@@ -44,6 +44,7 @@ What AAFE told us on the October 1 call, in their words where it matters. Sarah 
 - Janelle is finalizing an AI acceptable-use policy (no personal information into AI tools) and wants to be kept close on data decisions.
 
 ## Required inputs before build
+<!-- new Oct 3 -->
 
 What we need from AAFE, in one list: the materials promised on the call (expected about a week after it) plus the approvals Natalie's prototype review surfaced. Until each arrives, we build against invented data and placeholders.
 
