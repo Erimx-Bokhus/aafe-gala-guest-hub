@@ -1,0 +1,69 @@
+# Overview
+
+AAFE runs one gala a year for 500–600 guests, and its guest list lives in a single spreadsheet that staff rebuild by hand from Give Lively purchases, emailed sponsorship pledges, checks, and comps. We are building one reliable guest list on top of Give Lively that sponsors can update themselves and staff can trust from first purchase to gala-night check-in.
+
+```steps
+Purchases and pledges come in | Give Lively tickets, emailed sponsorships, checks, comps
+Each package becomes its seats | A $25,000 sponsorship holds 7 seats
+Guest details fill each seat | Sponsors name and edit their own guests
+Empty seats get flagged | Sorted by the AAFE staff member who owns the relationship
+Final list, badges, check-in | Exports for printing, iPad check-in at the door
+```
+
+```notes
+Open with the spreadsheet: every year staff rebuild one guest list by hand from four sources. The five steps are the whole product. Everything else in this hub supports one of them.
+```
+
+## Follow one sponsorship
+
+One invented sponsor, start to finish. Step through it, or use the arrow keys in present mode.
+
+```walkthrough
+sponsor: Lantern Street Partners | Gold sponsorship | $25,000 | 7
+guests: A. Rivera, Director; K. Osei, VP Community; M. Chen, CFO; D. Park, Board Member; S. Haddad, Partner; L. Novak, Analyst; R. Iyer, Counsel
+Pledge arrives by email | The sponsor commits $25,000 by email. A staff member enters it by hand and becomes the relationship owner. | pay=Pledged; named=0; dash=New commitment · owner assigned
+The package becomes seats | Gold includes 7 seats, so the tool creates 7 open seats tied to this commitment. | pay=Pledged; named=0; flag=1; dash=7 names missing
+Sponsor gets a private link | No account needed. The link opens only this sponsorship and closes at AAFE's deadline. | pay=Pledged; named=0; flag=1; link=1; dash=Link sent · 7 names missing
+Names come in | The sponsor names 5 guests. The 2 open seats appear on the owner's follow-up list, with a reminder drafted for staff to approve. | pay=Pledged; named=5; flag=1; link=1; dash=2 names missing · reminder drafted
+The check arrives | Staff record the check. The payment status changes; no bank details are stored. | pay=Received · check; named=5; flag=1; link=1; dash=Paid · 2 names missing
+Last names, then review | The final 2 names arrive. The owner corrects one title before printing, and the correction survives the next import. | pay=Received · check; named=7; fix=3; dash=Complete · reviewed before print
+Badges and the door | Badges print with table numbers. At check-in, 6 of 7 guests arrive, and the Salesforce file records who came. | pay=Received · check; named=7; arrived=6; table=12; dash=6 of 7 checked in
+```
+
+```notes
+This is the demo in miniature. Pause on step 4: the sponsor fixes their own list, which is AAFE's top priority from the call. Step 6 answers the 2026 name-tag problem.
+```
+
+## At a glance
+
+| | |
+| --- | --- |
+| Client | Asian Americans for Equality (AAFE) |
+| Contacts | Janelle Teng and Sarah Pritchard |
+| Team | ERIMX BOKHUS, Pursuit AI Native Fellowship |
+| Target event | AAFE's 2027 gala |
+| Discovery call | October 1, 2026 |
+| Demo Day | November 10, 2026 |
+| Status | Discovery complete; stack decision the week of October 5 |
+
+## Team
+
+| Person | Role | GitHub |
+| --- | --- | --- |
+| Natalie Walker | Product manager, client contact | wsvdesign |
+| Aisling Leiva-Davila | Backend, GitHub and integrations | nessaisling-lab |
+| Cornell Robertson | Backend | CodeToTheCore |
+| Antonin Lesov | Frontend | antoninlesov |
+
+Build areas are assigned the week of October 5. Proposed owners appear on the [Build plan](#build-plan) page.
+
+## What we will not build
+
+- A replacement for Give Lively. AAFE keeps it for tickets, donations, and tax receipts.
+- Anything that processes payments or stores card or bank details.
+- A seating chart builder. A table number on the badge is enough for now.
+- Production hosting. We deliver a portable prototype with invented data; AAFE, with the partner it chooses, decides whether and where it runs.
+
+## How this hub works
+
+Each page is a markdown file in `docs/`. Edit the file, and the page updates. The same files sit in the code repository, so the team and Claude Code read from one source.

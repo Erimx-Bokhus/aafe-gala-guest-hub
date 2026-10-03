@@ -1,0 +1,392 @@
+AAFE Gala Guest List: How Give Lively Works and What We're Building
+
+
+
+
+  AAFE Gala Guest List: How Give Lively
+  Works and What We're Building
+    Sep 30, 2026          · ​@natalie
+
+
+  Summary
+  We are building a gala operations tool that sits between Give Lively and gala night, and it
+  does not replace Give Lively. AAFE keeps selling tickets and sponsorships through Give
+  Lively, which is free, already embedded on aafe.org and already sends tax receipts. Our
+  tool handles the four things nothing in their stack does: collecting each guest's name for a
+  purchase, assigning tables, tracking payment across Give Lively, checks, direct deposits
+  and comps, and checking guests in at the door. It has two doors, a staff app and a guest-
+  facing names form. The hardest problem is not technical. It is timing: once a buyer finishes
+  checkout without naming their guests, getting those names costs staff weeks of email
+  and phone calls.
+
+
+  How Give Lively works for AAFE
+  Give Lively is a free fundraising platform for nonprofits, and AAFE uses it as its existing
+  fundraising platform, named as such in the project intake form.
+
+
+     Piece                                 How it works
+
+     Cost                                  No setup, platform, membership or subscription
+                                           fees, and no paid tiers. Give Lively is funded by its
+                                           founders, who cover its operating costs so
+                                           nonprofits and donors are never charged.
+
+     Payments                              Processed through Stripe, into AAFE's own Stripe
+                                           account. Give Lively never holds the money.
+                                           Stripe's per-transaction fee applies, and donors are
+                                           usually offered the option to cover it.
+
+     Where guests see it                   Give Lively's donate and ticket forms embed inside
+                                           aafe.org pages, so the visitor appears to stay on
+                                           AAFE's site while Give Lively processes the
+                                           payment behind the scenes.
+
+
+
+
+                                                                                                   Page 1 of 8
+AAFE Gala Guest List: How Give Lively Works and What We're Building
+
+
+
+
+     Piece                                 How it works
+
+     Tax receipts                          Give Lively emails each donor their own receipt
+                                           automatically, with the tax-deductible amount.
+                                           There is no single receipt for the whole event; the
+                                           obligation is per donor.
+
+     Donor records                         Every purchase is recorded with name, email,
+                                           amount and date, and can be exported.
+
+     Salesforce                            A free native app syncs Give Lively donors,
+                                           donations, campaigns and events into Salesforce
+                                           every hour. Setup uses Salesforce's free
+                                           integration-user licenses, so it does not consume
+                                           AAFE's paid seats.
+
+     Automation                            There is no public developer API. A Zapier
+                                           integration connects Give Lively to other services
+                                           with no coding, which is the realistic route to an
+                                           automatic feed.
+
+
+  Give Lively pricing · Give Lively integrations
+
+  One thing to confirm with AAFE: the intake form refers to "GiveLively's current offering
+  under our subscription," but Give Lively has no subscription. The paid platform in their
+  stack may be Salesforce, an add-on or an event producer.
+
+
+  Why AAFE should keep Give Lively
+  Nothing in the intake form asks anyone to replace Give Lively. It asks for a tool that works
+  with it, and that is the right read.
+
+        It costs nothing, so replacing it saves no money.
+        Tax receipts are handled automatically, and getting receipts wrong has consequences
+        for donors and for AAFE.
+        The embedded forms already keep buyers on aafe.org, so a branded checkout is not a
+        reason to move.
+        Donor records already flow into Salesforce, if the sync is switched on.
+        Year-round donations run through it, not just the gala. Moving the gala off Give Lively
+        would split AAFE's giving across two systems.
+
+
+
+
+                                                                                                 Page 2 of 8
+AAFE Gala Guest List: How Give Lively Works and What We're Building
+
+
+
+
+  Proposing a replacement in the first meeting would also signal that we did not read the
+  brief. The opportunity is the operations layer, not the checkout.
+
+
+  The five gaps in the intake form
+  Every constraint Janelle lists is about guests, not about money moving.
+
+   1. Guest names per package. Sponsorship levels and ticket packages come with
+      different numbers of guests, so collecting names needs conditional questions that
+      Give Lively does not offer.
+   2. Sponsors cannot edit. Once a sponsor adds a guest name, Give Lively does not
+      support changing it.
+   3. Buyer is not the attendee. A coordinator often buys for a manager or colleagues, so
+      contact information and attendee information have to be tracked separately.
+   4. Payments arrive by several routes. AAFE encourages the event website, but also
+      accepts sponsorship dollars by check and direct deposit, which means manual
+        additions to the guest list.
+   5. Comped guests. A number of tickets, such as those for elected officials, carry no
+      payment but still need RSVP tracking.
+
+  Two more requirements sit alongside these: each guest needs an AAFE relationship
+  owner, and sponsors need a marketing materials status for logos and program ads.
+
+
+  The core constraint: the moment of purchase
+  There is one moment when a buyer is paying full attention to AAFE: checkout. They have
+  their card out, they are filling in a form, and they expect to be asked things. That is the
+  cheapest possible moment to collect ten guest names.
+
+  Give Lively cannot ask at that moment, because it cannot vary the questions by package.
+  So the names have to be collected afterward, and everything gets harder:
+
+        Attention drops to near zero. The buyer has done what they came to do. A follow-up
+        email arrives days later, competing with everything else in their inbox.
+        The buyer often does not know yet. A company that buys a table in February may not
+        decide who is attending until April.
+        Staff absorb the cost. Chasing names becomes email, then a second email, then a
+        phone call, then a call to an assistant, repeated across dozens of sponsors during the
+        busiest weeks before the event.
+
+
+                                                                                            Page 3 of 8
+AAFE Gala Guest List: How Give Lively Works and What We're Building
+
+
+
+
+        The deadline is immovable. Name tags print on a fixed date. Seating has to be final
+        before that. Every unreturned name compresses the same fixed window.
+
+  This is why the intake form describes staff time as the problem, not software. The
+  spreadsheet is bulky because it is a chase list.
+
+  Our tool cannot remove this constraint while Give Lively handles checkout. What it can do
+  is make the chase cheap: know exactly who is missing what, sort it by the staff member
+  who owns the relationship, and draft the follow-up in one click. If AAFE ever wants the
+  constraint removed rather than managed, that requires asking for names at checkout,
+  which is the decision laid out below.
+
+
+  The two tools
+  One product, one database, two doors. Who is looking decides what they see.
+
+  Door 1: the staff guest list app. AAFE staff and gala volunteers sign in and work the whole
+  event.
+
+        Overview of progress toward sponsorship, ticket and attendance goals
+        Every guest with missing information, and what is missing
+        Guests grouped by AAFE relationship owner
+        One-click follow-up email drafts, copied out for a person to send
+        Drag-and-drop seating chart with table capacity
+        Payments across Give Lively, check, direct deposit, comp and sponsor-included
+        Logo and program ad status for sponsors
+        Check-in on gala night, recording who checked each guest in
+        Import from a Give Lively export, matching existing guests rather than duplicating
+        them
+
+  Door 2: the guest names form. The person who bought tickets opens a private link and
+  sees only their own purchase.
+
+        The right number of name slots for their package, which is gap 1
+        Editable until a deadline AAFE sets, which is gap 2
+        Buyer details kept separate from attendee details, which is gap 3
+        Their own payment status and table number, once assigned
+        The option to cancel
+
+
+
+
+                                                                                              Page 4 of 8
+AAFE Gala Guest List: How Give Lively Works and What We're Building
+
+
+
+
+  When a sponsor types a name into door 2, it appears in door 1 immediately. The seating
+  chart stays on the staff side only: a guest sees their own table number, never the full
+  room.
+
+
+  Scenarios
+  Seven ways a guest reaches the gala, and what the tool does in each. Every one of these
+  exists in the intake form or follows from it.
+
+  1. A sponsor buys a table on Give Lively. Helen buys a $50,000 Lead Sponsorship for
+  twelve seats. Give Lively records the purchase and emails her a receipt. Our tool picks up
+  the purchase, creates twelve seats, marks eleven names missing, and sends Helen a link
+  to name her guests. Her AAFE owner sees the gap on the overview.
+
+  2. A coordinator buys for someone else. An assistant buys two tickets for her firm's
+  partners and is not attending. The buyer and the attendees are separate records. All
+  correspondence goes to the assistant; the name tags print the partners' names.
+
+  3. A sponsorship arrives by check. A bank mails a $25,000 check with no Give Lively
+  record at all. Staff add the sponsorship in one step, mark the method as check, and the
+  same guest-name link goes out. On the overview it counts toward the sponsorship goal
+  exactly like a card payment.
+
+  4. A comped guest. An elected official is invited with no payment expected. Staff add
+  them as a comp, so they take a seat and appear at check-in, but never appear as a balance
+  owed or in a payment reminder.
+
+  5. A sponsor who does not respond. The common case. Two weeks pass, the seats stay
+  unnamed. The tool shows exactly which sponsors are outstanding, how many names each
+  still owes, and who at AAFE owns that relationship, and drafts the reminder email
+  addressed to the buyer rather than the unnamed seat. Staff still make the phone call, but
+  they make it from a list instead of a spreadsheet hunt.
+
+  6. A change the week of the gala. A sponsor swaps two guests three days out. They open
+  their link and edit the names themselves, which Give Lively does not allow. The seating
+  chart and name tag list update immediately.
+
+  7. Gala night. Staff check guests in on a phone or tablet. Someone arrives who is not on
+  the list and is added on the spot. At the end, AAFE knows who actually attended rather
+  than who bought a ticket, which is information that has never survived a gala before.
+
+
+
+
+                                                                                          Page 5 of 8
+AAFE Gala Guest List: How Give Lively Works and What We're Building
+
+
+
+
+  The decision: where guest names get collected
+  This is AAFE's choice, not ours. We have built both so the trade-off can be seen rather
+  than argued.
+
+
+                                 Option A: link after purchase            Option B: names at checkout
+
+     How it works                Give Lively sells the ticket, then our   An AAFE-branded checkout on
+                                 tool emails the buyer a private link     Stripe asks for guest names during
+                                 to name their guests                     purchase, and Give Lively stays for
+                                                                          year-round donations
+
+     Give Lively                 Unchanged                                Still used for donations, not for gala
+                                                                          tickets
+
+     Names                       Days to weeks later, if the buyer        Immediately, from most buyers
+     collected                   responds
+
+     Staff chasing               Real, and managed by the tool            Much less, mostly for buyers who
+                                                                          did not know their guests yet
+
+     Tax receipts                Handled by Give Lively                   AAFE would need to confirm how
+                                                                          receipts are issued outside Give
+                                                                          Lively
+
+     Build effort                Works today, import already built        Needs a payment backend, a Stripe
+                                                                          account connection and receipt
+                                                                          handling
+
+     Risk                        Low                                      Higher, and touches money and
+                                                                          compliance
+
+
+  Option A is the responsible recommendation for this project. Option B is worth showing
+  because it answers the constraint at its source, and because AAFE may want it later.
+
+  One caution on Stripe payouts: Give Lively already runs payments into AAFE's own Stripe
+  account, so Option B does not change how fast money arrives. A large or unusual charge
+  can trigger a Stripe review either way.
+
+
+  What happens to the data afterward
+  Give Lively knows what happened on its website. It does not know what happened in the
+  room, because that information never passed through it.
+
+
+
+                                                                                                              Page 6 of 8
+AAFE Gala Guest List: How Give Lively Works and What We're Building
+
+
+
+
+  Four things are created during gala preparation and on gala night, and none of them reach
+  Salesforce today:
+
+        who actually attended, as opposed to who bought a ticket
+        which guests a sponsor brought
+        who sat at which table
+        dietary needs and any accommodations
+
+  They live in the gala spreadsheet, and nobody is available to retype a 600-person
+  spreadsheet into Salesforce after the event. The file gets saved, becomes next year's
+  template, and each gala effectively starts over. That is why questions like "who has
+  attended three years running but never given on their own?" cannot be answered.
+
+  Our tool captures all four as a by-product of doing its job, so a Salesforce-ready export at
+  the end costs almost nothing. A direct Salesforce integration is possible but out of scope
+  for a capstone: it needs API access, an administrator's permissions and knowledge of
+  AAFE's customizations. An export gets most of the value.
+
+  Worth confirming with AAFE rather than assuming: some of this may already be recorded
+  by hand.
+
+
+
+  What the demo shows, and what it hides
+  The Demo Day build runs on invented data, and the flow will look smoother than a real
+  gala.
+
+        Everyone responds instantly. In the demo, a fake sponsor clicks the link and fills in
+        names right away. In April, a third of them will not have answered for weeks. The mock
+        data should deliberately include unresponsive sponsors so the reminder tooling has
+        something to do.
+        No real money moves. The checkout is a working demonstration, not a live payment.
+        The code, the card form and the confirmation are all simulated.
+        No live Give Lively connection. Purchases arrive through a file import. An automatic
+        feed would need Zapier and a hosted address, which belongs in a later phase.
+        The spreadsheet is a guess. Without a sample of AAFE's real guest spreadsheet, the
+        fields are inferred from the intake form.
+
+  Naming these in the presentation is better than having someone find them. It shows we
+  understand the difference between a demo and an operation.
+
+
+
+
+                                                                                           Page 7 of 8
+AAFE Gala Guest List: How Give Lively Works and What We're Building
+
+
+
+
+  Open questions for AAFE
+  For the call on October 1.
+
+  The guest list today
+
+        Can we see last year's guest spreadsheet, redacted, or at least its column headers?
+        Without it we are guessing at fields.
+        How do you get guest names from sponsors today, and how many follow-ups does it
+        usually take?
+        What are the deadlines for guest names, sponsor materials, seating and name tag
+        printing?
+
+  Systems and cost
+
+        The intake form mentions a subscription. Which platforms are you paying for, and
+        roughly what does the gala stack cost each year?
+        Is the Give Lively to Salesforce sync switched on? If so, we may read from Salesforce
+        instead.
+        Who administers Salesforce, and does the gala guest list end up there afterward?
+        Was the 2026 ticket page on Give Lively, and can we see an export from it?
+
+  The event
+
+        Who builds the seating plan, and when? We understand the venue leaves it to the
+        client.
+        What are this year's sponsorship, ticket and attendance goals?
+        How quickly do gala funds reach your bank account today, and has a payout ever been
+        delayed?
+        Is it important that guests stay on an AAFE-branded page when they buy?
+
+  After the project
+
+        Who at AAFE would own this tool day to day, and are there limits on ongoing costs?
+        Who owns the code and intellectual property we build?
+
+
+
+
+                                                                                           Page 8 of 8
+
