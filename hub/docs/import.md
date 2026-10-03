@@ -77,6 +77,7 @@ Nothing is deleted automatically. Refunded seats are cancelled, not removed, and
 - Does it show **refunds**, or are they only in another report?
 - Exact column headers, date format, and whether amounts include the donor-covered fee.
 - Are Give Lively sponsorships in the same report as tickets?
+- **Which report.** Give Lively's "Line Items (All)" purchase report has the transaction ID (Natalie's prototype imports it); the attendee report has guest names. Likely both, joined on transaction ID.
 
 ## Test cases
 <!-- team -->
