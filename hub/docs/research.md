@@ -84,6 +84,7 @@ A custom tool is justified only if it keeps Give Lively, costs AAFE less per yea
 **Not ours to build:** payment processing, ticket checkout, auctions, or a donor CRM.
 
 ## Where earlier research was superseded
+<!-- new Oct 3 -->
 <!-- team -->
 
 Natalie's research predates the October 1 call. Where it differs, discovery and the decision log win:
