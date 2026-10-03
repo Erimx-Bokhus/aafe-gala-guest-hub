@@ -83,6 +83,21 @@ A custom tool is justified only if it keeps Give Lively, costs AAFE less per yea
 
 **Not ours to build:** payment processing, ticket checkout, auctions, or a donor CRM.
 
+## Where earlier research was superseded
+<!-- team -->
+
+Natalie's research predates the October 1 call. Where it differs, discovery and the decision log win:
+
+| Research said | Now |
+| --- | --- |
+| Give Lively forms are embedded on aafe.org | Registration links out to Give Lively; it isn't embedded |
+| Option B: an AAFE Stripe checkout that collects names at purchase | Out of scope: the tool never processes payments |
+| Drag-and-drop seating chart | Later phase; a table number on the badge is enough |
+| A $50,000 sponsorship with 12 seats | Seats per tier pending with AAFE (the call said ~20 for the top tier, 7 for $25,000) |
+| November 9 presentation | Nov 9 is the team's last work day; Demo Day is Nov 10 |
+
+Natalie's clickable prototypes and seed data (Oct 2) are reviewed in `docs/research/prototype-review-2026-10-03.md`: six pieces of her schema were adopted into the data model, and four prototype behaviors (automatic emails, short readable sponsor links, sequential QR codes, real photos in public) change before Demo Day.
+
 ## Give Lively's limits
 
 Covered on the [Systems](#systems) page: no public API, no comps, no conditional questions by package, sponsors can't edit guest names, and per-ticket detail only in the Attendee Data export.

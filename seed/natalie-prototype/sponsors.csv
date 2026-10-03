@@ -1,0 +1,16 @@
+id,organization_name,primary_contact_name,primary_contact_email,phone,relationship_owner_id,salesforce_account_id,created_at
+sp-harborline,Harborline Community Bank,Evelyn Park,evelyn.park@harborline.example.org,(212) 555-0100,st-mei,001DEMO0000HARB,2024-01-15T15:00:00Z
+sp-meridian,Meridian Family Foundation,Arthur Wong,awong@meridianfdn.example.org,(212) 555-0101,st-daniel,001DEMO0000MERI,2024-01-15T15:00:00Z
+sp-acme,Acme Community Partners,Jordan Lee,jordan.lee@acmepartners.example.org,(212) 555-0102,st-priya,001DEMO0000ACME,2024-01-15T15:00:00Z
+sp-northgate,Northgate Health Collective,Ingrid Larsen,ilarsen@northgate.example.org,(212) 555-0103,st-daniel,,2024-01-15T15:00:00Z
+sp-lotus,Lotus Lane Design Studio,Vivian Tran,vivian@lotuslane.example.org,(212) 555-0104,st-grace,001DEMO0000LOTU,2024-01-15T15:00:00Z
+sp-pacific,Pacific Rim Builders,Marco Delgado,mdelgado@pacificrim.example.org,(212) 555-0105,st-grace,,2024-01-15T15:00:00Z
+sp-bowery,Bowery Dental Group,Dr. Sun Hee Cho,scho@bowerydental.example.org,(212) 555-0106,st-priya,,2024-01-15T15:00:00Z
+sp-queens,Queens Tech Collective,Ravi Patel,ravi@queenstech.example.org,(212) 555-0107,st-daniel,,2024-01-15T15:00:00Z
+sp-dumpling,Golden Dumpling Co.,Henry Lau,henry@goldendumpling.example.org,(212) 555-0108,st-priya,,2024-01-15T15:00:00Z
+sp-okafor,Chidi Okafor,Chidi Okafor,c.okafor@riversidelegal.example.org,(212) 555-0109,st-grace,,2024-01-15T15:00:00Z
+sp-alvarez,Maria Alvarez,Maria Alvarez,maria.alvarez@mail.example.org,(212) 555-0110,st-grace,,2024-01-15T15:00:00Z
+sp-kimfam,Kim Family Fund,Joyce Kim,joyce.kim@kimfamily.example.org,(212) 555-0111,st-mei,,2024-01-15T15:00:00Z
+sp-tanaka,Ken Tanaka,Ken Tanaka,ken.tanaka@mail.example.org,(212) 555-0112,st-daniel,,2024-01-15T15:00:00Z
+sp-brooks,Alisha Brooks,Alisha Brooks,alisha.brooks@mail.example.org,(212) 555-0113,st-priya,,2024-01-15T15:00:00Z
+sp-aafe-rel,AAFE Executive Director's Office,AAFE Gala Team,gala-team@aafe-demo.example.org,(212) 555-0114,st-mei,,2024-01-15T15:00:00Z

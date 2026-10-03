@@ -1,0 +1,23 @@
+id,template,to_email,to_name,order_id,guest_id,trigger,status,sent_at
+em-001,portal_link,evelyn.park@harborline.example.org,Evelyn Park,ord-harborline,,payment_recorded,opened,2026-08-14T16:05:00Z
+em-002,portal_link,awong@meridianfdn.example.org,Arthur Wong,ord-meridian,,payment_recorded,opened,2026-09-02T15:10:00Z
+em-003,portal_link,jordan.lee@acmepartners.example.org,Jordan Lee,ord-acme,,payment_recorded,opened,2026-09-05T14:20:00Z
+em-004,portal_link,ilarsen@northgate.example.org,Ingrid Larsen,ord-northgate,,givelively_sync,opened,2026-09-18T20:30:00Z
+em-005,portal_link,vivian@lotuslane.example.org,Vivian Tran,ord-lotus,,givelively_sync,opened,2026-07-30T13:30:00Z
+em-006,portal_link,mdelgado@pacificrim.example.org,Marco Delgado,ord-pacific,,givelively_sync,opened,2026-09-22T17:30:00Z
+em-007,portal_link,scho@bowerydental.example.org,Dr. Sun Hee Cho,ord-bowery,,givelively_sync,opened,2026-09-24T12:30:00Z
+em-008,portal_link,ravi@queenstech.example.org,Ravi Patel,ord-queens,,givelively_sync,opened,2026-09-25T12:30:00Z
+em-009,portal_link,c.okafor@riversidelegal.example.org,Chidi Okafor,ord-okafor,,givelively_sync,opened,2026-09-25T21:30:00Z
+em-010,portal_link,maria.alvarez@mail.example.org,Maria Alvarez,ord-alvarez,,givelively_sync,opened,2026-09-26T21:30:00Z
+em-011,portal_link,joyce.kim@kimfamily.example.org,Joyce Kim,ord-kimfam,,payment_recorded,opened,2026-09-21T15:00:00Z
+em-012,portal_link,ken.tanaka@mail.example.org,Ken Tanaka,ord-tanaka,,givelively_sync,opened,2026-09-27T23:30:00Z
+em-013,portal_link,alisha.brooks@mail.example.org,Alisha Brooks,ord-brooks,,givelively_sync,opened,2026-09-28T01:30:00Z
+em-014,qr_invitation,leah.goldberg@guest.example.org,Leah Goldberg,ord-rel,g-041,staff_manual,sent,2026-09-03T14:00:00Z
+em-015,qr_invitation,revpeter.wu@guest.example.org,Rev. Peter Wu,ord-rel,g-042,staff_manual,sent,2026-09-03T14:00:00Z
+em-016,qr_invitation,drannie.lam@guest.example.org,Dr. Annie Lam,ord-rel,g-043,staff_manual,sent,2026-09-03T14:00:00Z
+em-017,qr_invitation,victor.huang@guest.example.org,Victor Huang,ord-rel,g-044,staff_manual,sent,2026-09-03T14:00:00Z
+em-018,qr_invitation,yolanda.rivera@guest.example.org,Yolanda Rivera,ord-rel,g-045,staff_manual,sent,2026-09-03T14:00:00Z
+em-019,qr_invitation,eddie.chan@guest.example.org,Eddie Chan,ord-rel,g-046,staff_manual,sent,2026-09-03T14:00:00Z
+em-020,qr_invitation,mabel.fong@guest.example.org,Mabel Fong,ord-rel,g-047,staff_manual,queued,
+em-021,qr_invitation,thomas.reid@guest.example.org,Thomas Reid,ord-rel,g-048,staff_manual,sent,2026-09-03T14:00:00Z
+em-022,guest_list_reminder,jordan.lee@acmepartners.example.org,Jordan Lee,ord-acme,,scheduled,queued,

@@ -1,0 +1,13 @@
+id,name,contribution_amount,included_seat_count,tier_category,required_materials
+platinum,Platinum — Lead Sponsor,50000,20,sponsorship,"[""logo"", ""full_page_ad""]"
+gold,Gold — Documentary Screening Sponsor,25000,10,sponsorship,"[""logo"", ""full_page_ad""]"
+silver,Silver — Signature Cocktail Sponsor,15000,8,sponsorship,"[""logo"", ""half_page_ad""]"
+bronze,Bronze — Performance Sponsor,10000,6,sponsorship,"[""logo"", ""half_page_ad""]"
+champion,Champion — Party Favor Sponsor,7000,2,sponsorship,"[""logo""]"
+friend,Friend Sponsor,2500,1,sponsorship,"[""logo""]"
+supporter,Supporter Sponsor,1000,1,sponsorship,"[""logo""]"
+corporate_ticket,Corporate Ticket,500,1,ticket,[]
+community_ticket,Community Ticket,250,1,ticket,[]
+full_page_ad,Full-Page Digital Advertising,1000,0,advertising_only,"[""full_page_ad""]"
+half_page_ad,Half-Page Digital Advertising,500,0,advertising_only,"[""half_page_ad""]"
+comp_relationship,Complimentary — Relationship Guests,0,0,complimentary,[]
