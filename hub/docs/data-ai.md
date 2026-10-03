@@ -17,7 +17,7 @@ The prototype uses invented data only. This page sets out what a production vers
 | Payment method, date, and status | |
 | Relationship owner, logo and program-ad status | |
 | Table number, badge status, check-in time | |
-| Source of each record and a history of every change | |
+| Source of each record (Give Lively, staff entry, sponsor link, or check-in desk) and a history of every change | |
 
 **Optional, if AAFE chooses:** dietary and accessibility needs, shown only to staff who need them and deleted after the event.
 
@@ -31,7 +31,8 @@ The prototype uses invented data only. This page sets out what a production vers
 ## Access
 
 - The prototype uses demo accounts with three roles: admin, staff, and check-in volunteer. A production version would use AAFE's Google accounts with MFA.
-- Sponsor links open only that sponsor's purchase and expire at AAFE's deadline.
+- Sponsor links open only that sponsor's purchase and expire at AAFE's deadline. QR e-tickets open only one seat and expire after gala night. Both are random, and only a scrambled (hashed) copy is stored, so a database leak doesn't reveal working links.
+- Every email is approved by staff before it sends. A relationship manager who reviews and sends their own comp ticket counts as the approver; every send is logged.
 - Every edit records who made it and when.
 - Data is encrypted in transit and at rest; credentials live in the host's secrets store, never in the code.
 
