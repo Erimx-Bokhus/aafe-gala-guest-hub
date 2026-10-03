@@ -34,6 +34,6 @@ Priorities are the team's proposal until confirmed with AAFE. Source in brackets
 - Payments, checkout, Stripe, auctions, donor CRM.
 
 ## Open questions for AAFE
-- **Seats per tier.** The 2025 public flyer (used in the prototype seed data) gives Gold $25,000 = 10 seats; on the Oct 1 call AAFE said $25,000 comes with 7 tickets. Confirm the 2027 packages.
+- **Seats per tier.** The 2025 public flyer (used in the prototype seed data) gives Gold $25,000 = 10 seats; on the Oct 1 call AAFE said $25,000 comes with 7 tickets. The call also put the top tier at ~20 tickets, while Natalie's research example uses a $50,000 sponsorship with 12 seats. Confirm the 2027 packages.
 - **Logo and photos.** Written approval to use AAFE's logo and event photos in the prototype and at Demo Day.
 - **Goals per category** for the dashboard (sponsorship dollars, tickets, attendance).
