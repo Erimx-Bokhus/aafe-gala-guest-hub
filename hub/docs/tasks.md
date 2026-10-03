@@ -13,6 +13,7 @@ The live tracker, with owners and status dropdowns, is the [Findings, Build Plan
 - [ ] Settle code ownership and a team agreement with Pursuit — Team
 
 ## Week of October 5
+<!-- updated Oct 3 -->
 
 - [ ] Decide the stack and the demo preview host, and record it — Natalie, team
 - [x] Commit the handoff package to the team repo (Erimx-Bokhus) — Aisling
