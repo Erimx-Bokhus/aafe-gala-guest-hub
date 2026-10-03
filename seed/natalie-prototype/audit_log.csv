@@ -1,0 +1,123 @@
+at,actor_type,actor,entity,entity_id,order_id,action,from_state,to_state,guest_visible,summary,id
+2026-07-30T13:15:00Z,system,Give Lively sync,order,ord-lotus,ord-lotus,order.created,,paid,1,Champion — Party Favor Sponsor recorded for Lotus Lane Design Studio (givelively).,1
+2026-07-30T13:15:00Z,system,Give Lively sync,payment,pay-lotus-1,ord-lotus,payment.recorded,,,1,"Payment received: $7,000.00.",2
+2026-07-30T13:30:00Z,system,Email service,email,ord-lotus,ord-lotus,portal_link.sent,,,1,Private guest-list link emailed.,3
+2026-08-01T14:00:00Z,staff,Mei Lin Ortiz,order,ord-harborline,ord-harborline,order.created,,paid,1,Platinum — Lead Sponsor recorded for Harborline Community Bank (ach_direct).,4
+2026-08-14T15:00:00Z,staff,Staff,payment,pay-harb-1,ord-harborline,payment.recorded,,,1,"Payment received: $50,000.00.",5
+2026-08-14T16:05:00Z,system,Email service,email,ord-harborline,ord-harborline,portal_link.sent,,,1,Private guest-list link emailed.,6
+2026-08-20T14:00:00Z,staff,Mei Lin Ortiz,order,ord-meridian,ord-meridian,order.created,,partially_paid,1,Gold — Documentary Screening Sponsor recorded for Meridian Family Foundation (wire).,7
+2026-09-01T12:00:00Z,staff,Mei Lin Ortiz,order,ord-rel,ord-rel,order.created,,comp,0,Complimentary — Relationship Guests recorded for AAFE Executive Director's Office (comp).,8
+2026-09-01T12:00:00Z,staff,Staff,guest,g-041,ord-rel,guest.submitted,unnamed,submitted,1,Leah Goldberg added to seat 1.,9
+2026-09-01T12:00:00Z,staff,Staff,guest,g-042,ord-rel,guest.submitted,unnamed,submitted,1,Rev. Peter Wu added to seat 2.,10
+2026-09-01T12:00:00Z,staff,Staff,guest,g-043,ord-rel,guest.submitted,unnamed,submitted,1,Dr. Annie Lam added to seat 3.,11
+2026-09-01T12:00:00Z,staff,Staff,guest,g-044,ord-rel,guest.submitted,unnamed,submitted,1,Victor Huang added to seat 4.,12
+2026-09-01T12:00:00Z,staff,Staff,guest,g-045,ord-rel,guest.submitted,unnamed,submitted,1,Yolanda Rivera added to seat 5.,13
+2026-09-01T12:00:00Z,staff,Staff,guest,g-046,ord-rel,guest.submitted,unnamed,submitted,1,Eddie Chan added to seat 6.,14
+2026-09-01T12:00:00Z,staff,Staff,guest,g-047,ord-rel,guest.submitted,unnamed,submitted,1,Mabel Fong added to seat 7.,15
+2026-09-01T12:00:00Z,staff,Staff,guest,g-048,ord-rel,guest.submitted,unnamed,submitted,1,Thomas Reid added to seat 8.,16
+2026-09-01T20:00:00Z,staff,Priya Raman,seat,seat-ord-rel-1,ord-rel,seat.reviewed,submitted,reviewed,1,Leah Goldberg confirmed by AAFE.,17
+2026-09-01T20:00:00Z,staff,Priya Raman,seat,seat-ord-rel-2,ord-rel,seat.reviewed,submitted,reviewed,1,Rev. Peter Wu confirmed by AAFE.,18
+2026-09-01T20:00:00Z,staff,Priya Raman,seat,seat-ord-rel-3,ord-rel,seat.reviewed,submitted,reviewed,1,Dr. Annie Lam confirmed by AAFE.,19
+2026-09-01T20:00:00Z,staff,Priya Raman,seat,seat-ord-rel-4,ord-rel,seat.reviewed,submitted,reviewed,1,Victor Huang confirmed by AAFE.,20
+2026-09-01T20:00:00Z,staff,Priya Raman,seat,seat-ord-rel-5,ord-rel,seat.reviewed,submitted,reviewed,1,Yolanda Rivera confirmed by AAFE.,21
+2026-09-01T20:00:00Z,staff,Priya Raman,seat,seat-ord-rel-6,ord-rel,seat.reviewed,submitted,reviewed,1,Eddie Chan confirmed by AAFE.,22
+2026-09-01T20:00:00Z,staff,Priya Raman,seat,seat-ord-rel-7,ord-rel,seat.reviewed,submitted,reviewed,1,Mabel Fong confirmed by AAFE.,23
+2026-09-01T20:00:00Z,staff,Priya Raman,seat,seat-ord-rel-8,ord-rel,seat.reviewed,submitted,reviewed,1,Thomas Reid confirmed by AAFE.,24
+2026-09-02T14:30:00Z,staff,Staff,payment,pay-meri-1,ord-meridian,payment.recorded,,,1,"Payment received: $12,500.00.",25
+2026-09-02T15:10:00Z,system,Email service,email,ord-meridian,ord-meridian,portal_link.sent,,,1,Private guest-list link emailed.,26
+2026-09-05T14:00:00Z,staff,Mei Lin Ortiz,order,ord-acme,ord-acme,order.created,,pledged,1,Silver — Signature Cocktail Sponsor recorded for Acme Community Partners (check).,27
+2026-09-05T14:20:00Z,system,Email service,email,ord-acme,ord-acme,portal_link.sent,,,1,Private guest-list link emailed.,28
+2026-09-12T12:00:00Z,staff,Mei Lin Ortiz,order,ord-dumpling,ord-dumpling,order.created,,invoice_sent,1,Full-Page Digital Advertising recorded for Golden Dumpling Co. (staff_entry).,29
+2026-09-12T15:00:00Z,staff,Staff,guest,g-019,ord-acme,guest.submitted,unnamed,submitted,1,Jordan Lee added to seat 1.,30
+2026-09-12T15:00:00Z,staff,Staff,guest,g-020,ord-acme,guest.submitted,unnamed,submitted,1,Alicia Moreno added to seat 2.,31
+2026-09-12T20:00:00Z,staff,Priya Raman,seat,seat-ord-acme-1,ord-acme,seat.reviewed,submitted,reviewed,1,Jordan Lee confirmed by AAFE.,32
+2026-09-12T20:00:00Z,staff,Priya Raman,seat,seat-ord-acme-2,ord-acme,seat.reviewed,submitted,reviewed,1,Alicia Moreno confirmed by AAFE.,33
+2026-09-15T15:00:00Z,staff,Staff,guest,g-001,ord-harborline,guest.submitted,unnamed,submitted,1,Evelyn Park added to seat 1.,34
+2026-09-15T15:00:00Z,staff,Staff,guest,g-002,ord-harborline,guest.submitted,unnamed,submitted,1,Marcus Bell added to seat 2.,35
+2026-09-15T15:00:00Z,staff,Staff,guest,g-003,ord-harborline,guest.submitted,unnamed,submitted,1,Sofia Reyes added to seat 3.,36
+2026-09-15T15:00:00Z,staff,Staff,guest,g-004,ord-harborline,guest.submitted,unnamed,submitted,1,Hao Zhang added to seat 4.,37
+2026-09-15T15:00:00Z,staff,Staff,guest,g-005,ord-harborline,guest.submitted,unnamed,submitted,1,Amara Okoye added to seat 5.,38
+2026-09-15T15:00:00Z,staff,Staff,guest,g-006,ord-harborline,guest.submitted,unnamed,submitted,1,Liam Nguyen added to seat 6.,39
+2026-09-15T15:00:00Z,staff,Staff,guest,g-007,ord-harborline,guest.submitted,unnamed,submitted,1,Rachel Kim added to seat 7.,40
+2026-09-15T15:00:00Z,staff,Staff,guest,g-008,ord-harborline,guest.submitted,unnamed,submitted,1,Joseph Alvarez added to seat 8.,41
+2026-09-15T20:00:00Z,staff,Priya Raman,seat,seat-ord-harborline-1,ord-harborline,seat.reviewed,submitted,reviewed,1,Evelyn Park confirmed by AAFE.,42
+2026-09-15T20:00:00Z,staff,Priya Raman,seat,seat-ord-harborline-2,ord-harborline,seat.reviewed,submitted,reviewed,1,Marcus Bell confirmed by AAFE.,43
+2026-09-15T20:00:00Z,staff,Priya Raman,seat,seat-ord-harborline-3,ord-harborline,seat.reviewed,submitted,reviewed,1,Sofia Reyes confirmed by AAFE.,44
+2026-09-15T20:00:00Z,staff,Priya Raman,seat,seat-ord-harborline-4,ord-harborline,seat.reviewed,submitted,reviewed,1,Hao Zhang confirmed by AAFE.,45
+2026-09-15T20:00:00Z,staff,Priya Raman,seat,seat-ord-harborline-5,ord-harborline,seat.reviewed,submitted,reviewed,1,Amara Okoye confirmed by AAFE.,46
+2026-09-15T20:00:00Z,staff,Priya Raman,seat,seat-ord-harborline-6,ord-harborline,seat.reviewed,submitted,reviewed,1,Liam Nguyen confirmed by AAFE.,47
+2026-09-15T20:00:00Z,staff,Priya Raman,seat,seat-ord-harborline-7,ord-harborline,seat.reviewed,submitted,reviewed,1,Rachel Kim confirmed by AAFE.,48
+2026-09-15T20:00:00Z,staff,Priya Raman,seat,seat-ord-harborline-8,ord-harborline,seat.reviewed,submitted,reviewed,1,Joseph Alvarez confirmed by AAFE.,49
+2026-09-18T19:42:00Z,system,Give Lively sync,order,ord-northgate,ord-northgate,order.created,,paid,1,Bronze — Performance Sponsor recorded for Northgate Health Collective (givelively).,50
+2026-09-18T19:42:00Z,system,Give Lively sync,payment,pay-north-1,ord-northgate,payment.recorded,,,1,"Payment received: $10,220.30.",51
+2026-09-18T20:30:00Z,system,Email service,email,ord-northgate,ord-northgate,portal_link.sent,,,1,Private guest-list link emailed.,52
+2026-09-20T15:00:00Z,staff,Mei Lin Ortiz,order,ord-kimfam,ord-kimfam,order.created,,paid,1,Corporate Ticket recorded for Kim Family Fund (check).,53
+2026-09-20T15:00:00Z,staff,Staff,payment,pay-kim-1,ord-kimfam,payment.recorded,,,1,"Payment received: $1,000.00.",54
+2026-09-21T15:00:00Z,system,Email service,email,ord-kimfam,ord-kimfam,portal_link.sent,,,1,Private guest-list link emailed.,55
+2026-09-22T16:20:00Z,guest_portal,Guest portal,guest,g-025,ord-northgate,guest.submitted,unnamed,submitted,1,Omar Siddiqui added to seat 2.,56
+2026-09-22T17:00:00Z,system,Give Lively sync,order,ord-pacific,ord-pacific,order.created,,paid,1,Silver — Signature Cocktail Sponsor recorded for Pacific Rim Builders (givelively).,57
+2026-09-22T17:00:00Z,system,Give Lively sync,payment,pay-pac-1,ord-pacific,payment.recorded,,,1,"Payment received: $15,005.00.",58
+2026-09-22T17:30:00Z,system,Email service,email,ord-pacific,ord-pacific,portal_link.sent,,,1,Private guest-list link emailed.,59
+2026-09-24T12:00:00Z,system,Give Lively sync,order,ord-bowery,ord-bowery,order.created,,paid,1,Friend Sponsor recorded for Bowery Dental Group (givelively).,60
+2026-09-24T12:00:00Z,system,Give Lively sync,payment,pay-bow-1,ord-bowery,payment.recorded,,,1,"Payment received: $2,500.00.",61
+2026-09-24T12:30:00Z,system,Email service,email,ord-bowery,ord-bowery,portal_link.sent,,,1,Private guest-list link emailed.,62
+2026-09-24T13:00:00Z,guest_portal,Guest portal,guest,g-034,ord-bowery,guest.submitted,unnamed,submitted,1,Sun Hee Cho added to seat 1.,63
+2026-09-25T12:00:00Z,system,Give Lively sync,order,ord-queens,ord-queens,order.created,,paid,1,Supporter Sponsor recorded for Queens Tech Collective (givelively).,64
+2026-09-25T12:00:00Z,system,Give Lively sync,payment,pay-que-1,ord-queens,payment.recorded,,,1,"Payment received: $1,022.30.",65
+2026-09-25T12:30:00Z,system,Email service,email,ord-queens,ord-queens,portal_link.sent,,,1,Private guest-list link emailed.,66
+2026-09-25T21:00:00Z,system,Give Lively sync,order,ord-okafor,ord-okafor,order.created,,paid,1,Corporate Ticket recorded for Chidi Okafor (givelively).,67
+2026-09-25T21:00:00Z,system,Give Lively sync,payment,pay-oka-1,ord-okafor,payment.recorded,,,1,Payment received: $511.30.,68
+2026-09-25T21:30:00Z,system,Email service,email,ord-okafor,ord-okafor,portal_link.sent,,,1,Private guest-list link emailed.,69
+2026-09-26T15:00:00Z,staff,Staff,guest,g-013,ord-meridian,guest.submitted,unnamed,submitted,1,Arthur Wong added to seat 1.,70
+2026-09-26T15:00:00Z,staff,Staff,guest,g-014,ord-meridian,guest.submitted,unnamed,submitted,1,Helen Matsuda added to seat 2.,71
+2026-09-26T15:00:00Z,staff,Staff,guest,g-015,ord-meridian,guest.submitted,unnamed,submitted,1,Kwame Asante added to seat 3.,72
+2026-09-26T15:00:00Z,staff,Staff,guest,g-016,ord-meridian,guest.submitted,unnamed,submitted,1,Lucía Fernández added to seat 4.,73
+2026-09-26T15:00:00Z,guest_portal,Guest portal,guest,g-017,ord-meridian,guest.submitted,unnamed,submitted,1,Jun Ito added to seat 5.,74
+2026-09-26T15:00:00Z,guest_portal,Guest portal,guest,g-018,ord-meridian,guest.submitted,unnamed,submitted,1,Patricia Lowe added to seat 6.,75
+2026-09-26T15:00:00Z,staff,Staff,guest,g-024,ord-northgate,guest.submitted,unnamed,submitted,1,Ingrid Larsen added to seat 1.,76
+2026-09-26T15:00:00Z,staff,Staff,guest,g-026,ord-lotus,guest.submitted,unnamed,submitted,1,Vivian Tran added to seat 1.,77
+2026-09-26T15:00:00Z,staff,Staff,guest,g-027,ord-lotus,guest.submitted,unnamed,submitted,1,Mateo Ruiz added to seat 2.,78
+2026-09-26T15:00:00Z,staff,Staff,guest,g-035,ord-queens,guest.submitted,unnamed,submitted,1,Ravi Patel added to seat 1.,79
+2026-09-26T15:00:00Z,staff,Staff,guest,g-036,ord-okafor,guest.submitted,unnamed,submitted,1,Chidi Okafor added to seat 1.,80
+2026-09-26T15:00:00Z,staff,Staff,guest,g-037,ord-alvarez,guest.submitted,unnamed,submitted,1,Maria Alvarez added to seat 1.,81
+2026-09-26T15:00:00Z,staff,Staff,guest,g-038,ord-kimfam,guest.submitted,unnamed,submitted,1,Joyce Kim added to seat 1.,82
+2026-09-26T15:00:00Z,staff,Staff,guest,g-039,ord-kimfam,guest.submitted,unnamed,submitted,1,Daniel Kim added to seat 2.,83
+2026-09-26T18:42:00Z,guest_portal,Guest portal,guest,g-009,ord-harborline,guest.submitted,unnamed,submitted,1,Nina Castillo added to seat 9.,84
+2026-09-26T18:42:00Z,guest_portal,Guest portal,guest,g-010,ord-harborline,guest.submitted,unnamed,submitted,1,Tomás Herrera added to seat 10.,85
+2026-09-26T18:42:00Z,guest_portal,Guest portal,guest,g-011,ord-harborline,guest.submitted,unnamed,submitted,1,Wen Li added to seat 11.,86
+2026-09-26T18:42:00Z,guest_portal,Guest portal,guest,g-012,ord-harborline,guest.submitted,unnamed,submitted,1,Grace Odum added to seat 12.,87
+2026-09-26T20:00:00Z,staff,Priya Raman,seat,seat-ord-meridian-1,ord-meridian,seat.reviewed,submitted,reviewed,1,Arthur Wong confirmed by AAFE.,88
+2026-09-26T20:00:00Z,staff,Priya Raman,seat,seat-ord-meridian-2,ord-meridian,seat.reviewed,submitted,reviewed,1,Helen Matsuda confirmed by AAFE.,89
+2026-09-26T20:00:00Z,staff,Priya Raman,seat,seat-ord-meridian-3,ord-meridian,seat.reviewed,submitted,reviewed,1,Kwame Asante confirmed by AAFE.,90
+2026-09-26T20:00:00Z,staff,Priya Raman,seat,seat-ord-meridian-4,ord-meridian,seat.reviewed,submitted,reviewed,1,Lucía Fernández confirmed by AAFE.,91
+2026-09-26T20:00:00Z,staff,Priya Raman,seat,seat-ord-northgate-1,ord-northgate,seat.reviewed,submitted,reviewed,1,Ingrid Larsen confirmed by AAFE.,92
+2026-09-26T20:00:00Z,staff,Priya Raman,seat,seat-ord-lotus-1,ord-lotus,seat.reviewed,submitted,reviewed,1,Vivian Tran confirmed by AAFE.,93
+2026-09-26T20:00:00Z,staff,Priya Raman,seat,seat-ord-lotus-2,ord-lotus,seat.reviewed,submitted,reviewed,1,Mateo Ruiz confirmed by AAFE.,94
+2026-09-26T20:00:00Z,staff,Priya Raman,seat,seat-ord-queens-1,ord-queens,seat.reviewed,submitted,reviewed,1,Ravi Patel confirmed by AAFE.,95
+2026-09-26T20:00:00Z,staff,Priya Raman,seat,seat-ord-okafor-1,ord-okafor,seat.reviewed,submitted,reviewed,1,Chidi Okafor confirmed by AAFE.,96
+2026-09-26T20:00:00Z,staff,Priya Raman,seat,seat-ord-alvarez-1,ord-alvarez,seat.reviewed,submitted,reviewed,1,Maria Alvarez confirmed by AAFE.,97
+2026-09-26T20:00:00Z,staff,Priya Raman,seat,seat-ord-kimfam-1,ord-kimfam,seat.reviewed,submitted,reviewed,1,Joyce Kim confirmed by AAFE.,98
+2026-09-26T20:00:00Z,staff,Priya Raman,seat,seat-ord-kimfam-2,ord-kimfam,seat.reviewed,submitted,reviewed,1,Daniel Kim confirmed by AAFE.,99
+2026-09-26T21:00:00Z,system,Give Lively sync,order,ord-alvarez,ord-alvarez,order.created,,paid,1,Community Ticket recorded for Maria Alvarez (givelively).,100
+2026-09-26T21:00:00Z,system,Give Lively sync,payment,pay-alv-1,ord-alvarez,payment.recorded,,,1,Payment received: $250.00.,101
+2026-09-26T21:30:00Z,system,Email service,email,ord-alvarez,ord-alvarez,portal_link.sent,,,1,Private guest-list link emailed.,102
+2026-09-27T23:00:00Z,system,Give Lively sync,order,ord-tanaka,ord-tanaka,order.created,,paid,1,Community Ticket recorded for Ken Tanaka (givelively).,103
+2026-09-27T23:00:00Z,system,Give Lively sync,payment,pay-tan-1,ord-tanaka,payment.recorded,,,1,Payment received: $255.80.,104
+2026-09-27T23:30:00Z,system,Email service,email,ord-tanaka,ord-tanaka,portal_link.sent,,,1,Private guest-list link emailed.,105
+2026-09-28T00:10:00Z,guest_portal,Guest portal,guest,g-040,ord-tanaka,guest.submitted,unnamed,submitted,1,Ken Tanaka added to seat 1.,106
+2026-09-28T01:00:00Z,system,Give Lively sync,order,ord-brooks,ord-brooks,order.created,,paid,1,Community Ticket recorded for Alisha Brooks (givelively).,107
+2026-09-28T01:00:00Z,system,Give Lively sync,payment,pay-bro-1,ord-brooks,payment.recorded,,,1,Payment received: $250.00.,108
+2026-09-28T01:30:00Z,system,Email service,email,ord-brooks,ord-brooks,portal_link.sent,,,1,Private guest-list link emailed.,109
+2026-09-28T14:10:00Z,guest_portal,Guest portal,guest,g-021,ord-acme,guest.submitted,unnamed,submitted,1,Samuel Chen added to seat 3.,110
+2026-09-28T14:11:00Z,guest_portal,Guest portal,guest,g-022,ord-acme,guest.submitted,unnamed,submitted,1,Fatima Haddad added to seat 4.,111
+2026-09-28T14:12:00Z,guest_portal,Guest portal,guest,g-023,ord-acme,guest.submitted,unnamed,submitted,1,Brian O’Connell added to seat 5.,112
+2026-09-29T13:00:00Z,guest_portal,Guest portal,guest,g-028,ord-pacific,guest.submitted,unnamed,submitted,1,Marco Delgado added to seat 1.,113
+2026-09-29T13:00:00Z,guest_portal,Guest portal,guest,g-029,ord-pacific,guest.submitted,unnamed,submitted,1,Aiko Saito added to seat 2.,114
+2026-09-29T13:00:00Z,guest_portal,Guest portal,guest,g-030,ord-pacific,guest.submitted,unnamed,submitted,1,Deepa Nair added to seat 3.,115
+2026-09-29T13:00:00Z,guest_portal,Guest portal,guest,g-031,ord-pacific,guest.submitted,unnamed,submitted,1,Luis Ortega added to seat 4.,116
+2026-09-29T13:00:00Z,guest_portal,Guest portal,guest,g-032,ord-pacific,guest.submitted,unnamed,submitted,1,Hannah Goldfarb added to seat 5.,117
+2026-09-29T13:00:00Z,guest_portal,Guest portal,guest,g-033,ord-pacific,guest.submitted,unnamed,submitted,1,Tae-yang Park added to seat 6.,118
+2026-09-29T20:00:00Z,staff,Priya Raman,seat,seat-ord-pacific-1,ord-pacific,seat.reviewed,submitted,reviewed,1,Marco Delgado confirmed by AAFE.,119
+2026-09-29T20:00:00Z,staff,Priya Raman,seat,seat-ord-pacific-2,ord-pacific,seat.reviewed,submitted,reviewed,1,Aiko Saito confirmed by AAFE.,120
+2026-09-29T20:00:00Z,staff,Priya Raman,seat,seat-ord-pacific-3,ord-pacific,seat.reviewed,submitted,reviewed,1,Deepa Nair confirmed by AAFE.,121
+2026-09-29T20:00:00Z,staff,Priya Raman,seat,seat-ord-pacific-4,ord-pacific,seat.reviewed,submitted,reviewed,1,Luis Ortega confirmed by AAFE.,122

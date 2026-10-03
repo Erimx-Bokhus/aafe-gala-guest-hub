@@ -1,0 +1,3 @@
+id,event_id,guest_id,order_id,arrival_name,method,type,checked_in_by,note,checked_in_at
+ci-001,ev-2027,g-026,ord-lotus,,search,standard,Kenji Abe (volunteer),,2026-09-30T23:05:00Z
+ci-002,ev-2027,,ord-harborline,Daniel Fogel (guest of Harborline),exception,Sponsor seat was not previously named,Mei Lin Ortiz,Filling open Harborline seat 13; approved by relationship owner.,2026-09-30T23:12:00Z
