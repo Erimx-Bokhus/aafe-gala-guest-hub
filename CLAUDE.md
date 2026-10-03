@@ -21,10 +21,10 @@ technical partner.** Production hosting and real data are AAFE's decisions after
 1. **No real donor data, ever.** Fixtures and demo data are invented. Never commit real names, emails, or exports from AAFE.
 2. **No payment processing.** Do not integrate Stripe or store card, bank, or ACH details. Payment is recorded as method, date, status, and amount entered by staff or imported from Give Lively.
 3. **Secrets never in code.** `.env*` is gitignored; `.env.example` holds placeholders. Keys stay server-side; nothing secret in client bundles.
-4. **Staff approve every email before it sends.** No automatic sends, including sponsor portal links after a Give Lively purchase: queue a draft for approval.
+4. **Staff approve every email before it sends.** No automatic sends, including sponsor portal links after a Give Lively purchase: queue a draft for approval. A staff member who reviews and sends their own email (e.g. a relationship manager sending a comp ticket) counts as the approver; the send is logged.
 5. **AI is optional and off by default.** No AI call may receive email addresses, phone numbers, or payment info. Nothing AI-generated goes out without staff approval.
-6. **Sponsor links are secrets.** Tokens are random (at least 128 bits), stored hashed, scoped to one order, and expire at AAFE's deadline. Never use readable slugs like an organization name.
-7. **Record source and history.** Every guest record keeps its source (Give Lively import, staff entry, sponsor portal) and a change log. Staff corrections must survive the next import.
+6. **Sponsor links and QR e-tickets are secrets.** Tokens are random (at least 128 bits) and stored hashed. Sponsor links are scoped to one order and expire at AAFE's deadline; QR e-tickets are scoped to one seat and expire after gala night. Never use readable slugs like an organization name.
+7. **Record source and history.** Every guest record keeps its source (Give Lively import, staff entry, sponsor portal, check-in desk for walk-ins) and a change log. Staff corrections must survive the next import.
 8. **No AAFE logo or real event photos without AAFE's written approval.** Use placeholders until approval is recorded in `docs/decisions.md`.
 9. **Maintainability over cleverness.** AAFE's tech capacity is "pretty low." Prefer mainstream, well-documented choices a future partner can pick up.
 
@@ -36,7 +36,7 @@ Candidates on the table: React + TypeScript with Supabase Postgres (matches Nata
 Natalie built clickable concepts of the sponsor portal and staff app (shared in Slack Oct 2; source link pending). Treat them as the UI reference, not the scope: emails, seating chart, fee analytics, and Salesforce sync are trimmed per `docs/requirements.md`.
 
 ## Working in this repo
-- Branches: `main` is protected by review; each person works on their own branch (`aisling`, `natalie`, `cornell`, `antonin`) or a short feature branch off it (`aisling/import-engine`).
+- Branches: `main` is protected by review; each person works on their own branch (`aisling`, `natalie`, `cornell`, `antonin`) or a short feature branch off it (`aisling-import-engine`; a `name/...` prefix is impossible while a branch called `name` exists).
 - Merge `main` into your branch often; send work back as small pull requests.
 - Commit messages say what changed and why. Credit co-authors with `Co-authored-by:` trailers.
 
