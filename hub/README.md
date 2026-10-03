@@ -19,6 +19,18 @@ Edit the markdown file in `hub/docs/`. To add a page, add the file and one line 
 
 Put `<!-- team -->` on the line after a `##` heading to hide that section in client view.
 
+## Mark what changed
+
+Put one of these on the line after a heading to badge it:
+
+| Marker | Use it when |
+| --- | --- |
+| `<!-- new Oct 3 -->` | The page or section didn't exist before |
+| `<!-- updated Oct 3 -->` | Existing content had something added (rows, tasks, terms) |
+| `<!-- modified Oct 3 -->` | Existing content was changed or corrected (wording, numbers, a rule) |
+
+After the `#` title it marks the whole page; after a `##` heading it marks that section. The date is free text and optional. The sidebar shows the page's own marker, or else its most significant section marker (new, then modified, then updated); hover it to see which sections. Team-only sections don't count in client view. Badges stay until you delete the marker line.
+
 ## Custom blocks
 
 Write these as fenced code blocks with the name after the backticks.

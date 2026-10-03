@@ -1,4 +1,5 @@
 # Glossary
+<!-- updated Oct 3 -->
 
 Terms used across this hub, in plain language.
 
