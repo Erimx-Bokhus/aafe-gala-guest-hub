@@ -1,0 +1,5 @@
+id,year,name,event_date,doors_time,program_time,venue_name,venue_address,dress_code,guest_list_deadline,program_ad_deadline,status,is_synthetic
+ev-2024,2024,AAFE 50th Anniversary Gala,2024-05-30,6:00 PM,7:15 PM,Synthetic venue,"New York, NY",Cocktail,2024-05-10,2024-05-01,closed,1
+ev-2025,2025,AAFE 51st Annual Gala,2025-05-22,6:00 PM,7:15 PM,Synthetic venue,"New York, NY",Cocktail,2025-05-02,2025-04-25,closed,1
+ev-2026,2026,AAFE 52nd Annual Gala,2026-05-21,6:00 PM,7:15 PM,Synthetic venue,"New York, NY",Cocktail,2026-05-01,2026-04-24,closed,1
+ev-2027,2027,AAFE 53rd Annual Gala (demo),2027-05-20,6:00 PM,7:15 PM,"Demo Rooftop, Lower Manhattan","100 Demo Street, New York, NY 10004 (synthetic)",Cocktail attire,2027-04-23,2027-04-16,planning,1
