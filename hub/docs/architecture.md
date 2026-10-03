@@ -21,6 +21,7 @@ Outputs | Badge file — mail merge with table number; Follow-up drafts — staf
 | Repo | Team GitHub organization | Handed to AAFE, or the partner it chooses, at handoff |
 
 ## How matching works
+<!-- modified Oct 3 -->
 
 Each incoming row goes through the same checks, in order. The first check that answers yes decides what happens.
 
@@ -43,6 +44,7 @@ Matching is deliberately boring: plain rules anyone can audit, no AI deciding wh
 Nothing merges on a guess. Every import ends with a report such as "12 new, 3 updated, 40 unchanged, 2 need review, 1 rejected." A staff or sponsor correction always wins over incoming data, and the original value is kept in the history.
 
 ## Data model
+<!-- modified Oct 3 -->
 
 A draft until AAFE's spreadsheet column headers arrive. Arrows point from a field to the table it refers to.
 
