@@ -13,9 +13,12 @@ Format: date · decision · reason · decided by. Reopen only with new informati
 | 2026-10-01 | Maintainability is the deciding criterion for the stack | AAFE: tech capacity "pretty low," can't maintain very custom software | Client input |
 | 2026-10-01 | Staff approval required before any email is sent | Close relationships; client request | Client |
 | 2026-10-01 | Seating chart deprioritized; table number on badge is enough | Client: lower priority, staff assign seats | Client |
+| 2026-10-03 | A relationship manager sending their own comp ticket counts as staff approval; every send is logged | Client wants RMs to send comps themselves; RMs are staff | Aisling |
+| 2026-10-03 | Real AAFE staff contact details are redacted from repo docs | Hard rule 1 spirit; the repo will be handed on | Aisling |
+| 2026-10-03 | Nov 9 is the team's last work day; Nov 10 is Demo Day and handoff | Clarifies dates used across the docs | Aisling |
 | _pending_ | Stack and demo preview host | To decide week of Oct 5 | Team |
 | _pending_ | AI on/off, retention window, dietary data | See `data-handling.md` | AAFE |
 | _pending_ | Code and IP ownership after Nov 10, and the repo license | Open question for AAFE and Pursuit | AAFE + team |
-| _pending_ | Seats per sponsorship tier for 2027 | Flyer and call disagree ($25,000 = 10 vs 7 seats) | AAFE |
+| _pending_ | Seats per sponsorship tier for 2027 | Flyer and call disagree ($25,000 = 10 vs 7 seats); call says top tier ~20 seats, Natalie's research example uses 12 | AAFE |
 | _pending_ | Use of AAFE logo and event photos | Needs written approval | AAFE |
 | _pending_ | Which prototype features are MVP vs later | Natalie's concept (Oct 2) goes beyond agreed scope | Team |

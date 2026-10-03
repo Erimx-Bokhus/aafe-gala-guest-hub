@@ -76,7 +76,7 @@ commitments      (id, purchaser_id, package_id,
                   payment_date, owner_staff_id, logo_status, program_ad_status)
 
 seats            (id, commitment_id, attendee_id NULL,   -- NULL = unnamed seat
-                  table_no, badge_status, ticket_token, checked_in_at)
+                  table_no, badge_status, ticket_token_hash, checked_in_at)
 
 sponsor_links    (id, commitment_id, token_hash, expires_at)
 import_runs      (id, source, started_at, status, n_new, n_updated, n_review)
