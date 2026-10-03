@@ -57,10 +57,11 @@ Re-importing the same file changes nothing and reports every row as unchanged.
 
 ## 3. Rows to orders, guests, and seats
 
-- **Order → commitment.** One commitment per `transaction_id`, `source = givelively`,
-  `payment_method = givelively`, `payment_status = received`, amount = sum of the rows.
+- **Order → commitment and payment.** One commitment per `transaction_id`, `source = givelively`,
+  amount = sum of the rows, plus one `payments` row (`method = givelively`,
+  `reference = transaction_id`). The commitment's `payment_status` is derived from its payments.
 - **Package.** `ticket_type` is looked up in a staff-maintained table of ticket type → package
-  (Give Lively ticket names change between years; packages are per `gala_year`). A ticket type with
+  (Give Lively ticket names change between years; packages belong to one `gala_events` row). A ticket type with
   no mapping sends the whole order to review (`unknown_ticket_type`) and creates nothing until staff
   map it.
 - **Kind.** The package decides it: individual tickets → `ticket`, sponsorship packages → `sponsorship`.
@@ -73,8 +74,7 @@ Re-importing the same file changes nothing and reports every row as unchanged.
   attendee row with a name becomes (or matches) a separate contact linked to the seat. A purchaser is
   only seated if a row names them as an attendee.
 - **Seat source link.** Each seat created from a row stores that row's `source_record_id`, so the
-  next import of the same row updates the same seat. (Addition to `docs/data-model.md`: add
-  `source_record_id` to `seats` and `commitments`.)
+  next import of the same row updates the same seat (`source_record_id` in `docs/data-model.md`).
 - **Sponsor link.** A new sponsorship order with unnamed seats gets a `sponsor_links` row (random
   token, hashed) and a **draft** email in the approval queue. Nothing is sent by the import (rule 4).
 - **Relationship owner.** Not in the Give Lively data. Left blank and shown in the "no owner" view;
@@ -117,7 +117,7 @@ from the guest list.
   review (`double_booked`). Both seats keep the guest until staff choose; the other seat then
   returns to unnamed.
 - **Refund.** A row whose `status` is refunded, or an order whose amount drops to zero → commitment
-  `payment_status = refunded` (addition to the data model's enum), seats marked `cancelled`, and a
+  `payment_status = refunded`, seat `status = cancelled`, and a
   review item (`refund`) so the relationship owner can follow up. Nothing is deleted; badges and
   check-in skip cancelled seats.
 - **Amount change** (partial refund or edit in Give Lively) → amount updated, listed in the report.
@@ -152,7 +152,7 @@ Shown to staff at the end of every run and kept with the `import_runs` row:
 
 - File name, file hash, who ran it, start and finish time, status.
 - Counts: rows read, **new**, **updated**, **unchanged**, **rejected**, **sent to review**
-  (`n_new`, `n_updated`, `n_rejected`, `n_review` in `import_runs`; add `n_unchanged`).
+  (`n_new`, `n_updated`, `n_unchanged`, `n_rejected`, `n_review` in `import_runs`).
 - Rejected rows: row number and reason.
 - Review items created: reason code, row number, candidate.
 - Changes held by overrides: field, override value, old and new import values.
@@ -185,6 +185,10 @@ does not raise the same item on the next import.
 - Does the export carry refund status, or do refunds only show as a separate report?
 - Exact column headers, date format, and whether amounts include the donor-covered fee.
 - Are sponsorships bought on Give Lively exported in the same report as tickets?
+- **Which report:** Give Lively has a "Line Items (All)" purchase report (one row per purchase, with
+  the transaction ID; Natalie's prototype imports this one) and a per-ticket attendee report (guest
+  names). The likely answer is both: Line Items for commitments and payments, the attendee report for
+  seats and guests, joined on transaction ID. Confirm with the samples which columns each carries.
 
 ## 10. Test cases
 

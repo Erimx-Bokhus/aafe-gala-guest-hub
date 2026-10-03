@@ -9,7 +9,7 @@ The same guest arrives from several sources | 3 | 2 | Rule-based matching, a rev
 Sponsors don't use the form, as with the earlier Google Form | 2 | 3 | One link per sponsor showing their seat count; staff can enter names for them; staff-approved reminders | Antonin, Cornell
 Scope grows toward a full event platform | 2 | 3 | Finish the must-haves end to end before anything else; log every scope change | Team
 Weak internet at the venue during check-in | 2 | 3 | Check-in keeps working offline; a printed list is exported the day before | Antonin
-Give Lively's exports differ from the samples | 2 | 2 | Column mapping on import; every row that fails is listed with a reason | Aisling
+Give Lively's exports differ from the samples | 2 | 2 | Column mapping on import; every row that fails is listed with a reason; spec lists what to check first (per-ticket ID, refunds) | Aisling
 Wrong titles or affiliations on badges | 2 | 2 | The relationship owner reviews each badge before printing | Antonin
 Real guest data gets into the prototype | 1 | 3 | Invented data only; imports tested with synthetic files; no real exports shared with the team; secrets kept out of the code | Everyone
 Translations read awkwardly | 2 | 1 | AAFE staff review every translated string before launch | Natalie
