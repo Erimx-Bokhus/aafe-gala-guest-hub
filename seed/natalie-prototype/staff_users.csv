@@ -1,0 +1,6 @@
+id,name,email,role
+st-mei,Mei Lin Ortiz,mei.ortiz@aafe-demo.example.org,gala_admin
+st-daniel,Daniel Seo,daniel.seo@aafe-demo.example.org,relationship_manager
+st-priya,Priya Raman,priya.raman@aafe-demo.example.org,relationship_manager
+st-grace,Grace Huang,grace.huang@aafe-demo.example.org,relationship_manager
+st-kenji,Kenji Abe (volunteer),kenji.volunteer@aafe-demo.example.org,check_in_volunteer

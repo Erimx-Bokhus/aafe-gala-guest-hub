@@ -1,0 +1,28 @@
+id,event_id,sponsor_id,tier_id,source,commitment_amount,status,portal_token,portal_token_expires_at,portal_link_sent_at,guest_list_deadline,logo_status,program_ad_status,givelively_order_ref,salesforce_opportunity_id,internal_notes,created_at,updated_at
+ord-harborline,ev-2027,sp-harborline,platinum,ach_direct,50000,paid,hb-7f3k9q2m,2027-05-21T04:00:00Z,2026-08-14T16:05:00Z,2027-04-23,approved,pending,,,Lead sponsor. CEO may bring board members; confirm two weeks out.,2026-08-01T14:00:00Z,2026-08-01T14:00:00Z
+ord-meridian,ev-2027,sp-meridian,gold,wire,25000,partially_paid,mf-2p8x4r1d,2027-05-21T04:00:00Z,2026-09-02T15:10:00Z,2027-04-23,received,received,,,Pledge by email; second installment expected Q1 2027.,2026-08-20T14:00:00Z,2026-08-20T14:00:00Z
+ord-acme,ev-2027,sp-acme,silver,check,15000,pledged,acme-community-partners,2027-05-21T04:00:00Z,2026-09-05T14:20:00Z,2027-04-23,pending,received,,,Check expected after their October board meeting. Jordan prefers email.,2026-09-05T14:00:00Z,2026-09-05T14:00:00Z
+ord-northgate,ev-2027,sp-northgate,bronze,givelively,10000,paid,ng-5t1w8e3z,2027-05-21T04:00:00Z,2026-09-18T20:30:00Z,2027-04-23,pending,pending,GL-50555580,,Bought on Give Lively; only purchaser name came through.,2026-09-18T19:42:00Z,2026-09-18T19:42:00Z
+ord-lotus,ev-2027,sp-lotus,champion,givelively,7000,paid,ll-9c2v6b4n,2027-05-21T04:00:00Z,2026-07-30T13:30:00Z,2027-04-23,approved,not_required,GL-18977634,,Complete. Designing party-favor packaging in-kind.,2026-07-30T13:15:00Z,2026-07-30T13:15:00Z
+ord-pacific,ev-2027,sp-pacific,silver,givelively,15000,paid,pr-3m7h1k5j,2027-05-21T04:00:00Z,2026-09-22T17:30:00Z,2027-04-23,received,pending,GL-44185988,,"Paid by bank transfer on Give Lively (0.8% fee, capped at $5).",2026-09-22T17:00:00Z,2026-09-22T17:00:00Z
+ord-bowery,ev-2027,sp-bowery,friend,givelively,2500,paid,bd-8q4s2x7c,2027-05-21T04:00:00Z,2026-09-24T12:30:00Z,2027-04-23,pending,not_required,GL-97757863,,,2026-09-24T12:00:00Z,2026-09-24T12:00:00Z
+ord-queens,ev-2027,sp-queens,supporter,givelively,1000,paid,qt-1z6y3u9i,2027-05-21T04:00:00Z,2026-09-25T12:30:00Z,2027-04-23,received,not_required,GL-44234229,,,2026-09-25T12:00:00Z,2026-09-25T12:00:00Z
+ord-dumpling,ev-2027,sp-dumpling,full_page_ad,staff_entry,1000,invoice_sent,,,,2027-04-23,not_required,pending,,,Advertising only — no seats.,2026-09-12T12:00:00Z,2026-09-12T12:00:00Z
+ord-okafor,ev-2027,sp-okafor,corporate_ticket,givelively,500,paid,co-4r8t2y6u,2027-05-21T04:00:00Z,2026-09-25T21:30:00Z,2027-04-23,not_required,not_required,GL-67081458,,,2026-09-25T21:00:00Z,2026-09-25T21:00:00Z
+ord-alvarez,ev-2027,sp-alvarez,community_ticket,givelively,250,paid,ma-7u3i9o1p,2027-05-21T04:00:00Z,2026-09-26T21:30:00Z,2027-04-23,not_required,not_required,GL-77907539,,,2026-09-26T21:00:00Z,2026-09-26T21:00:00Z
+ord-kimfam,ev-2027,sp-kimfam,corporate_ticket,check,1000,paid,kf-6y2t8r4e,2027-05-21T04:00:00Z,2026-09-21T15:00:00Z,2027-04-23,not_required,not_required,,,,2026-09-20T15:00:00Z,2026-09-20T15:00:00Z
+ord-tanaka,ev-2027,sp-tanaka,community_ticket,givelively,250,paid,kt-2w5e8r1t,2027-05-21T04:00:00Z,2026-09-27T23:30:00Z,2027-04-23,not_required,not_required,GL-40667343,,,2026-09-27T23:00:00Z,2026-09-27T23:00:00Z
+ord-brooks,ev-2027,sp-brooks,community_ticket,givelively,250,paid,ab-9o4i7u2y,2027-05-21T04:00:00Z,2026-09-28T01:30:00Z,2027-04-23,not_required,not_required,GL-31006419,,,2026-09-28T01:00:00Z,2026-09-28T01:00:00Z
+ord-rel,ev-2027,sp-aafe-rel,comp_relationship,comp,0,comp,,,,2027-04-23,not_required,not_required,,,Complimentary relationship guests. QR invitations emailed by staff.,2026-09-01T12:00:00Z,2026-09-01T12:00:00Z
+ord-24-harb,ev-2024,sp-harborline,gold,check,25000,paid,,,,,approved,approved,,006DEMO4-HARB,Historical (synthetic).,2024-04-02T15:00:00Z,2024-04-02T15:00:00Z
+ord-25-harb,ev-2025,sp-harborline,gold,ach_direct,25000,paid,,,,,approved,approved,,006DEMO5-HARB,Historical (synthetic).,2025-03-28T15:00:00Z,2025-03-28T15:00:00Z
+ord-26-harb,ev-2026,sp-harborline,platinum,ach_direct,50000,paid,,,,,approved,approved,,006DEMO6-HARB,Historical (synthetic).,2026-03-30T15:00:00Z,2026-03-30T15:00:00Z
+ord-24-meri,ev-2024,sp-meridian,gold,wire,25000,paid,,,,,approved,approved,,006DEMO4-MERI,Historical (synthetic).,2024-04-10T15:00:00Z,2024-04-10T15:00:00Z
+ord-26-meri,ev-2026,sp-meridian,gold,wire,25000,paid,,,,,approved,approved,,006DEMO6-MERI,Historical (synthetic).,2026-04-08T15:00:00Z,2026-04-08T15:00:00Z
+ord-25-acme,ev-2025,sp-acme,bronze,check,10000,paid,,,,,approved,approved,,006DEMO5-ACME,Historical (synthetic).,2025-04-14T15:00:00Z,2025-04-14T15:00:00Z
+ord-26-acme,ev-2026,sp-acme,silver,check,15000,paid,,,,,approved,approved,,006DEMO6-ACME,Historical (synthetic).,2026-04-20T15:00:00Z,2026-04-20T15:00:00Z
+ord-25-lotus,ev-2025,sp-lotus,friend,givelively,2500,paid,,,,,approved,not_required,,006DEMO-LOTUS,Historical (synthetic).,2025-04-01T15:00:00Z,2025-04-01T15:00:00Z
+ord-26-lotus,ev-2026,sp-lotus,champion,givelively,7000,paid,,,,,approved,not_required,,006DEMO-LOTUS,Historical (synthetic).,2026-04-03T15:00:00Z,2026-04-03T15:00:00Z
+ord-26-north,ev-2026,sp-northgate,supporter,givelively,1000,paid,,,,,approved,not_required,,006DEMO-NORTH,Historical (synthetic).,2026-04-22T15:00:00Z,2026-04-22T15:00:00Z
+ord-24-kim,ev-2024,sp-kimfam,champion,check,7000,paid,,,,,approved,not_required,,006DEMO24-KIM,Historical (synthetic).,2024-05-01T15:00:00Z,2024-05-01T15:00:00Z
+ord-26-kim,ev-2026,sp-kimfam,friend,check,2500,paid,,,,,approved,not_required,,006DEMO26-KIM,Historical (synthetic).,2026-04-29T15:00:00Z,2026-04-29T15:00:00Z
