@@ -1,0 +1,46 @@
+# Data and AI
+
+The prototype uses invented data only. This page sets out what a production version would store and how it would treat AI, so AAFE can review it with its AI policy; the policies themselves are AAFE's decisions.
+
+1. **No payment processing.** Payments stay in Give Lively and Stripe. The tool never stores card or bank details, and the prototype does not connect to Stripe.
+2. **No real donor data during the capstone.** Everything through Demo Day uses invented names.
+3. **AI is optional and supervised.** It sees the fewest fields possible, and a staff member approves everything before it reaches a sponsor.
+4. **AAFE decides retention.** Guest data can be exported for Salesforce and deleted after the gala.
+
+## What the tool stores
+
+| Stores | Never stores |
+| --- | --- |
+| Purchaser or sponsor contact: name, title, organization, email, phone | Card numbers, bank or ACH details, check images |
+| Attendee name, title, organization, optional email | Stripe or Give Lively logins |
+| Package and seat count | Sponsor passwords (they use private links) |
+| Payment method, date, and status | |
+| Relationship owner, logo and program-ad status | |
+| Table number, badge status, check-in time | |
+| Source of each record and a history of every change | |
+
+**Optional, if AAFE chooses:** dietary and accessibility needs, shown only to staff who need them and deleted after the event.
+
+## AI
+
+- **Where it could help:** drafting follow-up emails, and explaining why two records look like the same person.
+- **What it never receives:** email addresses, phone numbers, or payment information.
+- **Matching works without AI.** The rules are plain and auditable; AI explanations sit behind an admin switch, off by default.
+- **Provider terms:** a paid service that doesn't train on submitted data, confirmed in writing before any real data is used.
+
+## Access
+
+- The prototype uses demo accounts with three roles: admin, staff, and check-in volunteer. A production version would use AAFE's Google accounts with MFA.
+- Sponsor links open only that sponsor's purchase and expire at AAFE's deadline.
+- Every edit records who made it and when.
+- Data is encrypted in transit and at rest; credentials live in the host's secrets store, never in the code.
+
+## Decisions for AAFE, if the tool is adopted
+
+- [ ] AI on or off
+- [ ] Delete contact details 60 days after the gala, or keep them
+- [ ] Collect dietary needs in the tool, or not
+- [ ] Who holds admin access
+- [ ] Share AAFE's AI acceptable-use policy with the team
+
+Full draft for AAFE: [Guest data and AI handling](https://claude.ai/code/artifact/1d0571f4-d854-4e4a-90df-b60a62de28ce).
