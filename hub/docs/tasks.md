@@ -26,6 +26,9 @@ The live tracker, with owners and status dropdowns, is the [Findings, Build Plan
 - [ ] Follow up with AAFE if materials haven't arrived — Natalie
 - [ ] Check AAFE's sample exports against the import spec (per-ticket ID, refunds, headers) — Aisling
 - [ ] Confirm 2027 seats per sponsorship tier with AAFE — Natalie
+- [ ] Share the prototype source (seed.sql, seed.json) — Natalie
+- [ ] Ask AAFE for written approval of the logo and event photos for Demo Day; swap the name-badge photo — Natalie
+- [ ] Seed loader: Natalie's data with random hashed tokens and draft-only emails — Aisling
 
 ## Week of October 12
 
