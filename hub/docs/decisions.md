@@ -4,6 +4,9 @@ Every decision with its reason and what would reopen it, newest first. Nothing h
 
 | Date | Decision | Why | Revisit if | Owner |
 | --- | --- | --- | --- | --- |
+| Oct 3 | A relationship manager sending their own comp ticket counts as staff approval; every send is logged | Client wants RMs to send comps themselves; RMs are staff | AAFE wants a second approver | Aisling |
+| Oct 3 | Real AAFE staff contact details are redacted from repo docs | The repo will be handed on | — | Aisling |
+| Oct 3 | Nov 9 is the team's last work day; Nov 10 is Demo Day and handoff | Clarifies dates used across the docs | Pursuit moves Demo Day | Aisling |
 | Oct 1 | We deliver a prototype with invented data, code, and documentation; production hosting is not selected during the capstone | AAFE should decide on adoption, and on a technical partner, after reviewing the finished prototype | AAFE asks the team to deploy for production | Natalie |
 | Oct 1 | Stripe is left out of the prototype; read-only payment confirmation is documented as a future option | With invented data there is nothing real to confirm | AAFE adopts the tool and wants it | Team |
 | Oct 1 | Matching uses plain rules (Give Lively ID, then email, then name and organization); AI explanations behind an admin switch, off by default | AAFE's draft AI policy keeps guest names out of AI tools; rules are easier to audit | AAFE approves AI use in writing | Aisling |

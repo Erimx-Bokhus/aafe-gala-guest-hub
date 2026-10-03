@@ -5,6 +5,8 @@
 
 # Data exports: never commit real AAFE data
 *.csv
+*.xlsx
+*.xls
 !**/fixtures/**/*.csv
 !**/seed/**/*.csv
 exports/
