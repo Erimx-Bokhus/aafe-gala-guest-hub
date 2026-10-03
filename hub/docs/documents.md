@@ -12,6 +12,7 @@ Everything the team has produced or collected, in one place. Living documents ar
 | [Future Hosting Notes](https://claude.ai/code/artifact/f74b0de5-c123-40b4-a9fd-c60be5297c41) | Engineering notes on future hosting paths, revised after Natalie's critique; feeds the production-readiness notes | Internal |
 
 ## Research by Natalie Walker
+<!-- updated Oct 3 -->
 
 | Document | What it covers |
 | --- | --- |
@@ -27,6 +28,7 @@ Everything the team has produced or collected, in one place. Living documents ar
 Repo copies: `docs/research/`. Where this research differs from later discovery or decisions (embedded form, Stripe checkout, seating chart, seat counts, Nov 9), `docs/research/README.md` lists the current position.
 
 ## Call records
+<!-- modified Oct 3 -->
 
 | Record | Where |
 | --- | --- |
@@ -43,6 +45,7 @@ Repo copies: `docs/research/`. Where this research differs from later discovery 
 | Code repository | [github.com/Erimx-Bokhus/aafe-gala-guest-hub](https://github.com/Erimx-Bokhus/aafe-gala-guest-hub) (private; team members invited) |
 
 ## Repo handoff package
+<!-- updated Oct 3 -->
 
 The starter files for the code repository: `CLAUDE.md` (project rules for Claude Code), `README.md`, `KICKOFF_PROMPT.md`, and `docs/` with requirements, decisions, data model, data handling, and research. This hub sits beside them in `hub/`.
 
@@ -55,6 +58,7 @@ The starter files for the code repository: `CLAUDE.md` (project rules for Claude
 | `.github/workflows/gitleaks.yml` | Secret scan on every push and pull request |
 
 ## Working in the repo
+<!-- new Oct 3 -->
 <!-- team -->
 
 - `main` only changes through pull requests. Aisling is the repo admin and reviews and merges every pull request.

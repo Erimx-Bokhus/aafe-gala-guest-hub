@@ -90,6 +90,11 @@ mark{background:var(--mark);color:inherit;border-radius:2px;padding:0 1px}
 .nav a{display:grid;grid-template-columns:26px 1fr auto;align-items:baseline;gap:4px;padding:6px 10px;border-radius:7px;text-decoration:none;color:var(--soft);font:500 14px/1.35 var(--f-ui)}
 .nav a .n{font:500 12px/1 var(--f-display);color:var(--faint);font-variant-numeric:tabular-nums}
 .nav a .tag{font:600 9.5px/1 var(--f-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--faint);border:1px solid var(--rule-strong);border-radius:4px;padding:3px 4px}
+.nav a .tags{display:flex;gap:4px;align-items:baseline}
+/* change markers: <!-- new|updated|modified [date] --> under a heading; label always in text, color is a second cue */
+.chg{--c:var(--accent);display:inline-block;vertical-align:middle;font:600 9.5px/1 var(--f-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--c);border:1px solid var(--c);border-radius:4px;padding:3px 5px;white-space:nowrap}
+.chg.k-updated{--c:var(--ok)} .chg.k-modified{--c:var(--k-review)}
+.doc h1 .chg,.doc h2 .chg{margin-left:10px;position:relative;top:-3px;font-size:10px;padding:4px 6px}
 .nav a:hover{background:var(--accent-wash);color:var(--ink)}
 .nav a[aria-current="page"]{background:var(--surface);color:var(--ink);box-shadow:inset 3px 0 0 var(--accent)}
 .nav a[aria-current="page"] .n{color:var(--accent)}
@@ -981,9 +986,24 @@ function sectionize(container){
   for (const k of kids){
     if (k.nodeName === 'H2'){ s = document.createElement('section'); s.className = 'slide'; container.appendChild(s); }
     if (k.nodeType === 8 && k.data.trim() === 'team'){ s.dataset.team = ''; continue; }
+    const cm = k.nodeType === 8 && k.data.trim().match(/^(new|updated|modified)\b\s*(.*)$/i);
+    if (cm){ s.dataset.mark = cm[1].toLowerCase(); s.dataset.markOn = cm[2].trim(); continue; }
     s.appendChild(k);
   }
   return [...container.querySelectorAll(':scope > .slide')];
+}
+
+/* ============ change markers ============ */
+const CHG = {new:'New', updated:'Updated', modified:'Modified'}, CHG_RANK = {new:3, modified:2, updated:1};
+function chgTag(kind, on){ const t = document.createElement('span'); t.className = `chg k-${kind}`;
+  t.textContent = CHG[kind] + (on ? ` · ${on}` : ''); return t; }
+/* page badge: the page's own marker, else its most significant section marker (hidden team sections skipped in client view) */
+function pageMark(id){
+  const m = (docs[id] && docs[id].marks || []).filter(x => !(client && x.team));
+  const own = m.find(x => x.page); if (own) return {kind: own.kind, tip: `${CHG[own.kind]} page${own.on ? ' · ' + own.on : ''}`};
+  if (!m.length) return null;
+  const top = m.reduce((a, b) => CHG_RANK[b.kind] > CHG_RANK[a.kind] ? b : a);
+  return {kind: top.kind, tip: m.map(x => `${CHG[x.kind]}: ${x.label}`).join(' · ')};
 }
 
 /* ============ nav ============ */
@@ -992,7 +1012,9 @@ function buildNav(){
   const vis = visiblePages(), groups = [...new Set(vis.map(p => p.group))];
   $('#nav').innerHTML = groups.map(g => `<div class="nav-group"><div class="nav-label">${g}</div>${
     vis.filter(p => p.group === g).map(p => { const i = vis.indexOf(p);
-      return `<a href="#${p.id}" data-id="${p.id}"><span class="n">${pad(i+1)}</span><span>${esc(p.title)}</span>${p.team ? '<span class="tag">Team</span>' : ''}</a><ul class="toc" data-toc="${p.id}" hidden></ul>`; }).join('')
+      const mk = pageMark(p.id);
+      const tags = (mk ? `<span class="chg k-${mk.kind}" title="${esc(mk.tip)}">${CHG[mk.kind]}</span>` : '') + (p.team ? '<span class="tag">Team</span>' : '');
+      return `<a href="#${p.id}" data-id="${p.id}"><span class="n">${pad(i+1)}</span><span>${esc(p.title)}</span>${tags ? `<span class="tags">${tags}</span>` : ''}</a><ul class="toc" data-toc="${p.id}" hidden></ul>`; }).join('')
   }</div>`).join('');
   document.querySelectorAll('[data-mode]').forEach(b => b.setAttribute('aria-pressed', String((b.dataset.mode === 'client') === client)));
   document.body.classList.toggle('client', client);
@@ -1022,7 +1044,9 @@ async function load(id){
     const secs = sectionize(tmp);
     tmp.querySelectorAll('[data-notes]').forEach(n => n.remove());
     const textOf = list => list.map(s => s.textContent).join(' ').replace(/\s+/g,' ').trim();
-    docs[id] = {md, html, text: textOf(secs), pub: textOf(secs.filter(s => !('team' in s.dataset)))};
+    const marks = secs.filter(s => s.dataset.mark).map(s => ({kind: s.dataset.mark, on: s.dataset.markOn,
+      page: s === secs[0], team: 'team' in s.dataset, label: (s.querySelector('h2') || {}).textContent || ''}));
+    docs[id] = {md, html, marks, text: textOf(secs), pub: textOf(secs.filter(s => !('team' in s.dataset)))};
   } catch (e) { docs[id] = {error: String(e.message || e)}; }
   return docs[id];
 }
@@ -1063,6 +1087,7 @@ function decorate(doc, id){
     b.setAttribute('aria-label', `Copy link to ${h.textContent}`); b.dataset.copy = h.id; h.prepend(b);
     if ('team' in h.closest('.slide').dataset){ const t = document.createElement('span'); t.className = 'team-tag'; t.textContent = 'Team only'; h.append(t); }
   });
+  doc.querySelectorAll('.slide[data-mark]').forEach(sl => { const h = sl.querySelector('h2,h1'); if (h) h.append(chgTag(sl.dataset.mark, sl.dataset.markOn)); });
   doc.querySelectorAll('.slide[data-team]').forEach(s => s.setAttribute('data-team', ''));
   doc.querySelectorAll('a[href]').forEach(a => { if (/^https?:/.test(a.getAttribute('href'))) { a.target = '_blank'; a.rel = 'noopener'; } });
   // checkboxes
@@ -1314,7 +1339,7 @@ async function connectShared(){
 (() => { const {wantClient} = parseHash(); if (wantClient){ client = true; store.set('aafe-hub-client', true); } })();
 buildNav();
 { const {page, section} = parseHash(); show(page || 'overview', {section}); }
-Promise.all(PAGES.map(p => load(p.id))).then(() => { const q = $('#q').value; if (q) runSearch(q); });
+Promise.all(PAGES.map(p => load(p.id))).then(() => { buildNav(); updateNav(); const q = $('#q').value; if (q) runSearch(q); });
 connectShared();
 })();
 </script>
