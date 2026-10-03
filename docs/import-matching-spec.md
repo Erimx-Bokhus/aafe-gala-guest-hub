@@ -73,8 +73,7 @@ Re-importing the same file changes nothing and reports every row as unchanged.
   attendee row with a name becomes (or matches) a separate contact linked to the seat. A purchaser is
   only seated if a row names them as an attendee.
 - **Seat source link.** Each seat created from a row stores that row's `source_record_id`, so the
-  next import of the same row updates the same seat. (Addition to `docs/data-model.md`: add
-  `source_record_id` to `seats` and `commitments`.)
+  next import of the same row updates the same seat (`source_record_id` in `docs/data-model.md`).
 - **Sponsor link.** A new sponsorship order with unnamed seats gets a `sponsor_links` row (random
   token, hashed) and a **draft** email in the approval queue. Nothing is sent by the import (rule 4).
 - **Relationship owner.** Not in the Give Lively data. Left blank and shown in the "no owner" view;
@@ -117,7 +116,7 @@ from the guest list.
   review (`double_booked`). Both seats keep the guest until staff choose; the other seat then
   returns to unnamed.
 - **Refund.** A row whose `status` is refunded, or an order whose amount drops to zero → commitment
-  `payment_status = refunded` (addition to the data model's enum), seats marked `cancelled`, and a
+  `payment_status = refunded`, seats marked `cancelled`, and a
   review item (`refund`) so the relationship owner can follow up. Nothing is deleted; badges and
   check-in skip cancelled seats.
 - **Amount change** (partial refund or edit in Give Lively) → amount updated, listed in the report.
@@ -152,7 +151,7 @@ Shown to staff at the end of every run and kept with the `import_runs` row:
 
 - File name, file hash, who ran it, start and finish time, status.
 - Counts: rows read, **new**, **updated**, **unchanged**, **rejected**, **sent to review**
-  (`n_new`, `n_updated`, `n_rejected`, `n_review` in `import_runs`; add `n_unchanged`).
+  (`n_new`, `n_updated`, `n_unchanged`, `n_rejected`, `n_review` in `import_runs`).
 - Rejected rows: row number and reason.
 - Review items created: reason code, row number, candidate.
 - Changes held by overrides: field, override value, old and new import values.
