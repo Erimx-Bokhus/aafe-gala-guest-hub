@@ -21,7 +21,7 @@ Everything the team has produced or collected, in one place. Living documents ar
 | Hosting Options and Costs: Critique (Oct 1) | Review of the hosting draft: estimates, verified facts, operating requirements, and decision framing |
 | Future Deployment Note | The one-page note for AAFE's handoff package: production hosting is intentionally not selected during the capstone |
 
-Repo copies: `docs/research/`.
+Repo copies: `docs/research/`. Where this research differs from later discovery or decisions (embedded form, Stripe checkout, seating chart, seat counts, Nov 9), `docs/research/README.md` lists the current position.
 
 ## Call records
 
@@ -42,6 +42,19 @@ Repo copies: `docs/research/`.
 ## Repo handoff package
 
 The starter files for the code repository: `CLAUDE.md` (project rules for Claude Code), `README.md`, `KICKOFF_PROMPT.md`, and `docs/` with requirements, decisions, data model, data handling, and research. This hub sits beside them in `hub/`.
+
+| Repo document | What it is |
+| --- | --- |
+| `docs/import-matching-spec.md` | How Give Lively rows become orders, guests, and seats; matching; review queue; corrections; import report; 22 test cases. Summarized on [Import and matching](#import) |
+| `docs/seed-data-requirements.md` | The invented records and two Give Lively export files the tests need |
+| `.github/workflows/gitleaks.yml` | Secret scan on every push and pull request |
+
+## Working in the repo
+<!-- team -->
+
+- `main` only changes through pull requests. Aisling is the repo admin and reviews and merges every pull request.
+- Each person works on their own branch (`aisling`, `natalie`, `cornell`, `antonin`) or a feature branch named `name-topic`, such as `aisling-import-engine`. A `name/topic` branch can't be created while a branch called `name` exists.
+- Every push and pull request is scanned for secrets. Spreadsheet and CSV exports are blocked by `.gitignore`, except invented ones under `seed/` or `fixtures/`.
 
 ## Credits
 

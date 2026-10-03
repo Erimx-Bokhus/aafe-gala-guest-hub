@@ -28,18 +28,19 @@ Each incoming row goes through the same checks, in order. The first check that a
 start: A row arrives from Give Lively, the sponsor form, or staff entry
 !Has a name and a source? | Rejected, with the reason in the import report | reject
 Same Give Lively ID as a guest we have? | Update that guest | update
-Same email address? | Update that guest | update
-Close match on name and organization? | Review queue: staff confirm or keep separate | review
+Same email and same last name? | Update that guest | update
+Same name and same organization? | Update that guest | update
+Close but not certain (shared email, names swapped, other organization)? | Review queue: staff confirm or keep separate | review
 else | Create a new guest | new
 ```
 
-"Bob Smith, Acme" and "Robert Smith, Acme Corp" is a close match: it waits for a person instead of merging.
+"Wei Chen" and "Chen Wei" at the same organization is a close match: it waits for a person instead of merging. Full rules, the review queue, and the test cases: [Import and matching](#import).
 
 ```notes
 Matching is deliberately boring: plain rules anyone can audit, no AI deciding who is who. That matters because AAFE's draft AI policy keeps names out of AI tools.
 ```
 
-Nothing merges on a guess. Every import ends with a report such as "12 new, 3 updated, 2 need review, 1 rejected." A staff correction always wins over incoming data, and the original value is kept in the history.
+Nothing merges on a guess. Every import ends with a report such as "12 new, 3 updated, 40 unchanged, 2 need review, 1 rejected." A staff or sponsor correction always wins over incoming data, and the original value is kept in the history.
 
 ## Data model
 
@@ -47,16 +48,16 @@ A draft until AAFE's spreadsheet column headers arrive. Arrows point from a fiel
 
 ```erd
 contacts @1,1 | first_name; last_name; title; organization; email; phone
-commitments @2,1 | purchaser_id → contacts; package_id → packages; kind: ticket, sponsorship, comp; source; payment_method; payment_status; owner_staff_id → staff
+commitments @2,1 | purchaser_id → contacts; package_id → packages; kind: ticket, sponsorship, comp; source; payment_method; payment_status; owner_staff_id → staff; source_record_id → source_records
 packages @3,1 | gala_year; name; tier; seat_count; amount_cents
 staff @1,2 | name; email; role: admin, staff, check-in
-seats @2,2 | commitment_id → commitments; attendee_id → contacts (empty = open seat); table_no; badge_status; checked_in_at
+seats @2,2 | commitment_id → commitments; attendee_id → contacts (empty = open seat); table_no; badge_status; ticket_token_hash; checked_in_at; source_record_id → source_records
 sponsor_links @3,2 | commitment_id → commitments; token_hash; expires_at
 --- Import and history
-import_runs | source; status; n_new; n_updated; n_review
+import_runs | source; status; n_new; n_updated; n_unchanged; n_rejected; n_review
 source_records | import_run_id → import_runs; source; source_id; raw
 review_queue | source_record_id → source_records; candidate_contact_id → contacts; score; resolution
-field_overrides | entity; field; value; set_by → staff
+field_overrides | entity; field; value; set_by (staff or sponsor link)
 audit_log | actor → staff; entity; action; before; after
 ```
 
@@ -70,16 +71,19 @@ packages         (id, gala_year, name, tier, seat_count, amount_cents)
 
 commitments      (id, purchaser_id, package_id,
                   kind            -- ticket | sponsorship | comp
-                  source          -- givelively | staff_entry | sponsor_form
+                  source          -- givelively | staff_entry | sponsor_form | checkin (walk-in)
                   payment_method  -- givelively | check | ach | none
-                  payment_status  -- pledged | received | n/a
-                  payment_date, owner_staff_id, logo_status, program_ad_status)
+                  payment_status  -- pledged | received | refunded | n/a
+                  payment_date, owner_staff_id, logo_status, program_ad_status,
+                  source_record_id)
 
 seats            (id, commitment_id, attendee_id NULL,   -- NULL = unnamed seat
-                  table_no, badge_status, ticket_token_hash, checked_in_at)
+                  table_no,
+                  badge_status    -- draft | owner_reviewed | printed | cancelled
+                  ticket_token_hash, checked_in_at, source_record_id)
 
 sponsor_links    (id, commitment_id, token_hash, expires_at)
-import_runs      (id, source, started_at, status, n_new, n_updated, n_review)
+import_runs      (id, source, started_at, status, n_new, n_updated, n_unchanged, n_rejected, n_review)
 source_records   (id, import_run_id, source, source_id, raw, UNIQUE (source, source_id))
 review_queue     (id, source_record_id, candidate_contact_id, score, resolution)
 field_overrides  (id, entity, entity_id, field, value, set_by, set_at)

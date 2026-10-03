@@ -9,20 +9,21 @@ Audit log | A record of every change: who made it, when, and the before and afte
 Badge mail merge | The spreadsheet file used to print name tags, one row per guest, including the table number.
 Comp | A complimentary ticket, for example for an elected official or community partner. Give Lively can't issue them.
 Commitment | One purchase or pledge: a ticket, a sponsorship, or a comp. It holds a package and its seats.
-Correction that survives re-import | A staff edit (a "field override") that the next Give Lively import won't overwrite.
+Correction that survives re-import | A staff or sponsor edit (a "field override") that the next Give Lively import won't overwrite. Staff edits win over sponsor edits, which win over Give Lively.
 Donation feed | A read-only JSON feed of Give Lively donations, switched on by creating a Zapier key. Not an API.
 Give Lively | AAFE's free fundraising platform for tickets, donations, and tax receipts. The tool reads from it and never replaces it.
-Import report | The summary after each import: new, updated, needs review, and rejected rows, each with a reason.
+Import report | The summary after each import: new, updated, unchanged, needs review, and rejected rows, each with a reason, plus any Give Lively changes held back by a correction.
 Line Items report | Give Lively's purchase report. Each line carries the Stripe charge ID.
-Match | Deciding whether an incoming row is a guest we already have. Checked by Give Lively ID, then email, then name and organization.
+Match | Deciding whether an incoming row is a guest we already have. Checked by Give Lively ID, then email with last name, then name and organization. Anything less certain goes to review.
 Next.js | The web framework we propose. Widely used, with TypeScript, so most web developers can maintain it.
 Open seat | A seat in a package with no guest named yet. The dashboard groups these by relationship owner.
 P0, P1, P2 | Priority. P0 must work by Demo Day; P1 should; P2 is a stretch goal.
-Package | A sponsorship or ticket tier and how many seats it includes, such as $25,000 with 7 seats.
+Package | A sponsorship or ticket tier and how many seats it includes, such as $25,000 with 7 seats (2027 counts to be confirmed by AAFE).
 Postgres | The database we propose: standard, free, and offered by every major host.
 Relationship owner | The AAFE staff member responsible for a guest or sponsor, and the one who follows up.
 Render | A hosting company. One option a future partner could consider, at an estimated base of about $13 a month.
 Demo preview | The temporary copy of the prototype the team runs for Demo Day, with invented data only. Not a production system.
+Gitleaks | A scanner that checks every change pushed to the repo for passwords and keys before it can merge.
 Production-readiness notes | The handoff section listing what a future partner must settle before real data is used: hosting, backups, access, support, and gala-night fallback.
 Restricted key | A Stripe key limited to reading payment status. Not used in the prototype; listed as a future option.
 Review queue | Close matches waiting for a staff member to confirm or keep separate.
