@@ -1,7 +1,7 @@
 # Discovery call findings — October 1, 2026
 
 Attendees: AAFE's project contact, AAFE's gala lead (AAFE); Natalie Walker, Aisling Leiva-Davila, Antonin Lesov,
-Cornell Robertson (team); Avni Nahar (Pursuit). Full transcript: `transcripts/2026-10-01-discovery-call.txt`.
+Cornell Robertson (team); Avni Nahar (Pursuit). The full transcript is kept out of the repo (it is the client's own words); ask the team for access.
 AAFE's gala lead ran the guest list for the 2026 gala (AAFE's project contact was on leave).
 
 ## Top priority
