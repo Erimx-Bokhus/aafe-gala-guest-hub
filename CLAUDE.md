@@ -36,7 +36,7 @@ Candidates on the table: React + TypeScript with Supabase Postgres (matches Nata
 Natalie built clickable concepts of the sponsor portal and staff app (shared in Slack Oct 2; source link pending). Treat them as the UI reference, not the scope: emails, seating chart, fee analytics, and Salesforce sync are trimmed per `docs/requirements.md`.
 
 ## Working in this repo
-- Branches: `main` is protected by review; each person works on their own branch (`aisling`, `natalie`, `cornell`, `antonin`) or a short feature branch off it (`aisling-import-engine`; a `name/...` prefix is impossible while a branch called `name` exists).
+- Branches: `main` is protected by review. Aisling is the repo admin: every pull request is reviewed and merged by Aisling (`nessaisling-lab` or `aislingld-pursuit`); each person works on their own branch (`aisling`, `natalie`, `cornell`, `antonin`) or a short feature branch off it (`aisling-import-engine`; a `name/...` prefix is impossible while a branch called `name` exists).
 - Merge `main` into your branch often; send work back as small pull requests.
 - Commit messages say what changed and why. Credit co-authors with `Co-authored-by:` trailers.
 
