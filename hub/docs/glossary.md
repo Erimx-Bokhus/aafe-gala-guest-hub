@@ -1,0 +1,35 @@
+# Glossary
+
+Terms used across this hub, in plain language.
+
+```glossary
+ACH | A bank-to-bank transfer. Sponsors often pay this way to avoid card fees.
+Attendee Data export | Give Lively's per-guest report: one row per ticket holder, separate from the purchase report.
+Audit log | A record of every change: who made it, when, and the before and after values.
+Badge mail merge | The spreadsheet file used to print name tags, one row per guest, including the table number.
+Comp | A complimentary ticket, for example for an elected official or community partner. Give Lively can't issue them.
+Commitment | One purchase or pledge: a ticket, a sponsorship, or a comp. It holds a package and its seats.
+Correction that survives re-import | A staff edit (a "field override") that the next Give Lively import won't overwrite.
+Donation feed | A read-only JSON feed of Give Lively donations, switched on by creating a Zapier key. Not an API.
+Give Lively | AAFE's free fundraising platform for tickets, donations, and tax receipts. The tool reads from it and never replaces it.
+Import report | The summary after each import: new, updated, needs review, and rejected rows, each with a reason.
+Line Items report | Give Lively's purchase report. Each line carries the Stripe charge ID.
+Match | Deciding whether an incoming row is a guest we already have. Checked by Give Lively ID, then email, then name and organization.
+Next.js | The web framework we propose. Widely used, with TypeScript, so most web developers can maintain it.
+Open seat | A seat in a package with no guest named yet. The dashboard groups these by relationship owner.
+P0, P1, P2 | Priority. P0 must work by Demo Day; P1 should; P2 is a stretch goal.
+Package | A sponsorship or ticket tier and how many seats it includes, such as $25,000 with 7 seats.
+Postgres | The database we propose: standard, free, and offered by every major host.
+Relationship owner | The AAFE staff member responsible for a guest or sponsor, and the one who follows up.
+Render | A hosting company. One option a future partner could consider, at an estimated base of about $13 a month.
+Demo preview | The temporary copy of the prototype the team runs for Demo Day, with invented data only. Not a production system.
+Production-readiness notes | The handoff section listing what a future partner must settle before real data is used: hosting, backups, access, support, and gala-night fallback.
+Restricted key | A Stripe key limited to reading payment status. Not used in the prototype; listed as a future option.
+Review queue | Close matches waiting for a staff member to confirm or keep separate.
+Salesforce file | An export of who actually attended, shaped for AAFE's Salesforce, live for the 2027 gala.
+Seat | One place at the gala, tied to a commitment, either named or open.
+Sponsor link | A private, expiring web address where one sponsor names and edits their guests. No account needed.
+Stretch | Work we do only if the must-haves are finished: QR tickets.
+Synthetic data | Invented names and organizations used for building and the public demo. The prototype never holds real guest data.
+Walk-in | A guest who arrives without being on the list. The check-in lead decides, and the tool records it.
+```
