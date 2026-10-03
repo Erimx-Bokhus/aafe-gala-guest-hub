@@ -27,7 +27,7 @@ Repo copies: `docs/research/`.
 
 | Record | Where |
 | --- | --- |
-| Discovery call, October 1, 2026 (58 minutes, full transcript) | `docs/transcripts/2026-10-01-discovery-call.txt` and the team Slack thread |
+| Discovery call, October 1, 2026 (58 minutes, full transcript) | Kept out of the repo (the client's own words); team Slack thread |
 | Discovery call summary | [Discovery](#discovery) page; `docs/discovery-2026-10-01.md` |
 
 ## Team spaces
@@ -41,7 +41,7 @@ Repo copies: `docs/research/`.
 
 ## Repo handoff package
 
-The starter files for the code repository: `CLAUDE.md` (project rules for Claude Code), `README.md`, `KICKOFF_PROMPT.md`, and `docs/` with requirements, decisions, data model, data handling, research, and transcripts. This hub sits beside them in `hub/`.
+The starter files for the code repository: `CLAUDE.md` (project rules for Claude Code), `README.md`, `KICKOFF_PROMPT.md`, and `docs/` with requirements, decisions, data model, data handling, and research. This hub sits beside them in `hub/`.
 
 ## Credits
 
