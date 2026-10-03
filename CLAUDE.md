@@ -25,7 +25,7 @@ technical partner.** Production hosting and real data are AAFE's decisions after
 5. **AI is optional and off by default.** No AI call may receive email addresses, phone numbers, or payment info. Nothing AI-generated goes out without staff approval.
 6. **Sponsor links and QR e-tickets are secrets.** Tokens are random (at least 128 bits) and stored hashed. Sponsor links are scoped to one order and expire at AAFE's deadline; QR e-tickets are scoped to one seat and expire after gala night. Never use readable slugs like an organization name.
 7. **Record source and history.** Every guest record keeps its source (Give Lively import, staff entry, sponsor portal, check-in desk for walk-ins) and a change log. Staff corrections must survive the next import.
-8. **No AAFE logo or real event photos without AAFE's written approval.** Use placeholders until approval is recorded in `docs/decisions.md`.
+8. **AAFE's logo and real event photos stay internal until AAFE approves in writing.** They may be used in this private repo and in reviews with the team and AAFE. Anything public, including Demo Day, uses placeholders until approval is recorded in `docs/decisions.md`. Avoid photos where a real attendee's name badge is readable.
 9. **Maintainability over cleverness.** AAFE's tech capacity is "pretty low." Prefer mainstream, well-documented choices a future partner can pick up.
 
 ## Stack
@@ -33,7 +33,7 @@ technical partner.** Production hosting and real data are AAFE's decisions after
 Candidates on the table: React + TypeScript with Supabase Postgres (matches Natalie's prototype and seed data), or Next.js + TypeScript with Postgres. Either way: Postgres, typed code, and the import/matching logic isolated in its own tested module.
 
 ## Reference prototype
-Natalie built clickable concepts of the sponsor portal and staff app (shared in Slack Oct 2; source link pending). Treat them as the UI reference, not the scope: emails, seating chart, fee analytics, and Salesforce sync are trimmed per `docs/requirements.md`.
+Natalie built clickable concepts of the sponsor portal and staff app (shared in Slack Oct 2; source link pending). Treat them as the UI reference, not the scope: emails, seating chart, fee analytics, and Salesforce sync are trimmed per `docs/requirements.md`. Her seed data is in `seed/natalie-prototype/`; what was adopted and what must change is in `docs/research/prototype-review-2026-10-03.md`.
 
 ## Working in this repo
 - Branches: `main` is protected by review. Aisling is the repo admin: every pull request is reviewed and merged by Aisling (`nessaisling-lab` or `aislingld-pursuit`); each person works on their own branch (`aisling`, `natalie`, `cornell`, `antonin`) or a short feature branch off it (`aisling-import-engine`; a `name/...` prefix is impossible while a branch called `name` exists).
