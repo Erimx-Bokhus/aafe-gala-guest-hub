@@ -1,0 +1,1319 @@
+<title>AAFE Gala Project Hub</title>
+<meta name="description" content="Project documentation for the AAFE gala guest-list tool, prepared by team ERIMX BOKHUS.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Shippori+Mincho:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@500&family=Noto+Sans+KR:wght@500&text=%E4%BA%9E%E6%B4%B2%E4%BA%BA%E5%B9%B3%E7%AD%89%E6%9C%83%EC%95%84%EC%A3%BC%EC%9D%B8%ED%8F%89%EB%93%B1%ED%9A%8C%E4%B8%AD%E6%96%87%ED%95%9C%EA%B5%AD%EC%96%B4&display=swap">
+<style>
+/* Layout: sidebar (masthead, search, numbered page list, view tools) + reading column.
+   Under 900px the sidebar becomes a compact header with a scrolling tab strip.
+   Present mode hides the chrome and shows one section (h2) at a time.
+   Palette: AAFE's orange-red and Poppins, on the paper/ink/seal system from the
+   team's deck (Shippori Mincho + Zen Kaku Gothic New). Owner colors (orange, blue,
+   aqua + striped neutral for shared work) were run through a colorblind-safety
+   validator in both themes; every colored mark also carries a text label. */
+:root{
+  --bg:#f5f2ec; --surface:#ffffff; --surface-2:#efe9dd; --ink:#1f1d1a; --soft:#5b564d; --faint:#8a8478;
+  --rule:rgba(31,29,26,.14); --rule-strong:rgba(31,29,26,.28);
+  --accent:#c64c28; --accent-text:#ad3f1d; --accent-wash:rgba(198,76,40,.09);
+  --gold:#8a6a2e; --mark:#f6dca6;
+  --own-aisling:#c64c28; --own-cornell:#2a78d6; --own-antonin:#1baf7a; --own-shared:#8a8478;
+  --k-update:#2a78d6; --k-review:#a8770f; --k-new:#c64c28; --k-reject:#8a8478;
+  --ok:#17795a; --ok-wash:rgba(23,121,90,.1);
+  --shadow:0 1px 2px rgba(31,29,26,.06),0 8px 24px rgba(31,29,26,.06);
+  --f-display:"Shippori Mincho","Noto Serif","Georgia",serif;
+  --f-body:"Zen Kaku Gothic New","Segoe UI",system-ui,-apple-system,sans-serif;
+  --f-ui:"Poppins","Segoe UI",system-ui,-apple-system,sans-serif;
+  --f-mono:ui-monospace,"SFMono-Regular","Cascadia Mono",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#161412; --surface:#1f1c19; --surface-2:#282420; --ink:#efe9dd; --soft:#b8b0a3; --faint:#8a8378;
+  --rule:rgba(239,233,221,.13); --rule-strong:rgba(239,233,221,.26);
+  --accent:#e0714d; --accent-text:#f08c69; --accent-wash:rgba(224,113,77,.13);
+  --gold:#cfa860; --mark:#6b4f1f;
+  --own-aisling:#d95926; --own-cornell:#3987e5; --own-antonin:#199e70; --own-shared:#8e877b;
+  --k-update:#3987e5; --k-review:#c99a2e; --k-new:#e0714d; --k-reject:#8e877b;
+  --ok:#4cc79a; --ok-wash:rgba(76,199,154,.12);
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25); color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161412; --surface:#1f1c19; --surface-2:#282420; --ink:#efe9dd; --soft:#b8b0a3; --faint:#8a8378;
+  --rule:rgba(239,233,221,.13); --rule-strong:rgba(239,233,221,.26);
+  --accent:#e0714d; --accent-text:#f08c69; --accent-wash:rgba(224,113,77,.13);
+  --gold:#cfa860; --mark:#6b4f1f;
+  --own-aisling:#d95926; --own-cornell:#3987e5; --own-antonin:#199e70; --own-shared:#8e877b;
+  --k-update:#3987e5; --k-review:#c99a2e; --k-new:#e0714d; --k-reject:#8e877b;
+  --ok:#4cc79a; --ok-wash:rgba(76,199,154,.12);
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25); color-scheme:dark;
+}
+[hidden]{display:none!important}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-padding-top:24px}
+body{background:var(--bg);color:var(--ink);font:400 16px/1.72 var(--f-body);-webkit-font-smoothing:antialiased}
+button,input{font:inherit;color:inherit}
+a{color:var(--accent-text);text-decoration-thickness:1px;text-underline-offset:3px}
+a:hover{text-decoration-thickness:2px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+
+.shell{display:grid;grid-template-columns:280px minmax(0,1fr);min-height:100vh}
+
+/* ---------- Sidebar ---------- */
+.side{position:sticky;top:0;align-self:start;height:100vh;overflow-y:auto;border-right:1px solid var(--rule);
+  background:var(--surface-2);padding:28px 20px 24px;display:flex;flex-direction:column;gap:22px}
+.mast{display:flex;flex-direction:column;gap:10px}
+.mast-for{font:500 10.5px/1.45 var(--f-ui);letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
+.mast-name{display:flex;flex-direction:column;gap:1px;font:500 12px/1.5 var(--f-ui);color:var(--soft)}
+.mast-name .en{font-weight:600;color:var(--ink);font-size:13px}
+.cjk-tc{font-family:"Noto Sans TC",var(--f-body)}
+.cjk-kr{font-family:"Noto Sans KR",var(--f-body)}
+.mast-title{font:700 27px/1.15 var(--f-display);margin:6px 0 0;text-wrap:balance;letter-spacing:.01em}
+.mast-title span{color:var(--accent)}
+.mast-sub{font:500 12px/1.5 var(--f-ui);color:var(--soft);margin:0}
+.mast-rule{height:3px;width:44px;background:var(--accent);border:0;margin:4px 0 0}
+
+.search{position:relative}
+.search input{width:100%;padding:9px 12px 9px 34px;border:1px solid var(--rule-strong);border-radius:8px;background:var(--surface);font:400 14px/1.4 var(--f-ui)}
+.search input::placeholder{color:var(--faint)}
+.search svg{position:absolute;left:11px;top:19px;transform:translateY(-50%);width:15px;height:15px;stroke:var(--faint);fill:none;stroke-width:2}
+.search kbd{position:absolute;right:9px;top:19px;transform:translateY(-50%);font:500 11px var(--f-ui);color:var(--faint);border:1px solid var(--rule-strong);border-radius:4px;padding:0 5px}
+.results{list-style:none;margin:8px 0 0;padding:4px;display:flex;flex-direction:column;gap:2px;background:var(--surface);border:1px solid var(--rule);border-radius:8px;box-shadow:var(--shadow);max-height:52vh;overflow:auto}
+.results button{display:block;width:100%;text-align:left;background:none;border:0;padding:8px 10px;cursor:pointer;border-radius:6px}
+.results button:hover,.results button:focus-visible{background:var(--accent-wash)}
+.r-page{display:block;font:600 11px/1.3 var(--f-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--accent-text)}
+.r-snip{display:block;font-size:13px;line-height:1.5;color:var(--soft)}
+.r-empty{padding:10px 12px;font-size:13px;color:var(--faint)}
+mark{background:var(--mark);color:inherit;border-radius:2px;padding:0 1px}
+
+.nav{display:flex;flex-direction:column;gap:14px;order:3}
+.nav-group{display:flex;flex-direction:column;gap:1px}
+.nav-label{font:600 10.5px/1 var(--f-ui);letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin:0 0 6px 10px}
+.nav a{display:grid;grid-template-columns:26px 1fr auto;align-items:baseline;gap:4px;padding:6px 10px;border-radius:7px;text-decoration:none;color:var(--soft);font:500 14px/1.35 var(--f-ui)}
+.nav a .n{font:500 12px/1 var(--f-display);color:var(--faint);font-variant-numeric:tabular-nums}
+.nav a .tag{font:600 9.5px/1 var(--f-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--faint);border:1px solid var(--rule-strong);border-radius:4px;padding:3px 4px}
+.nav a:hover{background:var(--accent-wash);color:var(--ink)}
+.nav a[aria-current="page"]{background:var(--surface);color:var(--ink);box-shadow:inset 3px 0 0 var(--accent)}
+.nav a[aria-current="page"] .n{color:var(--accent)}
+.toc{list-style:none;margin:2px 0 6px 36px;padding:0 0 0 10px;border-left:1px solid var(--rule)}
+.toc button{background:none;border:0;padding:3px 0;text-align:left;cursor:pointer;font:400 12.5px/1.4 var(--f-ui);color:var(--faint)}
+.toc button:hover{color:var(--accent-text)}
+
+.tools{order:4;margin-top:auto;display:flex;flex-direction:column;gap:10px}
+.seg{display:grid;grid-template-columns:1fr 1fr;padding:3px;border-radius:9px;background:var(--surface);border:1px solid var(--rule-strong)}
+.seg button{border:0;background:none;padding:7px 8px;border-radius:6px;cursor:pointer;font:600 12.5px/1 var(--f-ui);color:var(--soft)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.tools-row{display:grid;grid-template-columns:1fr auto;gap:8px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:9px 14px;border-radius:8px;border:1px solid var(--rule-strong);background:var(--surface);cursor:pointer;font:600 13px/1 var(--f-ui)}
+.btn:hover{border-color:var(--accent);color:var(--accent-text)}
+.btn:disabled{opacity:.4;cursor:default}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn-primary:hover{color:#fff;filter:brightness(1.07)}
+.btn svg{width:14px;height:14px;fill:currentColor}
+.side-note{font:400 11.5px/1.5 var(--f-ui);color:var(--faint);margin:0}
+
+/* ---------- Reading column ---------- */
+.main{min-width:0;padding-inline:clamp(16px,5vw,64px);padding-block:48px 64px}
+.page{max-width:880px;margin:0 auto}
+.kicker{display:flex;align-items:baseline;gap:12px;margin-bottom:6px}
+.kicker .num{font:700 44px/1 var(--f-display);color:var(--accent);font-variant-numeric:tabular-nums}
+.kicker .grp{font:600 11px/1 var(--f-ui);letter-spacing:.16em;text-transform:uppercase;color:var(--faint)}
+.client-banner{font:500 12.5px/1.4 var(--f-ui);color:var(--soft);background:var(--surface);border:1px solid var(--rule);border-radius:8px;padding:8px 12px;margin:0 0 18px;display:flex;gap:8px;align-items:center}
+.client-banner b{color:var(--ink)}
+.doc h1{font:700 clamp(32px,4.4vw,46px)/1.12 var(--f-display);margin:0 0 18px;text-wrap:balance;letter-spacing:.005em}
+.doc h1 + p{font-size:18.5px;line-height:1.65;color:var(--soft);max-width:66ch;margin-top:0}
+.doc h2{font:700 25px/1.25 var(--f-display);margin:52px 0 14px;padding-top:20px;border-top:1px solid var(--rule);text-wrap:balance;position:relative}
+.doc h3{font:600 17px/1.35 var(--f-ui);margin:30px 0 8px}
+.h-link{position:absolute;left:-30px;top:24px;width:24px;height:24px;border:0;border-radius:5px;background:none;color:var(--faint);cursor:pointer;opacity:0;font:600 15px/24px var(--f-ui)}
+.doc h2:hover .h-link,.h-link:focus-visible{opacity:1}
+.h-link:hover{color:var(--accent-text);background:var(--accent-wash)}
+.team-tag{display:inline-block;vertical-align:middle;margin-left:10px;font:600 9.5px/1 var(--f-ui);letter-spacing:.1em;text-transform:uppercase;color:var(--faint);border:1px solid var(--rule-strong);border-radius:4px;padding:4px 5px;position:relative;top:-3px}
+.doc p,.doc li{max-width:68ch}
+.doc p{margin:0 0 14px}
+.doc ul,.doc ol{padding-left:1.3em;margin:0 0 16px}
+.doc li{margin:4px 0}
+.doc li::marker{color:var(--accent)}
+.doc strong{font-weight:700;color:var(--ink)}
+.doc blockquote{margin:20px 0;padding:6px 0 6px 20px;border-left:3px solid var(--accent);font:500 19px/1.6 var(--f-display);color:var(--ink);max-width:62ch}
+.doc blockquote p{margin:0}
+.doc code{font:13.5px/1.5 var(--f-mono);background:var(--surface-2);padding:1px 5px;border-radius:4px}
+.doc pre{background:var(--surface-2);border:1px solid var(--rule);border-radius:10px;padding:16px 18px;overflow-x:auto;margin:0 0 18px}
+.doc pre code{background:none;padding:0;font-size:13px;line-height:1.6}
+.doc details{margin:4px 0 18px}
+.doc details > summary{cursor:pointer;font:600 13px/1.4 var(--f-ui);color:var(--soft);padding:6px 0}
+.doc details > summary:hover{color:var(--accent-text)}
+.table-wrap{overflow-x:auto;margin:6px 0 22px;border:1px solid var(--rule);border-radius:10px;background:var(--surface)}
+.doc table{border-collapse:collapse;width:100%;font-size:14.5px;line-height:1.55}
+.doc th{font:600 11px/1.3 var(--f-ui);letter-spacing:.09em;text-transform:uppercase;color:var(--soft);text-align:left;padding:11px 14px;background:var(--surface-2);border-bottom:1px solid var(--rule);white-space:nowrap}
+.doc td{padding:10px 14px;border-bottom:1px solid var(--rule);vertical-align:top;font-variant-numeric:tabular-nums}
+.doc tr:last-child td{border-bottom:0}
+.doc td:first-child{font-weight:500}
+.doc li:has(> input[type=checkbox]){list-style:none;margin-left:-1.3em;display:flex;gap:10px;align-items:flex-start}
+.doc input[type=checkbox]{appearance:none;flex:none;width:18px;height:18px;margin:4px 0 0;border:1.5px solid var(--rule-strong);border-radius:5px;background:var(--surface);cursor:pointer;display:grid;place-items:center}
+.doc input[type=checkbox]:disabled{cursor:default;opacity:.7}
+.doc input[type=checkbox]:checked{background:var(--accent);border-color:var(--accent)}
+.doc input[type=checkbox]:checked::after{content:"";width:5px;height:9px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg) translate(-1px,-1px)}
+.doc li.done{color:var(--faint);text-decoration:line-through;text-decoration-color:var(--rule-strong)}
+.check-note{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;font:500 12.5px/1.5 var(--f-ui);color:var(--soft);margin:0 0 22px;padding:10px 14px;background:var(--surface);border:1px solid var(--rule);border-radius:10px}
+.check-note .meter{flex:1 1 140px;height:6px;border-radius:3px;background:var(--surface-2);overflow:hidden;max-width:240px}
+.check-note .meter i{display:block;height:100%;background:var(--accent);border-radius:3px}
+.check-note .where{color:var(--faint);font-weight:400}
+
+/* speaker notes */
+.notes{border-left:2px solid var(--gold);padding:2px 0 2px 14px;margin:6px 0 20px}
+.notes > summary{font:600 11px/1.4 var(--f-ui)!important;letter-spacing:.1em;text-transform:uppercase;color:var(--gold)!important;padding:2px 0!important}
+.notes p{font-size:14.5px;color:var(--soft);margin:6px 0 0}
+
+/* tooltip + toast */
+#tip{position:fixed;z-index:40;pointer-events:none;max-width:280px;padding:8px 10px;border-radius:8px;background:var(--ink);color:var(--bg);font:500 12px/1.45 var(--f-ui);box-shadow:var(--shadow)}
+#toast{position:fixed;z-index:41;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);max-width:calc(100vw - 32px);padding:10px 14px;border-radius:10px;background:var(--ink);color:var(--bg);font:500 13px/1.45 var(--f-ui);box-shadow:var(--shadow);overflow-wrap:anywhere}
+#toast code{user-select:all;font:12px var(--f-mono)}
+
+/* ---------- steps fence ---------- */
+.doc .steps{list-style:none;padding:0;margin:26px 0 30px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.steps li{margin:0;max-width:none;background:var(--surface);border:1px solid var(--rule);border-radius:12px;padding:16px 16px 18px;display:flex;flex-direction:column;gap:6px}
+.steps li::marker{content:none}
+.steps-n{font:700 30px/1 var(--f-display);color:var(--accent)}
+.steps strong{font:600 14.5px/1.35 var(--f-ui)}
+.steps span:last-child{font-size:13.5px;line-height:1.5;color:var(--soft)}
+
+/* ---------- layers fence ---------- */
+.layers{display:flex;flex-direction:column;margin:24px 0 30px}
+.layer{display:grid;grid-template-columns:150px minmax(0,1fr);gap:16px;align-items:start;padding:14px 0}
+.layer + .layer{border-top:1px dashed var(--rule-strong)}
+.layer-name{margin:6px 0 0;font:600 11.5px/1.35 var(--f-ui);letter-spacing:.1em;text-transform:uppercase;color:var(--soft);display:flex;gap:9px;align-items:baseline}
+.layer-name span{font:700 18px/1 var(--f-display);color:var(--accent);letter-spacing:0}
+.doc .layer-items{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px}
+.layer-items li{margin:0;max-width:none;background:var(--surface);border:1px solid var(--rule);border-radius:9px;padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.layer-items li::marker{content:none}
+.layer-items strong{font:600 13.5px/1.35 var(--f-ui)}
+.layer-items span{font-size:12.5px;line-height:1.45;color:var(--soft)}
+.layer:nth-child(3) .layer-items li{border-color:color-mix(in srgb,var(--accent) 40%,var(--rule))}
+
+/* ---------- shared chart frame ---------- */
+.viz{margin:22px 0 10px;border:1px solid var(--rule);border-radius:12px;background:var(--surface);padding:16px 18px 14px}
+.viz-title{font:600 12px/1.3 var(--f-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--soft);margin:0 0 12px}
+.viz-scroll{overflow-x:auto}
+.legend{display:flex;flex-wrap:wrap;gap:8px 18px;margin:10px 0 22px;font:500 12.5px/1 var(--f-ui);color:var(--soft)}
+.legend span{display:inline-flex;align-items:center;gap:7px}
+.legend i{width:14px;height:10px;border-radius:3px;background:var(--c)}
+.legend i.tex,.tex{background:repeating-linear-gradient(135deg,var(--c) 0 3px,transparent 3px 6px)!important;box-shadow:inset 0 0 0 1.5px var(--c)}
+.legend i.d{width:10px;height:10px;border-radius:0;transform:rotate(45deg);background:var(--surface);border:2px solid var(--ink)}
+
+/* ---------- timeline fence ---------- */
+.tl{min-width:800px;--days:37}
+.tl-row{display:grid;grid-template-columns:280px minmax(0,1fr);align-items:center;min-height:42px}
+.tl-row + .tl-row{border-top:1px solid var(--rule)}
+.tl-label{display:flex;flex-direction:column;padding-right:14px;min-width:0}
+.tl-label b{font:600 13px/1.3 var(--f-ui)}
+.tl-label b i{font-style:normal;color:var(--faint);font-weight:500;margin-right:6px;font-variant-numeric:tabular-nums}
+.tl-label small{font:400 11.5px/1.35 var(--f-ui);color:var(--faint)}
+.tl-track{position:relative;height:100%;min-height:42px;display:grid;grid-template-columns:repeat(var(--days),1fr);align-items:center;
+  background-image:linear-gradient(to right,var(--rule) 1px,transparent 1px);background-size:calc(100% / var(--days) * 7) 100%}
+.tl-bar{height:14px;border-radius:4px;background:var(--c);margin:0 1px;cursor:default;outline-offset:2px}
+.tl-bar.tex{background-color:transparent}
+.tl-axis{min-height:28px}
+.tl-axis .tl-track{background:none}
+.tl-tick{font:600 10.5px/1 var(--f-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--faint);white-space:nowrap;padding-left:3px;border-left:1px solid var(--rule-strong)}
+.tl-ms{justify-self:center;width:13px;height:13px;transform:rotate(45deg);border:2px solid var(--ink);background:var(--surface)}
+.tl-ms.accent{background:var(--accent);border-color:var(--accent);width:15px;height:15px}
+.tl-row.ms .tl-label b{font-family:var(--f-display);font-size:14px}
+.tl-today{position:absolute;top:0;bottom:0;width:2px;background:var(--accent);opacity:.7}
+
+/* ---------- dot / range plots (costbars, ranges, workload) ---------- */
+.plot{display:grid;grid-template-columns:minmax(150px,230px) minmax(0,1fr) 112px;column-gap:16px;align-items:center;min-width:600px}
+.plot-row{display:contents}
+.plot-row > *{min-height:36px;display:flex;align-items:center;border-top:1px solid var(--rule)}
+.plot-row.first > *{border-top:0}
+.plot-label{font:500 13px/1.3 var(--f-ui);gap:8px}
+.plot-label i{flex:none;width:10px;height:10px;border-radius:3px;background:var(--c)}
+.plot-val{font:500 12.5px/1.3 var(--f-ui);color:var(--soft);justify-content:flex-end;font-variant-numeric:tabular-nums;text-align:right}
+.plot-group > *{min-height:28px;border-top:0;font:600 10.5px/1 var(--f-ui);letter-spacing:.12em;text-transform:uppercase;color:var(--faint);padding-top:10px}
+.plot-track{position:relative;align-self:stretch}
+.plot-track .grid{position:absolute;top:0;bottom:0;width:1px;background:var(--rule)}
+.mk{position:absolute;top:50%;transform:translate(-50%,-50%);width:11px;height:11px;border-radius:50%;background:var(--c);box-shadow:0 0 0 2px var(--surface)}
+.mk.zero{background:var(--surface);border:2px solid var(--c);transform:translate(0,-50%)}
+.rg-bar{position:absolute;top:50%;height:8px;transform:translateY(-50%);border-radius:4px;background:var(--c)}
+.rg-bar.soft{opacity:.35}
+.rg-bar.tex{background-color:transparent}
+.plot-hit{position:absolute;inset:0;cursor:default}
+.plot-axis > *{border-top:1px solid var(--rule-strong);min-height:26px;align-items:flex-start;padding-top:6px}
+.plot-axis .tick{position:absolute;transform:translateX(-50%);font:500 10.5px/1 var(--f-ui);color:var(--faint);white-space:nowrap;font-variant-numeric:tabular-nums}
+.band{position:absolute;top:0;bottom:0;background:var(--ok-wash);border-left:1.5px dashed var(--ok);border-right:1.5px dashed var(--ok)}
+.band-label{font:600 11px/1.3 var(--f-ui);color:var(--ok);min-height:22px!important;border-top:0!important;align-items:flex-end!important}
+.plot-note{font:400 13px/1.45 var(--f-body);color:var(--soft)}
+.viz-foot{font:400 12px/1.5 var(--f-ui);color:var(--faint);margin:8px 0 0}
+
+/* ---------- walkthrough ---------- */
+.wt{display:grid;grid-template-columns:250px minmax(0,1fr);gap:18px;margin:22px 0 26px;align-items:start}
+.wt-steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px;counter-reset:none}
+.doc .wt-steps{padding:0;margin:0}
+.wt-steps li{margin:0;max-width:none}
+.wt-steps li::marker{content:none}
+.wt-steps button{display:grid;grid-template-columns:26px 1fr;gap:10px;align-items:center;width:100%;text-align:left;background:none;border:0;border-radius:8px;padding:7px 8px;cursor:pointer;font:500 13px/1.3 var(--f-ui);color:var(--soft)}
+.wt-steps button:hover{background:var(--accent-wash);color:var(--ink)}
+.wt-steps .dot{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;border:1.5px solid var(--rule-strong);font:700 13px/1 var(--f-display);color:var(--faint);background:var(--surface)}
+.wt-steps button.past .dot{border-color:var(--accent);color:var(--accent)}
+.wt-steps button[aria-current="step"]{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+.wt-steps button[aria-current="step"] .dot{background:var(--accent);border-color:var(--accent);color:#fff}
+.wt-card{background:var(--surface);border:1px solid var(--rule);border-radius:14px;padding:18px 20px 16px;box-shadow:var(--shadow);min-width:0}
+.wt-head{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:8px 16px;padding-bottom:12px;border-bottom:1px solid var(--rule)}
+.wt-name{font:700 19px/1.25 var(--f-display)}
+.wt-sub{font:500 12.5px/1.4 var(--f-ui);color:var(--soft)}
+.pills{display:flex;gap:6px;flex-wrap:wrap}
+.pill{display:inline-flex;align-items:center;gap:6px;font:600 11.5px/1 var(--f-ui);padding:6px 9px;border-radius:999px;border:1px solid var(--rule-strong);color:var(--soft);background:var(--surface)}
+.pill.paid{border-color:var(--ok);color:var(--ok);background:var(--ok-wash)}
+.pill.pledged{border-color:var(--k-review);color:var(--k-review)}
+.pill.link{border-style:dashed}
+.wt-step{padding:14px 0 4px}
+.wt-step h4{margin:0 0 4px;font:600 16px/1.35 var(--f-ui)}
+.wt-step p{margin:0;font-size:14.5px;color:var(--soft);max-width:60ch}
+.seats{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px;margin:14px 0 12px}
+.seat{border:1.5px solid var(--rule-strong);border-radius:9px;padding:8px 10px;min-height:66px;display:flex;flex-direction:column;gap:1px;font:500 12px/1.3 var(--f-ui);background:var(--surface);transition:background .25s,border-color .25s}
+.seat .sn{font:600 10px/1 var(--f-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--faint);display:flex;justify-content:space-between;gap:6px;margin-bottom:3px}
+.seat b{font-weight:600;color:var(--ink)}
+.seat small{color:var(--soft);font-size:11.5px}
+.seat.open{border-style:dashed;color:var(--faint)}
+.seat.flag{border-style:dashed;border-color:var(--accent);background:var(--accent-wash)}
+.seat.flag small{color:var(--accent-text);font-weight:600}
+.seat.in{border-color:var(--ok);background:var(--ok-wash)}
+.seat.in .sn span:last-child{color:var(--ok)}
+.seat .fix{font:600 10px/1.2 var(--f-ui);color:var(--k-review);margin-top:2px}
+.wt-dash{display:flex;align-items:center;gap:8px;font:500 12.5px/1.4 var(--f-ui);color:var(--soft);padding:10px 12px;background:var(--surface-2);border-radius:8px}
+.wt-dash b{color:var(--ink);font-weight:600}
+.wt-ctl{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px}
+.wt-ctl span{font:500 12px/1 var(--f-ui);color:var(--faint);font-variant-numeric:tabular-nums}
+.wt-ctl div{display:flex;gap:6px}
+.wt-anim{animation:rise .3s ease both}
+
+/* ---------- decision flow ---------- */
+.dec{margin:22px 0 14px;display:flex;flex-direction:column;align-items:stretch}
+.dec-start{align-self:flex-start;font:600 12.5px/1.4 var(--f-ui);padding:9px 14px;border-radius:999px;background:var(--ink);color:var(--bg);max-width:100%}
+.dec-down{width:240px;max-width:45%;display:flex;flex-direction:column;align-items:center;font:600 10.5px/1 var(--f-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--faint);padding:4px 0}
+.dec-down::before{content:"";width:1.5px;height:12px;background:var(--rule-strong)}
+.dec-down::after{content:"";width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid var(--rule-strong);margin-top:3px}
+.dec-down span{padding:3px 0}
+.dec-row{display:grid;grid-template-columns:240px 90px minmax(0,1fr);align-items:center}
+.dec-q{border:1.5px solid var(--ink);border-radius:10px;padding:10px 12px;font:600 13.5px/1.35 var(--f-ui);background:var(--surface);position:relative}
+.dec-q::before{content:"?";position:absolute;right:8px;top:6px;font:700 12px/1 var(--f-display);color:var(--faint)}
+.dec-arrow{position:relative;height:100%;display:flex;align-items:center;justify-content:center}
+.dec-arrow::before{content:"";position:absolute;left:0;right:6px;top:50%;height:1.5px;background:var(--c)}
+.dec-arrow::after{content:"";position:absolute;right:0;top:50%;transform:translateY(-50%);border-top:5px solid transparent;border-bottom:5px solid transparent;border-left:7px solid var(--c)}
+.dec-arrow span{position:relative;background:var(--bg);padding:0 6px;font:600 10.5px/1 var(--f-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--soft)}
+.dec-out{border-radius:10px;padding:10px 12px;font:500 13.5px/1.35 var(--f-ui);background:var(--surface);border:1px solid var(--rule);box-shadow:inset 4px 0 0 var(--c);display:flex;flex-direction:column;gap:2px}
+.dec-out small{font:600 10px/1 var(--f-ui);letter-spacing:.1em;text-transform:uppercase;color:var(--c)}
+.dec-final{width:240px;max-width:100%}
+
+/* ---------- ERD ---------- */
+.erd{position:relative;margin:20px 0 6px}
+.erd-core{position:relative;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:30px 64px}
+.erd svg.lines{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+.erd svg.lines path{fill:none;stroke:var(--faint);stroke-width:1.4}
+.erd svg.lines circle{fill:var(--surface);stroke:var(--faint);stroke-width:1.4}
+.ent{position:relative;z-index:1;background:var(--surface);border:1px solid var(--rule-strong);border-radius:10px;overflow:hidden;font:12px/1.5 var(--f-mono)}
+.ent h5{margin:0;padding:8px 12px;font:600 13px/1.3 var(--f-mono);background:var(--surface-2);border-bottom:1px solid var(--rule)}
+.ent ul{list-style:none;margin:0;padding:6px 0}
+.doc .ent ul{padding:6px 0;margin:0}
+.ent li{margin:0;padding:2px 12px;max-width:none;color:var(--soft);display:flex;justify-content:space-between;gap:8px}
+.ent li::marker{content:none}
+.ent li em{font-style:normal;color:var(--accent-text);white-space:nowrap}
+.ent li.hl{background:var(--accent-wash)}
+.erd-sub{margin-top:26px}
+.erd-sub-label{font:600 10.5px/1 var(--f-ui);letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin:0 0 10px}
+.erd-sub-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+.erd-sub .ent{font-size:11.5px}
+.erd-sub .ent h5{font-size:12px;padding:6px 10px}
+.erd-sub .ent li{padding:1px 10px;flex-wrap:wrap;column-gap:6px}
+.erd-sub .ent li em{white-space:normal}
+
+/* ---------- risks ---------- */
+.rk{display:grid;grid-template-columns:300px minmax(0,1fr);gap:24px;margin:22px 0 10px;align-items:start}
+.heat{display:grid;grid-template-columns:22px repeat(3,1fr);grid-template-rows:repeat(3,84px) 26px 18px;gap:4px}
+.heat .ylab{grid-column:1;grid-row:1/4;writing-mode:vertical-rl;transform:rotate(180deg);font:600 10.5px/1 var(--f-ui);letter-spacing:.1em;text-transform:uppercase;color:var(--faint);text-align:center}
+.heat .cell{border-radius:8px;background:color-mix(in srgb,var(--accent) var(--p),var(--surface));border:1px solid var(--rule);display:flex;flex-wrap:wrap;align-content:center;justify-content:center;gap:4px;padding:4px;position:relative}
+.heat .cell .lvl{position:absolute;left:6px;top:4px;font:500 9.5px/1 var(--f-ui);color:var(--faint)}
+.heat .rdot{width:24px;height:24px;border-radius:50%;background:var(--surface);border:1.5px solid var(--ink);display:grid;place-items:center;font:700 11px/1 var(--f-ui);cursor:default}
+.heat .rdot.on,.heat .rdot:hover{background:var(--ink);color:var(--bg)}
+.heat .xt{font:500 10.5px/1 var(--f-ui);color:var(--faint);text-align:center;align-self:center}
+.heat .xlab{grid-column:2/5;font:600 10.5px/1 var(--f-ui);letter-spacing:.1em;text-transform:uppercase;color:var(--faint);text-align:center}
+.heat .yt{font:500 10.5px/1 var(--f-ui);color:var(--faint);display:none}
+.rk-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:0}
+.doc .rk-list{padding:0;margin:0}
+.rk-list li{margin:0;max-width:none;display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;padding:10px 8px;border-top:1px solid var(--rule);border-radius:6px}
+.rk-list li:first-child{border-top:0}
+.rk-list li::marker{content:none}
+.rk-list li.on{background:var(--accent-wash)}
+.rk-list .rn{width:24px;height:24px;border-radius:50%;border:1.5px solid var(--ink);display:grid;place-items:center;font:700 11px/1 var(--f-ui)}
+.rk-list b{display:block;font:600 14px/1.35 var(--f-ui)}
+.rk-list .meta{font:500 11.5px/1.4 var(--f-ui);color:var(--faint)}
+.rk-list p{margin:3px 0 0;font-size:13.5px;line-height:1.5;color:var(--soft)}
+
+/* ---------- glossary ---------- */
+.gl-filter{width:100%;max-width:360px;padding:9px 12px;border:1px solid var(--rule-strong);border-radius:8px;background:var(--surface);font:400 14px/1.4 var(--f-ui);margin:10px 0 6px}
+.gl-letter{font:700 22px/1 var(--f-display);color:var(--accent);margin:24px 0 6px;padding-bottom:6px;border-bottom:1px solid var(--rule)}
+.gl dl{margin:0;display:grid;grid-template-columns:minmax(140px,220px) minmax(0,1fr);column-gap:20px}
+.gl dt{font:600 14px/1.4 var(--f-ui);padding:9px 0;border-top:1px solid var(--rule)}
+.gl dd{margin:0;padding:9px 0;border-top:1px solid var(--rule);font-size:14.5px;line-height:1.55;color:var(--soft);max-width:62ch}
+.gl dt:first-of-type,.gl dt:first-of-type + dd{border-top:0}
+
+/* ---------- wireframes ---------- */
+.wf-wrap{overflow-x:auto;margin:16px 0 8px;padding:4px 2px 8px}
+.wf{position:relative;border:1.5px solid var(--rule-strong);border-radius:14px;background:var(--surface);font:500 12px/1.4 var(--f-ui);color:var(--soft)}
+.wf-badge{position:absolute;top:-10px;right:14px;font:600 10px/1 var(--f-ui);letter-spacing:.1em;text-transform:uppercase;background:var(--bg);color:var(--faint);border:1px dashed var(--rule-strong);border-radius:4px;padding:4px 6px}
+.wf .bar{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--rule)}
+.wf .bar b{font:600 13px/1.2 var(--f-ui);color:var(--ink);margin-right:auto}
+.wf .box{border:1px dashed var(--rule-strong);border-radius:6px;padding:5px 9px;color:var(--faint);white-space:nowrap}
+.wf .box.solid{border-style:solid;color:var(--ink)}
+.wf .box.acc{border-color:var(--accent);background:var(--accent);color:#fff}
+.wf .lbl{font:600 10px/1 var(--f-ui);letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin:0 0 8px}
+.wf .meter{height:8px;border-radius:4px;background:var(--surface-2);overflow:hidden;margin:6px 0 2px}
+.wf .meter i{display:block;height:100%;background:var(--soft);border-radius:4px}
+.wf .row{display:grid;align-items:center;gap:10px;padding:7px 0;border-top:1px solid var(--rule)}
+.wf .st{font:600 10.5px/1 var(--f-ui);padding:4px 7px;border-radius:999px;border:1px solid var(--rule-strong);white-space:nowrap;justify-self:start}
+.wf .st.miss{border-color:var(--accent);color:var(--accent-text)}
+.wf .st.ok{border-color:var(--ok);color:var(--ok)}
+.wf-dash{min-width:720px}
+.wf-dash .body{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;padding:14px}
+.wf-dash .goal{border:1px solid var(--rule);border-radius:8px;padding:10px 12px}
+.wf-dash .goal b{display:block;color:var(--ink);font-size:15px}
+.wf-dash .gaps{grid-column:1;border:1px solid var(--rule);border-radius:8px;padding:10px 12px}
+.wf-dash .grid{grid-column:2/4;border:1px solid var(--rule);border-radius:8px;padding:10px 12px}
+.wf-dash .grid .row{grid-template-columns:1.3fr 1.4fr .9fr .8fr}
+.wf-dash .gaps .row{grid-template-columns:1fr auto}
+.wf-phone{width:320px;margin:0 auto;border-radius:28px;padding:14px 12px 16px}
+.wf-phone .bar{border:0;padding:4px 6px 10px;flex-direction:column;align-items:flex-start;gap:2px}
+.wf-phone .langs{display:flex;gap:4px;padding:0 6px 10px}
+.wf-phone .langs .box{padding:3px 7px;font-size:11px}
+.wf-phone .slot{border:1px solid var(--rule);border-radius:9px;padding:8px 10px;margin:0 6px 7px}
+.wf-phone .slot .lbl{margin-bottom:5px}
+.wf-phone .slot .f{border:1px dashed var(--rule-strong);border-radius:5px;padding:4px 8px;margin-top:4px;color:var(--faint)}
+.wf-phone .slot.filled .f{border-style:solid;color:var(--ink)}
+.wf-phone .foot{display:flex;justify-content:space-between;align-items:center;padding:6px 6px 0}
+.wf-pad{min-width:700px;border-radius:22px;padding:12px}
+.wf-pad .body{display:grid;grid-template-columns:minmax(0,1fr) 200px;gap:14px;padding:12px 4px 4px}
+.wf-pad .q{border:1.5px solid var(--ink);border-radius:8px;padding:9px 12px;color:var(--ink);font-size:14px;margin-bottom:8px}
+.wf-pad .row{grid-template-columns:1.1fr 1.3fr .5fr auto}
+.wf-pad .panel{border:1px solid var(--rule);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.wf-pad .panel b{display:block;color:var(--ink);font-size:20px;font-family:var(--f-display)}
+
+/* ---------- page-end nav + footer ---------- */
+.pager{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:56px 0 0}
+.pager a{display:flex;flex-direction:column;gap:3px;padding:14px 16px;border:1px solid var(--rule);border-radius:10px;background:var(--surface);text-decoration:none;color:var(--ink)}
+.pager a:hover{border-color:var(--accent)}
+.pager a.next{text-align:right;grid-column:2}
+.pager small{font:600 10.5px/1 var(--f-ui);letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
+.pager b{font:700 17px/1.3 var(--f-display)}
+.foot{max-width:880px;margin:40px auto 0;padding-top:18px;border-top:1px solid var(--rule);font:400 12px/1.6 var(--f-ui);color:var(--faint);display:flex;flex-wrap:wrap;gap:6px 18px;justify-content:space-between}
+.state{padding:28px;border:1px dashed var(--rule-strong);border-radius:12px;color:var(--soft);background:var(--surface)}
+.state h1{font-size:28px}
+.loading{color:var(--faint);font:500 14px var(--f-ui)}
+
+/* ---------- client view ---------- */
+body.client [data-team],body.client .notes,body.client .h-link + .team-tag{display:none!important}
+
+/* ---------- present mode ---------- */
+.presbar{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:10px clamp(16px,4vw,40px) calc(10px + env(safe-area-inset-bottom,0px));background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:blur(8px);border-top:1px solid var(--rule)}
+.presbar .where{font:500 12.5px/1.3 var(--f-ui);color:var(--soft);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.presbar .where b{color:var(--ink);font-weight:600}
+.presbar .ctl{display:flex;gap:8px;flex:none}
+.notes-drawer{position:fixed;left:0;right:0;bottom:calc(58px + env(safe-area-inset-bottom,0px));z-index:19;padding:14px clamp(16px,4vw,40px);background:var(--surface);border-top:2px solid var(--gold);font:400 15px/1.6 var(--f-body);color:var(--soft);max-height:34vh;overflow:auto}
+.notes-drawer b{font:600 11px/1 var(--f-ui);letter-spacing:.1em;text-transform:uppercase;color:var(--gold);display:block;margin-bottom:6px}
+.progress{position:fixed;top:0;left:0;height:3px;background:var(--accent);z-index:21;transition:width .25s}
+body.presenting .side{display:none}
+body.presenting .shell{grid-template-columns:minmax(0,1fr)}
+body.presenting .main{padding-block:7vh 140px;min-height:100vh;display:flex;flex-direction:column}
+body.presenting .page{max-width:1080px;width:100%;flex:1}
+body.presenting .doc{font-size:19px}
+body.presenting .doc h1{font-size:clamp(40px,6vw,68px)}
+body.presenting .doc h2{border-top:0;padding-top:0;margin-top:8px;font-size:clamp(30px,3.8vw,44px)}
+body.presenting .doc .slide{animation:rise .35s ease both}
+body.presenting .doc p,body.presenting .doc li{max-width:60ch}
+body.presenting .pager,body.presenting .foot,body.presenting .check-note,body.presenting .doc .notes,body.presenting .h-link,body.presenting .client-banner{display:none}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){body.presenting .doc .slide,.wt-anim{animation:none}.progress,.seat{transition:none}}
+
+/* ---------- narrow screens ---------- */
+@media (max-width:900px){
+  .shell{grid-template-columns:minmax(0,1fr)}
+  .side{position:static;height:auto;overflow:visible;border-right:0;border-bottom:1px solid var(--rule);padding:18px 16px 0;gap:14px}
+  .mast{gap:6px}.mast-name{flex-direction:row;flex-wrap:wrap;column-gap:10px}.mast-title{font-size:24px}
+  .tools{order:2;margin-top:0;flex-direction:row;flex-wrap:wrap;gap:8px}
+  .tools .seg{flex:1 1 180px}.tools-row{flex:1 1 180px}.side-note{display:none}
+  .nav{order:5;position:sticky;top:env(safe-area-inset-top,0px);z-index:5;flex-direction:row;gap:0;overflow-x:auto;margin:0 -16px;padding:6px 12px;background:var(--surface-2);border-top:1px solid var(--rule);scrollbar-width:none}
+  .nav::-webkit-scrollbar{display:none}
+  .nav-group{flex-direction:row;gap:2px}.nav-label,.toc{display:none}
+  .nav a{white-space:nowrap;grid-template-columns:auto auto auto;gap:6px;padding:8px 10px}
+  .nav a[aria-current="page"]{box-shadow:inset 0 -2px 0 var(--accent)}
+  .main{padding-block:28px 48px}
+  .layer{grid-template-columns:minmax(0,1fr);gap:8px}
+  .kicker .num{font-size:36px}
+  .wt{grid-template-columns:minmax(0,1fr)}
+  .wt-steps{flex-direction:row;overflow-x:auto;gap:4px;padding-bottom:4px}
+  .wt-steps button{grid-template-columns:26px;justify-items:center;width:auto}
+  .wt-steps button .t{display:none}
+  .rk{grid-template-columns:minmax(0,1fr)}
+  .heat{max-width:340px}
+  .h-link{display:none}
+}
+@media (max-width:760px){
+  .erd-core{grid-template-columns:minmax(0,1fr);gap:12px}
+  .erd svg.lines{display:none}
+  .dec-row{grid-template-columns:minmax(0,1fr);gap:0}
+  .dec-arrow{height:30px;justify-content:flex-start;padding-left:16px}
+  .dec-arrow::before{left:16px;right:auto;top:0;bottom:6px;width:1.5px;height:auto}
+  .dec-arrow::after{left:11px;right:auto;top:auto;bottom:0;transform:none;border-left:5px solid transparent;border-right:5px solid transparent;border-top:7px solid var(--c);border-bottom:0}
+  .dec-arrow span{margin-left:14px}
+  .dec-down{width:auto;max-width:none;align-items:flex-start;padding-left:10px}
+  .dec-down::before{margin-left:6px}.dec-down::after{margin-left:1px}
+  .gl dl{grid-template-columns:minmax(0,1fr)}
+  .gl dd{border-top:0;padding-top:0}
+}
+@media (max-width:620px){
+  .viz{padding:14px 12px 12px}
+  .plot{grid-template-columns:minmax(84px,108px) minmax(0,1fr) 70px;column-gap:10px;min-width:0}
+  .plot-label{font-size:12px}
+  .plot-val{font-size:11.5px;white-space:normal}
+  .plot-note{font-size:12px}
+  .plot-axis .tick:nth-child(even){display:none}
+}
+@media (max-width:520px){.pager{grid-template-columns:minmax(0,1fr)}.pager a.next{grid-column:1}.doc h1 + p{font-size:17px}}
+</style>
+
+<div class="shell">
+  <aside class="side" aria-label="Project hub navigation">
+    <header class="mast">
+      <div class="mast-for">Prepared for</div>
+      <div class="mast-name" lang="en">
+        <span class="en">Asian Americans for Equality</span>
+        <span lang="es">Asiáticos Americanos por la Igualdad</span>
+        <span class="cjk-tc" lang="zh-Hant">亞洲人平等會</span>
+        <span class="cjk-kr" lang="ko">아주인 평등회</span>
+      </div>
+      <h1 class="mast-title">Gala Guest List <span>Project Hub</span></h1>
+      <p class="mast-sub">Team ERIMX BOKHUS · Pursuit AI Native</p>
+      <hr class="mast-rule">
+    </header>
+    <div class="search" role="search">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="search" placeholder="Search all pages" aria-label="Search all pages" autocomplete="off">
+      <kbd aria-hidden="true">/</kbd>
+      <ul class="results" id="results" hidden></ul>
+    </div>
+    <nav class="nav" id="nav"></nav>
+    <div class="tools">
+      <div class="seg" role="group" aria-label="View">
+        <button type="button" data-mode="team" aria-pressed="true">Team view</button>
+        <button type="button" data-mode="client" aria-pressed="false">Client view</button>
+      </div>
+      <div class="tools-row">
+        <button class="btn btn-primary" type="button" data-present>
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z"/></svg>Present</button>
+        <button class="btn" type="button" id="copy-view" title="Copy a link to this page in the current view">Copy link</button>
+      </div>
+      <p class="side-note" id="mode-note">Present shows one section at a time: ← → or space to move, N for speaker notes, Esc to exit.</p>
+    </div>
+  </aside>
+
+  <main class="main" id="main">
+    <div class="page">
+      <div class="kicker" id="kicker" aria-hidden="true"></div>
+      <div class="client-banner" id="client-banner" hidden><b>Client view.</b> Team-only pages and sections are hidden here. They're hidden, not locked.</div>
+      <article class="doc" id="doc"><p class="loading">Loading…</p></article>
+      <nav class="pager" id="pager" aria-label="Previous and next page"></nav>
+    </div>
+    <footer class="foot">
+      <span>Prepared by team ERIMX BOKHUS, Pursuit AI Native Fellowship. Not an official AAFE website.</span>
+      <span>Updated October 2, 2026 · Invented example data only</span>
+    </footer>
+  </main>
+</div>
+
+<div class="progress" id="progress" hidden></div>
+<div class="notes-drawer" id="drawer" hidden></div>
+<div class="presbar" id="presbar" hidden>
+  <div class="where" id="where"></div>
+  <div class="ctl">
+    <button class="btn" type="button" id="notes-btn" aria-pressed="false">Notes</button>
+    <button class="btn" type="button" id="prev" aria-label="Previous">←</button>
+    <button class="btn" type="button" id="next" aria-label="Next">→</button>
+    <button class="btn" type="button" id="exit">Exit</button>
+  </div>
+</div>
+<div id="tip" role="tooltip" hidden></div>
+<div id="toast" role="status" aria-live="polite" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<script>
+(() => {
+const ARTIFACT_URL = 'https://claude.ai/artifact/QVViUNx6SWRBZYKCfrAmp6';
+const PAGES = [
+  {id:'overview',     title:'Overview',      group:'Project'},
+  {id:'discovery',    title:'Discovery',     group:'Project'},
+  {id:'requirements', title:'Requirements',  group:'Project'},
+  {id:'systems',      title:'Systems',       group:'Context'},
+  {id:'research',     title:'Research',      group:'Context'},
+  {id:'architecture', title:'Architecture',  group:'Build'},
+  {id:'screens',      title:'Screens',       group:'Build'},
+  {id:'build-plan',   title:'Build plan',    group:'Build'},
+  {id:'tasks',        title:'Tasks',         group:'Build', team:true},
+  {id:'hosting',      title:'Hosting',       group:'Operate'},
+  {id:'data-ai',      title:'Data and AI',   group:'Operate'},
+  {id:'risks',        title:'Risks',         group:'Operate'},
+  {id:'decisions',    title:'Decisions',     group:'Operate'},
+  {id:'documents',    title:'Documents',     group:'Reference'},
+  {id:'glossary',     title:'Glossary',      group:'Reference'},
+];
+const NUMERALS = ['一','二','三','四','五','六','七','八','九','十'];
+const OWNERS = {aisling:'Aisling', cornell:'Cornell', antonin:'Antonin', shared:'Shared'};
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad = n => String(n).padStart(2,'0');
+const slug = s => s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+const lines = src => src.split('\n').map(l => l.trim()).filter(Boolean);
+const cells = l => l.split('|').map(s => s.trim());
+const kv = s => Object.fromEntries((s || '').split(';').map(p => p.split('=').map(x => x.trim())).filter(p => p[0]));
+const money = n => n === 0 ? '$0' : '$' + Math.round(n).toLocaleString('en-US');
+const rng = (a, b, f = String) => a === b ? f(a) : `${f(a)}–${f(b)}`;
+const parseRange = s => { const [a, b] = String(s).split(/[–-]/).map(Number); return [a, isNaN(b) ? a : b]; };
+
+const store = {
+  get(k, d){ try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } },
+  set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+};
+
+/* ============ custom fences ============ */
+function fenceSteps(src){
+  const rows = lines(src).map(cells);
+  return `<ol class="steps">${rows.map((r,i) =>
+    `<li><span class="steps-n" aria-hidden="true">${NUMERALS[i] || i+1}</span><strong>${esc(r[0])}</strong><span>${esc(r[1]||'')}</span></li>`).join('')}</ol>`;
+}
+function fenceLayers(src){
+  const rows = lines(src).map(l => { const i = l.indexOf('|'); return [l.slice(0,i).trim(), l.slice(i+1).trim()]; });
+  return `<div class="layers">${rows.map(([name, items], i) => `<section class="layer">
+    <h4 class="layer-name"><span>${i+1}</span>${esc(name)}</h4>
+    <ul class="layer-items">${items.split(';').map(it => { const [a, ...b] = it.trim().split(/\s+—\s+/);
+      return `<li><strong>${esc(a)}</strong>${b.length ? `<span>${esc(b.join(' — '))}</span>` : ''}</li>`; }).join('')}</ul></section>`).join('')}</div>`;
+}
+function parseDate(s){ const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); }
+const fmt = d => `${MONTHS[d.getMonth()]} ${d.getDate()}`;
+const fmtR = (a, b) => a.getMonth() === b.getMonth() ? `${fmt(a)}–${b.getDate()}` : `${fmt(a)}–${fmt(b)}`;
+let lastTimeline = null;
+function fenceTimeline(src){
+  let start, end; const rows = [];
+  for (const l of lines(src)){
+    if (/^start:/.test(l)) { start = parseDate(l.split(':')[1].trim()); continue; }
+    if (/^end:/.test(l))   { end = parseDate(l.split(':')[1].trim()); continue; }
+    const p = cells(l);
+    if (/^milestone/.test(p[0])) rows.push({ms:true, accent:p[0].endsWith('*'), name:p[1], date:parseDate(p[2])});
+    else rows.push({id:p[0], name:p[1], s:parseDate(p[2]), e:parseDate(p[3]), owner:p[4], ai:p[5], real:p[6], stretch:/stretch/i.test(p[1])});
+  }
+  lastTimeline = rows;
+  const day = d => Math.round((d - start) / 864e5);
+  const days = day(end) + 1;
+  let ticks = '';
+  for (let i = 0; i < days; i += 7){ const d = new Date(start); d.setDate(d.getDate()+i);
+    ticks += `<span class="tl-tick" style="grid-column:${i+1} / span ${Math.min(7, days-i)}">${fmt(d)}</span>`; }
+  const today = new Date(); today.setHours(0,0,0,0);
+  const ti = day(today);
+  const todayLine = (ti >= 0 && ti < days) ? `<span class="tl-today" style="left:calc(${(ti+.5)/days*100}% - 1px)"></span>` : '';
+  const body = rows.map(r => {
+    if (r.ms){
+      return `<div class="tl-row ms"><div class="tl-label"><b>${esc(r.name)}</b><small>${fmt(r.date)}</small></div>
+        <div class="tl-track">${todayLine}<span class="tl-ms${r.accent?' accent':''}" style="grid-column:${day(r.date)+1}" data-tip="${esc(r.name)} · ${fmt(r.date)}"></span></div></div>`;
+    }
+    const who = OWNERS[r.owner] || r.owner;
+    const tex = r.owner === 'shared' || r.stretch;
+    const tip = `${r.id} ${r.name} · ${fmt(r.s)}–${fmt(r.e)} · ${who} · AI-assisted ${r.ai} days, by hand ${r.real} days`;
+    return `<div class="tl-row"><div class="tl-label"><b><i>${esc(r.id)}</i>${esc(r.name.replace(/\s*\(stretch\)/i,''))}</b>
+      <small>${esc(who)}${r.stretch?' · stretch':''} · ${fmtR(r.s, r.e)} · AI ${esc(r.ai)} d / hand ${esc(r.real)} d</small></div>
+      <div class="tl-track">${todayLine}<span class="tl-bar${tex?' tex':''}" tabindex="0" style="--c:var(--own-${esc(r.owner)});grid-column:${day(r.s)+1} / ${day(r.e)+2}" data-tip="${esc(tip)}"></span></div></div>`;
+  }).join('');
+  const legend = Object.entries(OWNERS).map(([k,v]) => `<span><i style="--c:var(--own-${k})"${k==='shared'?' class="tex"':''}></i>${v}</span>`).join('')
+    + `<span><i class="tex" style="--c:var(--soft)"></i>Stretch</span><span><i class="d"></i>Milestone</span>`;
+  return `<div class="viz"><div class="viz-scroll"><div class="tl" style="--days:${days}" role="img" aria-label="Build timeline from ${fmt(start)} to ${fmt(end)}">
+    <div class="tl-row tl-axis"><div class="tl-label"><small>Week of</small></div><div class="tl-track">${ticks}</div></div>${body}</div></div></div>
+    <div class="legend">${legend}</div>`;
+}
+
+/* --- dot / range plots --- */
+function scaleFn(spec){
+  const [kind, a, b] = spec.split(/\s+/); const lo = +a, hi = +b;
+  if (kind === 'log'){ const L = Math.log10(lo), H = Math.log10(hi);
+    return {log:true, lo, hi, x: v => v <= 0 ? 0 : Math.max(0, Math.min(1, (Math.log10(v) - L) / (H - L))),
+      ticks: [100,300,1000,3000,10000,30000].filter(t => t >= lo && t <= hi)}; }
+  const step = (hi - lo) <= 100 ? 15 : 100;
+  const ticks = []; for (let t = lo; t <= hi; t += step) ticks.push(t);
+  return {lo, hi, x: v => (v - lo) / (hi - lo), ticks};
+}
+const tickLabel = (t, isMoney) => isMoney ? (t >= 1000 ? `$${t/1000}k` : `$${t}`) : String(t);
+function gridLines(sc){ return sc.ticks.map(t => `<span class="grid" style="left:${sc.x(t)*100}%"></span>`).join(''); }
+function axisRow(sc, isMoney, label = ''){
+  return `<div class="plot-row plot-axis"><span class="plot-label" style="color:var(--faint);font-size:11px">${esc(label)}</span><div class="plot-track">${
+    sc.ticks.map(t => `<span class="tick" style="left:${sc.x(t)*100}%">${tickLabel(t, isMoney)}</span>`).join('')}</div><span></span></div>`;
+}
+const GROUPS = {today:'Today', ours:'Our tool', gala:'Gala platforms (replace Give Lively checkout)', enterprise:'Enterprise event platforms', other:''};
+function fenceCostbars(src){
+  let title = '', sc = scaleFn('linear 0 100'); const rows = [];
+  for (const l of lines(src)){
+    if (l.startsWith('title:')) { title = l.slice(6).trim(); continue; }
+    if (l.startsWith('scale:')) { sc = scaleFn(l.slice(6).trim()); continue; }
+    const [label, lo, hi, group, note] = cells(l); rows.push({label, lo:+lo, hi:+hi, group, note});
+  }
+  let html = '', lastGroup = null, first = true;
+  const useGroups = rows.some(x => x.group === 'gala' || x.group === 'enterprise');
+  for (const r of rows){
+    if (useGroups && GROUPS[r.group] && r.group !== lastGroup){
+      html += `<div class="plot-row plot-group"><span style="grid-column:1/-1">${esc(GROUPS[r.group])}</span></div>`; first = true;
+    }
+    lastGroup = r.group;
+    const c = r.group === 'ours' ? 'var(--accent)' : r.group === 'today' ? 'var(--ink)' : 'var(--soft)';
+    const val = rng(r.lo, r.hi, money);
+    const tip = `${r.label}: ${val} a year${r.note ? ' · ' + r.note : ''}`;
+    let marks;
+    if (r.hi === 0) marks = `<span class="mk zero" style="--c:${c};left:0"></span>`;
+    else if (r.lo === r.hi) marks = `<span class="mk" style="--c:${c};left:${sc.x(r.lo)*100}%"></span>`;
+    else { const a = sc.x(r.lo || sc.lo), b = sc.x(r.hi);
+      marks = `<span class="rg-bar" style="--c:${c};left:${a*100}%;width:${(b-a)*100}%"></span><span class="mk" style="--c:${c};left:${a*100}%"></span><span class="mk" style="--c:${c};left:${b*100}%"></span>`; }
+    html += `<div class="plot-row${first?' first':''}"><span class="plot-label"${r.group==='ours'?' style="font-weight:600;color:var(--accent-text)"':''}>${esc(r.label)}</span>
+      <div class="plot-track">${gridLines(sc)}${marks}<span class="plot-hit" tabindex="0" data-tip="${esc(tip)}"></span></div><span class="plot-val">${val}</span></div>`;
+    first = false;
+  }
+  html += axisRow(sc, true, sc.log ? 'Each step ≈ 3×' : 'Per year');
+  return `<figure class="viz" style="margin-inline:0"><figcaption class="viz-title">${esc(title)}</figcaption><div class="viz-scroll"><div class="plot">${html}</div></div></figure>`;
+}
+function fenceRanges(src){
+  let title = '', max = 100, band = null; const rows = [];
+  for (const l of lines(src)){
+    if (l.startsWith('title:')) { title = l.slice(6).trim(); continue; }
+    if (l.startsWith('max:')) { max = +l.slice(4); continue; }
+    if (l.startsWith('band:')) { const [n, a, b] = cells(l.slice(5)); band = {n, a:+a, b:+b}; continue; }
+    const [label, lo, hi, kind, note] = cells(l); rows.push({label, lo:+lo, hi:+hi, kind, note});
+  }
+  const sc = scaleFn(`linear 0 ${max}`);
+  const bandEl = band ? `<span class="band" style="left:${sc.x(band.a)*100}%;width:${(sc.x(band.b)-sc.x(band.a))*100}%"></span>` : '';
+  let html = '';
+  rows.forEach((r, i) => {
+    const c = r.kind === 'ai' ? 'var(--accent)' : 'var(--soft)';
+    const a = sc.x(r.lo), b = sc.x(r.hi);
+    html += `<div class="plot-row${i===0?' first':''}"><span class="plot-label"><i style="--c:${c}"></i>${esc(r.label)}</span>
+      <div class="plot-track">${gridLines(sc)}${bandEl}<span class="rg-bar" style="--c:${c};left:${a*100}%;width:${(b-a)*100}%;height:14px"></span>
+      <span class="plot-hit" tabindex="0" data-tip="${esc(`${r.label}: ${r.lo}–${r.hi} person-days. ${r.note || ''}`)}"></span></div>
+      <span class="plot-val">${r.lo}–${r.hi} days</span></div>`;
+  });
+  html += axisRow(sc, false, 'Person-days');
+  const bandKey = band ? `<div class="legend" style="margin:0 0 6px"><span><i style="--c:var(--ok-wash);box-shadow:inset 0 0 0 1.5px var(--ok)"></i>Shaded: ${esc(band.n)} (${band.a}–${band.b} days)</span></div>` : '';
+  return `<figure class="viz" style="margin-inline:0"><figcaption class="viz-title">${esc(title)}</figcaption>${bandKey}<div class="viz-scroll"><div class="plot">${html}</div></div>
+    <p class="viz-foot">${rows.map(r => `${esc(r.label)}: ${esc(r.note || '')}`).join(' · ')}</p></figure>`;
+}
+function fenceWorkload(src){
+  const notes = lines(src).filter(l => l.startsWith('note:')).map(l => cells(l.slice(5)));
+  if (!lastTimeline) return '';
+  const acc = {};
+  for (const r of lastTimeline){ if (r.ms) continue;
+    const [a, b] = parseRange(r.ai); const o = acc[r.owner] ||= {lo:0, hi:0, slo:0, shi:0, items:[]};
+    if (r.stretch){ o.slo += a; o.shi += b; } else { o.lo += a; o.hi += b; }
+    o.items.push(`${r.id}${r.stretch ? ' (stretch)' : ''}`);
+  }
+  const order = ['aisling','cornell','antonin','shared'].filter(k => acc[k]);
+  const max = Math.ceil(Math.max(...order.map(k => acc[k].hi + acc[k].shi)) / 2) * 2 + 2;
+  const sc = scaleFn(`linear 0 ${max}`); sc.ticks = []; for (let t = 0; t <= max; t += 2) sc.ticks.push(t);
+  let html = '';
+  order.forEach((k, i) => {
+    const o = acc[k], c = `var(--own-${k})`, tex = k === 'shared';
+    const tip = `${OWNERS[k]}: ${rng(o.lo, o.hi)} AI-assisted days${o.shi ? ` plus ${rng(o.slo, o.shi)} stretch` : ''} · ${o.items.join(', ')}`;
+    html += `<div class="plot-row${i===0?' first':''}"><span class="plot-label"><i style="--c:${c}"${tex?' class="tex"':''}></i>${OWNERS[k]}</span>
+      <div class="plot-track">${gridLines(sc)}
+        <span class="rg-bar${tex?' tex':''}" style="--c:${c};left:0;width:${sc.x(o.lo)*100}%;height:14px"></span>
+        <span class="rg-bar soft" style="--c:${c};left:${sc.x(o.lo)*100}%;width:${(sc.x(o.hi)-sc.x(o.lo))*100}%;height:14px"></span>
+        ${o.shi ? `<span class="rg-bar tex" style="--c:${c};left:calc(${sc.x(o.hi)*100}% + 2px);width:${(sc.x(o.hi+o.shi)-sc.x(o.hi))*100}%;height:14px"></span>` : ''}
+        <span class="plot-hit" tabindex="0" data-tip="${esc(tip)}"></span></div>
+      <span class="plot-val">${rng(o.lo, o.hi)} d${o.shi ? ` +${rng(o.slo, o.shi)}` : ''}</span></div>`;
+  });
+  for (const [name, text] of notes){
+    html += `<div class="plot-row"><span class="plot-label"><i style="--c:var(--rule-strong)"></i>${esc(name)}</span><span class="plot-note">${esc(text)}</span><span class="plot-val">—</span></div>`;
+  }
+  html += axisRow(sc, false, 'AI-assisted days');
+  return `<figure class="viz" style="margin-inline:0"><figcaption class="viz-title">Build work per person</figcaption><div class="viz-scroll"><div class="plot">${html}</div></div>
+    <p class="viz-foot">Solid: low estimate. Faded: up to the high estimate. Striped: stretch work. Shared work is split across all four people.</p></figure>`;
+}
+
+/* --- walkthrough --- */
+function fenceWalkthrough(src){
+  let sponsor = {}, guests = [], steps = [];
+  for (const l of lines(src)){
+    if (l.startsWith('sponsor:')){ const [n, p, a, s] = cells(l.slice(8)); sponsor = {name:n, pkg:p, amt:a, seats:+s}; continue; }
+    if (l.startsWith('guests:')){ guests = l.slice(7).split(';').map(g => { const i = g.indexOf(','); return {n:g.slice(0,i).trim(), t:g.slice(i+1).trim()}; }); continue; }
+    const [t, d, st] = cells(l); steps.push({t, d, s:kv(st)});
+  }
+  const data = encodeURIComponent(JSON.stringify({sponsor, guests, steps}));
+  return `<div class="wt" data-wt="${data}"></div>`;
+}
+function mountWalkthrough(el){
+  const {sponsor, guests, steps} = JSON.parse(decodeURIComponent(el.dataset.wt));
+  let i = 0;
+  el.innerHTML = `<ol class="wt-steps" aria-label="Steps">${steps.map((s, k) =>
+    `<li><button type="button" data-k="${k}"><span class="dot">${k+1}</span><span class="t">${esc(s.t)}</span></button></li>`).join('')}</ol>
+    <div class="wt-card" aria-live="polite"></div>`;
+  const card = el.querySelector('.wt-card');
+  function render(anim){
+    const st = steps[i], s = st.s;
+    const named = +(s.named || 0), arrived = s.arrived !== undefined ? +s.arrived : -1, fix = +(s.fix || 0);
+    const paid = /received/i.test(s.pay || '');
+    let seats = '';
+    for (let k = 0; k < sponsor.seats; k++){
+      const g = guests[k] || {n:'Guest', t:''};
+      let cls = 'open', inner = `<b>Open seat</b><small>${s.flag ? 'Name missing' : 'Waiting'}</small>`, right = '';
+      if (k < named){ cls = 'named'; inner = `<b>${esc(g.n)}</b><small>${esc(g.t)}</small>`; }
+      else if (s.flag) cls = 'flag';
+      if (arrived >= 0 && k < named){ if (k < arrived){ cls = 'in'; right = '✓ In'; } else right = 'Not arrived'; }
+      const fixNote = (fix && k === fix - 1) ? `<span class="fix">Title corrected by owner</span>` : '';
+      const table = s.table ? `T${esc(s.table)}` : '';
+      seats += `<div class="seat ${cls}"><span class="sn"><span>Seat ${k+1}${table ? ' · ' + table : ''}</span><span>${right}</span></span>${inner}${fixNote}</div>`;
+    }
+    card.innerHTML = `<div class="${anim ? 'wt-anim' : ''}">
+      <div class="wt-head"><div><div class="wt-name">${esc(sponsor.name)}</div><div class="wt-sub">${esc(sponsor.pkg)} · ${esc(sponsor.amt)} · ${sponsor.seats} seats · invented example</div></div>
+        <div class="pills"><span class="pill ${paid ? 'paid' : 'pledged'}">${esc(s.pay || '')}</span>${s.link ? '<span class="pill link">Sponsor link active</span>' : ''}</div></div>
+      <div class="wt-step"><h4>${i+1}. ${esc(st.t)}</h4><p>${esc(st.d)}</p></div>
+      <div class="seats">${seats}</div>
+      <div class="wt-dash"><span aria-hidden="true">▤</span><span>Staff dashboard: <b>${esc(s.dash || '')}</b></span></div></div>
+      <div class="wt-ctl"><span>Step ${i+1} of ${steps.length}</span><div>
+        <button class="btn" type="button" data-wd="-1" ${i===0?'disabled':''} aria-label="Previous step">←</button>
+        <button class="btn${i<steps.length-1?' btn-primary':''}" type="button" data-wd="1" ${i===steps.length-1?'disabled':''}>${i<steps.length-1?'Next step →':'Done'}</button></div></div>`;
+    el.querySelectorAll('.wt-steps button').forEach((b, k) => {
+      b.classList.toggle('past', k < i);
+      if (k === i) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current');
+    });
+  }
+  el.addEventListener('click', e => {
+    const b = e.target.closest('[data-k],[data-wd]'); if (!b) return;
+    if (b.dataset.k !== undefined) i = +b.dataset.k; else i = Math.max(0, Math.min(steps.length-1, i + +b.dataset.wd));
+    render(true);
+  });
+  el._wt = { step(dir){ const n = i + dir; if (n < 0 || n >= steps.length) return false; i = n; render(true); return true; },
+             reset(toEnd){ i = toEnd ? steps.length-1 : 0; render(false); } };
+  render(false);
+}
+
+/* --- decision ladder --- */
+const KIND_LABEL = {update:'Update', review:'Review', new:'New guest', reject:'Rejected'};
+function fenceDecision(src){
+  let start = '', html = '';
+  const rows = [];
+  for (const l of lines(src)){
+    if (l.startsWith('start:')) { start = l.slice(6).trim(); continue; }
+    const [q, out, kind] = cells(l); rows.push({q, out, kind});
+  }
+  html += `<div class="dec-start">${esc(start)}</div>`;
+  rows.forEach((r, i) => {
+    const neg = r.q.startsWith('!'); const q = neg ? r.q.slice(1) : r.q;
+    const c = `var(--k-${r.kind})`;
+    if (q === 'else'){
+      html += `<div class="dec-down"><span>${i ? (rows[i-1].q.startsWith('!') ? 'Yes' : 'No') : ''}</span></div>
+        <div class="dec-out dec-final" style="--c:${c}"><small>${KIND_LABEL[r.kind] || ''}</small>${esc(r.out)}</div>`;
+      return;
+    }
+    const prevLabel = i === 0 ? '' : (rows[i-1].q.startsWith('!') ? 'Yes' : 'No');
+    html += `<div class="dec-down"><span>${prevLabel}</span></div>
+      <div class="dec-row"><div class="dec-q">${esc(q)}</div><div class="dec-arrow" style="--c:${c}"><span>${neg ? 'No' : 'Yes'}</span></div>
+      <div class="dec-out" style="--c:${c}"><small>${KIND_LABEL[r.kind] || ''}</small>${esc(r.out)}</div></div>`;
+  });
+  return `<div class="dec" role="group" aria-label="Matching decision flow">${html}</div>`;
+}
+
+/* --- ERD --- */
+function fenceErd(src){
+  const core = [], sub = []; let subLabel = '', inSub = false;
+  for (const l of lines(src)){
+    if (l.startsWith('---')) { inSub = true; subLabel = l.replace(/^-+/, '').trim(); continue; }
+    const [head, fields] = cells(l);
+    const m = head.match(/^(\S+)(?:\s*@(\d+),(\d+))?/);
+    const ent = {name:m[1], col:m[2], row:m[3], fields:fields.split(';').map(f => {
+      const t = f.trim(); const a = t.split('→');
+      if (a.length > 1){ const rest = a[1].trim(); const tgt = rest.split(/\s+/)[0]; return {name:a[0].trim(), fk:tgt, extra:rest.slice(tgt.length).trim()}; }
+      return {name:t};
+    })};
+    (inSub ? sub : core).push(ent);
+  }
+  const box = (e, isCore) => `<div class="ent" data-ent="${esc(e.name)}"${isCore && e.col ? ` style="grid-column:${e.col};grid-row:${e.row}"` : ''}>
+    <h5>${esc(e.name)}</h5><ul>${e.fields.map(f => `<li${f.fk && isCore ? ` data-fk="${esc(f.fk)}"` : ''}><span>${esc(f.name)}${f.extra ? ` <span style="color:var(--faint)">${esc(f.extra)}</span>` : ''}</span>${f.fk ? `<em>→ ${esc(f.fk)}</em>` : ''}</li>`).join('')}</ul></div>`;
+  return `<div class="erd" data-erd><div class="erd-core"><svg class="lines" aria-hidden="true"></svg>${core.map(e => box(e, true)).join('')}</div>
+    ${sub.length ? `<div class="erd-sub"><p class="erd-sub-label">${esc(subLabel)}</p><div class="erd-sub-grid">${sub.map(e => box(e, false)).join('')}</div></div>` : ''}</div>`;
+}
+function drawErd(erd){
+  const coreEl = erd.querySelector('.erd-core'), svg = coreEl.querySelector('svg.lines');
+  if (!coreEl.offsetParent || coreEl.clientWidth < 700){ svg.innerHTML = ''; return; }
+  const base = coreEl.getBoundingClientRect();
+  const R = el => { const r = el.getBoundingClientRect(); return {l:r.left-base.left, r:r.right-base.left, t:r.top-base.top, b:r.bottom-base.top, cy:(r.top+r.bottom)/2-base.top}; };
+  let out = '';
+  coreEl.querySelectorAll('li[data-fk]').forEach(li => {
+    const tgt = coreEl.querySelector(`.ent[data-ent="${li.dataset.fk}"]`); if (!tgt) return;
+    const src = li.closest('.ent'); const s = R(src), f = R(li), t = R(tgt), th = R(tgt.querySelector('h5'));
+    const y1 = f.cy, y2 = th.cy;
+    let d, x1, x2;
+    if (Math.abs(s.l - t.l) < 10){ // same column: straight line up to the box above
+      const x = (s.l + s.r) / 2, yb = t.b + 7;
+      out += `<path d="M${x},${s.t} V${yb}"/><path d="M${x-4.5},${yb} L${x},${t.b} L${x+4.5},${yb} Z" style="fill:var(--faint);stroke:none"/><circle cx="${x}" cy="${s.t}" r="3"/>`;
+      return;
+    } else {
+      const right = t.l > s.r - 2; x1 = right ? s.r : s.l; x2 = right ? t.l : t.r;
+      const dx = Math.max(24, Math.abs(x2 - x1) / 2) * (right ? 1 : -1);
+      const end = right ? x2 - 7 : x2 + 7;
+      d = `M${x1},${y1} C${x1 + dx},${y1} ${end - dx},${y2} ${end},${y2}`;
+    }
+    const dir = x2 >= x1 || Math.abs(s.l - t.l) < 10 ? 1 : -1;
+    const ax = Math.abs(s.l - t.l) < 10 ? x2 : x2;
+    const arrow = dir > 0 ? `M${ax-8},${y2-4.5} L${ax},${y2} L${ax-8},${y2+4.5} Z` : `M${ax+8},${y2-4.5} L${ax},${y2} L${ax+8},${y2+4.5} Z`;
+    out += `<path d="${d}"/><path d="${arrow}" style="fill:var(--faint);stroke:none"/><circle cx="${x1}" cy="${y1}" r="3"/>`;
+  });
+  svg.innerHTML = out;
+}
+
+/* --- risks --- */
+const LV = ['', 'Low', 'Medium', 'High'], LK = ['', 'Unlikely', 'Possible', 'Likely'];
+function fenceRisks(src){
+  const rows = lines(src).map(cells).map(([t, l, i, m, o]) => ({t, l:+l, i:+i, m, o}));
+  rows.forEach((r, k) => r.k = k);
+  rows.sort((a, b) => (b.l*b.i - a.l*a.i) || (b.i - a.i) || (a.k - b.k));
+  rows.forEach((r, k) => r.n = k + 1);
+  const pct = {1:5, 2:12, 3:18, 4:26, 6:38, 9:52};
+  let cellsHtml = '';
+  for (let l = 3; l >= 1; l--) for (let i = 1; i <= 3; i++){
+    const here = rows.filter(r => r.l === l && r.i === i);
+    cellsHtml += `<div class="cell" style="--p:${pct[l*i]}%;grid-column:${i+1};grid-row:${4-l}">${
+      here.map(r => `<span class="rdot" data-r="${r.n}" tabindex="0" data-tip="${r.n}. ${esc(r.t)}">${r.n}</span>`).join('')}</div>`;
+  }
+  const heat = `<div class="heat" role="img" aria-label="Risk matrix: likelihood by impact">
+    <span class="ylab">Likelihood →</span>${cellsHtml}
+    ${[1,2,3].map(i => `<span class="xt" style="grid-column:${i+1};grid-row:4">${LV[i]}</span>`).join('')}
+    <span class="xlab" style="grid-row:5">Impact →</span></div>`;
+  const list = `<ol class="rk-list">${rows.map(r => `<li data-r="${r.n}"><span class="rn">${r.n}</span><div><b>${esc(r.t)}</b>
+    <span class="meta">${LK[r.l]} · ${LV[r.i]} impact · ${esc(r.o)}</span><p>${esc(r.m)}</p></div></li>`).join('')}</ol>`;
+  return `<div class="rk">${heat}${list}</div>`;
+}
+
+/* --- glossary --- */
+function fenceGlossary(src){
+  const rows = lines(src).map(cells).sort((a, b) => a[0].localeCompare(b[0]));
+  const groups = {};
+  rows.forEach(([t, d]) => { const L = /[A-Za-z]/.test(t[0]) ? t[0].toUpperCase() : '#'; (groups[L] ||= []).push([t, d]); });
+  return `<div class="gl"><input class="gl-filter" type="search" placeholder="Filter ${rows.length} terms" aria-label="Filter glossary">${
+    Object.entries(groups).map(([L, items]) => `<section data-gl><div class="gl-letter">${L}</div><dl>${
+      items.map(([t, d]) => `<dt id="term-${slug(t)}">${esc(t)}</dt><dd>${esc(d)}</dd>`).join('')}</dl></section>`).join('')}</div>`;
+}
+
+/* --- wireframes --- */
+const WF = {
+  dashboard: () => `<div class="wf wf-dash"><span class="wf-badge">Rough sketch</span>
+    <div class="bar"><b>2027 Gala · Guest list</b><span class="box">Search guests or sponsors</span><span class="box solid">Import Give Lively file</span><span class="box acc">Export badges</span></div>
+    <div class="body">
+      <div class="goal"><p class="lbl">Sponsorships</p><b>$310,000</b><div class="meter"><i style="width:62%"></i></div>62% of goal · sample goal</div>
+      <div class="goal"><p class="lbl">Tickets</p><b>184 sold</b><div class="meter"><i style="width:46%"></i></div>46% of goal · sample goal</div>
+      <div class="goal"><p class="lbl">Seats named</p><b>412 of 538</b><div class="meter"><i style="width:77%"></i></div>126 names missing</div>
+      <div class="gaps"><p class="lbl">Missing names by owner</p>
+        <div class="row"><span>Staff member A</span><span class="st miss">31 open</span></div>
+        <div class="row"><span>Staff member B</span><span class="st miss">22 open</span></div>
+        <div class="row"><span>Staff member C</span><span class="st miss">9 open</span></div>
+        <div class="row"><span>Unassigned</span><span class="st">4</span></div></div>
+      <div class="grid"><p class="lbl">Guests · filter: needs attention</p>
+        <div class="row"><span style="color:var(--ink)">Lantern Street Partners</span><span>Gold · 7 seats · 2 open</span><span class="st miss">Names missing</span><span>Staff A</span></div>
+        <div class="row"><span style="color:var(--ink)">M. Okafor</span><span>Individual ticket</span><span class="st">Review match</span><span>Staff B</span></div>
+        <div class="row"><span style="color:var(--ink)">Council Member (comp)</span><span>Comp · 2 seats</span><span class="st ok">Confirmed</span><span>Staff C</span></div>
+        <div class="row"><span style="color:var(--ink)">Riverside Health Fund</span><span>Silver · 10 seats</span><span class="st miss">Logo missing</span><span>Staff A</span></div></div>
+    </div></div>`,
+  sponsor: () => `<div class="wf wf-phone"><span class="wf-badge">Rough sketch</span>
+    <div class="bar"><b>Lantern Street Partners</b><span>Gold sponsorship · 7 seats</span><span style="color:var(--accent-text)">Names due by AAFE's deadline</span></div>
+    <div class="langs"><span class="box solid">English</span><span class="box cjk-tc">中文</span><span class="box cjk-kr">한국어</span><span class="box">Español</span></div>
+    <div class="slot filled"><p class="lbl">Seat 1</p><div class="f">A. Rivera</div><div class="f">Director · Lantern Street Partners</div></div>
+    <div class="slot filled"><p class="lbl">Seat 2</p><div class="f">K. Osei</div><div class="f">VP Community</div></div>
+    <div class="slot"><p class="lbl">Seat 3</p><div class="f">Guest name</div><div class="f">Title and organization</div></div>
+    <div class="slot" style="opacity:.6"><p class="lbl">Seats 4–7</p><div class="f">4 more slots…</div></div>
+    <div class="foot"><span>Saved · edit anytime before the deadline</span><span class="box acc">Save</span></div></div>`,
+  checkin: () => `<div class="wf wf-pad"><span class="wf-badge">Rough sketch</span>
+    <div class="bar"><b>Check-in · Gala night</b><span class="box">Works offline · synced 1 min ago</span><span class="box solid">+ Walk-in</span></div>
+    <div class="body"><div>
+      <div class="q">ri|</div>
+      <div class="row"><span style="color:var(--ink)">A. Rivera</span><span>Lantern Street Partners</span><span>T12</span><span class="box acc">Check in</span></div>
+      <div class="row"><span style="color:var(--ink)">R. Iyer</span><span>Lantern Street Partners</span><span>T12</span><span class="st ok">✓ Arrived 7:04</span></div>
+      <div class="row"><span style="color:var(--ink)">Open seat</span><span>Lantern Street Partners</span><span>T12</span><span class="box">Assign walk-in</span></div>
+      <div class="row"><span style="color:var(--ink)">D. Rivas</span><span>Individual ticket</span><span>T3</span><span class="box acc">Check in</span></div>
+    </div>
+    <div class="panel"><p class="lbl">Tonight</p><div><b>312</b>arrived of 538</div><div><b>9</b>walk-ins</div><div><b>14</b>unnamed sponsor seats</div></div></div></div>`
+};
+function fenceWireframe(kind){ const f = WF[kind]; return f ? `<div class="wf-wrap">${f()}</div>` : ''; }
+
+function fenceNotes(src){ return `<details class="notes" data-notes><summary>Speaker notes</summary><p>${esc(src.trim())}</p></details>`; }
+
+marked.use({ gfm:true, renderer:{
+  code(code, info){
+    const [lang, arg] = (info || '').trim().split(/\s+/);
+    switch (lang){
+      case 'steps': return fenceSteps(code);
+      case 'layers': return fenceLayers(code);
+      case 'timeline': return fenceTimeline(code);
+      case 'costbars': return fenceCostbars(code);
+      case 'ranges': return fenceRanges(code);
+      case 'workload': return fenceWorkload(code);
+      case 'walkthrough': return fenceWalkthrough(code);
+      case 'decision': return fenceDecision(code);
+      case 'erd': return fenceErd(code);
+      case 'risks': return fenceRisks(code);
+      case 'glossary': return fenceGlossary(code);
+      case 'wireframe': return fenceWireframe(arg);
+      case 'notes': return fenceNotes(code);
+    }
+    return `<pre><code${lang ? ` class="lang-${esc(lang)}"` : ''}>${esc(code)}</code></pre>`;
+  },
+  table(header, body){ return `<div class="table-wrap"><table><thead>${header}</thead><tbody>${body}</tbody></table></div>`; }
+}});
+
+/* ============ state ============ */
+const docs = {};
+let current = null, slides = [], slideIdx = 0, presenting = false, notesOpen = false;
+let client = store.get('aafe-hub-client', false);
+let checks = store.get('aafe-hub-checks', {});   // fallback when shared storage isn't available
+let sharedChecks = null, sharedDb = null, canWrite = true, checkMode = 'local';
+
+/* split a rendered container into sections at each h2; marks team-only sections */
+function sectionize(container){
+  const kids = [...container.childNodes]; container.textContent = '';
+  let s = document.createElement('section'); s.className = 'slide'; container.appendChild(s);
+  for (const k of kids){
+    if (k.nodeName === 'H2'){ s = document.createElement('section'); s.className = 'slide'; container.appendChild(s); }
+    if (k.nodeType === 8 && k.data.trim() === 'team'){ s.dataset.team = ''; continue; }
+    s.appendChild(k);
+  }
+  return [...container.querySelectorAll(':scope > .slide')];
+}
+
+/* ============ nav ============ */
+function visiblePages(){ return PAGES.filter(p => !(client && p.team)); }
+function buildNav(){
+  const vis = visiblePages(), groups = [...new Set(vis.map(p => p.group))];
+  $('#nav').innerHTML = groups.map(g => `<div class="nav-group"><div class="nav-label">${g}</div>${
+    vis.filter(p => p.group === g).map(p => { const i = vis.indexOf(p);
+      return `<a href="#${p.id}" data-id="${p.id}"><span class="n">${pad(i+1)}</span><span>${esc(p.title)}</span>${p.team ? '<span class="tag">Team</span>' : ''}</a><ul class="toc" data-toc="${p.id}" hidden></ul>`; }).join('')
+  }</div>`).join('');
+  document.querySelectorAll('[data-mode]').forEach(b => b.setAttribute('aria-pressed', String((b.dataset.mode === 'client') === client)));
+  document.body.classList.toggle('client', client);
+  $('#client-banner').hidden = !client;
+}
+function updateNav(){
+  document.querySelectorAll('#nav a').forEach(a => { if (a.dataset.id === current) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current'); });
+  document.querySelectorAll('.toc').forEach(t => {
+    if (t.dataset.toc !== current){ t.hidden = true; return; }
+    const hs = slides.map(s => s.querySelector('h2')).filter(Boolean);
+    t.innerHTML = hs.map(h => `<li><button type="button" data-h="${h.id}">${esc(h.dataset.label)}</button></li>`).join('');
+    t.hidden = hs.length === 0;
+  });
+  const a = document.querySelector(`#nav a[data-id="${current}"]`);
+  if (a && window.matchMedia('(max-width:900px)').matches) a.scrollIntoView({block:'nearest', inline:'center'});
+}
+
+/* ============ load + render ============ */
+async function load(id){
+  if (docs[id]) return docs[id];
+  try {
+    const r = await fetch(`docs/${id}.md`, {cache:'no-cache'});
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const md = await r.text();
+    const html = marked.parse(md);
+    const tmp = document.createElement('div'); tmp.innerHTML = html;
+    const secs = sectionize(tmp);
+    tmp.querySelectorAll('[data-notes]').forEach(n => n.remove());
+    const textOf = list => list.map(s => s.textContent).join(' ').replace(/\s+/g,' ').trim();
+    docs[id] = {md, html, text: textOf(secs), pub: textOf(secs.filter(s => !('team' in s.dataset)))};
+  } catch (e) { docs[id] = {error: String(e.message || e)}; }
+  return docs[id];
+}
+
+function keyFor(id, li){ return `${id}--${slug(li.textContent).slice(0, 80) || 'item'}`; }
+function isChecked(key){ return sharedChecks ? !!sharedChecks[key] : !!checks[key]; }
+function applyChecks(){
+  const doc = $('#doc'); const boxes = doc.querySelectorAll('input[type=checkbox]');
+  let done = 0;
+  boxes.forEach(b => { const v = isChecked(b.dataset.key); b.checked = v; b.closest('li').classList.toggle('done', v); if (v) done++;
+    b.disabled = !canWrite; });
+  const note = doc.querySelector('.check-note');
+  if (note && boxes.length){
+    const where = checkMode === 'shared' ? (canWrite ? 'Shared with the team: everyone sees the same checkmarks.' : 'View only: you can see the team’s checkmarks but not change them.')
+      : 'Saved in this browser only. Shared checkmarks need the published hub.';
+    note.innerHTML = `<span><b>${done}</b> of ${boxes.length} done</span><span class="meter"><i style="width:${boxes.length ? done/boxes.length*100 : 0}%"></i></span><span class="where">${where}</span>`;
+  }
+}
+async function setCheck(key, v){
+  if (sharedDb){
+    sharedChecks = {...(sharedChecks || {}), [key]: v}; applyChecks();
+    try { await sharedDb.collection('checks').doc(key).set({done: v, at: new Date().toISOString()}); }
+    catch (e) {
+      if (e && e.code === 'invalid_argument'){ canWrite = false; }
+      toast(e && e.code === 'quota_exceeded' ? 'The shared checklist is full; nothing was saved.' : 'That checkmark didn’t save. Try again in a moment.');
+      const snap = await sharedDb.collection('checks').doc(key).get().catch(() => null);
+      sharedChecks = {...sharedChecks, [key]: !!(snap && snap.exists && snap.data().done)}; applyChecks();
+    }
+  } else { checks[key] = v; store.set('aafe-hub-checks', checks); applyChecks(); }
+}
+
+function decorate(doc, id){
+  slides = sectionize(doc);
+  doc.querySelectorAll('thead').forEach(th => { if (!th.textContent.trim()) th.hidden = true; });
+  doc.querySelectorAll('h2,h3').forEach(h => { h.dataset.label = h.textContent.trim(); h.id = slug(h.textContent); });
+  doc.querySelectorAll('h2').forEach(h => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'h-link'; b.textContent = '#';
+    b.setAttribute('aria-label', `Copy link to ${h.textContent}`); b.dataset.copy = h.id; h.prepend(b);
+    if ('team' in h.closest('.slide').dataset){ const t = document.createElement('span'); t.className = 'team-tag'; t.textContent = 'Team only'; h.append(t); }
+  });
+  doc.querySelectorAll('.slide[data-team]').forEach(s => s.setAttribute('data-team', ''));
+  doc.querySelectorAll('a[href]').forEach(a => { if (/^https?:/.test(a.getAttribute('href'))) { a.target = '_blank'; a.rel = 'noopener'; } });
+  // checkboxes
+  const boxes = doc.querySelectorAll('input[type=checkbox]');
+  boxes.forEach(b => {
+    const li = b.closest('li'); b.dataset.key = keyFor(id, li);
+    b.removeAttribute('disabled'); b.setAttribute('aria-label', li.textContent.trim());
+    b.addEventListener('change', () => setCheck(b.dataset.key, b.checked));
+  });
+  if (boxes.length){
+    const n = document.createElement('div'); n.className = 'check-note';
+    const firstH2 = doc.querySelector('.slide:first-child'); firstH2.appendChild(n);
+  }
+  applyChecks();
+  doc.querySelectorAll('[data-wt]').forEach(mountWalkthrough);
+  doc.querySelectorAll('[data-erd]').forEach(e => { drawErd(e); });
+  // glossary filter
+  doc.querySelectorAll('.gl-filter').forEach(inp => inp.addEventListener('input', () => {
+    const q = inp.value.trim().toLowerCase();
+    doc.querySelectorAll('.gl section[data-gl]').forEach(sec => {
+      let any = false;
+      sec.querySelectorAll('dt').forEach(dt => { const dd = dt.nextElementSibling;
+        const hit = !q || dt.textContent.toLowerCase().includes(q) || dd.textContent.toLowerCase().includes(q);
+        dt.hidden = dd.hidden = !hit; any ||= hit; });
+      sec.hidden = !any;
+    });
+  }));
+  // risk cross-highlight
+  doc.querySelectorAll('.rk').forEach(rk => {
+    const on = n => rk.querySelectorAll('[data-r]').forEach(x => x.classList.toggle('on', x.dataset.r === n));
+    rk.addEventListener('pointerover', e => { const t = e.target.closest('[data-r]'); on(t ? t.dataset.r : null); });
+    rk.addEventListener('focusin', e => { const t = e.target.closest('[data-r]'); if (t) on(t.dataset.r); });
+    rk.addEventListener('pointerleave', () => on(null));
+  });
+  slides = slides.filter(s => !(client && 'team' in s.dataset));
+}
+
+async function show(id, {slide = 0, section = null, focusTerm = null} = {}){
+  const vis = visiblePages();
+  if (!vis.some(p => p.id === id)) id = 'overview';
+  current = id;
+  const i = vis.findIndex(p => p.id === id), p = vis[i];
+  $('#kicker').innerHTML = `<span class="num">${pad(i+1)}</span><span class="grp">${esc(p.group)}${p.team ? ' · Team only' : ''}</span>`;
+  const doc = $('#doc');
+  const d = await load(id);
+  if (current !== id) return;
+  lastTimeline = null;
+  if (d.error){
+    doc.innerHTML = `<div class="state"><h1>${esc(p.title)}</h1><p>This page couldn't load (<code>docs/${id}.md</code>: ${esc(d.error)}).</p>
+      <p>If you opened <code>index.html</code> straight from your files, the browser blocks it from reading the pages. In the hub folder, run <code>npx serve</code> and open the address it prints.</p></div>`;
+    slides = [doc.firstElementChild];
+  } else {
+    doc.innerHTML = marked.parse(d.md);   // re-parse so fences that depend on earlier fences (workload) see fresh data
+    decorate(doc, id);
+  }
+  const prev = vis[i-1], next = vis[i+1];
+  $('#pager').innerHTML = (prev ? `<a class="prev" href="#${prev.id}"><small>← Previous</small><b>${esc(prev.title)}</b></a>` : '')
+    + (next ? `<a class="next" href="#${next.id}"><small>Next →</small><b>${esc(next.title)}</b></a>` : '');
+  updateNav();
+  slideIdx = slide < 0 ? slides.length - 1 : Math.min(slide, slides.length - 1);
+  if (section){ const h = document.getElementById(section); const s = h && h.closest('.slide'); if (s && slides.includes(s)) slideIdx = slides.indexOf(s); }
+  if (presenting && slide < 0){ const wt = slides[slideIdx]?.querySelector('.wt'); if (wt && wt._wt) wt._wt.reset(true); }
+  applySlides();
+  if (focusTerm) highlight(doc, focusTerm);
+  else if (section && !presenting){ const h = document.getElementById(section); if (h) h.scrollIntoView({block:'start'}); }
+  else if (!presenting) window.scrollTo(0, 0);
+}
+
+/* ============ present mode ============ */
+function applySlides(){
+  const all = $('#doc').querySelectorAll(':scope > .slide');
+  all.forEach(s => { s.hidden = presenting ? s !== slides[slideIdx] : false; });
+  $('#presbar').hidden = !presenting; $('#progress').hidden = !presenting;
+  document.body.classList.toggle('presenting', presenting);
+  updateDrawer();
+  (presenting ? slides[slideIdx] : $('#doc'))?.querySelectorAll('[data-erd]').forEach(drawErd);
+  if (!presenting) return;
+  const vis = visiblePages(), pi = vis.findIndex(p => p.id === current);
+  const h = slides[slideIdx]?.querySelector('h2,h1');
+  const label = h ? (h.dataset.label || h.textContent) : '';
+  $('#where').innerHTML = `<b>${pad(pi+1)} ${esc(vis[pi].title)}</b> · ${esc(label)} · ${slideIdx+1}/${slides.length}`;
+  $('#progress').style.width = `${((pi + (slideIdx+1)/slides.length) / vis.length) * 100}%`;
+  $('#prev').disabled = pi === 0 && slideIdx === 0;
+  $('#next').disabled = pi === vis.length - 1 && slideIdx === slides.length - 1;
+  window.scrollTo(0, 0);
+}
+function updateDrawer(){
+  const dr = $('#drawer'), btn = $('#notes-btn');
+  const n = presenting && !client ? slides[slideIdx]?.querySelector('[data-notes] p') : null;
+  btn.hidden = client; btn.disabled = !n; btn.setAttribute('aria-pressed', String(notesOpen && !!n));
+  btn.textContent = n ? 'Notes' : 'No notes';
+  dr.hidden = !(presenting && notesOpen && n);
+  if (n) dr.innerHTML = `<b>Speaker notes</b>${esc(n.textContent)}`;
+}
+let pendingSlide = 0;
+function step(dir){
+  const wt = slides[slideIdx]?.querySelector('.wt');
+  if (wt && wt._wt && wt._wt.step(dir)) return;
+  const vis = visiblePages(), pi = vis.findIndex(p => p.id === current);
+  const ni = slideIdx + dir;
+  if (ni >= 0 && ni < slides.length){
+    slideIdx = ni;
+    const w2 = slides[slideIdx]?.querySelector('.wt'); if (w2 && w2._wt) w2._wt.reset(dir < 0);
+    applySlides(); return;
+  }
+  const np = vis[pi + dir]; if (!np) return;
+  pendingSlide = dir > 0 ? 0 : -1;
+  location.hash = np.id + (client ? '~client' : '');
+}
+function setPresenting(on){
+  presenting = on;
+  if (on){ slideIdx = 0; const el = document.documentElement; if (el.requestFullscreen && !document.fullscreenElement) el.requestFullscreen().catch(() => {});
+    const w = slides[0]?.querySelector('.wt'); if (w && w._wt) w._wt.reset(false); }
+  else if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {});
+  applySlides();
+}
+
+/* ============ search ============ */
+function highlight(root, term){
+  const re = new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'), 'gi');
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {acceptNode: n => n.parentElement.closest('mark,script,style,button,[data-wt],details[data-notes]') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT});
+  const nodes = []; while (walker.nextNode()){ re.lastIndex = 0; if (re.test(walker.currentNode.nodeValue)) nodes.push(walker.currentNode); }
+  nodes.forEach(n => { re.lastIndex = 0; const frag = document.createDocumentFragment(); let last = 0, m; const t = n.nodeValue;
+    while ((m = re.exec(t))){ frag.append(t.slice(last, m.index)); const mk = document.createElement('mark'); mk.textContent = m[0]; frag.append(mk); last = m.index + m[0].length; }
+    frag.append(t.slice(last)); n.replaceWith(frag); });
+  const first = [...root.querySelectorAll('mark')].find(m => !m.closest('[hidden]') && !(client && m.closest('[data-team]')));
+  if (first){
+    if (presenting){ const s = first.closest('.slide'); if (slides.includes(s)){ slideIdx = slides.indexOf(s); applySlides(); } }
+    first.scrollIntoView({block:'center'});
+  }
+}
+let pendingTerm = null;
+function runSearch(q){
+  const box = $('#results'); q = q.trim();
+  if (q.length < 2){ box.hidden = true; box.innerHTML = ''; return; }
+  const lq = q.toLowerCase(); const out = [];
+  for (const p of visiblePages()){ const d = docs[p.id]; if (!d || !d.text) continue;
+    const t = client ? d.pub : d.text, lt = t.toLowerCase(); let idx = lt.indexOf(lq), hits = 0; const first = idx;
+    while (idx !== -1){ hits++; idx = lt.indexOf(lq, idx + lq.length); }
+    if (hits){ const a = Math.max(0, first - 50), b = Math.min(t.length, first + q.length + 70);
+      const snip = (a ? '…' : '') + esc(t.slice(a, first)) + '<mark>' + esc(t.slice(first, first + q.length)) + '</mark>' + esc(t.slice(first + q.length, b)) + (b < t.length ? '…' : '');
+      out.push({p, hits, snip}); }
+  }
+  box.innerHTML = out.length ? out.map(r => `<li><button type="button" data-go="${r.p.id}"><span class="r-page">${esc(r.p.title)} · ${r.hits}</span><span class="r-snip">${r.snip}</span></button></li>`).join('')
+    : `<li class="r-empty">No matches for “${esc(q)}”.</li>`;
+  box.hidden = false;
+}
+
+/* ============ links, tooltip, toast ============ */
+function linkFor(section){ return `${ARTIFACT_URL}#${current}${section ? '.' + section : ''}${client ? '~client' : ''}`; }
+async function copy(text, okMsg){
+  try { await navigator.clipboard.writeText(text); toast(okMsg); }
+  catch { toast(`Copy this link: <code>${esc(text)}</code>`, true, 9000); }
+}
+let toastT;
+function toast(msg, html = false, ms = 2600){
+  const t = $('#toast'); if (html) t.innerHTML = msg; else t.textContent = msg; t.hidden = false;
+  clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, ms);
+}
+const tip = $('#tip');
+function showTip(el, x, y){
+  tip.textContent = el.dataset.tip; tip.hidden = false;
+  const r = tip.getBoundingClientRect();
+  if (x === undefined){ const b = el.getBoundingClientRect(); x = b.left + b.width/2; y = b.top; }
+  let left = Math.min(window.innerWidth - r.width - 8, Math.max(8, x - r.width/2));
+  let top = y - r.height - 12; if (top < 8) top = y + 18;
+  tip.style.left = left + 'px'; tip.style.top = top + 'px';
+}
+document.addEventListener('pointermove', e => { const el = e.target.closest && e.target.closest('[data-tip]'); if (el) showTip(el, e.clientX, e.clientY); else tip.hidden = true; });
+document.addEventListener('focusin', e => { const el = e.target.closest('[data-tip]'); if (el) showTip(el); });
+document.addEventListener('focusout', () => { tip.hidden = true; });
+window.addEventListener('scroll', () => { tip.hidden = true; }, {passive:true});
+
+/* ============ routing ============ */
+function parseHash(){
+  let h = decodeURIComponent(location.hash.slice(1));
+  let wantClient = false;
+  if (h.endsWith('~client')){ wantClient = true; h = h.slice(0, -7); }
+  const [page, section] = h.split('.');
+  return {page, section, wantClient};
+}
+function setClient(v){
+  if (client === v) return;
+  client = v; store.set('aafe-hub-client', v); buildNav();
+  show(current, {slide: presenting ? 0 : 0});
+}
+window.addEventListener('hashchange', () => {
+  const {page, section, wantClient} = parseHash();
+  if (wantClient && !client){ client = true; store.set('aafe-hub-client', true); buildNav(); }
+  const opts = {slide: pendingSlide, section, focusTerm: pendingTerm}; pendingSlide = 0; pendingTerm = null;
+  show(page, opts);
+});
+
+/* ============ events ============ */
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-present],[data-go],[data-h],[data-mode],[data-copy],#prev,#next,#exit,#notes-btn,#copy-view'); if (!t) return;
+  if (t.matches('[data-present]')) setPresenting(true);
+  else if (t.matches('[data-mode]')) setClient(t.dataset.mode === 'client');
+  else if (t.id === 'prev') step(-1);
+  else if (t.id === 'next') step(1);
+  else if (t.id === 'exit') setPresenting(false);
+  else if (t.id === 'notes-btn'){ notesOpen = !notesOpen; updateDrawer(); }
+  else if (t.id === 'copy-view') copy(linkFor(null), client ? 'Client-view link copied.' : 'Link copied.');
+  else if (t.dataset.copy) copy(linkFor(t.dataset.copy), 'Link to this section copied.');
+  else if (t.dataset.go){
+    const term = $('#q').value.trim(); $('#results').hidden = true;
+    if (t.dataset.go === current) show(current, {focusTerm: term});
+    else { pendingTerm = term; location.hash = t.dataset.go; }
+  } else if (t.dataset.h){
+    const h = document.getElementById(t.dataset.h); if (h) h.scrollIntoView({behavior:'smooth', block:'start'});
+  }
+});
+$('#q').addEventListener('input', e => runSearch(e.target.value));
+$('#q').addEventListener('keydown', e => {
+  if (e.key === 'Escape'){ e.target.value = ''; runSearch(''); e.target.blur(); }
+  if (e.key === 'Enter'){ const b = $('#results button'); if (b) b.click(); }
+});
+document.addEventListener('keydown', e => {
+  if (e.target.closest('input,textarea')) return;
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.key === '/' && !presenting){ e.preventDefault(); $('#q').focus(); return; }
+  if (!presenting){ if (e.key === 'p' || e.key === 'P') setPresenting(true); return; }
+  if (['ArrowRight','PageDown',' '].includes(e.key)){ e.preventDefault(); step(1); }
+  else if (['ArrowLeft','PageUp'].includes(e.key)){ e.preventDefault(); step(-1); }
+  else if (e.key === 'n' || e.key === 'N'){ notesOpen = !notesOpen; updateDrawer(); }
+  else if (e.key === 'Escape') setPresenting(false);
+});
+let rz; window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => document.querySelectorAll('[data-erd]').forEach(drawErd), 120); });
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => document.querySelectorAll('[data-erd]').forEach(drawErd));
+
+/* ============ shared checkmarks (db capability) ============ */
+async function connectShared(){
+  const c = window.claude; if (!c || typeof c.use !== 'function') return;
+  let db = null; try { db = await c.use('db'); } catch { db = null; }
+  if (!db) return;
+  try {
+    const user = await c.use('user').catch(() => null);
+    if (user && typeof user.can === 'function'){ const w = await user.can('data.write'); if (w === false) canWrite = false; }
+  } catch {}
+  sharedDb = db; checkMode = 'shared'; sharedChecks = sharedChecks || {};
+  db.collection('checks').onSnapshot(snap => {
+    const m = {}; snap.docs.forEach(d => { const v = d.data(); m[d.id] = !!(v && v.done); });
+    sharedChecks = m; applyChecks();
+  }, () => { sharedDb = null; sharedChecks = null; checkMode = 'local'; applyChecks(); });
+  applyChecks();
+}
+
+/* ============ start ============ */
+(() => { const {wantClient} = parseHash(); if (wantClient){ client = true; store.set('aafe-hub-client', true); } })();
+buildNav();
+{ const {page, section} = parseHash(); show(page || 'overview', {section}); }
+Promise.all(PAGES.map(p => load(p.id))).then(() => { const q = $('#q').value; if (q) runSearch(q); });
+connectShared();
+})();
+</script>
