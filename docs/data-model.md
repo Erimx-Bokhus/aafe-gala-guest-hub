@@ -23,26 +23,28 @@ commitments      (id, purchaser_id → contacts, package_id → packages,
                   kind              -- ticket | sponsorship | comp
                   source            -- givelively | staff_entry | sponsor_form | checkin (walk-in)
                   payment_method    -- givelively | check | ach | none
-                  payment_status    -- pledged | received | n/a
+                  payment_status    -- pledged | received | refunded | n/a
                   payment_date, owner_staff_id → staff,
-                  logo_status, program_ad_status, created_at)
+                  logo_status, program_ad_status, created_at,
+                  source_record_id → source_records NULL)    -- set when created by an import
 
 seats            (id, commitment_id → commitments,
                   attendee_id → contacts NULL,         -- NULL = unnamed seat to chase
-                  table_no, badge_status,              -- draft | owner_reviewed | printed
+                  table_no, badge_status,              -- draft | owner_reviewed | printed | cancelled
                   ticket_token_hash,                   -- QR e-ticket (should-have); QR holds the raw token, only the hash is stored
-                  checked_in_at, checked_in_by → staff)
+                  checked_in_at, checked_in_by → staff,
+                  source_record_id → source_records NULL)    -- the import row this seat came from
 
 sponsor_links    (id, commitment_id, token_hash, expires_at)
 
 -- import / reconciliation
 import_runs      (id, source, started_at, finished_at, status,
-                  n_new, n_updated, n_rejected, n_review)
+                  n_new, n_updated, n_unchanged, n_rejected, n_review)
 source_records   (id, import_run_id, source, source_id, raw jsonb,
                   UNIQUE (source, source_id))          -- re-imports never duplicate
 review_queue     (id, source_record_id, candidate_contact_id, score, reason,
                   resolved_by → staff, resolution)
-field_overrides  (id, entity, entity_id, field, value, set_by, set_at)  -- corrections survive imports
+field_overrides  (id, entity, entity_id, field, value, set_by, set_at)  -- corrections survive imports; set_by = staff or sponsor link
 
 audit_log        (id, actor, entity, entity_id, action, before jsonb, after jsonb, at)
 ```
