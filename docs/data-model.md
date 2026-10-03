@@ -21,7 +21,7 @@ packages         (id, gala_year, name, tier, seat_count, amount_cents)
 
 commitments      (id, purchaser_id → contacts, package_id → packages,
                   kind              -- ticket | sponsorship | comp
-                  source            -- givelively | staff_entry | sponsor_form
+                  source            -- givelively | staff_entry | sponsor_form | checkin (walk-in)
                   payment_method    -- givelively | check | ach | none
                   payment_status    -- pledged | received | n/a
                   payment_date, owner_staff_id → staff,
@@ -30,7 +30,7 @@ commitments      (id, purchaser_id → contacts, package_id → packages,
 seats            (id, commitment_id → commitments,
                   attendee_id → contacts NULL,         -- NULL = unnamed seat to chase
                   table_no, badge_status,              -- draft | owner_reviewed | printed
-                  ticket_token,                        -- QR e-ticket (should-have)
+                  ticket_token_hash,                   -- QR e-ticket (should-have); QR holds the raw token, only the hash is stored
                   checked_in_at, checked_in_by → staff)
 
 sponsor_links    (id, commitment_id, token_hash, expires_at)
