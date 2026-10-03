@@ -1,0 +1,24 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Data exports: never commit real AAFE data
+*.csv
+!**/fixtures/**/*.csv
+!**/seed/**/*.csv
+exports/
+data/private/
+
+# Dependencies and builds
+node_modules/
+dist/
+build/
+.next/
+coverage/
+
+# OS and editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

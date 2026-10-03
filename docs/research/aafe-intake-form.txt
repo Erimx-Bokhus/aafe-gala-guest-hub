@@ -1,0 +1,90 @@
+AI Native Demo Day Project Intake Form​
+​
+Purpose: ​
+To capture project details for your AI Native Demo Day group project.
+
+Instructions: ​
+Please complete the fields below to help us accurately scope the mock project with Builders for Demo Day.
+Let us know if you have any questions as you fill this out.
+
+
+
+
+01. Partner Information
+    ●​ Company Name: Asian Americans for Equality
+    ●​ Contact Person: AAFE's project contact, [AAFE contact email]
+
+
+
+
+02. Project Overview
+Project Title: Gala Guest List Management
+
+Short Description (1-3 sentences): AAFE’s largest fundraising campaign each year is our annual gala,
+hosting 500-600 guests including sponsors, partners, funders, and community members. The guest list is
+currently managed by staff in a bulky and manual spreadsheet. We would like a tool to collect and
+consolidate guest names & other information, accept changes, and identify gaps in our list.
+
+What problem is this project addressing, and why does it matter to your organization (1-2 sentences)?
+This project would allow us to have a tool without paying an expensive subscription fee for a fundraising
+event platform, while also saving significant staff time currently allocated to guest list management during a
+crucial period of event preparation. Using a manual spreadsheet also creates room for error, but these are
+some of our most important relationships; ensuring a smooth guest experience is a high priority for us.
+
+Output of the Project:
+We need a tool that will give us a complete, correct, and up-to-date guest list before our gala takes place
+so we can print name tags and check people in at the event. Ideally, this tool would work with our existing
+fundraising platform, GiveLively.
+
+Guided Questions: Core Business Questions Dashboard should Help Answer for Mock Investor
+   ●​ Who is planning on attending the gala, and have we received all relevant information, payment,
+       and materials from them?
+   ●​ For each guest, who on AAFE staff is responsible for owning that relationship?
+   ●​ How are we tracking to goal on sponsorships, tickets, and other categories of attendees?
+03. Project Scope
+  ●​ Suggested Deliverables:
+        ○​ Tool that connects to GiveLively or other inputs to create a guest list that includes name,
+            email, company, ticket tier, table number, AAFE relationship owner, # of tickets in party,
+            payment status, guest list status, and marketing materials status
+        ○​ Potentially this tool will also be able to prompt e-mail communications for sponsors or
+            guests that we are missing information from
+        ○​ Ideally, this tool could be used for live check-in at the event to track which guests actually
+            attend vs. only reserve tickets​
+
+  ●​ Known Constraints (optional):
+        ○​ GiveLively’s current offering under our subscription has a couple of challenges.
+           Sponsorship levels and ticket packages come with different #s of guests, so requesting
+           guest names & contact information requires conditional questions that GiveLively doesn’t
+           offer. Additionally, GiveLively does not support a sponsor making changes once they add a
+           guest name.
+        ○​ Many of our tickets are purchased by someone who is not attending (e.g., a coordinator
+           purchases a ticket for their manager or others in their company); we need to differentiate
+           between contact information and attendee information.
+        ○​ Guests pay and register via different methods. We try to encourage everyone to go
+           through our event website, but we also accept sponsorship dollars via check and direct
+           deposit, which requires manual additions to our guest list.
+        ○​ We also comp a number of tickets that are not tracked for payment but need to be tracked
+           for RSVP purposes, like elected officials.​
+
+  ●​ Desired Technologies/Tools (if any/optional):
+        ○​ GiveLively fundraising platform
+        ○​ Stripe payment platform
+        ○​ Salesforce integration desired​
+
+  ●​ Skills Preferred (optional):
+          ○​ ​
+
+  ●​ Remaining Questions to be Answered:
+        ○​
+
+
+
+
+04. Success Criteria
+  ●​ What would a successful project outcome look like for you?
+       ○​ Our staff would spend less time tracking and making minute changes and additions to our
+          spreadsheet, and instead be able to periodically and quickly review one list with many
+          fields that is pulling in updated information from a couple of different sources.​
+
+●​ Are there specific questions you hope Builders will explore?
+
