@@ -15,12 +15,20 @@ The live tracker, with owners and status dropdowns, is the [Findings, Build Plan
 ## Week of October 5
 
 - [ ] Decide the stack and the demo preview host, and record it — Natalie, team
-- [ ] Commit the handoff package to the team repo (Erimx-Bokhus) — Aisling
-- [ ] CI with secret scanning, .gitignore, .env.example, staging deploy — Aisling
+- [x] Commit the handoff package to the team repo (Erimx-Bokhus) — Aisling
+- [x] CI with secret scanning (gitleaks on every push and PR), .gitignore, .env.example — Aisling
+- [x] Import and matching spec with 22 test cases — Aisling
+- [x] Seed data requirements for the import tests — Aisling
+- [ ] Staging deploy — Aisling
 - [ ] Database schema and migrations — Aisling, Cornell
 - [ ] Synthetic data generator (~550 guests, messy cases) — Aisling
 - [ ] Google sign-in and staff roles — Cornell
 - [ ] Follow up with AAFE if materials haven't arrived — Natalie
+- [ ] Check AAFE's sample exports against the import spec (per-ticket ID, refunds, headers) — Aisling
+- [ ] Confirm 2027 seats per sponsorship tier with AAFE — Natalie
+- [ ] Share the prototype source (seed.sql, seed.json) — Natalie
+- [ ] Ask AAFE for written approval of the logo and event photos for Demo Day; swap the name-badge photo — Natalie
+- [ ] Seed loader: Natalie's data with random hashed tokens and draft-only emails — Aisling
 
 ## Week of October 12
 

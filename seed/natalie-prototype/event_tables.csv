@@ -1,0 +1,12 @@
+id,event_id,number,label,capacity,pos_x,pos_y
+tb-1,ev-2027,1,Head table,10,20,30
+tb-2,ev-2027,2,Harborline,10,40,30
+tb-3,ev-2027,3,Harborline,10,60,30
+tb-4,ev-2027,4,Meridian,10,80,30
+tb-5,ev-2027,5,Acme,10,20,55
+tb-6,ev-2027,6,Pacific Rim,10,40,55
+tb-7,ev-2027,7,,10,60,55
+tb-8,ev-2027,8,,10,80,55
+tb-9,ev-2027,9,,10,30,80
+tb-10,ev-2027,10,,10,50,80
+tb-11,ev-2027,11,,10,70,80
