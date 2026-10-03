@@ -43,17 +43,25 @@ What AAFE told us on the October 1 call, in their words where it matters. AAFE's
 - AAFE uses Google Workspace and Google Drive.
 - AAFE's project contact is finalizing an AI acceptable-use policy (no personal information into AI tools) and wants to be kept close on data decisions.
 
-## Materials AAFE promised
+## Required inputs before build
 
-Expected within about a week of the call:
+What we need from AAFE, in one list: the materials promised on the call (expected about a week after it) plus the approvals Natalie's prototype review surfaced. Until each arrives, we build against invented data and placeholders.
 
-- Comp categories and amounts
-- Guest spreadsheet column headers
-- Badge, export, and check-in templates
-- Sample Give Lively exports
-- Deadlines for names, materials, seating, and printing
-- Screen recordings of their Give Lively setup
-- Redacted examples of sponsor email threads
+| Input | What it unlocks | Status |
+| --- | --- | --- |
+| A named contact who approves on AAFE's behalf | Every approval below, and decisions on data and AI | To confirm |
+| Sponsorship tiers and seat counts for 2027 | Seats per package (the 2025 flyer and the call disagree) | Pending |
+| Comp categories and amounts | Relationship guests and comp tracking | Promised |
+| Redacted guest spreadsheet column headers | The data model and the legacy migration | Promised |
+| Redacted Give Lively exports (Line Items and attendee reports) | Import columns, per-ticket IDs, refunds | Promised |
+| Badge, export, and check-in templates | Badge file and check-in list formats | Promised |
+| Deadlines for names, materials, seating, and printing | Sponsor-link expiry, reminders, badge cutoff | Promised |
+| Screen recordings of their Give Lively setup | How ticket types and sponsorships are named | Promised |
+| Redacted sponsor email threads | Wording of follow-up drafts | Promised |
+| Approved logo and brand kit | AAFE branding in anything shown publicly | Needs written approval |
+| Approved real event photos | Photos in anything shown publicly | Needs written approval |
+
+Real logo and photos may be used inside the private repo and in reviews with the team and AAFE; anything public, including Demo Day, uses placeholders until AAFE approves in writing.
 
 ## Still to ask
 
