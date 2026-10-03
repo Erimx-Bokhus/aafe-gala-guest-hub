@@ -15,6 +15,10 @@ Case numbers below refer to that table.
   must read `seat_count` from the package, never hard-code 7 or 10.
 - Seed CSVs live under a `seed/` or `fixtures/` folder (the only CSVs `.gitignore` allows).
 
+## Starting point
+
+Natalie's seed data (`seed/natalie-prototype/`) is the demo's base state: galas, staff, tiers, sponsors, orders, payments, guests, seats, and check-ins. The records below are added alongside it for the import tests; reuse her staff and tiers rather than inventing a second set.
+
 ## Three layers
 
 1. **Base database state** (rows loaded before any import).

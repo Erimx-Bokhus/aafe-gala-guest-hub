@@ -96,6 +96,8 @@ Natalie's research predates the October 1 call. Where it differs, discovery and 
 | A $50,000 sponsorship with 12 seats | Seats per tier pending with AAFE (the call said ~20 for the top tier, 7 for $25,000) |
 | November 9 presentation | Nov 9 is the team's last work day; Demo Day is Nov 10 |
 
+Natalie's clickable prototypes and seed data (Oct 2) are reviewed in `docs/research/prototype-review-2026-10-03.md`: six pieces of her schema were adopted into the data model, and four prototype behaviors (automatic emails, short readable sponsor links, sequential QR codes, real photos in public) change before Demo Day.
+
 ## Give Lively's limits
 
 Covered on the [Systems](#systems) page: no public API, no comps, no conditional questions by package, sponsors can't edit guest names, and per-ticket detail only in the Attendee Data export.
