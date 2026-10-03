@@ -16,9 +16,10 @@ Format: date · decision · reason · decided by. Reopen only with new informati
 | 2026-10-03 | A relationship manager sending their own comp ticket counts as staff approval; every send is logged | Client wants RMs to send comps themselves; RMs are staff | Aisling |
 | 2026-10-03 | Real AAFE staff contact details are redacted from repo docs | Hard rule 1 spirit; the repo will be handed on | Aisling |
 | 2026-10-03 | Nov 9 is the team's last work day; Nov 10 is Demo Day and handoff | Clarifies dates used across the docs | Aisling |
+| 2026-10-03 | AAFE logo and real event photos allowed in the private repo and internal reviews; public use, including Demo Day, needs AAFE's written approval | Repo is private and handed to AAFE; Demo Day is public and photos show real attendees | Aisling |
 | _pending_ | Stack and demo preview host | To decide week of Oct 5 | Team |
 | _pending_ | AI on/off, retention window, dietary data | See `data-handling.md` | AAFE |
 | _pending_ | Code and IP ownership after Nov 10, and the repo license | Open question for AAFE and Pursuit | AAFE + team |
 | _pending_ | Seats per sponsorship tier for 2027 | Flyer and call disagree ($25,000 = 10 vs 7 seats); call says top tier ~20 seats, Natalie's research example uses 12 | AAFE |
-| _pending_ | Use of AAFE logo and event photos | Needs written approval | AAFE |
+| _pending_ | Public use of AAFE logo and event photos (Demo Day) | Needs written approval | AAFE |
 | _pending_ | Which prototype features are MVP vs later | Natalie's concept (Oct 2) goes beyond agreed scope | Team |
