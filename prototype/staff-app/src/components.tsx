@@ -61,7 +61,7 @@ export function AddPledgeModal({ open, onClose }: { open: boolean; onClose: () =
   const ok = f.org.trim() && f.contact.trim() && /\S+@\S+\.\S+/.test(f.email)
   return (
     <Modal open={open} onClose={onClose} title="New pledge (check, ACH or wire)">
-      <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); if (!ok) return; update((d) => addPledge(d, user, f)); toast('Pledge recorded — guest-list link emailed'); onClose(); setF({ ...f, org: '', contact: '', email: '' }) }}>
+      <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); if (!ok) return; update((d) => addPledge(d, user, f)); toast('Pledge recorded — guest-list email drafted for approval'); onClose(); setF({ ...f, org: '', contact: '', email: '' }) }}>
         <Field id="po" label="Organization or donor name"><input id="po" className="input" value={f.org} onChange={(e) => setF({ ...f, org: e.target.value })} /></Field>
         <div className="grid gap-3 sm:grid-cols-2">
           <Field id="pc" label="Primary contact"><input id="pc" className="input" value={f.contact} onChange={(e) => setF({ ...f, contact: e.target.value })} /></Field>
