@@ -135,8 +135,13 @@ export const ago = (iso: string) => {
   return fmtDate(iso, 'en-US', true)
 }
 export function downloadCsv(filename: string, rows: (string | number | null | undefined)[][]) {
-  const esc = (v: string | number | null | undefined) => `"${String(v ?? '').replace(/"/g, '""')}"`
-  const blob = new Blob([rows.map((r) => r.map(esc).join(',')).join('\n')], { type: 'text/csv;charset=utf-8' })
+  // Quote every cell; prefix text that Excel would treat as a formula (=, +, -, @, tab, return) with ' (CSV injection guard).
+  const esc = (v: string | number | null | undefined) => {
+    let s = String(v ?? '')
+    if (typeof v === 'string' && /^[=+\-@\t\r]/.test(s)) s = `'${s}`
+    return `"${s.replace(/"/g, '""')}"`
+  }
+  const blob = new Blob(['\ufeff' + rows.map((r) => r.map(esc).join(',')).join('\n')], { type: 'text/csv;charset=utf-8' }) // BOM so Excel reads Chinese/Korean names
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove()
   setTimeout(() => URL.revokeObjectURL(url), 1000)

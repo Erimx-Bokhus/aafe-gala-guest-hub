@@ -66,7 +66,7 @@ export default function CheckIn() {
 
       <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto_auto]">
         <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); byCode(code) }}>
-          <input className="input h-12" placeholder="QR code, e.g. AAFE27-REL-1037" value={code} onChange={(e) => setCode(e.target.value)} aria-label="QR code" data-testid="qr-input" />
+          <input className="input h-12" placeholder="QR code, e.g. AAFE-3F9C…" value={code} onChange={(e) => setCode(e.target.value)} aria-label="QR code" data-testid="qr-input" />
           <button className="btn-navy h-12 shrink-0"><QrCode size={18} /> Enter</button>
         </form>
         <button className="btn-ghost h-12" onClick={() => setScan((s) => !s)}><Camera size={18} /> {scan ? 'Stop camera' : 'Scan QR'}</button>

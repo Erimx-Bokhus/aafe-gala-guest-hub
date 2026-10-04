@@ -67,7 +67,7 @@ export default function Relationship() {
               <div className="mt-3 flex justify-center"><QR value={preview.qr_token!} size={140} /></div>
               <p className="mt-3 text-sm text-navy-800">With gratitude,<br />The AAFE Gala Team</p>
             </div>
-            <div className="mt-4 flex justify-end gap-2"><button className="btn-ghost" onClick={() => setPreview(null)}>Close</button><button className="btn-primary" data-testid="send-qr" onClick={() => { update((d) => sendQrInvite(d, preview.id)); toast(`QR invitation sent to ${preview.email} (simulated)`); setPreview(null) }}><Mail size={15} /> Send (simulated)</button></div>
+            <div className="mt-4 flex justify-end gap-2"><button className="btn-ghost" onClick={() => setPreview(null)}>Close</button><button className="btn-primary" data-testid="send-qr" onClick={() => { update((d) => sendQrInvite(d, user, preview.id)); toast(`QR invitation sent to ${preview.email} (simulated)`); setPreview(null) }}><Mail size={15} /> Send (simulated)</button></div>
           </div>
         )}
       </Modal>
