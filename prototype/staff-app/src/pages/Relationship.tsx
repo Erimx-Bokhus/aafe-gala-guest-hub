@@ -18,7 +18,7 @@ export default function Relationship() {
   return (
     <div>
       <PageHead title="Relationship guests" sub="Complimentary guests invited by the Executive Director, board and relationship managers. Each gets a personal QR code by email to show at the door." actions={<button className="btn-primary" onClick={() => setAdd(true)}><Plus size={16} /> Add guest</button>} />
-      <ul className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
+      <ul className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3 [&>*]:min-w-0">
         {list.map((g) => {
           const em = lastEmail(g)
           const t = db.event_tables.find((x) => x.id === g.table_id)

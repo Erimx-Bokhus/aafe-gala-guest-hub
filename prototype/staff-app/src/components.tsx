@@ -17,7 +17,9 @@ export const SeatPill = ({ s }: { s: SeatStatus }) => <Pill tone={SEAT_PILL[s][0
 export function RecordPaymentModal({ open, onClose, orderId }: { open: boolean; onClose: () => void; orderId?: string }) {
   const { db, update, user, toast } = useStaff()
   const candidates = curOrders(db).filter((o) => o.source !== 'givelively' && o.source !== 'comp' && orderMoney(db, o.id).balance > 0)
-  const [oid, setOid] = useState(orderId ?? candidates[0]?.id ?? '')
+  // The order comes from the page when there is one (sponsor detail); otherwise from the picker, falling back if the picked order is now paid.
+  const [picked, setOid] = useState(candidates[0]?.id ?? '')
+  const oid = orderId ?? (candidates.some((o) => o.id === picked) ? picked : candidates[0]?.id ?? '')
   const bal = oid ? orderMoney(db, oid).balance : 0
   const [method, setMethod] = useState<'check' | 'ach_direct' | 'wire'>('check')
   const [amount, setAmount] = useState('')
@@ -48,7 +50,7 @@ export function RecordPaymentModal({ open, onClose, orderId }: { open: boolean; 
           <Field id="rd" label={method === 'check' ? 'Deposit date' : 'Date on statement'}><input id="rd" type="date" className="input" value={date} onChange={(e) => setDate(e.target.value)} /></Field>
         </div>
         {method === 'check' && <Field id="rc" label="Check number" error={!checkNo.trim() && amount ? 'Required for checks' : undefined}><input id="rc" className="input" value={checkNo} onChange={(e) => setCheckNo(e.target.value)} /></Field>}
-        <p className="rounded-md bg-cream-100 p-3 text-xs text-navy-600">No processor fee on offline payments. If this is the first payment and no portal link was sent, the guest-list email goes out automatically. The payment is queued for Salesforce.</p>
+        <p className="rounded-md bg-cream-100 p-3 text-xs text-navy-600">No processor fee on offline payments. If this is the first payment and no portal link was sent, a guest-list email is drafted for staff approval. The payment is queued for Salesforce.</p>
         <div className="flex justify-end gap-2"><button type="button" className="btn-ghost" onClick={onClose}>Cancel</button><button className="btn-primary" disabled={!valid} data-testid="save-payment">Record payment</button></div>
       </form>
     </Modal>
@@ -71,7 +73,7 @@ export function AddPledgeModal({ open, onClose }: { open: boolean; onClose: () =
           <Field id="pt" label="Package"><select id="pt" className="input" value={f.tierId} onChange={(e) => setF({ ...f, tierId: e.target.value })}>{db.sponsorship_tiers.filter((t) => t.tier_category !== 'complimentary').map((t) => <option key={t.id} value={t.id}>{t.name} — {money(t.contribution_amount)}</option>)}</select></Field>
           <Field id="ps" label="Will pay by"><select id="ps" className="input" value={f.source} onChange={(e) => setF({ ...f, source: e.target.value as 'check' })}><option value="check">Check</option><option value="ach_direct">ACH to AAFE bank</option><option value="wire">Wire</option></select></Field>
         </div>
-        <p className="rounded-md bg-cream-100 p-3 text-xs text-navy-600">Give Lively purchases arrive automatically — use this only for donors paying outside Give Lively. Seats are created from the package and the guest-list link is emailed right away.</p>
+        <p className="rounded-md bg-cream-100 p-3 text-xs text-navy-600">Give Lively purchases arrive automatically — use this only for donors paying outside Give Lively. Seats are created from the package and a guest-list email is drafted for staff approval.</p>
         <div className="flex justify-end gap-2"><button type="button" className="btn-ghost" onClick={onClose}>Cancel</button><button className="btn-primary" disabled={!ok}>Record pledge & email link</button></div>
       </form>
     </Modal>
