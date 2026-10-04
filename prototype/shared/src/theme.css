@@ -1,0 +1,76 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --page: 252 250 246; --surface: 255 255 255; --muted: 247 242 234; --line: 238 230 216;
+  --brand-50: 252 243 238; --brand-100: 248 227 216;
+  --n50: 241 244 248; --n100: 223 229 238; --n300: 154 169 191; --n500: 75 94 124; --n600: 58 75 102;
+  --n700: 34 50 77; --n800: 24 37 59; --n900: 16 26 44;
+  --ink: 16 26 44; --ink2: 24 37 59;
+  color-scheme: light;
+}
+.dark {
+  --page: 11 17 29; --surface: 20 29 46; --muted: 26 37 57; --line: 44 57 82;
+  --brand-50: 58 32 24; --brand-100: 82 42 28;
+  --n50: 29 40 61; --n100: 49 63 89; --n300: 109 125 152; --n500: 152 166 189; --n600: 178 190 209;
+  --n700: 203 213 226; --n800: 226 232 240; --n900: 244 246 250;
+  --ink: 16 26 44; --ink2: 24 37 59;
+  color-scheme: dark;
+}
+.dark .bg-emerald-50 { background-color: rgb(6 78 59 / .35); } .dark .text-emerald-800, .dark .text-emerald-700 { color: rgb(110 231 183); }
+.dark .bg-amber-50 { background-color: rgb(120 53 15 / .35); } .dark .text-amber-800, .dark .text-amber-700 { color: rgb(252 211 77); }
+.dark .bg-rose-50 { background-color: rgb(136 19 55 / .35); } .dark .text-rose-800, .dark .text-rose-700 { color: rgb(253 164 175); }
+.dark .bg-sky-50 { background-color: rgb(12 74 110 / .35); } .dark .text-sky-800 { color: rgb(125 211 252); }
+.dark .ring-emerald-200, .dark .ring-amber-200, .dark .ring-rose-200, .dark .ring-sky-200 { --tw-ring-color: rgb(255 255 255 / .12); }
+.dark .border-emerald-100, .dark .border-emerald-200 { border-color: rgb(16 185 129 / .3); }
+
+/* GUEST PORTAL = AAFE brand: orange + cream + white, charcoal text (#313131 from aafe.org). No navy. */
+.brand-warm {
+  --page: 251 247 240; --surface: 255 255 255; --muted: 246 238 226; --line: 234 223 207;
+  --brand-50: 252 241 235; --brand-100: 248 224 212;
+  --n50: 245 239 230; --n100: 232 223 211; --n300: 181 170 160; --n500: 122 112 106; --n600: 94 86 80;
+  --n700: 74 67 62; --n800: 61 56 53; --n900: 49 49 49;
+  --ink: 49 49 49; --ink2: 61 56 53;
+}
+.brand-warm.dark {
+  --page: 26 23 21; --surface: 37 33 30; --muted: 46 41 37; --line: 66 59 53;
+  --brand-50: 70 35 22; --brand-100: 92 44 26;
+  --n50: 46 41 37; --n100: 72 64 58; --n300: 120 110 102; --n500: 170 160 150; --n600: 196 187 176;
+  --n700: 216 208 198; --n800: 234 228 220; --n900: 250 246 240;
+  --ink: 20 18 16; --ink2: 37 33 30;
+}
+.proto-banner { background: rgb(var(--ink)); color: #fff; }
+.brand-warm .proto-banner { background: #C64C28; }
+
+/* Rotating AAFE logo name (mirrors the animated logo on aafe.org) */
+.logo-name { display: grid; }
+.logo-name > span { grid-area: 1 / 1; opacity: 0; transition: opacity .6s ease; }
+.logo-name > span.on { opacity: 1; }
+
+@layer base {
+  html { -webkit-font-smoothing: antialiased; transition: font-size .15s ease; }
+  body { @apply font-body text-navy-900 bg-cream-50; }
+  h1, h2, h3, h4 { @apply font-sans; text-wrap: balance; }
+  :focus-visible { outline: 2px solid #C64C28; outline-offset: 2px; }
+}
+@layer components {
+  .btn { @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed; }
+  .btn-primary { @apply btn bg-brand-500 text-white hover:bg-brand-600; }
+  .btn-navy { @apply btn bg-ink text-white hover:bg-ink-2 dark:bg-navy-100 dark:hover:bg-navy-300; }
+  .btn-ghost { @apply btn border border-navy-100 bg-surface text-navy-800 hover:bg-navy-50; }
+  .btn-sm { @apply px-3 py-1.5 text-xs; }
+  .card { @apply rounded-xl border border-navy-100 bg-surface; }
+  .label { @apply block text-xs font-semibold uppercase tracking-wide text-navy-500 mb-1; }
+  .input { @apply w-full rounded-md border border-navy-100 bg-surface px-3 py-2 text-sm text-navy-900 placeholder:text-navy-300 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100; }
+  .th { @apply px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-navy-500 whitespace-nowrap; }
+  .td { @apply px-3 py-2.5 text-sm text-navy-800 align-top; }
+  .icon-btn { @apply inline-flex h-9 w-9 items-center justify-center rounded-md border border-navy-100 bg-surface text-navy-700 hover:bg-navy-50 disabled:opacity-40; }
+}
+@media print {
+  .no-print { display: none !important; }
+  html, body { background: white !important; }
+  .badge-sheet { gap: 8px !important; }
+  .badge-card { break-inside: avoid; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
