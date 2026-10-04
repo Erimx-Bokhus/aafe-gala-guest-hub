@@ -6,7 +6,8 @@ import { PageHead } from '../App'
 import { assignSeat, seatOrderAtTable, useStaff } from '../store'
 import { curOrders } from './Dashboard'
 
-const PALETTE = ['#C64C28', '#2F6FB0', '#2E8B6E', '#8A5CC2', '#C2902E', '#B8476E', '#4B8F9E', '#6B7A2E', '#9E5B3C', '#9C6B30', '#7A4B8F', '#5E8F4B', '#A0522D', '#476F8A', '#8F4B6B']
+// No blue (AAFE brand); each color keeps white initials at 4.5:1 or better.
+const PALETTE = ['#C64C28', '#6E5A1E', '#1F7A5C', '#8A5CC2', '#8A6420', '#B8476E', '#2F7A3E', '#6B7A2E', '#9E5B3C', '#9C6B30', '#7A4B8F', '#4D7A2E', '#A0522D', '#8A4F00', '#8F4B6B']
 
 export default function Seating() {
   const { db, update, user, toast } = useStaff()

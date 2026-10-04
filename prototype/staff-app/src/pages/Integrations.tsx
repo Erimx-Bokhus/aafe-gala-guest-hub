@@ -67,8 +67,8 @@ export default function Integrations() {
   return (
     <div>
       <PageHead title="Integrations & email" sub="How data gets in (Give Lively), goes out (Salesforce), and reaches guests (email). Connections here are simulated in the prototype." />
-      <div className="grid gap-6 xl:grid-cols-2">
-        <section className="card p-5">
+      <div className="grid gap-6 xl:grid-cols-2 [&>*]:min-w-0">
+        <section className="card break-words p-5">
           <div className="flex items-start justify-between gap-3"><div><h2 className="text-lg font-semibold text-navy-900">Give Lively</h2><p className="text-sm text-navy-600">Ticket and sponsorship purchases → orders, payments, per-ticket fees, and a draft guest-list email for staff approval.</p></div><Pill tone="amber">Simulated</Pill></div>
           <ol className="mt-4 list-decimal space-y-1 pl-5 text-sm text-navy-700">
             <li>AAFE admin creates a Zapier API key in the Give Lively Nonprofit Admin Portal.</li>
