@@ -13,7 +13,7 @@ interface Tpl { title: boolean; org: boolean; sponsor: boolean; tableSeat: boole
 
 function Badge({ g, sponsor, table, tpl, year }: { g: Guest; sponsor: string; table?: number; tpl: Tpl; year: number }) {
   return (
-    <div className="badge-card flex aspect-[4/3] flex-col overflow-hidden rounded-lg border border-[#DFE5EE] bg-white text-[#101A2C] shadow-sm">
+    <div className="badge-card flex aspect-[4/3] flex-col overflow-hidden rounded-lg border border-[#EADFCF] bg-white text-[#313131] shadow-sm">
       <div className="flex items-center justify-between border-b-4 border-[#C64C28] px-4 py-1.5">
         <span className="flex items-center gap-1.5"><img src="./brand/aafe-mark-orange.png" alt="" className="h-6 w-6" /><span className="font-sans text-sm font-bold text-[#313131]">AAFE</span></span>
         <span className="text-[0.625rem] font-semibold uppercase tracking-[0.18em] text-[#C64C28]">Annual Gala {year}</span>
@@ -21,14 +21,14 @@ function Badge({ g, sponsor, table, tpl, year }: { g: Guest; sponsor: string; ta
       <div className="flex flex-1 items-center gap-3 px-4">
         <div className="min-w-0 flex-1">
           <div className="font-sans text-xl font-bold leading-tight">{g.first_name} {g.last_name}</div>
-          {tpl.title && g.title && <div className="mt-0.5 text-xs text-[#3A4B66]">{g.title}</div>}
-          {tpl.org && g.organization && <div className="text-xs font-semibold text-[#3A4B66]">{g.organization}</div>}
+          {tpl.title && g.title && <div className="mt-0.5 text-xs text-[#5E5650]">{g.title}</div>}
+          {tpl.org && g.organization && <div className="text-xs font-semibold text-[#5E5650]">{g.organization}</div>}
         </div>
         {tpl.qr && g.qr_token && <QR value={g.qr_token} size={52} />}
       </div>
       <div className="border-t border-[#EEE6D8] px-4 py-1.5">
         {tpl.tableSeat && <div className="text-sm font-bold">{table ? `Table ${table} · Seat ${g.seat_number}` : 'Table assignment pending'}</div>}
-        {tpl.sponsor && <div className="truncate text-[0.6875rem] text-[#4B5E7C]">{g.guest_type === 'comp_relationship' ? 'Guest of AAFE' : `Sponsored by ${sponsor}`}</div>}
+        {tpl.sponsor && <div className="truncate text-[0.6875rem] text-[#5E5650]">{g.guest_type === 'comp_relationship' ? 'Guest of AAFE' : `Sponsored by ${sponsor}`}</div>}
       </div>
     </div>
   )
@@ -61,7 +61,7 @@ export default function Badges() {
         </div>
         <div className="card flex items-center gap-1 p-1.5" role="tablist" aria-label="Badge filter">
           {([['ready', `Ready (${count('ready')})`], ['reprint_needed', `Reprint (${count('reprint_needed')})`], ['all', `All (${all.length})`]] as const).map(([k, l]) => (
-            <button key={k} role="tab" aria-selected={filter === k} onClick={() => setFilter(k)} className={`rounded-md px-3 py-1.5 text-sm font-semibold ${filter === k ? 'bg-ink text-white dark:bg-navy-100' : 'text-navy-600 hover:bg-navy-50'}`}>{l}</button>
+            <button key={k} role="tab" aria-selected={filter === k} onClick={() => setFilter(k)} className={`rounded-md px-3 py-1.5 text-sm font-semibold ${filter === k ? 'bg-brand-500 text-white' : 'text-navy-600 hover:bg-navy-50'}`}>{l}</button>
           ))}
         </div>
       </div>
