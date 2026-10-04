@@ -231,7 +231,7 @@
    "organization_name": "Harborline Community Bank",
    "primary_contact_name": "Evelyn Park",
    "primary_contact_email": "evelyn.park@harborline.example.org",
-   "phone": "(212) 555-2774",
+   "phone": "(212) 555-0104",
    "relationship_owner_id": "st-mei",
    "salesforce_account_id": "001DEMO0000HARB",
    "created_at": "2024-01-15T15:00:00Z"
@@ -241,7 +241,7 @@
    "organization_name": "Meridian Family Foundation",
    "primary_contact_name": "Arthur Wong",
    "primary_contact_email": "awong@meridianfdn.example.org",
-   "phone": "(212) 555-8603",
+   "phone": "(212) 555-0115",
    "relationship_owner_id": "st-daniel",
    "salesforce_account_id": "001DEMO0000MERI",
    "created_at": "2024-01-15T15:00:00Z"
@@ -251,7 +251,7 @@
    "organization_name": "Acme Community Partners",
    "primary_contact_name": "Jordan Lee",
    "primary_contact_email": "jordan.lee@acmepartners.example.org",
-   "phone": "(212) 555-2303",
+   "phone": "(212) 555-0103",
    "relationship_owner_id": "st-priya",
    "salesforce_account_id": "001DEMO0000ACME",
    "created_at": "2024-01-15T15:00:00Z"
@@ -261,7 +261,7 @@
    "organization_name": "Northgate Health Collective",
    "primary_contact_name": "Ingrid Larsen",
    "primary_contact_email": "ilarsen@northgate.example.org",
-   "phone": "(212) 555-1222",
+   "phone": "(212) 555-0101",
    "relationship_owner_id": "st-daniel",
    "salesforce_account_id": null,
    "created_at": "2024-01-15T15:00:00Z"
@@ -271,7 +271,7 @@
    "organization_name": "Lotus Lane Design Studio",
    "primary_contact_name": "Vivian Tran",
    "primary_contact_email": "vivian@lotuslane.example.org",
-   "phone": "(212) 555-6283",
+   "phone": "(212) 555-0110",
    "relationship_owner_id": "st-grace",
    "salesforce_account_id": "001DEMO0000LOTU",
    "created_at": "2024-01-15T15:00:00Z"
@@ -281,7 +281,7 @@
    "organization_name": "Pacific Rim Builders",
    "primary_contact_name": "Marco Delgado",
    "primary_contact_email": "mdelgado@pacificrim.example.org",
-   "phone": "(212) 555-7653",
+   "phone": "(212) 555-0114",
    "relationship_owner_id": "st-grace",
    "salesforce_account_id": null,
    "created_at": "2024-01-15T15:00:00Z"
@@ -291,7 +291,7 @@
    "organization_name": "Bowery Dental Group",
    "primary_contact_name": "Dr. Sun Hee Cho",
    "primary_contact_email": "scho@bowerydental.example.org",
-   "phone": "(212) 555-4006",
+   "phone": "(212) 555-0107",
    "relationship_owner_id": "st-priya",
    "salesforce_account_id": null,
    "created_at": "2024-01-15T15:00:00Z"
@@ -301,7 +301,7 @@
    "organization_name": "Queens Tech Collective",
    "primary_contact_name": "Ravi Patel",
    "primary_contact_email": "ravi@queenstech.example.org",
-   "phone": "(212) 555-7533",
+   "phone": "(212) 555-0113",
    "relationship_owner_id": "st-daniel",
    "salesforce_account_id": null,
    "created_at": "2024-01-15T15:00:00Z"
@@ -311,7 +311,7 @@
    "organization_name": "Golden Dumpling Co.",
    "primary_contact_name": "Henry Lau",
    "primary_contact_email": "henry@goldendumpling.example.org",
-   "phone": "(212) 555-3950",
+   "phone": "(212) 555-0106",
    "relationship_owner_id": "st-priya",
    "salesforce_account_id": null,
    "created_at": "2024-01-15T15:00:00Z"
@@ -321,7 +321,7 @@
    "organization_name": "Chidi Okafor",
    "primary_contact_name": "Chidi Okafor",
    "primary_contact_email": "c.okafor@riversidelegal.example.org",
-   "phone": "(212) 555-6697",
+   "phone": "(212) 555-0112",
    "relationship_owner_id": "st-grace",
    "salesforce_account_id": null,
    "created_at": "2024-01-15T15:00:00Z"
@@ -331,7 +331,7 @@
    "organization_name": "Maria Alvarez",
    "primary_contact_name": "Maria Alvarez",
    "primary_contact_email": "maria.alvarez@mail.example.org",
-   "phone": "(212) 555-3933",
+   "phone": "(212) 555-0105",
    "relationship_owner_id": "st-grace",
    "salesforce_account_id": null,
    "created_at": "2024-01-15T15:00:00Z"
@@ -341,7 +341,7 @@
    "organization_name": "Kim Family Fund",
    "primary_contact_name": "Joyce Kim",
    "primary_contact_email": "joyce.kim@kimfamily.example.org",
-   "phone": "(212) 555-5533",
+   "phone": "(212) 555-0108",
    "relationship_owner_id": "st-mei",
    "salesforce_account_id": null,
    "created_at": "2024-01-15T15:00:00Z"
@@ -351,7 +351,7 @@
    "organization_name": "Ken Tanaka",
    "primary_contact_name": "Ken Tanaka",
    "primary_contact_email": "ken.tanaka@mail.example.org",
-   "phone": "(212) 555-5732",
+   "phone": "(212) 555-0109",
    "relationship_owner_id": "st-daniel",
    "salesforce_account_id": null,
    "created_at": "2024-01-15T15:00:00Z"
@@ -361,7 +361,7 @@
    "organization_name": "Alisha Brooks",
    "primary_contact_name": "Alisha Brooks",
    "primary_contact_email": "alisha.brooks@mail.example.org",
-   "phone": "(212) 555-2255",
+   "phone": "(212) 555-0102",
    "relationship_owner_id": "st-priya",
    "salesforce_account_id": null,
    "created_at": "2024-01-15T15:00:00Z"
@@ -371,7 +371,7 @@
    "organization_name": "AAFE Executive Director's Office",
    "primary_contact_name": "AAFE Gala Team",
    "primary_contact_email": "gala-team@aafe-demo.example.org",
-   "phone": "(212) 555-6597",
+   "phone": "(212) 555-0111",
    "relationship_owner_id": "st-mei",
    "salesforce_account_id": null,
    "created_at": "2024-01-15T15:00:00Z"
@@ -426,7 +426,7 @@
    "source": "check",
    "commitment_amount": 15000,
    "status": "pledged",
-   "portal_token": "acme-community-partners",
+   "portal_token": "ac-6w9k3p5d",
    "portal_token_expires_at": "2027-05-21T04:00:00Z",
    "portal_link_sent_at": "2026-09-05T14:20:00Z",
    "guest_list_deadline": "2027-04-23",
@@ -2311,7 +2311,7 @@
    "seat_number": 1,
    "badge_status": "ready",
    "attendance_status": "expected",
-   "qr_token": "AAFE27-REL-1037",
+   "qr_token": "AAFE-15FBA19149DA60E7612BB6F6972898B0",
    "last_updated_by": "staff",
    "created_at": "2026-09-01T12:00:00Z",
    "updated_at": "2026-09-01T12:00:00Z"
@@ -2332,7 +2332,7 @@
    "seat_number": 2,
    "badge_status": "ready",
    "attendance_status": "expected",
-   "qr_token": "AAFE27-REL-1074",
+   "qr_token": "AAFE-0E403A41C1471B200D5F8DEDCC8FB3A5",
    "last_updated_by": "staff",
    "created_at": "2026-09-01T12:00:00Z",
    "updated_at": "2026-09-01T12:00:00Z"
@@ -2353,7 +2353,7 @@
    "seat_number": 3,
    "badge_status": "ready",
    "attendance_status": "expected",
-   "qr_token": "AAFE27-REL-1111",
+   "qr_token": "AAFE-DBAA90AB9FCA294244F01228E6663C55",
    "last_updated_by": "staff",
    "created_at": "2026-09-01T12:00:00Z",
    "updated_at": "2026-09-01T12:00:00Z"
@@ -2374,7 +2374,7 @@
    "seat_number": 4,
    "badge_status": "ready",
    "attendance_status": "expected",
-   "qr_token": "AAFE27-REL-1148",
+   "qr_token": "AAFE-4E486AD6FAD684F06C0D0806F511E442",
    "last_updated_by": "staff",
    "created_at": "2026-09-01T12:00:00Z",
    "updated_at": "2026-09-01T12:00:00Z"
@@ -2395,7 +2395,7 @@
    "seat_number": 5,
    "badge_status": "ready",
    "attendance_status": "expected",
-   "qr_token": "AAFE27-REL-1185",
+   "qr_token": "AAFE-9EEBF4279C456425C04B325865F57020",
    "last_updated_by": "staff",
    "created_at": "2026-09-01T12:00:00Z",
    "updated_at": "2026-09-01T12:00:00Z"
@@ -2416,7 +2416,7 @@
    "seat_number": null,
    "badge_status": "needs_review",
    "attendance_status": "expected",
-   "qr_token": "AAFE27-REL-1222",
+   "qr_token": "AAFE-CFF3931C280DABAFC5FA56B850612E59",
    "last_updated_by": "staff",
    "created_at": "2026-09-01T12:00:00Z",
    "updated_at": "2026-09-01T12:00:00Z"
@@ -2437,7 +2437,7 @@
    "seat_number": null,
    "badge_status": "needs_review",
    "attendance_status": "expected",
-   "qr_token": "AAFE27-REL-1259",
+   "qr_token": "AAFE-E2F87CF3AF45569350C5FD5A26593E7C",
    "last_updated_by": "staff",
    "created_at": "2026-09-01T12:00:00Z",
    "updated_at": "2026-09-01T12:00:00Z"
@@ -2458,7 +2458,7 @@
    "seat_number": 6,
    "badge_status": "ready",
    "attendance_status": "expected",
-   "qr_token": "AAFE27-REL-1296",
+   "qr_token": "AAFE-A663D57FC2B028DA0A3035E5263B87D1",
    "last_updated_by": "staff",
    "created_at": "2026-09-01T12:00:00Z",
    "updated_at": "2026-09-01T12:00:00Z"

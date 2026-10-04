@@ -2,7 +2,7 @@
 // so every change carries a date, time and actor (the "historical ledger").
 // PRODUCTION: each function becomes a Supabase insert/update (or RPC) — same names, same audit rule.
 import { createContext, useContext } from 'react'
-import { addAudit, nowIso, processorFee, sponsorOf, tierOf, uid } from '@shared/data'
+import { addAudit, newQrToken, nowIso, processorFee, secureToken, sponsorOf, tierOf, uid } from '@shared/data'
 import type { DB, Guest, PayMethod, StaffUser } from '@shared/types'
 
 export interface Ctx { db: DB; update: (fn: (d: DB) => DB) => void; user: StaffUser; toast: (m: string) => void }
@@ -59,9 +59,30 @@ export function seatOrderAtTable(db: DB, actor: string, orderId: string, tableId
   return d
 }
 
-function sendEmail(db: DB, template: DB['email_log'][number]['template'], to: string, toName: string, orderId: string | null, guestId: string | null, trigger: string): DB {
-  const e = { id: uid('em'), template, to_email: to, to_name: toName, order_id: orderId, guest_id: guestId, trigger, status: 'sent' as const, sent_at: nowIso() }
-  return addAudit({ ...db, email_log: [...db.email_log, e] }, { actor_type: 'system', actor: 'Email service', entity: 'email', entity_id: e.id, order_id: orderId, action: template === 'portal_link' ? 'portal_link.sent' : `${template}.sent`, from_state: null, to_state: 'sent', guest_visible: template === 'portal_link', summary: template === 'portal_link' ? 'Private guest-list link emailed.' : `${template.replace('_', ' ')} emailed to ${toName}.` })
+// Hard rule 4: staff approve every email. Automatic triggers create a DRAFT (status 'queued', no approver).
+// A staff member sending their own email (QR invite, resend link) is the approver, and it sends at once.
+function sendEmail(db: DB, template: DB['email_log'][number]['template'], to: string, toName: string, orderId: string | null, guestId: string | null, trigger: string, approvedBy: string | null = null): DB {
+  const e = { id: uid('em'), template, to_email: to, to_name: toName, order_id: orderId, guest_id: guestId, trigger, status: approvedBy ? 'sent' as const : 'queued' as const, sent_at: approvedBy ? nowIso() : null, approved_by: approvedBy }
+  const d = { ...db, email_log: [...db.email_log, e] }
+  if (!approvedBy) return addAudit(d, { actor_type: 'system', actor: 'Email queue', entity: 'email', entity_id: e.id, order_id: orderId, action: 'email.drafted', from_state: null, to_state: 'queued', guest_visible: false, summary: `${template.replace(/_/g, ' ')} for ${toName} drafted; waiting for staff approval.` })
+  return logSent(d, e.id, approvedBy)
+}
+function logSent(db: DB, emailId: string, approvedBy: string): DB {
+  const e = db.email_log.find((x) => x.id === emailId)!
+  let d = db
+  if (e.template === 'portal_link' && e.order_id) d = { ...d, orders: d.orders.map((x) => (x.id === e.order_id ? { ...x, portal_link_sent_at: e.sent_at } : x)) }
+  return addAudit(d, { actor_type: 'staff', actor: approvedBy, entity: 'email', entity_id: e.id, order_id: e.order_id, action: e.template === 'portal_link' ? 'portal_link.sent' : `${e.template}.sent`, from_state: 'queued', to_state: 'sent', guest_visible: e.template === 'portal_link', summary: e.template === 'portal_link' ? 'Private guest-list link emailed.' : `${e.template.replace(/_/g, ' ')} emailed to ${e.to_name}.` })
+}
+/** Staff approve a draft email; it sends (simulated) and is logged with the approver. */
+export function approveEmail(db: DB, user: StaffUser, emailId: string): DB {
+  const at = nowIso()
+  const d = { ...db, email_log: db.email_log.map((x) => (x.id === emailId && x.status === 'queued' ? { ...x, status: 'sent' as const, sent_at: at, approved_by: user.name } : x)) }
+  return logSent(d, emailId, user.name)
+}
+/** Staff discard a draft email; nothing is sent. */
+export function cancelEmail(db: DB, user: StaffUser, emailId: string): DB {
+  const e = db.email_log.find((x) => x.id === emailId)!
+  return addAudit({ ...db, email_log: db.email_log.map((x) => (x.id === emailId ? { ...x, status: 'cancelled' as const } : x)) }, { actor_type: 'staff', actor: user.name, entity: 'email', entity_id: emailId, order_id: e.order_id, action: 'email.cancelled', from_state: 'queued', to_state: 'cancelled', guest_visible: false, summary: `Draft ${e.template.replace(/_/g, ' ')} for ${e.to_name} discarded.` })
 }
 
 /** Staff records a check or a direct ACH/wire seen on the bank statement. */
@@ -72,10 +93,9 @@ export function recordOfflinePayment(db: DB, user: StaffUser, orderId: string, p
   const status = applied + 0.005 >= o.commitment_amount ? 'paid' as const : 'partially_paid' as const
   let d: DB = { ...db, payments: [...db.payments, pay], orders: db.orders.map((x) => (x.id === orderId ? { ...x, status, updated_at: nowIso() } : x)), salesforce_sync: [...db.salesforce_sync, { entity: 'payment', entity_id: pay.id, sf_object: 'Opportunity', sf_id: null, status: 'pending', last_synced_at: null, error_message: null }] }
   d = addAudit(d, { actor_type: 'staff', actor: user.name, entity: 'payment', entity_id: pay.id, order_id: orderId, action: 'payment.recorded', from_state: o.status, to_state: status, guest_visible: true, summary: `Payment received: ${p.amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}.` })
-  if (!o.portal_link_sent_at && o.portal_token) {
+  if (!o.portal_link_sent_at && o.portal_token && !d.email_log.some((e) => e.order_id === orderId && e.template === 'portal_link' && e.status === 'queued')) {
     const sp = sponsorOf(d, o.sponsor_id)
     d = sendEmail(d, 'portal_link', sp.primary_contact_email, sp.primary_contact_name, orderId, null, 'payment_recorded')
-    d = { ...d, orders: d.orders.map((x) => (x.id === orderId ? { ...x, portal_link_sent_at: nowIso() } : x)) }
   }
   return d
 }
@@ -84,13 +104,12 @@ function createSeats(db: DB, orderId: string, n: number): DB {
   const seats = Array.from({ length: n }, (_, i) => ({ id: `seat-${orderId}-${i + 1}`, order_id: orderId, slot_number: i + 1, guest_id: null, status: 'unnamed' as const, updated_at: nowIso() }))
   return { ...db, seats: [...db.seats, ...seats] }
 }
-const token = () => Math.random().toString(36).slice(2, 6) + '-' + Math.random().toString(36).slice(2, 10)
 
-/** Staff enters a pledge that will be paid by check/ACH/wire (not through Give Lively). Link is emailed immediately. */
+/** Staff enters a pledge that will be paid by check/ACH/wire (not through Give Lively). The link email is drafted for staff approval. */
 export function addPledge(db: DB, user: StaffUser, p: { org: string; contact: string; email: string; tierId: string; source: 'check' | 'ach_direct' | 'wire' }): DB {
   const sp = { id: uid('sp'), organization_name: p.org, primary_contact_name: p.contact, primary_contact_email: p.email, phone: '', relationship_owner_id: user.id, salesforce_account_id: null, created_at: nowIso() }
   const tier = tierOf(db, p.tierId)
-  const o = { id: uid('ord'), event_id: db.meta.current_event_id, sponsor_id: sp.id, tier_id: tier.id, source: p.source, commitment_amount: tier.contribution_amount, status: 'pledged' as const, portal_token: tier.included_seat_count ? token() : null, portal_token_expires_at: null, portal_link_sent_at: tier.included_seat_count ? nowIso() : null, guest_list_deadline: db.gala_events.find((e) => e.id === db.meta.current_event_id)!.guest_list_deadline, logo_status: tier.required_materials.includes('logo') ? 'pending' as const : 'not_required' as const, program_ad_status: tier.required_materials.some((m) => m.includes('ad')) ? 'pending' as const : 'not_required' as const, givelively_order_ref: null, salesforce_opportunity_id: null, internal_notes: '', created_at: nowIso(), updated_at: nowIso() }
+  const o = { id: uid('ord'), event_id: db.meta.current_event_id, sponsor_id: sp.id, tier_id: tier.id, source: p.source, commitment_amount: tier.contribution_amount, status: 'pledged' as const, portal_token: tier.included_seat_count ? secureToken() : null, portal_token_expires_at: null, portal_link_sent_at: null, guest_list_deadline: db.gala_events.find((e) => e.id === db.meta.current_event_id)!.guest_list_deadline, logo_status: tier.required_materials.includes('logo') ? 'pending' as const : 'not_required' as const, program_ad_status: tier.required_materials.some((m) => m.includes('ad')) ? 'pending' as const : 'not_required' as const, givelively_order_ref: null, salesforce_opportunity_id: null, internal_notes: '', created_at: nowIso(), updated_at: nowIso() }
   let d: DB = { ...db, sponsors: [...db.sponsors, sp], orders: [...db.orders, o] }
   d = createSeats(d, o.id, tier.included_seat_count)
   d = addAudit(d, { actor_type: 'staff', actor: user.name, entity: 'order', entity_id: o.id, order_id: o.id, action: 'order.created', from_state: null, to_state: 'pledged', guest_visible: true, summary: `${tier.name} recorded for ${p.org} (${p.source}).` })
@@ -110,7 +129,7 @@ export function importGiveLively(db: DB, rows: GLRow[]): { db: DB; created: numb
     const sp = d.sponsors.find((s) => s.primary_contact_email.toLowerCase() === r.email.toLowerCase()) ?? { id: uid('sp'), organization_name: org, primary_contact_name: `${r.first} ${r.last}`, primary_contact_email: r.email, phone: '', relationship_owner_id: 'st-mei', salesforce_account_id: null, created_at: nowIso() }
     if (!d.sponsors.includes(sp)) d = { ...d, sponsors: [...d.sponsors, sp] }
     const fee = Number.isFinite(r.fee) && r.fee > 0 ? r.fee : processorFee(method, r.gross)
-    const o = { id: uid('ord'), event_id: d.meta.current_event_id, sponsor_id: sp.id, tier_id: tier.id, source: 'givelively' as const, commitment_amount: tier.contribution_amount || r.original, status: 'paid' as const, portal_token: tier.included_seat_count ? token() : null, portal_token_expires_at: null, portal_link_sent_at: tier.included_seat_count ? nowIso() : null, guest_list_deadline: d.gala_events.find((e) => e.id === d.meta.current_event_id)!.guest_list_deadline, logo_status: tier.required_materials.includes('logo') ? 'pending' as const : 'not_required' as const, program_ad_status: 'not_required' as const, givelively_order_ref: r.txn, salesforce_opportunity_id: null, internal_notes: `Imported from Give Lively (${r.campaign}).`, created_at: nowIso(), updated_at: nowIso() }
+    const o = { id: uid('ord'), event_id: d.meta.current_event_id, sponsor_id: sp.id, tier_id: tier.id, source: 'givelively' as const, commitment_amount: tier.contribution_amount || r.original, status: 'paid' as const, portal_token: tier.included_seat_count ? secureToken() : null, portal_token_expires_at: null, portal_link_sent_at: null, guest_list_deadline: d.gala_events.find((e) => e.id === d.meta.current_event_id)!.guest_list_deadline, logo_status: tier.required_materials.includes('logo') ? 'pending' as const : 'not_required' as const, program_ad_status: 'not_required' as const, givelively_order_ref: r.txn, salesforce_opportunity_id: null, internal_notes: `Imported from Give Lively (${r.campaign}).`, created_at: nowIso(), updated_at: nowIso() }
     const pay = { id: uid('pay'), order_id: o.id, method, processor: 'stripe' as const, givelively_transaction_id: r.txn, check_number: null, original_amount: r.original, covered_fee_amount: r.covered, gross_amount: r.gross, transaction_fee_amount: fee, refunded_amount: 0, net_amount: Math.round((r.gross - fee) * 100) / 100, received_at: new Date(r.date).toISOString(), recorded_by: 'givelively_sync', reconciliation_status: 'matched' as const, salesforce_opportunity_id: null }
     d = { ...d, orders: [...d.orders, o], payments: [...d.payments, pay] }
     d = createSeats(d, o.id, tier.included_seat_count)
@@ -125,18 +144,19 @@ export function addCompGuest(db: DB, user: StaffUser, g: { first_name: string; l
   const orderId = 'ord-rel'
   const slot = Math.max(0, ...db.seats.filter((s) => s.order_id === orderId).map((s) => s.slot_number)) + 1
   const id = uid('g')
-  const guest: Guest = { id, order_id: orderId, ...g, dietary_needs: null, accessibility_needs: null, guest_type: 'comp_relationship', table_id: null, seat_number: null, badge_status: 'needs_review', attendance_status: 'expected', qr_token: `AAFE27-REL-${Math.floor(1000 + Math.random() * 8999)}`, last_updated_by: 'staff', created_at: nowIso(), updated_at: nowIso() }
+  const guest: Guest = { id, order_id: orderId, ...g, dietary_needs: null, accessibility_needs: null, guest_type: 'comp_relationship', table_id: null, seat_number: null, badge_status: 'needs_review', attendance_status: 'expected', qr_token: newQrToken(), last_updated_by: 'staff', created_at: nowIso(), updated_at: nowIso() }
   const d: DB = { ...db, guests: [...db.guests, guest], seats: [...db.seats, { id: `seat-${orderId}-${slot}`, order_id: orderId, slot_number: slot, guest_id: id, status: 'reviewed', updated_at: nowIso() }] }
   return addAudit(d, { actor_type: 'staff', actor: user.name, entity: 'guest', entity_id: id, order_id: orderId, action: 'comp_guest.added', from_state: null, to_state: 'reviewed', guest_visible: false, summary: `${g.first_name} ${g.last_name} added as relationship guest (${g.relationship_note || 'no note'}).` })
 }
-export const sendQrInvite = (db: DB, guestId: string) => {
+// Staff sending their own email after previewing it counts as the approver (hard rule 4); the send is logged.
+export const sendQrInvite = (db: DB, user: StaffUser, guestId: string) => {
   const g = db.guests.find((x) => x.id === guestId)!
-  return sendEmail(db, 'qr_invitation', g.email, name(g), g.order_id, g.id, 'staff_manual')
+  return sendEmail(db, 'qr_invitation', g.email, name(g), g.order_id, g.id, 'staff_manual', user.name)
 }
-export const resendPortalLink = (db: DB, orderId: string) => {
+export const resendPortalLink = (db: DB, user: StaffUser, orderId: string) => {
   const o = db.orders.find((x) => x.id === orderId)!
   const sp = sponsorOf(db, o.sponsor_id)
-  return { ...sendEmail(db, 'portal_link', sp.primary_contact_email, sp.primary_contact_name, orderId, null, 'staff_manual'), orders: db.orders.map((x) => (x.id === orderId ? { ...x, portal_link_sent_at: nowIso() } : x)) }
+  return sendEmail(db, 'portal_link', sp.primary_contact_email, sp.primary_contact_name, orderId, null, 'staff_manual', user.name)
 }
 
 export function checkIn(db: DB, actor: string, guestId: string, method: 'qr' | 'search'): DB {

@@ -3,7 +3,7 @@ import { CloudDownload, Download, RefreshCw, Upload } from 'lucide-react'
 import { processorFee } from '@shared/data'
 import { Pill, ago, downloadCsv, fmtDate } from '@shared/ui'
 import { PageHead } from '../App'
-import { importGiveLively, salesforceSyncNow, useStaff, type GLRow } from '../store'
+import { approveEmail, cancelEmail, importGiveLively, salesforceSyncNow, useStaff, type GLRow } from '../store'
 
 // Column names follow Give Lively's "Line Items (All)" report. Confirm against a real AAFE export before launch.
 const COLS: Record<keyof GLRow, string[]> = {
@@ -42,7 +42,7 @@ const sampleRows = () => [
 ]
 
 export default function Integrations() {
-  const { db, update, toast } = useStaff()
+  const { db, update, user, toast } = useStaff()
   const file = useRef<HTMLInputElement>(null)
   const [lastPull, setLastPull] = useState<string | null>(null)
   const [preview, setPreview] = useState<GLRow[] | null>(null)
@@ -50,12 +50,13 @@ export default function Integrations() {
   const pending = db.salesforce_sync.filter((s) => s.status === 'pending').length
   const synced = db.salesforce_sync.filter((s) => s.status === 'synced').length
   const lastSync = db.salesforce_sync.map((s) => s.last_synced_at).filter(Boolean).sort().at(-1)
-  const emails = db.email_log.slice().reverse().slice(0, 12)
+  const drafts = db.email_log.filter((e) => e.status === 'queued')
+  const emails = db.email_log.filter((e) => e.status !== 'queued').reverse().slice(0, 12)
 
   const runImport = (rows: GLRow[]) => {
     const r = importGiveLively(db, rows)
     update(() => r.db)
-    toast(`Give Lively: ${r.created} new, ${r.skipped} already imported — guest-list emails sent`)
+    toast(`Give Lively: ${r.created} new, ${r.skipped} already imported — guest-list emails drafted for approval`)
   }
   const pullNow = () => {
     const r = sampleRows()[Math.floor(Math.random() * 3)]
@@ -68,11 +69,11 @@ export default function Integrations() {
       <PageHead title="Integrations & email" sub="How data gets in (Give Lively), goes out (Salesforce), and reaches guests (email). Connections here are simulated in the prototype." />
       <div className="grid gap-6 xl:grid-cols-2">
         <section className="card p-5">
-          <div className="flex items-start justify-between gap-3"><div><h2 className="text-lg font-semibold text-navy-900">Give Lively</h2><p className="text-sm text-navy-600">Ticket and sponsorship purchases → orders, payments, per-ticket fees, and an automatic guest-list email.</p></div><Pill tone="amber">Simulated</Pill></div>
+          <div className="flex items-start justify-between gap-3"><div><h2 className="text-lg font-semibold text-navy-900">Give Lively</h2><p className="text-sm text-navy-600">Ticket and sponsorship purchases → orders, payments, per-ticket fees, and a draft guest-list email for staff approval.</p></div><Pill tone="amber">Simulated</Pill></div>
           <ol className="mt-4 list-decimal space-y-1 pl-5 text-sm text-navy-700">
             <li>AAFE admin creates a Zapier API key in the Give Lively Nonprofit Admin Portal.</li>
             <li>Backend stores it as a secret and polls the JSON endpoint every 10–15 min with <code className="rounded bg-navy-50 px-1 text-xs">?start_time_ms=</code>.</li>
-            <li>New donation → order + payment (Original, Covered fee, Gross, Transaction fee, Net) → seats → portal-link email.</li>
+            <li>New donation → order + payment (Original, Covered fee, Gross, Transaction fee, Net) → seats → draft portal-link email (staff approve before it sends).</li>
             <li>Backup: upload the “Line Items (All)” CSV export below. Duplicates are skipped by transaction ID.</li>
           </ol>
           <div className="mt-4 flex flex-wrap gap-2">
@@ -107,9 +108,25 @@ export default function Integrations() {
         </section>
 
         <section className="card overflow-hidden xl:col-span-2">
-          <div className="border-b border-navy-100 px-5 py-3"><h2 className="font-semibold text-navy-900">Email log</h2><p className="text-xs text-navy-500">Portal links fire automatically after a Give Lively purchase or when staff record a pledge/payment. QR invitations are sent by staff.</p></div>
+          <div className="border-b border-navy-100 px-5 py-3"><h2 className="font-semibold text-navy-900">Email log</h2><p className="text-xs text-navy-500">Nothing sends on its own. Give Lively purchases, pledges and payments create a draft guest-list email; staff approve or discard it below. QR invitations and resent links are sent by the staff member who reviews them.</p></div>
+          {drafts.length > 0 && (
+            <div className="border-b border-navy-100 bg-brand-50 px-5 py-3" data-testid="email-drafts">
+              <h3 className="text-sm font-semibold text-navy-900">Waiting for approval ({drafts.length})</h3>
+              <ul className="mt-2 divide-y divide-brand-100">
+                {drafts.map((e) => (
+                  <li key={e.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+                    <span><span className="font-medium text-navy-900">{e.template.replace(/_/g, ' ')}</span> to {e.to_name} <span className="text-xs text-navy-500">{e.to_email} · {e.trigger.replace(/_/g, ' ')}</span></span>
+                    <span className="flex gap-2">
+                      <button className="btn-primary btn-sm" onClick={() => { update((d) => approveEmail(d, user, e.id)); toast(`Approved and sent to ${e.to_name} (simulated)`) }}>Approve and send</button>
+                      <button className="btn-ghost btn-sm" onClick={() => { update((d) => cancelEmail(d, user, e.id)); toast('Draft discarded') }}>Discard</button>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           <table className="w-full min-w-[700px] text-sm"><thead className="bg-cream-100"><tr><th className="th">When</th><th className="th">Template</th><th className="th">To</th><th className="th">Trigger</th><th className="th">Status</th></tr></thead>
-            <tbody className="divide-y divide-navy-100">{emails.map((e) => <tr key={e.id}><td className="td whitespace-nowrap">{e.sent_at ? fmtDate(e.sent_at, 'en-US', true) : '—'}</td><td className="td">{e.template.replace(/_/g, ' ')}</td><td className="td">{e.to_name} <span className="text-xs text-navy-500">{e.to_email}</span></td><td className="td">{e.trigger.replace(/_/g, ' ')}</td><td className="td"><Pill tone={e.status === 'queued' ? 'amber' : 'green'}>{e.status}</Pill></td></tr>)}</tbody></table>
+            <tbody className="divide-y divide-navy-100">{emails.map((e) => <tr key={e.id}><td className="td whitespace-nowrap">{e.sent_at ? fmtDate(e.sent_at, 'en-US', true) : '—'}</td><td className="td">{e.template.replace(/_/g, ' ')}</td><td className="td">{e.to_name} <span className="text-xs text-navy-500">{e.to_email}</span></td><td className="td">{e.trigger.replace(/_/g, ' ')}</td><td className="td"><Pill tone={e.status === 'cancelled' ? 'gray' : 'green'}>{e.status}</Pill>{e.approved_by && <div className="mt-0.5 text-xs text-navy-500">approved by {e.approved_by}</div>}</td></tr>)}</tbody></table>
         </section>
       </div>
     </div>

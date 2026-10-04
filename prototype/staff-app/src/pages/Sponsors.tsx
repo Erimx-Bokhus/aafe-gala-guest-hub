@@ -5,7 +5,7 @@ import { Link, Pill, fmtDate, money } from '@shared/ui'
 import type { Material } from '@shared/types'
 import { PageHead } from '../App'
 import { AddPledgeModal, GUEST_PORTAL_URL, RecordPaymentModal, SeatPill } from '../components'
-import { resendPortalLink, setSeatStatus, useStaff } from '../store'
+import { approveEmail, resendPortalLink, setSeatStatus, useStaff } from '../store'
 import { curOrders } from './Dashboard'
 
 const SRC: Record<string, string> = { givelively: 'Give Lively', check: 'Check', ach_direct: 'ACH (direct)', wire: 'Wire', comp: 'Complimentary', staff_entry: 'Staff entry' }
@@ -67,7 +67,7 @@ export function SponsorDetail({ id }: { id: string }) {
       <PageHead title={sp.organization_name} sub={`${tier.name} · ${sp.primary_contact_name} · ${sp.primary_contact_email} · Owner: ${staffName(db, sp.relationship_owner_id)}`}
         actions={<>
           {m.balance > 0 && o.source !== 'givelively' && <button className="btn-primary" onClick={() => setPay(true)}>Record payment</button>}
-          {link && <button className="btn-ghost" onClick={() => { update((d) => resendPortalLink(d, o.id)); toast('Guest-list link re-sent') }}><Mail size={15} /> Resend portal link</button>}
+          {link && <button className="btn-ghost" onClick={() => { update((d) => resendPortalLink(d, user, o.id)); toast('Guest-list link re-sent') }}><Mail size={15} /> Resend portal link</button>}
           {link && <button className="btn-ghost" onClick={() => { navigator.clipboard?.writeText(link).catch(() => {}); toast('Portal link copied') }}><Copy size={15} /> Copy link</button>}
         </>} />
       <div className="grid gap-6 xl:grid-cols-[1.5fr_1fr]">
@@ -130,7 +130,7 @@ export function SponsorDetail({ id }: { id: string }) {
           </section>
           <section className="card p-4">
             <h2 className="font-semibold text-navy-900">Emails</h2>
-            <ul className="mt-2 space-y-1.5 text-sm">{emails.map((e) => <li key={e.id} className="flex justify-between gap-2"><span>{e.template.replace(/_/g, ' ')} <span className="text-xs text-navy-500">({e.trigger.replace(/_/g, ' ')})</span></span><Pill tone={e.status === 'queued' ? 'amber' : 'green'}>{e.status}</Pill></li>)}{!emails.length && <li className="text-navy-500">None.</li>}</ul>
+            <ul className="mt-2 space-y-1.5 text-sm">{emails.map((e) => <li key={e.id} className="flex justify-between gap-2"><span>{e.template.replace(/_/g, ' ')} <span className="text-xs text-navy-500">({e.trigger.replace(/_/g, ' ')})</span></span>{e.status === 'queued' ? <button className="btn-primary btn-sm" onClick={() => { update((d) => approveEmail(d, user, e.id)); toast(`Approved and sent to ${e.to_name} (simulated)`) }}>Approve and send</button> : <Pill tone={e.status === 'cancelled' ? 'gray' : 'green'}>{e.status}</Pill>}</li>)}{!emails.length && <li className="text-navy-500">None.</li>}</ul>
             {link && <p className="mt-3 break-all rounded bg-cream-100 p-2 font-mono text-xs text-navy-600">{link}</p>}
           </section>
           {o.internal_notes && <section className="card p-4"><h2 className="font-semibold text-navy-900">Internal notes</h2><p className="mt-1 text-sm text-navy-700">{o.internal_notes}</p></section>}

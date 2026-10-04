@@ -5,7 +5,14 @@ import type { AuditEntry, DB, PayMethod } from './types'
 
 export const loadDB = (): DB => structuredClone(seed) as unknown as DB
 export const nowIso = () => new Date().toISOString()
-export const uid = (p: string) => `${p}-${Math.random().toString(36).slice(2, 9)}`
+export const uid = (p: string) => `${p}-${Math.random().toString(36).slice(2, 9)}` // record IDs only; never for secrets
+/** Secret token (sponsor links, QR codes): 128 random bits from the browser's secure generator, base64url. */
+export function secureToken(): string {
+  const b = crypto.getRandomValues(new Uint8Array(16))
+  return btoa(String.fromCharCode(...b)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+}
+/** QR code value: 'AAFE-' + 32 hex characters (128 bits), same format as the backend's new_qr_token(). */
+export const newQrToken = () => 'AAFE-' + Array.from(crypto.getRandomValues(new Uint8Array(16)), (x) => x.toString(16).padStart(2, '0')).join('').toUpperCase()
 
 // Give Lively third-party (Stripe) rates for qualified nonprofits — https://www.givelively.org/fees-and-disbursement
 export function processorFee(method: PayMethod, gross: number) {
