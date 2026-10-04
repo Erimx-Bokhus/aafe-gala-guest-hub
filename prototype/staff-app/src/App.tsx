@@ -66,27 +66,27 @@ export default function App() {
   else page = <Dashboard />
 
   const Side = (
-    <nav aria-label="Staff navigation" className="flex h-full flex-col bg-ink text-[#DFE5EE]">
-      <div className="flex items-center gap-3 px-5 py-5">
-        <AafeLogo tone="light" size="sm" />
+    <nav aria-label="Staff navigation" className="flex h-full flex-col bg-brand-500 text-white">
+      <div className="flex items-center gap-3 border-b border-brand-600 bg-white px-5 py-5 dark:bg-surface">
+        <AafeLogo size="sm" />
       </div>
-      <div className="px-5 pb-3 text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-[#9AA9BF]">Gala operations</div>
+      <div className="px-5 pb-3 pt-5 text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-white">Gala operations</div>
       <ul className="flex-1 space-y-0.5 overflow-y-auto px-3">
         {nav.map((n) => {
           const active = n.to === '/' ? p === '/' : p.startsWith(n.to)
           return (
             <li key={n.to}>
-              <Link to={n.to} aria-current={active ? 'page' : undefined} className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium ${active ? 'bg-white/10 text-white' : 'hover:bg-white/5 hover:text-white'}`}>
-                <n.icon size={17} className={active ? 'text-[#F0C3AD]' : 'text-[#9AA9BF]'} /> {n.label}
+              <Link to={n.to} aria-current={active ? 'page' : undefined} className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium ${active ? 'bg-white text-brand-700' : 'text-white hover:bg-brand-600'}`}>
+                <n.icon size={17} className={active ? 'text-brand-500' : 'text-white'} /> {n.label}
               </Link>
             </li>
           )
         })}
       </ul>
-      <div className="border-t border-white/10 p-4">
+      <div className="border-t border-brand-600 p-4">
         <div className="text-sm font-semibold text-white">{user.name}</div>
-        <div className="text-xs text-[#9AA9BF]">{ROLE_LABEL[user.role]}</div>
-        <button className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-[#DFE5EE] hover:text-white" onClick={() => { setUser(null); go('/') }}><LogOut size={14} /> Sign out</button>
+        <div className="text-xs text-white">{ROLE_LABEL[user.role]}</div>
+        <button className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-white underline-offset-2 hover:underline" onClick={() => { setUser(null); go('/') }}><LogOut size={14} /> Sign out</button>
       </div>
     </nav>
   )

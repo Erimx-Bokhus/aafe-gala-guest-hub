@@ -6,7 +6,7 @@ import { PageHead } from '../App'
 import { assignSeat, seatOrderAtTable, useStaff } from '../store'
 import { curOrders } from './Dashboard'
 
-const PALETTE = ['#C64C28', '#2F6FB0', '#2E8B6E', '#8A5CC2', '#C2902E', '#B8476E', '#4B8F9E', '#6B7A2E', '#9E5B3C', '#3C5A9E', '#7A4B8F', '#5E8F4B', '#A0522D', '#476F8A', '#8F4B6B']
+const PALETTE = ['#C64C28', '#2F6FB0', '#2E8B6E', '#8A5CC2', '#C2902E', '#B8476E', '#4B8F9E', '#6B7A2E', '#9E5B3C', '#9C6B30', '#7A4B8F', '#5E8F4B', '#A0522D', '#476F8A', '#8F4B6B']
 
 export default function Seating() {
   const { db, update, user, toast } = useStaff()

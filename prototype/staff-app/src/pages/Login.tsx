@@ -19,7 +19,7 @@ export default function Login({ db, prefs, onLogin }: { db: DB; prefs: Prefs; on
     <div className="grid min-h-[calc(100vh-28px)] lg:grid-cols-2">
       <div className="relative hidden lg:block">
         <img src="./photos/gala-50th-panel.jpg" alt="Speakers on stage at AAFE’s 50th anniversary gala" className="absolute inset-0 h-full w-full object-cover" style={{ objectPosition: 'center 40%' }} />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#101A2C]/85 via-[#101A2C]/20 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#313131]/85 via-[#313131]/20 to-transparent" />
         <div className="absolute bottom-0 p-10 text-white">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#F0C3AD]">AAFE Gala Operations</p>
           <p className="mt-2 max-w-md font-serif text-3xl leading-tight">One place for every sponsor, seat, payment and badge.</p>
