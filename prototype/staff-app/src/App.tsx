@@ -1,6 +1,6 @@
 // AAFE STAFF APP (the "client app": AAFE's gala team)
 // Reads everything the guest portal writes (same database), plus Give Lively + Salesforce data.
-import { useCallback, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { Activity, Armchair, BadgeCheck, CalendarDays, ClipboardList, CreditCard, Heart, LayoutDashboard, LogOut, Menu, Plug, ScanLine, Table2, X } from 'lucide-react'
 import { loadDB } from '@shared/data'
 import { AafeLogo } from '@shared/Logo'
@@ -44,6 +44,8 @@ export default function App() {
   const prefs = useDisplayPrefs()
   const update = useCallback((fn: (d: DB) => DB) => setDb((d) => fn(d)), [])
   const toast = useCallback((m: string) => setMsg(m), [])
+  useEffect(() => setMenu(false), [path]) // close the phone menu after navigating
+  useEffect(() => { const k = (e: KeyboardEvent) => e.key === 'Escape' && setMenu(false); window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k) }, [])
 
   if (!user) return <><PrototypeBanner /><Login db={db} prefs={prefs} onLogin={(u) => { setUser(u); go(u.role === 'check_in_volunteer' ? '/checkin' : '/') }} /></>
 
@@ -53,7 +55,7 @@ export default function App() {
   let page: ReactNode
   if (p === '/') page = <Dashboard />
   else if (p === '/gala') page = <GalaInfo />
-  else if (p.startsWith('/sponsors/')) page = <SponsorDetail id={p.split('/')[2]} />
+  else if (p.startsWith('/sponsors/')) page = <SponsorDetail key={p.split('/')[2]} id={p.split('/')[2]} />
   else if (p === '/sponsors') page = <Sponsors />
   else if (p === '/guests') page = <GuestList />
   else if (p === '/payments') page = <Payments />

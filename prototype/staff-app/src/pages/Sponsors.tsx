@@ -70,7 +70,7 @@ export function SponsorDetail({ id }: { id: string }) {
           {link && <button className="btn-ghost" onClick={() => { update((d) => resendPortalLink(d, user, o.id)); toast('Guest-list link re-sent') }}><Mail size={15} /> Resend portal link</button>}
           {link && <button className="btn-ghost" onClick={() => { navigator.clipboard?.writeText(link).catch(() => {}); toast('Portal link copied') }}><Copy size={15} /> Copy link</button>}
         </>} />
-      <div className="grid gap-6 xl:grid-cols-[1.5fr_1fr]">
+      <div className="grid gap-6 xl:grid-cols-[1.5fr_1fr] [&>*]:min-w-0">
         <div className="space-y-6">
           <section className="card overflow-x-auto">
             <div className="border-b border-navy-100 px-4 py-3"><h2 className="font-semibold text-navy-900">Seats ({st.named}/{st.total} named · {st.needsReview} to review)</h2></div>

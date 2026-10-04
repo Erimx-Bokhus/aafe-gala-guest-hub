@@ -41,6 +41,8 @@
   --n700: 216 208 198; --n800: 234 228 220; --n900: 250 246 240;
   --ink: 20 18 16; --ink2: 37 33 30;
 }
+/* Dark mode: orange text needs a lighter shade to stay readable (6.8:1 on cards). Light mode unchanged. */
+.dark .text-brand-600, .dark .text-brand-700 { color: #E8956F; }
 .proto-banner { background: rgb(var(--ink)); color: #fff; }
 .brand-warm .proto-banner { background: #C64C28; }
 
