@@ -84,7 +84,7 @@ Check-in screen: names at 20px or larger so they can be read at arm's length.
 ## Layout and spacing
 - 4px spacing grid (Tailwind default). Cards: 24px padding, 12px radius, 1px `line` border, no heavy shadows.
 - Sponsor portal: single column, max width 640px, works at 360px phone width.
-- Staff workspace: white sidebar with orange active item, content max width 1280px.
+- Staff workspace: AAFE orange sidebar (`brand-500`) with white text and icons, the AAFE logo on a white band at the top, and the current page as a white tab with orange text. Content area white, max width 1280px. On screens under 1024px the sidebar opens from a menu button.
 - Check-in: iPad landscape first; tap targets at least 44×44px.
 
 ## Components
@@ -96,6 +96,7 @@ Check-in screen: names at 20px or larger so they can be read at arm's length.
 | Input | White, `line` border, 16px text; focus: `brand-500` border plus `brand-100` ring |
 | Link | `brand-500`, underlined on hover |
 | Focus ring | 2px `#C64C28`, 2px offset, on every interactive element |
+| Sidebar (staff) | Orange `#C64C28` background, white text (4.7:1), logo on white at the top, active page = white tab with `brand-700` text |
 | Table | White rows, `line` dividers, `brand-50` for selected row, header in `ink-muted` uppercase |
 | Status pill | Status colors above, rounded, `text-xs` with label |
 | Top bar | White with logo on the left; a thin 4px `brand-500` stripe at the top is the main brand accent |
