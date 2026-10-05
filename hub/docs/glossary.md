@@ -1,5 +1,5 @@
 # Glossary
-<!-- updated Oct 3 -->
+<!-- updated Oct 5 -->
 
 Terms used across this hub, in plain language.
 
@@ -16,11 +16,15 @@ Give Lively | AAFE's free fundraising platform for tickets, donations, and tax r
 Import report | The summary after each import: new, updated, unchanged, needs review, and rejected rows, each with a reason, plus any Give Lively changes held back by a correction.
 Line Items report | Give Lively's purchase report. Each line carries the Stripe charge ID.
 Match | Deciding whether an incoming row is a guest we already have. Checked by Give Lively ID, then email with last name, then name and organization. Anything less certain goes to review.
-Next.js | The web framework we propose. Widely used, with TypeScript, so most web developers can maintain it.
+React | The web framework the app is built with (decided Oct 5), written in TypeScript so most web developers can maintain it.
+Supabase | The hosted service the prototype runs on: a Postgres database, staff sign-in, and server functions. Free plan for the demo.
+Guest category | What kind of guest someone is: sponsor guest, ticket holder, comp, AAFE staff, volunteer, event staff, or government/VIP.
+Seated | A guest with a guaranteed table, which comes with Champion-level sponsorship and above. Other guests are admitted without one.
+Pipeline stage | Where a sponsor prospect stands: not started, reached out, in conversation, closed won, payment received, or lost.
 Needs reprint | A badge already printed whose name, title, organization, or table has since changed.
 Open seat | A seat in a package with no guest named yet. The dashboard groups these by relationship owner.
 P0, P1, P2 | Priority. P0 must work by Demo Day; P1 should; P2 is a stretch goal.
-Package | A sponsorship or ticket tier and how many seats it includes, such as $25,000 with 7 seats (2027 counts to be confirmed by AAFE).
+Package | A sponsorship or ticket tier and how many seats it includes, such as Silver at $25,000 with 10 seats (AAFE's 2026 flyer).
 Postgres | The database we propose: standard, free, and offered by every major host.
 Relationship owner | The AAFE staff member responsible for a guest or sponsor, and the one who follows up.
 Render | A hosting company. One option a future partner could consider, at an estimated base of about $13 a month.

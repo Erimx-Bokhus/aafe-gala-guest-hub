@@ -1,10 +1,11 @@
 # Risks
-<!-- modified Oct 3 -->
+<!-- modified Oct 5 -->
 
 What could go wrong, how likely it is, and what we are doing about it. Ranked by likelihood times impact; reviewed at each weekly check-in.
 
 ```risks
-AAFE's materials arrive late | 3 | 2 | Build against the intake form and synthetic data; follow up on October 8 | Natalie
+Real guest-list text from Give Lively is messier than the one sample | 3 | 2 | Split with plain rules first; anything unclear goes to staff review; ask AAFE for a few more redacted rows | Aisling
+AI features turn out to be required and aren't planned | 2 | 2 | Team confirms this week; candidates are on the Data and AI page | Team
 The handoff isn't clear enough for another partner to pick up | 2 | 3 | Standard stack; setup docs a teammate has tested from scratch; invented seed data; a known-limitations list | Aisling, Natalie
 The same guest arrives from several sources | 3 | 2 | Rule-based matching, a review queue, and corrections that survive re-import | Aisling
 Sponsors don't use the form, as with the earlier Google Form | 2 | 3 | One link per sponsor showing their seat count; staff can enter names for them; staff-approved reminders | Antonin, Cornell
@@ -26,4 +27,4 @@ The top risk is about AAFE's materials, not code. The handoff risk is the one we
 
 - **AAFE decides not to adopt the tool.** The handoff still includes the market comparison on the [Research](#research) page, so AAFE can choose an existing product with full information.
 - **AAFE wants Give Lively replaced.** That reopens the build-versus-buy decision; ClickBid and RSVPify become serious options.
-- **Materials slip past October 8.** Import (C4) is built against the intake form's fields and adapted when the real headers arrive; the demo uses synthetic exports shaped the same way.
+- **More materials arrive.** Comp amounts, badge templates, and Give Lively screen recordings are still to come; the import adapts through column mapping.
