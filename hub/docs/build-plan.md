@@ -1,4 +1,5 @@
 # Build plan
+<!-- updated Oct 5 -->
 
 Core features land by October 30, leaving the last ten days for testing and handoff. We deliver a working prototype with invented data; production hosting is not part of the plan. Estimates are person-days of focused work: "AI" assumes the builder works in Claude Code and reviews everything it writes; "real" assumes coding mostly by hand.
 
@@ -9,7 +10,7 @@ C0 | Setup and guardrails | 2026-10-05 | 2026-10-09 | aisling | 1 | 3–5
 C1 | Data model and test data | 2026-10-05 | 2026-10-11 | aisling | 1–2 | 4–6
 C2 | Sign-in and roles | 2026-10-05 | 2026-10-11 | cornell | 1 | 3–4
 C3 | Commitments and seats | 2026-10-12 | 2026-10-18 | cornell | 2–3 | 6–8
-C4 | Import and matching | 2026-10-12 | 2026-10-25 | aisling | 3–4 | 7–10
+C4 | Import and matching | 2026-10-07 | 2026-10-16 | aisling | 5–6 | 9–12
 C6 | Staff dashboard | 2026-10-12 | 2026-10-25 | antonin | 2–3 | 6–8
 C5 | Sponsor guest form | 2026-10-19 | 2026-10-25 | antonin | 2–3 | 5–7
 C7 | Follow-up emails | 2026-10-26 | 2026-11-01 | cornell | 1.5–2 | 4–5
@@ -34,7 +35,7 @@ Read it left to right: setup and data the first week, the import and the sponsor
 | C1 | Data model and test data | Schema, migrations, ~550 invented guests with duplicates and gaps | P0 | Aisling, Cornell |
 | C2 | Sign-in and roles | Google sign-in; admin, staff, check-in roles | P0 | Cornell |
 | C3 | Commitments and seats | Packages, tickets, sponsorships, comps, payment labels, manual entry | P0 | Cornell |
-| C4 | Import and matching | CSV mapping, duplicate detection, review queue, corrections that survive | P0 | Aisling |
+| C4 | Import and matching | Real Give Lively export, free-text guest-list splitting, duplicate detection, review queue, corrections that survive; about 9–11 Claude Code sessions | P0 | Aisling |
 | C5 | Sponsor guest form | Private link, slots per package, editable until the deadline | P0 | Antonin, Cornell |
 | C6 | Staff dashboard | Gaps by owner, goal tracking, guest grid, review before print | P0 | Antonin |
 | C7 | Follow-up emails | Drafts, staff approval, send or copy out | P1 | Cornell, Natalie |

@@ -8,7 +8,6 @@ The prototype uses invented data only. This page sets out what a production vers
 4. **AAFE decides retention.** Guest data can be exported for Salesforce and deleted after the gala.
 
 ## What the tool stores
-<!-- modified Oct 3 -->
 
 | Stores | Never stores |
 | --- | --- |
@@ -29,8 +28,17 @@ The prototype uses invented data only. This page sets out what a production vers
 - **Matching works without AI.** The rules are plain and auditable; AI explanations sit behind an admin switch, off by default.
 - **Provider terms:** a paid service that doesn't train on submitted data, confirmed in writing before any real data is used.
 
+## AI features for Demo Day
+<!-- new Oct 5 -->
+
+Antonin flagged on Oct 3 that AI Native Demo Day may expect two or three real AI features; the team is confirming whether that is required. Candidates that fit the rules above (off by default, staff approve everything, no emails, phone numbers, or payment details sent to AI):
+
+1. **Split the free-text guest list** from Give Lively into names; emails are removed before the text goes to AI, and staff confirm the result.
+2. **Flag likely badge errors**, such as a title or organization that differs from earlier records, for the relationship owner to review.
+3. **Explain why two records may be the same person** in the review queue.
+4. **Draft follow-up emails** for staff to edit and approve.
+
 ## Access
-<!-- updated Oct 3 -->
 
 - The prototype uses demo accounts with three roles: admin, staff, and check-in volunteer. A production version would use AAFE's Google accounts with MFA.
 - Sponsor links open only that sponsor's purchase and expire at AAFE's deadline. QR e-tickets open only one seat and expire after gala night. Both are random, and only a scrambled (hashed) copy is stored, so a database leak doesn't reveal working links.
