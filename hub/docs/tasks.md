@@ -1,6 +1,7 @@
 # Tasks
+<!-- modified Oct 5 -->
 
-The live tracker, with owners and status dropdowns, is the [Findings, Build Plan, and Tasks doc](https://claude.ai/code/artifact/25db30ba-7c5a-42dc-8e25-4c2b5dc47d2c). This page is a snapshot, ordered by target week and priority.
+The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus), kept by Natalie at Pursuit's request. This page is a snapshot for planning; when they differ, Trello wins.
 
 ## Groundwork: this week
 
@@ -13,9 +14,10 @@ The live tracker, with owners and status dropdowns, is the [Findings, Build Plan
 - [ ] Settle code ownership and a team agreement with Pursuit — Team
 
 ## Week of October 5
-<!-- updated Oct 3 -->
+<!-- updated Oct 5 -->
 
-- [ ] Decide the stack and the demo preview host, and record it — Natalie, team
+- [ ] Record the stack decision: React + Supabase — Aisling
+- [ ] Pick the demo preview host — Team
 - [x] Commit the handoff package to the team repo (Erimx-Bokhus) — Aisling
 - [x] CI with secret scanning (gitleaks on every push and PR), .gitignore, .env.example — Aisling
 - [x] Import and matching spec with 22 test cases — Aisling
@@ -23,18 +25,22 @@ The live tracker, with owners and status dropdowns, is the [Findings, Build Plan
 - [ ] Staging deploy — Aisling
 - [ ] Database schema and migrations — Aisling, Cornell
 - [ ] Synthetic data generator (~550 guests, messy cases) — Aisling
-- [ ] Google sign-in and staff roles — Cornell
-- [ ] Follow up with AAFE if materials haven't arrived — Natalie
-- [ ] Check AAFE's sample exports against the import spec (per-ticket ID, refunds, headers) — Aisling
+- [ ] Supabase sign-in and server-side staff roles (issues #8, #9) — Cornell
+- [ ] Get AAFE's materials (received Oct 5) — Natalie
+- [ ] Check AAFE's sample export against the import spec — Aisling
+- [ ] Revise the import spec for the real Give Lively export — Aisling
 - [ ] Confirm 2027 seats per sponsorship tier with AAFE — Natalie
 - [ ] Share the prototype source (seed.sql, seed.json) — Natalie
+- [ ] Merge PRs #7 (staff app) and #14 (design doc) once the secret scan passes — Aisling
+- [ ] Open PRs for the backend and guest-portal branches — Natalie
+- [ ] Decide whether AI features are required for Demo Day — Team
 - [ ] Ask AAFE for written approval of the logo and event photos for Demo Day; swap the name-badge photo — Natalie
 - [ ] Seed loader: Natalie's data with random hashed tokens and draft-only emails — Aisling
 
 ## Week of October 12
 
 - [ ] Packages, commitments, seats, and manual entry — Cornell
-- [ ] Give Lively CSV import with column mapping — Aisling
+- [ ] Give Lively import: real export, free-text guest lists — Aisling
 - [ ] Staff dashboard shell and guest grid — Antonin
 - [ ] Clickable prototype of the sponsor form and dashboard for AAFE — Antonin, Natalie
 
