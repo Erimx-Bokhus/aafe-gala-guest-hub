@@ -1,7 +1,10 @@
 name: Secret scan
 
 on:
+  # Once per pull request (re-runs on each new commit to it), plus after each merge to main.
+  # Branch pushes without a PR aren't scanned until a PR is opened.
   push:
+    branches: [main]
   pull_request:
 
 permissions:
