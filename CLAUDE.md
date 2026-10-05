@@ -36,7 +36,7 @@ technical partner.** Production hosting and real data are AAFE's decisions after
 Natalie built clickable concepts of the sponsor portal and staff app (shared in Slack Oct 2; source link pending). Treat them as the UI reference, not the scope: emails, seating chart, fee analytics, and Salesforce sync are trimmed per `docs/requirements.md`. Her seed data is in `seed/natalie-prototype/`; what was adopted and what must change is in `docs/research/prototype-review-2026-10-03.md`.
 
 ## Working in this repo
-- **Never commit or push to `main`.** GitHub's free plan can't lock `main` on a private repo, so nothing stops a direct push; this rule is the protection. Changes reach `main` only through a pull request.
+- **Never commit or push to `main`.** `main` is protected (GitHub Team, Oct 5): changes reach it only through a pull request with 1 approval and a passing secret scan (`gitleaks`); no force-pushes or deletion.
 - Branches: each person works on their own branch (`aisling`, `natalie`, `cornell`, `antonin`) or a short feature branch off it (`aisling-import-engine`; a `name/...` prefix is impossible while a branch called `name` exists).
 - Aisling is the repo admin: every pull request is reviewed and merged by Aisling (`nessaisling-lab` or `aislingld-pursuit`).
 - Merge `main` into your branch often; send work back as small pull requests.
