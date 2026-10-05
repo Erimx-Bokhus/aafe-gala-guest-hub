@@ -1,10 +1,15 @@
 # Decisions
-<!-- updated Oct 3 -->
+<!-- updated Oct 5 -->
 
 Every decision with its reason and what would reopen it, newest first. Nothing here is reopened without new information.
 
 | Date | Decision | Why | Revisit if | Owner |
 | --- | --- | --- | --- | --- |
+| Oct 5 | Stack: React + TypeScript (Vite, Tailwind) on Supabase (Postgres, sign-in, server functions) | Matches Natalie's working prototype; mainstream tools a future partner can pick up | A partner needs a different host | Aisling, team |
+| Oct 5 | Supabase free plan for the prototype and the demo | Covers invented data; a free project pauses after a week idle, so wake it before demos | The demo needs more than the free plan | Aisling |
+| Oct 5 | GitHub Team plan; `main` protected: pull request, 1 approval, passing secret scan, no force-push | A professional repo with a stable `main` | — | Aisling |
+| Oct 5 | 2027 seats per tier follow AAFE's 2026 flyer (Platinum 12, Gold 10, Silver 10, Bronze 8, Champion 6, Friend 2, Supporter 1) | AAFE's own flyer, received Oct 5 | AAFE sets different 2027 packages | AAFE (data) |
+| Oct 5 | Trello is the team's task tracker; the hub summarizes and links to it | Pursuit asked for Trello; avoids entering tasks twice | — | Natalie, Aisling |
 | Oct 3 | A relationship manager sending their own comp ticket counts as staff approval; every send is logged | Client wants RMs to send comps themselves; RMs are staff | AAFE wants a second approver | Aisling |
 | Oct 3 | Real AAFE staff contact details are redacted from repo docs | The repo will be handed on | — | Aisling |
 | Oct 3 | Nov 9 is the team's last work day; Nov 10 is Demo Day and handoff | Clarifies dates used across the docs | Pursuit moves Demo Day | Aisling |
@@ -24,9 +29,9 @@ Every decision with its reason and what would reopen it, newest first. Nothing h
 
 | Decision | Who decides | When |
 | --- | --- | --- |
-| Stack and demo preview host | Team | Week of Oct 5 |
+| Demo preview host | Team | When the demo is deployable |
+| Whether AI features are required for Demo Day | Team, Pursuit | This week |
 | AI on or off, retention, dietary data | AAFE | After the data note is reviewed |
 | Code and IP ownership after Nov 10 | AAFE, Pursuit, team | Before the first commit |
-| Seats per sponsorship tier for 2027 | AAFE | With the promised materials |
 | Public use of AAFE's logo and event photos, including Demo Day | AAFE | Before Demo Day |
 | Whether to adopt the tool, and with which technical partner | AAFE | After Demo Day |

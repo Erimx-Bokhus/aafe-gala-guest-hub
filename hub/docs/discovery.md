@@ -44,25 +44,45 @@ What AAFE told us on the October 1 call, in their words where it matters. Sarah 
 - Janelle is finalizing an AI acceptable-use policy (no personal information into AI tools) and wants to be kept close on data decisions.
 
 ## Required inputs before build
-<!-- new Oct 3 -->
+<!-- updated Oct 5 -->
 
 What we need from AAFE, in one list: the materials promised on the call (expected about a week after it) plus the approvals Natalie's prototype review surfaced. Until each arrives, we build against invented data and placeholders.
 
 | Input | What it unlocks | Status |
 | --- | --- | --- |
 | A named contact who approves on AAFE's behalf | Every approval below, and decisions on data and AI | To confirm |
-| Sponsorship tiers and seat counts for 2027 | Seats per package (the 2025 flyer and the call disagree) | Pending |
-| Comp categories and amounts | Relationship guests and comp tracking | Promised |
-| Redacted guest spreadsheet column headers | The data model and the legacy migration | Promised |
-| Redacted Give Lively exports (Line Items and attendee reports) | Import columns, per-ticket IDs, refunds | Promised |
+| Sponsorship tiers and seat counts | Seats per package | Received Oct 5 (2026 flyer) |
+| Comp categories and amounts | Relationship guests and comp tracking | Partly: guest categories received; comp amounts still open |
+| Redacted guest spreadsheet column headers | The data model and the legacy migration | Received Oct 5 |
+| Redacted Give Lively exports | Import columns, purchase IDs, refunds | Received Oct 5 (ticket export, one sample row) |
 | Badge, export, and check-in templates | Badge file and check-in list formats | Promised |
-| Deadlines for names, materials, seating, and printing | Sponsor-link expiry, reminders, badge cutoff | Promised |
+| Deadlines for names, materials, seating, and printing | Sponsor-link expiry, reminders, badge cutoff | Received Oct 5 (2026 dates) |
 | Screen recordings of their Give Lively setup | How ticket types and sponsorships are named | Promised |
-| Redacted sponsor email threads | Wording of follow-up drafts | Promised |
+| Redacted sponsor email threads | Wording of follow-up drafts | Received Oct 5 |
 | Approved logo and brand kit | AAFE branding in anything shown publicly | Needs written approval |
 | Approved real event photos | Photos in anything shown publicly | Needs written approval |
 
 Real logo and photos may be used inside the private repo and in reviews with the team and AAFE; anything public, including Demo Day, uses placeholders until AAFE approves in writing.
+
+## What AAFE sent on October 5
+<!-- new Oct 5 -->
+
+Janelle sent the guest-list notes, the 2026 sponsorship flyer, a Give Lively ticket export, and a redacted sponsor email thread. The files stay out of the repo because they hold real names; their structure is in `docs/aafe-materials-2026-10-05.md`.
+
+| 2026 guests by category | Guests |
+| --- | --- |
+| Sponsor guests | 234 |
+| Comped | 109 |
+| Ticket holders | 107 |
+| Government or VIP | 53 |
+| AAFE staff | 45 |
+| Event volunteers and staff | 5 |
+| **Total** | **553** |
+
+- **Only 208 of 553 guests had a guaranteed table.** Champion ($7,500) and above guarantee seating; Friend and Supporter tickets admit guests without one.
+- **2026 deadlines:** logo and ad April 30, guest names May 11, gala May 21.
+- **Give Lively's export is one row per purchase**, with no transaction ID, and every guest's name and email typed into one free-text box. This changes the import (see [Import and matching](#import)).
+- **AAFE's spreadsheet has two tabs:** a prospect tracker with pipeline stages (reached out, in conversation, closed won, payment received) and a confirmed attendee list used for check-in.
 
 ## Still to ask
 

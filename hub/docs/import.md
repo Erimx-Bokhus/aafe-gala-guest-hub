@@ -1,17 +1,18 @@
 # Import and matching
-<!-- new Oct 3 -->
+<!-- modified Oct 5 -->
 
 How a Give Lively export becomes guests, orders, and seats without duplicates, and why a staff correction is never lost. Plain rules, no AI. Full spec: `docs/import-matching-spec.md` in the repo.
 
-Written before AAFE's sample exports arrive; column names are assumptions until then.
+Updated Oct 5 for AAFE's real Give Lively export: one row per purchase, no transaction ID, and guest names typed into one free-text box. The full spec in the repo is being revised to match.
 
 ## What happens on every import
 
 ```steps
-Upload | Staff upload the Give Lively attendee export. Columns are mapped once and remembered.
+Upload | Staff upload the Give Lively ticket export. Columns are mapped once and remembered.
 Check | Rows missing a required field, or with an unreadable amount or date, are rejected with their row number and reason.
 Compare | Each row is compared with the last import. Unchanged rows are skipped, so re-importing the same file changes nothing.
-Group | Rows with the same transaction become one order; the package decides how many seats it holds.
+Identify | Each row is one purchase. With no transaction ID, a purchase is recognized by the buyer's email, purchase time, and tier, so re-importing never duplicates it.
+Split | The free-text guest list is split into names and emails; anything unclear goes to staff review.
 Match | Purchaser and each named guest are matched to people already in the list (rules below).
 Apply | New and changed data is written, except where a staff member or sponsor has corrected it.
 Report | A summary: new, updated, unchanged, rejected, and sent to review, with every held change listed.
@@ -23,7 +24,7 @@ One import is all-or-nothing: if anything fails partway, nothing is applied and 
 
 ## Orders, guests, and seats
 
-- **One order per Give Lively transaction.** It records the package, amount, and Give Lively as the payment method.
+- **One order per Give Lively purchase row.** It records the tier, amount, refund, and Give Lively as the payment method.
 - **Ticket orders** get one seat per ticket. **Sponsorships** get the package's full seat count, whatever Give Lively sent; names fill seats in order and the rest stay open.
 - **The buyer is not seated** unless a row names them as a guest. A coordinator buying for colleagues stays the contact; the colleagues get the badges.
 - **A new sponsorship with open seats** gets a private sponsor link and a **draft** email in the approval queue. The import never sends anything.
@@ -71,7 +72,19 @@ An import only updates the Give Lively layer. If Give Lively changes a field tha
 
 Nothing is deleted automatically. Refunded seats are cancelled, not removed, and drop out of badges and check-in. Each resolution is remembered, so the same row doesn't ask twice.
 
-## Waiting on AAFE's samples
+## What AAFE's export answered
+<!-- team -->
+<!-- updated Oct 5 -->
+
+- **Per-ticket ID:** none, and no transaction ID either. A purchase is keyed on email + purchase time + tier.
+- **Refunds:** yes, an "Amount Refunded" column and a "Status" column.
+- **Column headers and formats:** received. Dates look like `2026-02-05 05:14:46 PM EST`; amounts like `$1,000.00`; the donor-covered fee is its own column.
+- **Guest names:** one free-text answer per purchase ("Please list the name(s) and email address(es) of all guests…"). The sample has one row, so we don't yet know how messy real answers are.
+- **Still open:** whether sponsorships bought on Give Lively appear in the same export (the "Tier Category" column suggests they do).
+
+The test cases below are being updated to match: cases that relied on ticket IDs change, and cases for free-text guest lists are added.
+
+## Earlier questions
 <!-- team -->
 
 - Does the attendee export carry a **per-ticket ID**? Without one, rows are identified by their position in the transaction, which breaks if Give Lively reorders them.
