@@ -1,0 +1,17 @@
+# Secret-scan config for gitleaks (see .github/workflows/gitleaks.yml).
+# Keeps every default rule; adds one narrow exception.
+
+[extend]
+useDefault = true
+
+# The prototype's seed data (and the bundled OPEN-*.html copies built from it)
+# holds invented demo QR and sponsor-link tokens, not credentials (hard rule 1:
+# no real AAFE data). gitleaks' generic-api-key rule flags them. Only those two
+# token formats, only under prototype/, are exempt; anything else still fails.
+[[allowlists]]
+description = "Invented demo QR and sponsor-link tokens in prototype seed data"
+targetRules = ["generic-api-key"]
+condition = "AND"
+paths = ['''^prototype/''']
+regexTarget = "match"
+regexes = ['''(qr_token|portal_token)"?\s*:\s*"(AAFE-[0-9A-F]{32}|[a-z]{2}-[0-9a-z]{8})"''']
