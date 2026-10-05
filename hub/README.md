@@ -29,7 +29,7 @@ Put one of these on the line after a heading to badge it:
 | `<!-- updated Oct 3 -->` | Existing content had something added (rows, tasks, terms) |
 | `<!-- modified Oct 3 -->` | Existing content was changed or corrected (wording, numbers, a rule) |
 
-After the `#` title it marks the whole page; after a `##` heading it marks that section. The date is free text and optional. The sidebar shows the page's own marker, or else its most significant section marker (new, then modified, then updated); hover it to see which sections. Team-only sections don't count in client view. Badges stay until you delete the marker line.
+After the `#` title it marks the whole page; after a `##` heading it marks that section. The date is free text and optional. The sidebar shows the page's own marker, or else its most significant section marker (new, then modified, then updated); hover it to see which sections. Team-only sections don't count in client view. Badges stay until you delete the marker line. Each reader can also click a badge to mark it read: it disappears for them only, saved in their browser, and the sidebar badge clears once nothing on that page is unread.
 
 ## Custom blocks
 

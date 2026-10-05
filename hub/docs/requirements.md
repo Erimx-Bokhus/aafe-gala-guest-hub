@@ -11,6 +11,7 @@ From AAFE's intake form, for staff and for the Demo Day mock investor:
 3. How are we tracking to goal on sponsorships, tickets, and other categories?
 
 ## Must have for Demo Day
+<!-- updated Oct 5 -->
 
 - **Commitments and seats.** Every purchase or pledge has a package and a seat count; each seat is named or open. [call]
 - **Manual entry** for checks, ACH, and verbal pledges, with payment method, date, and status. [call]
@@ -23,14 +24,18 @@ From AAFE's intake form, for staff and for the Demo Day mock investor:
 - **Exports:** a badge mail-merge file with table numbers, a check-in list, and a Salesforce-ready attendee file. [call]
 - **Logo and program-ad status** for each sponsor. [intake, call]
 - **Follow-up emails** drafted by the tool and approved by staff. [call]
+- **A category on every guest:** sponsor guest, ticket holder, comp, AAFE staff, volunteer, event staff, or government/VIP. [AAFE data]
+- **Seated or admitted.** Champion and above guarantee a table; Friend and Supporter tickets admit guests without one, so the guest list and badges show the difference. [AAFE data]
 
 ## Should have
+<!-- updated Oct 5 -->
 
 - **QR-code e-tickets** emailed to each guest and scanned on an iPad. [call]
 - **A check-in app** that searches by guest or sponsor, marks arrivals, and handles walk-ins and unnamed sponsor seats. [call]
 - **Blank sponsor name tags** for unnamed seats. [call]
 - **A multilingual sponsor form** in English, Chinese, Korean, and Spanish, reviewed by AAFE staff. [scope]
 - **aafe.org branding.** [call]
+- **Sponsor pipeline:** each prospect's stage (not started, reached out, in conversation, closed won, payment received, lost), the ask against the commitment, and the last two years' giving, as in AAFE's prospect tracker. [AAFE data]
 
 ## Later or out of scope
 
