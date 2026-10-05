@@ -17,9 +17,12 @@ Format: date · decision · reason · decided by. Reopen only with new informati
 | 2026-10-03 | Real AAFE staff contact details are redacted from repo docs | Hard rule 1 spirit; the repo will be handed on | Aisling |
 | 2026-10-03 | Nov 9 is the team's last work day; Nov 10 is Demo Day and handoff | Clarifies dates used across the docs | Aisling |
 | 2026-10-03 | AAFE logo and real event photos allowed in the private repo and internal reviews; public use, including Demo Day, needs AAFE's written approval | Repo is private and handed to AAFE; Demo Day is public and photos show real attendees | Aisling |
-| _pending_ | Stack and demo preview host | To decide week of Oct 5 | Team |
+| 2026-10-05 | Stack: React + TypeScript (Vite, Tailwind) on Supabase (Postgres, Auth, Edge Functions) | Matches Natalie's working prototype and seed data; mainstream and documented for a future partner | Aisling (admin), team |
+| 2026-10-05 | Supabase free plan for the prototype and demo; no paid plan unless the demo needs it | Free covers invented data; a free project pauses after 1 week idle, so wake it before demos | Aisling |
+| 2026-10-05 | GitHub Team plan for the org, so `main` can be protected | A professional repo with enforced reviews; free plan can't protect a private branch | Aisling |
+| 2026-10-05 | 2027 seats per tier follow AAFE's 2026 flyer until AAFE says otherwise: Platinum $50,000 = 12, Gold $30,000 = 10, Silver $25,000 = 10, Bronze $15,000 = 8, Champion $7,500 = 6 (guaranteed seating); Friend $2,500 = 2, Supporter $1,000 = 1 (admittance, no guaranteed seat); full- and half-page ads = 0 | AAFE's own 2026 sponsorship flyer, received Oct 5; supersedes the 2025 flyer and the call's estimates | AAFE (data) |
+| _pending_ | Demo preview host | Decide when the demo is deployable | Team |
 | _pending_ | AI on/off, retention window, dietary data | See `data-handling.md` | AAFE |
 | _pending_ | Code and IP ownership after Nov 10, and the repo license | Open question for AAFE and Pursuit | AAFE + team |
-| _pending_ | Seats per sponsorship tier for 2027 | Flyer and call disagree ($25,000 = 10 vs 7 seats); call says top tier ~20 seats, Natalie's research example uses 12 | AAFE |
 | _pending_ | Public use of AAFE logo and event photos (Demo Day) | Needs written approval | AAFE |
 | _pending_ | Which prototype features are MVP vs later | Natalie's concept (Oct 2) goes beyond agreed scope | Team |

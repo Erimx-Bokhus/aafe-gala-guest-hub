@@ -10,6 +10,7 @@ technical partner.** Production hosting and real data are AAFE's decisions after
 
 ## Read first
 - `docs/discovery-2026-10-01.md`: what the client actually said (highest authority after the client)
+- `docs/aafe-materials-2026-10-05.md`: structure of AAFE's real spreadsheet, Give Lively export, tiers, and deadlines (the files stay out of the repo)
 - `docs/requirements.md`: prioritized requirements
 - `docs/decisions.md`: decision log; do not reopen a decision without new information
 - `docs/data-model.md`: proposed schema and the merge plan with Natalie's prototype schema
@@ -29,8 +30,7 @@ technical partner.** Production hosting and real data are AAFE's decisions after
 9. **Maintainability over cleverness.** AAFE's tech capacity is "pretty low." Prefer mainstream, well-documented choices a future partner can pick up.
 
 ## Stack
-**Status: pending team decision (Oct 3–5).** Do not scaffold until `docs/decisions.md` records the choice.
-Candidates on the table: React + TypeScript with Supabase Postgres (matches Natalie's prototype and seed data), or Next.js + TypeScript with Postgres. Either way: Postgres, typed code, and the import/matching logic isolated in its own tested module.
+**Decided Oct 5** (`docs/decisions.md`): React + TypeScript (Vite, Tailwind) on Supabase (Postgres, Auth, Edge Functions), on Supabase's free plan for the prototype. Matches Natalie's prototype in `prototype/`. Keep the import/matching logic isolated in its own tested module.
 
 ## Reference prototype
 Natalie built clickable concepts of the sponsor portal and staff app (shared in Slack Oct 2; source link pending). Treat them as the UI reference, not the scope: emails, seating chart, fee analytics, and Salesforce sync are trimmed per `docs/requirements.md`. Her seed data is in `seed/natalie-prototype/`; what was adopted and what must change is in `docs/research/prototype-review-2026-10-03.md`.
