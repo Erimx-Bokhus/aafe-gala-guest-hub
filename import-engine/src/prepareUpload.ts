@@ -67,14 +67,18 @@ export interface UploadReport {
  * runs the upload again.
  */
 export class GalaPageNotSetError extends Error {
-  constructor(readonly pages: { pageName: string | null; rows: number }[]) {
+  readonly pages: { pageName: string | null; rows: number }[]
+  constructor(pages: { pageName: string | null; rows: number }[]) {
     super("Choose this gala's Give Lively page before importing. Pages in this file: " +
       pages.map((p) => `${p.pageName ?? '(no page name)'} (${p.rows} row${p.rows === 1 ? '' : 's'})`).join(', '))
+    this.pages = pages
   }
 }
 
 export interface PreparedUpload {
   rows: PreparedRow[]
+  /** Rows waiting on a tier mapping. Sent to `gl_import()` too, which records the `unknown_tier` review. */
+  pendingTier: PurchaseRow[]
   report: UploadReport
 }
 
@@ -94,6 +98,7 @@ export async function prepareUpload(csv: string, ctx: UploadContext): Promise<Pr
   }
 
   const rows: PreparedRow[] = []
+  const pendingTier: PurchaseRow[] = []
   const skippedOtherPage: UploadReport['skippedOtherPage'] = []
   const unknownTiers = new Map<string, { givelivelyName: string; rowNumbers: number[] }>()
   const reviewItems: ReviewItem[] = []
@@ -114,6 +119,7 @@ export async function prepareUpload(csv: string, ctx: UploadContext): Promise<Pr
       entry.rowNumbers.push(row.rowNumber)
       unknownTiers.set(key, entry)
       reviewItems.push({ reason: 'unknown_tier', purchaseKey: row.purchaseKey, rowNumber: row.rowNumber, details: { tierPurchased: row.tierName } })
+      pendingTier.push(row)
       continue
     }
 
@@ -167,6 +173,7 @@ export async function prepareUpload(csv: string, ctx: UploadContext): Promise<Pr
 
   return {
     rows,
+    pendingTier,
     report: {
       rowsRead: read.rows.length + read.rejected.length,
       rejected: read.rejected,

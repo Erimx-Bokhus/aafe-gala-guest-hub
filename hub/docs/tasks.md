@@ -1,5 +1,5 @@
 # Tasks
-<!-- modified Oct 5 (pairs) -->
+<!-- updated Oct 6 -->
 
 The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus), kept by Natalie at Pursuit's request. This page is a snapshot for planning; when they differ, Trello wins. Build work belongs to a pair (Oct 5): **Frontend: Natalie + Antonin**; **Backend: Aisling + Cornell**.
 
@@ -16,37 +16,54 @@ The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus),
 ## Week of October 5
 <!-- updated Oct 5 -->
 
-- [ ] Record the stack decision: React + Supabase — Aisling
+- [x] Record the stack decision: React + Supabase — Aisling
 - [ ] Pick the demo preview host — Team
 - [x] Commit the handoff package to the team repo (Erimx-Bokhus) — Aisling
 - [x] CI with secret scanning (gitleaks on every push and PR), .gitignore, .env.example — Aisling
 - [x] Import and matching spec with 22 test cases — Aisling
 - [x] Seed data requirements for the import tests — Aisling
 - [ ] Staging deploy — Backend pair
-- [ ] Database schema and migrations — Backend pair
+- [x] Database schema and migrations (Natalie's backend, merged Oct 6) — Backend pair
 - [ ] Synthetic data generator (~550 guests, messy cases) — Backend pair
-- [ ] Supabase sign-in and server-side staff roles (issues #8, #9) — Backend pair
-- [ ] Get AAFE's materials (received Oct 5) — Natalie
-- [ ] Check AAFE's sample export against the import spec — Aisling
-- [ ] Revise the import spec for the real Give Lively export — Aisling
+- [ ] Supabase sign-in (#8, PR #27 in review) and server-side staff roles (#9) — Cornell
+- [x] Get AAFE's materials (received Oct 5) — Natalie
+- [x] Check AAFE's sample export against the import spec — Aisling
+- [x] Revise the import spec for the real Give Lively export — Aisling
 - [ ] Confirm 2027 seats per sponsorship tier with AAFE — Natalie
-- [ ] Share the prototype source (seed.sql, seed.json) — Natalie
-- [ ] Merge PRs #7 (staff app) and #14 (design doc) once the secret scan passes — Aisling
-- [ ] Open PRs for the backend and guest-portal branches — Natalie
+- [x] Share the prototype source (seed.sql, seed.json) — Natalie
+- [x] Merge PRs #7 (staff app) and #14 (design doc) once the secret scan passes — Aisling
+- [x] Bring the backend and guest-portal branches into `main` (PRs #25, #26) — Aisling
 - [ ] Decide whether AI features are required for Demo Day — Team
 - [ ] Ask AAFE for written approval of the logo and event photos for Demo Day; swap the name-badge photo — Natalie
-- [ ] Seed loader: Natalie's data with random hashed tokens and draft-only emails — Backend pair
+- [x] Seed loader: Natalie's data with random hashed tokens and draft-only emails — Backend pair
+
+## Added October 6
+<!-- new Oct 6 -->
+
+- [x] Import engine: reads the real export, splits guest lists, matches buyers and guests (PR #23) — Aisling
+- [x] Tier mapping and gala page filter from Natalie's review (PR #22) — Aisling
+- [x] Three import choices decided and posted for Natalie's review (PR #24) — Aisling
+- [x] Backend tests run on every PR (PR #26) — Aisling
+- [ ] Merge PR #26, then PR #27 after Cornell updates it from `main` — Aisling
+- [ ] Natalie's review of the three import choices (Slack) — Natalie
+- [ ] Share the Pursuit PRD and the team PRD with the backend pair — whoever has them
+- [ ] Trello access for Cornell; Supabase project URL and public key to Cornell — Natalie
+- [ ] Upload screen: import engine, report, page picker, tier-mapping picker — Frontend pair
+- [ ] Staff app: show "sent" and "resend" for QR codes instead of the code itself — Frontend pair
+- [ ] Portal: "From your purchase: please confirm" labels; Korean — Frontend pair
+- [ ] Frontend build check, demo-data drift check, real-data guard in CI — Backend pair
+- [ ] Informal client demo, Wednesday Oct 7 — Natalie
 
 ## Week of October 12
 
 - [ ] Packages, commitments, seats, and manual entry — Backend pair
-- [ ] Give Lively import: real export, free-text guest lists — Backend pair
+- [x] Give Lively import: real export, free-text guest lists (import engine, PRs #23–#24) — Aisling
 - [ ] Staff dashboard shell and guest grid — Frontend pair
 - [ ] Clickable prototype of the sponsor form and dashboard for AAFE — Frontend pair
 
 ## Week of October 19
 
-- [ ] Matching, review queue, corrections that survive re-import — Backend pair
+- [x] Matching, review queue, corrections that survive re-import (database side, PR #26) — Aisling
 - [ ] Sponsor guest form on private links — Frontend pair, with Backend pair
 - [ ] Gaps by owner, goal tracking, review before print — Frontend pair
 
@@ -61,7 +78,7 @@ The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus),
 
 - [ ] AAFE branding and sponsor-form translations, reviewed by AAFE — Frontend pair
 - [ ] End-to-end tests, accessibility, data-handling check — Everyone
-- [ ] QR e-tickets (stretch) — Backend pair
+- [x] QR e-tickets stored hashed, one per seat, expiring (issue #10, PR #26) — Aisling
 
 ## Week of November 9
 
