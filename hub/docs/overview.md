@@ -1,10 +1,11 @@
 # Overview
+<!-- modified Oct 5 -->
 
 AAFE runs one gala a year for 500–600 guests, and its guest list lives in a single spreadsheet that staff rebuild by hand from Give Lively purchases, emailed sponsorship pledges, checks, and comps. We are building one reliable guest list on top of Give Lively that sponsors can update themselves and staff can trust from first purchase to gala-night check-in.
 
 ```steps
 Purchases and pledges come in | Give Lively tickets, emailed sponsorships, checks, comps
-Each package becomes its seats | A $25,000 sponsorship holds 7 seats
+Each package becomes its seats | A $25,000 Silver sponsorship holds 10 seats
 Guest details fill each seat | Sponsors name and edit their own guests
 Empty seats get flagged | Sorted by the AAFE staff member who owns the relationship
 Final list, badges, check-in | Exports for printing, iPad check-in at the door
@@ -19,15 +20,15 @@ Open with the spreadsheet: every year staff rebuild one guest list by hand from 
 One invented sponsor, start to finish. Step through it, or use the arrow keys in present mode.
 
 ```walkthrough
-sponsor: Lantern Street Partners | Gold sponsorship | $25,000 | 7
-guests: A. Rivera, Director; K. Osei, VP Community; M. Chen, CFO; D. Park, Board Member; S. Haddad, Partner; L. Novak, Analyst; R. Iyer, Counsel
-Pledge arrives by email | The sponsor commits $25,000 by email. A staff member enters it by hand and becomes the relationship owner. | pay=Pledged; named=0; dash=New commitment · owner assigned
-The package becomes seats | Gold includes 7 seats, so the tool creates 7 open seats tied to this commitment. | pay=Pledged; named=0; flag=1; dash=7 names missing
-Sponsor gets a private link | No account needed. The link opens only this sponsorship and closes at AAFE's deadline. | pay=Pledged; named=0; flag=1; link=1; dash=Link sent · 7 names missing
-Names come in | The sponsor names 5 guests. The 2 open seats appear on the owner's follow-up list, with a reminder drafted for staff to approve. | pay=Pledged; named=5; flag=1; link=1; dash=2 names missing · reminder drafted
-The check arrives | Staff record the check. The payment status changes; no bank details are stored. | pay=Received · check; named=5; flag=1; link=1; dash=Paid · 2 names missing
-Last names, then review | The final 2 names arrive. The owner corrects one title before printing, and the correction survives the next import. | pay=Received · check; named=7; fix=3; dash=Complete · reviewed before print
-Badges and the door | Badges print with table numbers. At check-in, 6 of 7 guests arrive, and the Salesforce file records who came. | pay=Received · check; named=7; arrived=6; table=12; dash=6 of 7 checked in
+sponsor: Lantern Street Partners | Champion sponsorship | $7,500 | 6
+guests: A. Rivera, Director; K. Osei, VP Community; M. Chen, CFO; D. Park, Board Member; S. Haddad, Partner; L. Novak, Analyst
+Pledge arrives by email | The sponsor commits $7,500 by email. A staff member enters it by hand and becomes the relationship owner. | pay=Pledged; named=0; dash=New commitment · owner assigned
+The package becomes seats | Champion includes 6 seats, so the tool creates 6 open seats tied to this commitment. | pay=Pledged; named=0; flag=1; dash=6 names missing
+Sponsor gets a private link | No account needed. The link opens only this sponsorship and closes at AAFE's deadline. | pay=Pledged; named=0; flag=1; link=1; dash=Link sent · 6 names missing
+Names come in | The sponsor names 4 guests. The 2 open seats appear on the owner's follow-up list, with a reminder drafted for staff to approve. | pay=Pledged; named=4; flag=1; link=1; dash=2 names missing · reminder drafted
+The check arrives | Staff record the check. The payment status changes; no bank details are stored. | pay=Received · check; named=4; flag=1; link=1; dash=Paid · 2 names missing
+Last names, then review | The final 2 names arrive. The owner corrects one title before printing, and the correction survives the next import. | pay=Received · check; named=6; fix=3; dash=Complete · reviewed before print
+Badges and the door | Badges print with table numbers. At check-in, 5 of 6 guests arrive, and the Salesforce file records who came. | pay=Received · check; named=6; arrived=5; table=12; dash=5 of 6 checked in
 ```
 
 ```notes
@@ -44,18 +45,19 @@ This is the demo in miniature. Pause on step 4: the sponsor fixes their own list
 | Target event | AAFE's 2027 gala |
 | Discovery call | October 1, 2026 |
 | Demo Day | November 10, 2026 |
-| Status | Discovery complete; stack decision the week of October 5 |
+| Status | Discovery complete; AAFE's materials received Oct 5; stack decided (React + Supabase) |
 
 ## Team
+<!-- updated Oct 5 (pairs) -->
 
-| Person | Role | GitHub |
-| --- | --- | --- |
-| Natalie Walker | Product manager, client contact | wsvdesign |
-| Aisling Leiva-Davila | Backend, GitHub and integrations | nessaisling-lab |
-| Cornell Robertson | Backend | CodeToTheCore |
-| Antonin Lesov | Frontend | antoninlesov |
+| Person | Pair | Role | GitHub |
+| --- | --- | --- | --- |
+| Natalie Walker | Frontend | Product manager, client contact | wsvdesign |
+| Antonin Lesov | Frontend | Frontend | antoninlesov |
+| Aisling Leiva-Davila | Backend | Backend, GitHub and integrations | nessaisling-lab |
+| Cornell Robertson | Backend | Backend | CodeToTheCore |
 
-Build areas are assigned the week of October 5. Proposed owners appear on the [Build plan](#build-plan) page.
+Build work is split between two pairs (decided Oct 5): **Frontend pair: Natalie + Antonin** (staff app, sponsor portal, check-in, branding) and **Backend pair: Aisling + Cornell** (Supabase backend, import, sign-in and roles, secure links, exports, emails). Natalie also stays product lead and client contact. Owners per component are on the [Build plan](#build-plan) page.
 
 ## What we will not build
 

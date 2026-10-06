@@ -24,3 +24,6 @@ coverage/
 Thumbs.db
 .vscode/
 .idea/
+
+# Vite dev-server cache
+.vite/

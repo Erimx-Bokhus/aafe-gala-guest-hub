@@ -17,7 +17,7 @@
   --rule:rgba(31,29,26,.14); --rule-strong:rgba(31,29,26,.28);
   --accent:#c64c28; --accent-text:#ad3f1d; --accent-wash:rgba(198,76,40,.09);
   --gold:#8a6a2e; --mark:#f6dca6;
-  --own-aisling:#c64c28; --own-cornell:#2a78d6; --own-antonin:#1baf7a; --own-shared:#8a8478;
+  --own-backend:#c64c28; --own-frontend:#2a78d6; --own-shared:#8a8478;
   --k-update:#2a78d6; --k-review:#a8770f; --k-new:#c64c28; --k-reject:#8a8478;
   --ok:#17795a; --ok-wash:rgba(23,121,90,.1);
   --shadow:0 1px 2px rgba(31,29,26,.06),0 8px 24px rgba(31,29,26,.06);
@@ -31,7 +31,7 @@
   --rule:rgba(239,233,221,.13); --rule-strong:rgba(239,233,221,.26);
   --accent:#e0714d; --accent-text:#f08c69; --accent-wash:rgba(224,113,77,.13);
   --gold:#cfa860; --mark:#6b4f1f;
-  --own-aisling:#d95926; --own-cornell:#3987e5; --own-antonin:#199e70; --own-shared:#8e877b;
+  --own-backend:#d95926; --own-frontend:#3987e5; --own-shared:#8e877b;
   --k-update:#3987e5; --k-review:#c99a2e; --k-new:#e0714d; --k-reject:#8e877b;
   --ok:#4cc79a; --ok-wash:rgba(76,199,154,.12);
   --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25); color-scheme:dark;
@@ -41,7 +41,7 @@
   --rule:rgba(239,233,221,.13); --rule-strong:rgba(239,233,221,.26);
   --accent:#e0714d; --accent-text:#f08c69; --accent-wash:rgba(224,113,77,.13);
   --gold:#cfa860; --mark:#6b4f1f;
-  --own-aisling:#d95926; --own-cornell:#3987e5; --own-antonin:#199e70; --own-shared:#8e877b;
+  --own-backend:#d95926; --own-frontend:#3987e5; --own-shared:#8e877b;
   --k-update:#3987e5; --k-review:#c99a2e; --k-new:#e0714d; --k-reject:#8e877b;
   --ok:#4cc79a; --ok-wash:rgba(76,199,154,.12);
   --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25); color-scheme:dark;
@@ -94,7 +94,9 @@ mark{background:var(--mark);color:inherit;border-radius:2px;padding:0 1px}
 /* change markers: <!-- new|updated|modified [date] --> under a heading; label always in text, color is a second cue */
 .chg{--c:var(--accent);display:inline-block;vertical-align:middle;font:600 9.5px/1 var(--f-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--c);border:1px solid var(--c);border-radius:4px;padding:3px 5px;white-space:nowrap}
 .chg.k-updated{--c:var(--ok)} .chg.k-modified{--c:var(--k-review)}
-.doc h1 .chg,.doc h2 .chg{margin-left:10px;position:relative;top:-3px;font-size:10px;padding:4px 6px}
+.doc h1 .chg,.doc h2 .chg{margin-left:10px;position:relative;top:-3px;font-size:10px;padding:4px 6px;background:none;cursor:pointer}
+.doc h1 .chg:hover,.doc h2 .chg:hover{background:color-mix(in srgb,var(--c) 12%,transparent)}
+.doc h1 .chg:hover::after,.doc h2 .chg:hover::after{content:" · mark read"}
 .nav a:hover{background:var(--accent-wash);color:var(--ink)}
 .nav a[aria-current="page"]{background:var(--surface);color:var(--ink);box-shadow:inset 3px 0 0 var(--accent)}
 .nav a[aria-current="page"] .n{color:var(--accent)}
@@ -527,7 +529,7 @@ body.presenting .pager,body.presenting .foot,body.presenting .check-note,body.pr
     </div>
     <footer class="foot">
       <span>Prepared by team ERIMX BOKHUS, Pursuit AI Native Fellowship. Not an official AAFE website.</span>
-      <span>Updated October 3, 2026 · Invented example data only</span>
+      <span>Updated October 5, 2026 · Invented example data only</span>
     </footer>
   </main>
 </div>
@@ -569,7 +571,7 @@ const PAGES = [
   {id:'glossary',     title:'Glossary',      group:'Reference'},
 ];
 const NUMERALS = ['一','二','三','四','五','六','七','八','九','十'];
-const OWNERS = {aisling:'Aisling', cornell:'Cornell', antonin:'Antonin', shared:'Shared'};
+const OWNERS = {backend:'Backend pair: Aisling + Cornell', frontend:'Frontend pair: Natalie + Antonin', shared:'Everyone'};
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -720,7 +722,7 @@ function fenceWorkload(src){
     if (r.stretch){ o.slo += a; o.shi += b; } else { o.lo += a; o.hi += b; }
     o.items.push(`${r.id}${r.stretch ? ' (stretch)' : ''}`);
   }
-  const order = ['aisling','cornell','antonin','shared'].filter(k => acc[k]);
+  const order = ['backend','frontend','shared'].filter(k => acc[k]);
   const max = Math.ceil(Math.max(...order.map(k => acc[k].hi + acc[k].shi)) / 2) * 2 + 2;
   const sc = scaleFn(`linear 0 ${max}`); sc.ticks = []; for (let t = 0; t <= max; t += 2) sc.ticks.push(t);
   let html = '';
@@ -921,18 +923,18 @@ const WF = {
         <div class="row"><span>Staff member C</span><span class="st miss">9 open</span></div>
         <div class="row"><span>Unassigned</span><span class="st">4</span></div></div>
       <div class="grid"><p class="lbl">Guests · filter: needs attention</p>
-        <div class="row"><span style="color:var(--ink)">Lantern Street Partners</span><span>Gold · 7 seats · 2 open</span><span class="st miss">Names missing</span><span>Staff A</span></div>
+        <div class="row"><span style="color:var(--ink)">Lantern Street Partners</span><span>Champion · 6 seats · 2 open</span><span class="st miss">Names missing</span><span>Staff A</span></div>
         <div class="row"><span style="color:var(--ink)">M. Okafor</span><span>Individual ticket</span><span class="st">Review match</span><span>Staff B</span></div>
         <div class="row"><span style="color:var(--ink)">Council Member (comp)</span><span>Comp · 2 seats</span><span class="st ok">Confirmed</span><span>Staff C</span></div>
         <div class="row"><span style="color:var(--ink)">Riverside Health Fund</span><span>Silver · 10 seats</span><span class="st miss">Logo missing</span><span>Staff A</span></div></div>
     </div></div>`,
   sponsor: () => `<div class="wf wf-phone"><span class="wf-badge">Rough sketch</span>
-    <div class="bar"><b>Lantern Street Partners</b><span>Gold sponsorship · 7 seats</span><span style="color:var(--accent-text)">Names due by AAFE's deadline</span></div>
+    <div class="bar"><b>Lantern Street Partners</b><span>Champion sponsorship · 6 seats</span><span style="color:var(--accent-text)">Names due by AAFE's deadline</span></div>
     <div class="langs"><span class="box solid">English</span><span class="box cjk-tc">中文</span><span class="box cjk-kr">한국어</span><span class="box">Español</span></div>
     <div class="slot filled"><p class="lbl">Seat 1</p><div class="f">A. Rivera</div><div class="f">Director · Lantern Street Partners</div></div>
     <div class="slot filled"><p class="lbl">Seat 2</p><div class="f">K. Osei</div><div class="f">VP Community</div></div>
     <div class="slot"><p class="lbl">Seat 3</p><div class="f">Guest name</div><div class="f">Title and organization</div></div>
-    <div class="slot" style="opacity:.6"><p class="lbl">Seats 4–7</p><div class="f">4 more slots…</div></div>
+    <div class="slot" style="opacity:.6"><p class="lbl">Seats 4–6</p><div class="f">3 more slots…</div></div>
     <div class="foot"><span>Saved · edit anytime before the deadline</span><span class="box acc">Save</span></div></div>`,
   checkin: () => `<div class="wf wf-pad"><span class="wf-badge">Rough sketch</span>
     <div class="bar"><b>Check-in · Gala night</b><span class="box">Works offline · synced 1 min ago</span><span class="box solid">+ Walk-in</span></div>
@@ -995,11 +997,17 @@ function sectionize(container){
 
 /* ============ change markers ============ */
 const CHG = {new:'New', updated:'Updated', modified:'Modified'}, CHG_RANK = {new:3, modified:2, updated:1};
-function chgTag(kind, on){ const t = document.createElement('span'); t.className = `chg k-${kind}`;
-  t.textContent = CHG[kind] + (on ? ` · ${on}` : ''); return t; }
-/* page badge: the page's own marker, else its most significant section marker (hidden team sections skipped in client view) */
+/* read state: per viewer, in this browser only (a convenience, so it may reset) */
+let readMarks = store.get('aafe-hub-read', {});
+const markKey = (id, section, kind, on) => `${id}|${section}|${kind}|${on}`;
+const isRead = key => !!readMarks[key];
+function markRead(key){ readMarks = {...readMarks, [key]: true}; store.set('aafe-hub-read', readMarks); buildNav(); updateNav(); }
+function chgTag(kind, on, key){ const t = document.createElement('button'); t.type = 'button'; t.className = `chg k-${kind}`;
+  t.textContent = CHG[kind] + (on ? ` · ${on}` : ''); t.title = 'Mark as read'; t.setAttribute('aria-label', `${t.textContent}. Mark as read`);
+  t.addEventListener('click', () => { markRead(key); t.remove(); }); return t; }
+/* page badge: the page's own unread marker, else its most significant unread section marker (hidden team sections skipped in client view) */
 function pageMark(id){
-  const m = (docs[id] && docs[id].marks || []).filter(x => !(client && x.team));
+  const m = (docs[id] && docs[id].marks || []).filter(x => !(client && x.team) && !isRead(x.key));
   const own = m.find(x => x.page); if (own) return {kind: own.kind, tip: `${CHG[own.kind]} page${own.on ? ' · ' + own.on : ''}`};
   if (!m.length) return null;
   const top = m.reduce((a, b) => CHG_RANK[b.kind] > CHG_RANK[a.kind] ? b : a);
@@ -1045,7 +1053,8 @@ async function load(id){
     tmp.querySelectorAll('[data-notes]').forEach(n => n.remove());
     const textOf = list => list.map(s => s.textContent).join(' ').replace(/\s+/g,' ').trim();
     const marks = secs.filter(s => s.dataset.mark).map(s => ({kind: s.dataset.mark, on: s.dataset.markOn,
-      page: s === secs[0], team: 'team' in s.dataset, label: (s.querySelector('h2') || {}).textContent || ''}));
+      page: s === secs[0], team: 'team' in s.dataset, label: (s.querySelector('h2') || {}).textContent || '',
+      key: markKey(id, s === secs[0] ? 'page' : slug(s.querySelector('h2').textContent), s.dataset.mark, s.dataset.markOn)}));
     docs[id] = {md, html, marks, text: textOf(secs), pub: textOf(secs.filter(s => !('team' in s.dataset)))};
   } catch (e) { docs[id] = {error: String(e.message || e)}; }
   return docs[id];
@@ -1087,7 +1096,9 @@ function decorate(doc, id){
     b.setAttribute('aria-label', `Copy link to ${h.textContent}`); b.dataset.copy = h.id; h.prepend(b);
     if ('team' in h.closest('.slide').dataset){ const t = document.createElement('span'); t.className = 'team-tag'; t.textContent = 'Team only'; h.append(t); }
   });
-  doc.querySelectorAll('.slide[data-mark]').forEach(sl => { const h = sl.querySelector('h2,h1'); if (h) h.append(chgTag(sl.dataset.mark, sl.dataset.markOn)); });
+  doc.querySelectorAll('.slide[data-mark]').forEach(sl => { const h2 = sl.querySelector('h2'), h = h2 || sl.querySelector('h1'); if (!h) return;
+    const key = markKey(id, h2 ? h2.id : 'page', sl.dataset.mark, sl.dataset.markOn);
+    if (!isRead(key)) h.append(chgTag(sl.dataset.mark, sl.dataset.markOn, key)); });
   doc.querySelectorAll('.slide[data-team]').forEach(s => s.setAttribute('data-team', ''));
   doc.querySelectorAll('a[href]').forEach(a => { if (/^https?:/.test(a.getAttribute('href'))) { a.target = '_blank'; a.rel = 'noopener'; } });
   // checkboxes
