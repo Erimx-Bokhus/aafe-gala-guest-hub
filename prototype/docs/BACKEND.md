@@ -142,7 +142,7 @@ Errors come back as the Postgres message: `forbidden`, `not_found`, `invalid_lin
 - New tables: `givelively_sync_state` (poll cursor and last result) and `givelively_raw` (every gala donation as Give Lively sent it).
 - New `email_log` columns: `attempts`, `last_error`, `approved_by` and `approved_at`. New status: `cancelled`.
 - New unique index on `payments.givelively_transaction_id`.
-- `orders.portal_token` now holds a hash. The seed's demo links (`acme-community-partners`, etc.) still work.
+- `orders.portal_token` now holds a hash. The seed's demo links (`ac-6w9k3p5d`, etc.) still work.
 - The `audit_log` and `salesforce_sync` id counters are moved past the seed's ids (fixes a duplicate-key error on the first new audit row).
 
 ## Not done yet
@@ -151,7 +151,7 @@ Errors come back as the Postgres message: `forbidden`, `not_found`, `invalid_lin
 - **Staff App still uses in-memory data.** To connect it:
   - Swap `staff-app/src/store.ts` and `Login.tsx` to the calls above.
   - Sponsors → "copy portal link" becomes "send new link", because tokens are stored hashed.
-- **Team-rule gaps.** QR codes are per guest and stored in plain text, so staff can display them. Hard rule 6 wants them per seat, hashed, and expiring after gala night. The seed's demo sponsor links are readable slugs (`acme-community-partners`), which rule 6 forbids outside the demo.
+- **Team-rule gaps.** QR codes are per guest and stored in plain text, so staff can display them. Hard rule 6 wants them per seat, hashed, and expiring after gala night. The seed's demo sponsor links are short (8 characters), fine for the demo but below rule 6's 128 bits; real links are minted at 128 bits by `send-emails`.
 - **Email.** Only `portal_link` and `qr_invitation` templates are built, in English (the portal page itself has 中文 and Español). Scheduled deadline reminders and payment receipts aren't built.
 - **Salesforce.** Not built (out of scope in the project scope doc).
 - **Edge functions** haven't been run yet. Deno wasn't available when they were written, so test them after the first deploy. The SQL and the Give Lively mapping are tested.
