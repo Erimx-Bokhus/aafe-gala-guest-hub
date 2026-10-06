@@ -39,9 +39,9 @@ describe('matchGuest', () => {
     { id: 'g-wei', orderId: 'ord-a', displayName: 'Wei Chen', email: 'wei@example.org', organization: 'Harbor Health' },
     { id: 'g-jane', orderId: 'ord-a', displayName: 'Jane Doe', email: 'jane@example.org', organization: 'Lotus Bank' },
   ]
-  it('case 16: the same name on another order is double-booked', () => {
+  it('case 16: the same name on another order, organization unknown, is a possible duplicate (Oct 6)', () => {
     expect(matchGuest({ displayName: 'Susan Cho', email: null, organization: null }, 'ord-b', existing))
-      .toEqual({ reason: 'double_booked', existingGuestId: 'g-susan', existingOrderId: 'ord-a' })
+      .toEqual({ reason: 'possible_duplicate', existingGuestId: 'g-susan', existingOrderId: 'ord-a' })
   })
   it('case 17: the same words in another order, same organization, are double-booked', () => {
     expect(matchGuest({ displayName: 'Chen Wei', email: null, organization: 'Harbor Health Inc' }, 'ord-b', existing))
