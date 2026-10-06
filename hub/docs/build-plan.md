@@ -95,14 +95,13 @@ What the automated checks don't cover yet, most important first. <!-- new 2026-1
 title: Person-days of work against what the team has
 max: 90
 band: Team capacity, Oct 5 – Nov 9 | 45 | 60
-Built by hand | 58 | 80 | hand | Plus 2–3 days for QR tickets
-AI-assisted | 22 | 30 | ai | Plus 1 day for QR tickets
+Built by hand | 58 | 80 | hand | QR backend already done (PR #26)
+AI-assisted | 22 | 30 | ai | QR backend already done (PR #26)
 ```
 
 | | Real world | AI-assisted |
 | --- | --- | --- |
-| All core components (C0–C12) | 58–80 days | 22–30 days |
-| Stretch: QR tickets | +2–3 days | +1 day |
+| All core components (C0–C12) | 58–80 days | 22–30 days <!-- removed 2026-10-06 06:12 Aisling Stretch row for QR tickets: QR is should have, backend done in PR #26 --> |
 | Team capacity, Oct 5 – Nov 9 (assumed) | About 45–60 days | About 45–60 days |
 
 Built by hand, the scope exceeds what the team can deliver. AI-assisted, it fits with room for client feedback and rework. The capacity figure assumes four people in two pairs at three to four focused days a week. <!-- modified 2026-10-05 20:37 Aisling -->

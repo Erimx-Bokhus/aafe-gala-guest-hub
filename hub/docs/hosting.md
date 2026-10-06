@@ -56,13 +56,13 @@ The team Supabase project is loaded with the schema, seed, and backend (Oct 6); 
 <!-- team -->
 <!-- updated 2026-10-05 16:51 Aisling -->
 
-Reference for a future partner, not a decision for AAFE now. Because the prototype uses Supabase for data, sign-in, and server functions, paths that keep Supabase are the shortest; moving fully off it is more work. Costs are estimated base costs before usage, tax, optional storage, and vendor price changes. <!-- modified 2026-10-05 16:51 Aisling -->
+Reference for a future partner, not a decision for AAFE now. Because the prototype uses Supabase for data, sign-in, and server functions, path C keeps Supabase and is listed first as the shortest; A and B mean moving off Supabase's sign-in and server functions, which is more work. Costs are estimated base costs before usage, tax, optional storage, and vendor price changes. <!-- modified 2026-10-06 06:12 Aisling -->
 
 | Path | When it fits | Estimated base | Readiness work still required |
 | --- | --- | --- | --- |
+| C. Vercel + Supabase | Willing to pay more for managed tooling and a polished deploy workflow | About $45 a month before usage | Justify the higher base cost and two vendors <!-- modified 2026-10-06 06:12 Aisling --> |
 | A. Render + Postgres | A custom sponsor workflow and an AAFE-owned product at a modest, predictable cost | About $13 a month | Confirm the database tier's backup and recovery features; test a restore; set up roles and MFA; name owners |
 | B. Google Workspace + AppSheet | Zero incremental cost and staff maintainability matter most | Potentially $0, if AAFE's edition includes the AppSheet features needed | A short proof of capability: sponsor links, external users, duplicates, audit history, check-in |
-| C. Vercel + Supabase | Willing to pay more for managed tooling and a polished deploy workflow | About $45 a month before usage | Justify the higher base cost and two vendors |
 
 - **Google Cloud** stays an internal option only if someone owns the console, deployment, database, access management, networking, and billing.
 - **Fly.io** is not recommended at AAFE's current capacity: more operational work, and with Neon, two vendors and two support paths.

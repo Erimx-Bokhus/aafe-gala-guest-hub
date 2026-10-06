@@ -5,6 +5,7 @@ Every change to this hub, newest first. Open it while signed in to claude.ai and
 Each change has a kind, shown the same way on every page next to the exact line that changed: **✦ New** (didn't exist before), **+ Updated** (rows, tasks, or terms added), **✎ Modified** (wording, numbers, or a rule changed), **− Removed** (taken out), and **! Important** (everyone should act on it). Hover an icon for the date, time (New York), and who made the change; click it to mark it read.
 
 ```changes
+2026-10-06 06:12 | modified | Aisling | decisions | Answers to the audit's 17 questions: seven decisions logged and both decision logs synced, Korean and Traditional Chinese, sign-in, QR scope, Cornell's keys, hosting order, and New York dates
 2026-10-06 05:50 | modified | Aisling | tasks | Page audit: 41 outdated facts and wording fixed across 14 pages (test counts, PR states, branch protection, purchase key, risks, decisions); each line has its own icon
 2026-10-06 05:45 | new | Aisling | screens.the-build-so-far | Screenshots, two GIFs, and a 25-second video of the real build, with AAFE's logo and photos swapped for placeholders
 2026-10-06 05:34 | new | Aisling | history | New page: History, every hub edit (with removed text) and every merged pull request, filtered by day, week, or month
