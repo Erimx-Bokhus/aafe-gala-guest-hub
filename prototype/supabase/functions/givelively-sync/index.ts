@@ -2,9 +2,9 @@
 // Runs every 15 minutes from pg_cron (database/cron.sql); a gala_admin can also
 // trigger it from the staff app ("Pull now").
 //
-// Secrets: GIVELIVELY_ORG_ID, GIVELIVELY_API_KEY (Nonprofit Admin Portal -> Zapier API key),
-//          GIVELIVELY_CAMPAIGNS (comma-separated campaign names that are gala sales, e.g. "AAFE Gala 2027"),
-//          CRON_SECRET. Demo: GIVELIVELY_BASE_URL points at the givelively-mock function instead of Give Lively.
+// Secrets: GIVELIVELY_ORG_ID, GIVELIVELY_API_KEY (Nonprofit Admin Portal -> Zapier API key), CRON_SECRET.
+// Which donations are gala sales: the current gala's Give Lively page name (gala_events.givelively_page_name,
+// e.g. "AAFE's 52nd Annual Gala"), set by staff in the staff app. Not set -> the sync does nothing and says so. Demo: GIVELIVELY_BASE_URL points at the givelively-mock function instead of Give Lively.
 import { classify, normalize } from '../_shared/givelively.ts'
 import { admin, caller, cors, env, json } from '../_shared/supabase.ts'
 
@@ -16,10 +16,13 @@ Deno.serve(async (req) => {
   if (!who) return json({ error: 'forbidden' }, 403)
 
   const org = env('GIVELIVELY_ORG_ID'), key = env('GIVELIVELY_API_KEY')
-  const campaigns = env('GIVELIVELY_CAMPAIGNS').split(',').map((s) => s.trim()).filter(Boolean)
-  if (!org || !key || !campaigns.length) return json({ error: 'not_configured', message: 'Set GIVELIVELY_ORG_ID, GIVELIVELY_API_KEY and GIVELIVELY_CAMPAIGNS.' }, 500)
+  if (!org || !key) return json({ error: 'not_configured', message: 'Set GIVELIVELY_ORG_ID and GIVELIVELY_API_KEY.' }, 500)
 
   const db = admin()
+  const { data: gala } = await db.from('gala_events').select('givelively_page_name').neq('status', 'closed').order('year', { ascending: false }).limit(1).maybeSingle()
+  const pageName = gala?.givelively_page_name?.trim()
+  if (!pageName) return json({ error: 'not_configured', message: "Set this gala's Give Lively page name in the staff app first." }, 500)
+  const campaigns = [pageName]
   const startedAt = Date.now()
   const { data: state } = await db.from('givelively_sync_state').select('cursor_ms').eq('id', 1).single()
   const base = (env('GIVELIVELY_BASE_URL') || 'https://secure.givelively.org').replace(/\/$/, '')
