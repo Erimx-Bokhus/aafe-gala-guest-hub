@@ -401,6 +401,36 @@ mark{background:var(--mark);color:inherit;border-radius:2px;padding:0 1px}
 .wf-pad .panel{border:1px solid var(--rule);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
 .wf-pad .panel b{display:block;color:var(--ink);font-size:20px;font-family:var(--f-display)}
 
+/* ---------- what's new: changelog with per-person read state ---------- */
+.chlog{display:flex;flex-direction:column;gap:14px;margin:18px 0 10px}
+.ch-bar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;font:500 13px/1.3 var(--f-ui);color:var(--soft)}
+.ch-bar label{display:inline-flex;align-items:center;gap:8px}
+.ch-bar select{font:500 13px/1.3 var(--f-ui);padding:6px 8px;border:1px solid var(--rule-strong);border-radius:7px;background:var(--surface);color:var(--ink)}
+.ch-seg{display:inline-grid;grid-template-columns:repeat(3,auto)}
+.ch-where{font:400 12px/1.5 var(--f-ui);color:var(--faint);margin:0}
+.ch-team{display:flex;flex-wrap:wrap;gap:8px}
+.ch-person{font:500 12px/1.4 var(--f-ui);color:var(--soft);padding:6px 11px;border:1px solid var(--rule);border-radius:999px;background:var(--surface);font-variant-numeric:tabular-nums}
+.ch-person b{color:var(--ink);font-weight:600;margin-right:4px}
+.ch-person.away{border-style:dashed;color:var(--faint)}
+.ch-person.done{border-color:var(--ok)}
+.ch-date{font:600 11px/1 var(--f-ui);letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin:12px 0 4px}
+.doc .ch-list{list-style:none;margin:0;padding:0}
+.doc .ch-item{max-width:none;margin:0;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 14px;padding:12px 4px 12px 14px;border-top:1px solid var(--rule);box-shadow:inset 3px 0 0 var(--accent)}
+.doc .ch-item::marker{content:none}
+.doc .ch-item.read{box-shadow:none}
+.ch-main{display:flex;flex-direction:column;gap:3px;min-width:0}
+.ch-meta{font:500 11.5px/1.3 var(--f-ui);color:var(--faint)}
+.ch-who{font:600 11px/1 var(--f-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--accent-text);margin-right:6px}
+.ch-text{font:500 15px/1.5 var(--f-body);color:var(--ink);text-decoration:none}
+.ch-text:hover{text-decoration:underline}
+.ch-item.read .ch-text{color:var(--soft);font-weight:400}
+.ch-mark{align-self:start;border:1px solid var(--rule-strong);background:var(--surface);border-radius:6px;padding:6px 9px;font:600 11.5px/1 var(--f-ui);cursor:pointer;color:var(--soft);white-space:nowrap}
+.ch-mark:hover{border-color:var(--accent);color:var(--accent-text)}
+.ch-item.read .ch-mark{border-color:transparent;background:none;color:var(--ok)}
+.ch-receipts{grid-column:1/-1;margin:2px 0 0;font:400 12px/1.45 var(--f-ui);color:var(--faint)}
+.ch-receipts b{color:var(--ok);font-weight:600}
+.ch-empty{padding:16px 18px;border:1px dashed var(--rule-strong);border-radius:10px;color:var(--soft);font:400 14px/1.5 var(--f-ui);margin:0}
+
 /* ---------- page-end nav + footer ---------- */
 .pager{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:56px 0 0}
 .pager a{display:flex;flex-direction:column;gap:3px;padding:14px 16px;border:1px solid var(--rule);border-radius:10px;background:var(--surface);text-decoration:none;color:var(--ink)}
@@ -553,6 +583,7 @@ body.presenting .pager,body.presenting .foot,body.presenting .check-note,body.pr
 (() => {
 const ARTIFACT_URL = 'https://claude.ai/artifact/QVViUNx6SWRBZYKCfrAmp6';
 const PAGES = [
+  {id:'changes',      title:"What's new",    group:'Project', team:true},
   {id:'overview',     title:'Overview',      group:'Project'},
   {id:'discovery',    title:'Discovery',     group:'Project'},
   {id:'requirements', title:'Requirements',  group:'Project'},
@@ -949,6 +980,83 @@ const WF = {
 };
 function fenceWireframe(kind){ const f = WF[kind]; return f ? `<div class="wf-wrap">${f()}</div>` : ''; }
 
+/* --- what's new: one line per change, "YYYY-MM-DD | who | page.section | what changed" --- */
+const TEAM = ['Aisling','Natalie','Cornell','Antonin'];
+let chlog = [];                                            // newest first, as written in docs/changes.md
+let myReads = new Set(store.get('aafe-hub-chlog-read', []));
+let me = store.get('aafe-hub-me', '');
+let chFilter = store.get('aafe-hub-chlog-filter', 'unread'), chWho = '';
+let readers = {}, myUid = null, readsDb = null, readsMerged = false, readsWrite = Promise.resolve();
+function fenceChanges(src){
+  chlog = lines(src).map(cells).filter(r => r.length >= 4).map(([date, who, target, text]) => ({date, who, target, text}));
+  chlog.forEach(e => { e.key = slug(`${e.date} ${e.target} ${e.text}`).slice(0, 96); });
+  return '<div class="chlog" data-chlog></div>';
+}
+function saveReads(){
+  store.set('aafe-hub-chlog-read', [...myReads]); store.set('aafe-hub-me', me);
+  if (!readsDb || !myUid) return;
+  // one write at a time to this person's doc; a refused write means read-only for this visit
+  readsWrite = readsWrite.then(() => readsDb.collection('reads').doc(myUid).set({member: me, read: [...myReads], at: new Date().toISOString()}))
+    .catch(e => { if (e && e.code === 'invalid_argument') readsDb = null; renderChlogs(); });
+}
+/* reading a change also clears that section's New/Updated tag; markRead does the reverse */
+function readEntries(keys, read = true){
+  for (const k of keys){
+    if (read) myReads.add(k); else myReads.delete(k);
+    const e = chlog.find(x => x.key === k); if (!read || !e) continue;
+    const [pg, sec] = e.target.split('.');
+    (docs[pg] && docs[pg].marks || []).filter(m => m.key.startsWith(`${pg}|${sec || 'page'}|`)).forEach(m => { readMarks[m.key] = true; });
+  }
+  store.set('aafe-hub-read', readMarks); saveReads(); renderChlogs(); buildNav(); updateNav();
+}
+function memberReads(){
+  const m = {};
+  for (const r of Object.values(readers)){
+    if (!r || !TEAM.includes(r.member)) continue;
+    const o = m[r.member] ||= {read: new Set(), at: ''};
+    (Array.isArray(r.read) ? r.read : []).forEach(k => o.read.add(String(k)));
+    if (typeof r.at === 'string' && r.at > o.at) o.at = r.at;
+  }
+  if (TEAM.includes(me)){ const o = m[me] ||= {read: new Set(), at: ''}; myReads.forEach(k => o.read.add(k)); }
+  return m;
+}
+const shortDate = iso => { const d = new Date(iso); return isNaN(d) ? '' : fmt(d); };
+function chlogMark(){ const n = chlog.filter(e => !myReads.has(e.key)).length; return n ? {kind: 'new', text: `${n} new`, tip: `${n} change${n > 1 ? 's' : ''} you haven't read`} : null; }
+function renderChlogs(){ document.querySelectorAll('#doc [data-chlog]').forEach(renderChlog); }
+function renderChlog(el){
+  const shared = !!readsDb && !!myUid, mr = memberReads();
+  const unread = chlog.filter(e => !myReads.has(e.key));
+  let list = chFilter === 'unread' ? unread : chFilter === 'mine' ? chlog.filter(e => me && e.who === me) : chlog;
+  if (chWho) list = list.filter(e => e.who === chWho);
+  const opt = (v, cur, label) => `<option value="${esc(v)}"${v === cur ? ' selected' : ''}>${esc(label)}</option>`;
+  const seg = [['unread', `Unread by me · ${unread.length}`], ['mine', 'Made by me'], ['all', 'All']]
+    .map(([v, l]) => `<button type="button" data-chf="${v}" aria-pressed="${chFilter === v}"${v === 'mine' && !me ? ' disabled title="Pick your name first"' : ''}>${esc(l)}</button>`).join('');
+  const where = shared ? 'Shared with the team: everyone sees who has read each change.'
+    : 'Saved in this browser only. Open the published hub while signed in to claude.ai to share your reading with the team.';
+  const anyShared = (shared || Object.keys(readers).length > 0) && Object.keys(mr).length > 0;   // never in browser-only mode
+  const team = anyShared ? `<div class="ch-team" aria-label="Who has caught up">${TEAM.map(n => { const o = mr[n];
+      if (!o) return `<span class="ch-person away"><b>${esc(n)}</b>hasn't opened this page yet</span>`;
+      const k = chlog.filter(e => o.read.has(e.key)).length;
+      return `<span class="ch-person${k === chlog.length ? ' done' : ''}"><b>${esc(n)}</b>${k} of ${chlog.length} read${o.at ? ` · last ${shortDate(o.at)}` : ''}</span>`; }).join('')}</div>` : '';
+  let body = '';
+  if (!list.length) body = `<p class="ch-empty">${chFilter === 'unread' && !chWho ? "You're caught up. Nothing new since your last visit." : 'No changes match this view.'}</p>`;
+  else {
+    const days = [...new Set(list.map(e => e.date))];
+    body = days.map(d => `<section><h3 class="ch-date">${esc(fmt(parseDate(d)))}</h3><ol class="ch-list">${list.filter(e => e.date === d).map(e => {
+      const read = myReads.has(e.key), [pg] = e.target.split('.'), page = PAGES.find(p => p.id === pg);
+      const by = TEAM.filter(n => mr[n] && mr[n].read.has(e.key)), notYet = TEAM.filter(n => !by.includes(n));
+      const receipts = anyShared ? `<p class="ch-receipts">${by.length ? `<b>Read by</b> ${esc(by.join(', '))}` : 'Nobody has read this yet'}${by.length && notYet.length ? ` · not yet: ${esc(notYet.join(', '))}` : ''}</p>` : '';
+      return `<li class="ch-item${read ? ' read' : ''}"><div class="ch-main"><span class="ch-meta"><span class="ch-who">${esc(e.who)}</span>${esc(page ? page.title : pg)}</span>
+        <a class="ch-text" href="#${esc(e.target)}" data-chopen="${e.key}">${esc(e.text)}</a></div>
+        <button type="button" class="ch-mark" data-chmark="${e.key}" aria-pressed="${read}">${read ? 'Read ✓' : 'Mark read'}</button>${receipts}</li>`; }).join('')}</ol></section>`).join('');
+  }
+  el.innerHTML = `<div class="ch-bar"><label for="ch-me">I'm <select id="ch-me">${opt('', me, 'Pick your name')}${TEAM.map(n => opt(n, me, n)).join('')}</select></label>
+    <div class="seg ch-seg" role="group" aria-label="Show">${seg}</div>
+    <label for="ch-who">Made by <select id="ch-who">${opt('', chWho, 'Anyone')}${TEAM.map(n => opt(n, chWho, n)).join('')}</select></label>
+    <button class="btn" type="button" data-chall${unread.length ? '' : ' disabled'}>Mark all read</button></div>
+    <p class="ch-where">${where}</p>${team}${body}`;
+}
+
 function fenceNotes(src){ return `<details class="notes" data-notes><summary>Speaker notes</summary><p>${esc(src.trim())}</p></details>`; }
 
 marked.use({ gfm:true, renderer:{
@@ -968,6 +1076,7 @@ marked.use({ gfm:true, renderer:{
       case 'glossary': return fenceGlossary(code);
       case 'wireframe': return fenceWireframe(arg);
       case 'notes': return fenceNotes(code);
+      case 'changes': return fenceChanges(code);
     }
     return `<pre><code${lang ? ` class="lang-${esc(lang)}"` : ''}>${esc(code)}</code></pre>`;
   },
@@ -1001,7 +1110,10 @@ const CHG = {new:'New', updated:'Updated', modified:'Modified'}, CHG_RANK = {new
 let readMarks = store.get('aafe-hub-read', {});
 const markKey = (id, section, kind, on) => `${id}|${section}|${kind}|${on}`;
 const isRead = key => !!readMarks[key];
-function markRead(key){ readMarks = {...readMarks, [key]: true}; store.set('aafe-hub-read', readMarks); buildNav(); updateNav(); }
+function markRead(key){ readMarks = {...readMarks, [key]: true}; store.set('aafe-hub-read', readMarks);
+  const [pg, sec] = key.split('|'), target = sec === 'page' ? pg : `${pg}.${sec}`;
+  const keys = chlog.filter(e => e.target === target && !myReads.has(e.key)).map(e => e.key);
+  if (keys.length) readEntries(keys); else { buildNav(); updateNav(); } }
 function chgTag(kind, on, key){ const t = document.createElement('button'); t.type = 'button'; t.className = `chg k-${kind}`;
   t.textContent = CHG[kind] + (on ? ` · ${on}` : ''); t.title = 'Mark as read'; t.setAttribute('aria-label', `${t.textContent}. Mark as read`);
   t.addEventListener('click', () => { markRead(key); t.remove(); }); return t; }
@@ -1020,8 +1132,8 @@ function buildNav(){
   const vis = visiblePages(), groups = [...new Set(vis.map(p => p.group))];
   $('#nav').innerHTML = groups.map(g => `<div class="nav-group"><div class="nav-label">${g}</div>${
     vis.filter(p => p.group === g).map(p => { const i = vis.indexOf(p);
-      const mk = pageMark(p.id);
-      const tags = (mk ? `<span class="chg k-${mk.kind}" title="${esc(mk.tip)}${mk.sec ? ' · click to go there' : ''}"${mk.sec ? ` data-sec="${mk.sec}"` : ''}>${CHG[mk.kind]}</span>` : '') + (p.team ? '<span class="tag">Team</span>' : '');
+      const mk = p.id === 'changes' ? chlogMark() : pageMark(p.id);
+      const tags = (mk ? `<span class="chg k-${mk.kind}" title="${esc(mk.tip)}${mk.sec ? ' · click to go there' : ''}"${mk.sec ? ` data-sec="${mk.sec}"` : ''}>${mk.text || CHG[mk.kind]}</span>` : '') + (p.team ? '<span class="tag">Team</span>' : '');
       return `<a href="#${p.id}" data-id="${p.id}"><span class="n">${pad(i+1)}</span><span>${esc(p.title)}</span>${tags ? `<span class="tags">${tags}</span>` : ''}</a><ul class="toc" data-toc="${p.id}" hidden></ul>`; }).join('')
   }</div>`).join('');
   document.querySelectorAll('[data-mode]').forEach(b => b.setAttribute('aria-pressed', String((b.dataset.mode === 'client') === client)));
@@ -1115,6 +1227,7 @@ function decorate(doc, id){
   }
   applyChecks();
   doc.querySelectorAll('[data-wt]').forEach(mountWalkthrough);
+  doc.querySelectorAll('[data-chlog]').forEach(renderChlog);
   doc.querySelectorAll('[data-erd]').forEach(e => { drawErd(e); });
   // glossary filter
   doc.querySelectorAll('.gl-filter').forEach(inp => inp.addEventListener('input', () => {
@@ -1315,6 +1428,17 @@ document.addEventListener('click', e => {
     const h = document.getElementById(t.dataset.h); if (h) h.scrollIntoView({behavior:'smooth', block:'start'});
   }
 });
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-chf],[data-chmark],[data-chall],[data-chopen]'); if (!t) return;
+  if (t.dataset.chf){ chFilter = t.dataset.chf; store.set('aafe-hub-chlog-filter', chFilter); renderChlogs(); }
+  else if (t.dataset.chmark) readEntries([t.dataset.chmark], !myReads.has(t.dataset.chmark));
+  else if (t.hasAttribute('data-chall')) readEntries(chlog.map(x => x.key));
+  else if (t.dataset.chopen) readEntries([t.dataset.chopen]);   // the link still opens the change
+});
+document.addEventListener('change', e => {
+  if (e.target.id === 'ch-me'){ me = e.target.value; saveReads(); renderChlogs(); }
+  else if (e.target.id === 'ch-who'){ chWho = e.target.value; renderChlogs(); }
+});
 $('#q').addEventListener('input', e => runSearch(e.target.value));
 $('#q').addEventListener('keydown', e => {
   if (e.key === 'Escape'){ e.target.value = ''; runSearch(''); e.target.blur(); }
@@ -1338,10 +1462,22 @@ async function connectShared(){
   const c = window.claude; if (!c || typeof c.use !== 'function') return;
   let db = null; try { db = await c.use('db'); } catch { db = null; }
   if (!db) return;
+  let user = null;
   try {
-    const user = await c.use('user').catch(() => null);
+    user = await c.use('user').catch(() => null);
     if (user && typeof user.can === 'function'){ const w = await user.can('data.write'); if (w === false) canWrite = false; }
+    if (user && typeof user.id === 'function') myUid = await user.id().catch(() => null);
   } catch {}
+  if (myUid && canWrite) readsDb = db;
+  // everyone's read state, live; on first load fold this person's saved reads into this browser's
+  db.collection('reads').onSnapshot(snap => {
+    const r = {}; snap.docs.forEach(d => { r[d.id] = d.data(); }); readers = r;
+    if (!readsMerged && myUid){ readsMerged = true; const mine = readers[myUid] || {};
+      const before = myReads.size; (Array.isArray(mine.read) ? mine.read : []).forEach(k => myReads.add(String(k)));
+      if (!me && TEAM.includes(mine.member)) me = mine.member;
+      if (myReads.size !== before || (!readers[myUid] && myReads.size)) saveReads(); else store.set('aafe-hub-chlog-read', [...myReads]); }
+    renderChlogs(); buildNav(); updateNav();
+  }, () => { readsDb = null; renderChlogs(); });
   sharedDb = db; checkMode = 'shared'; sharedChecks = sharedChecks || {};
   db.collection('checks').onSnapshot(snap => {
     const m = {}; snap.docs.forEach(d => { const v = d.data(); m[d.id] = !!(v && v.done); });
