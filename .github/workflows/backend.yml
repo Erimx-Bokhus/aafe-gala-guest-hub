@@ -1,0 +1,29 @@
+name: Backend tests
+
+on:
+  push:
+    branches: [main]
+    paths: ['prototype/**', '.github/workflows/backend.yml']
+  pull_request:
+    paths: ['prototype/**', '.github/workflows/backend.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: prototype
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: prototype/package-lock.json
+      - run: npm ci
+      # Runs schema.sql + seed.sql + backend.sql in an in-memory Postgres (PGlite), then the
+      # portal, staff, import, and email-queue checks; plus the Give Lively field-mapping checks.
+      - run: npm run test:backend
