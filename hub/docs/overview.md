@@ -45,19 +45,19 @@ This is the demo in miniature. Pause on step 4: the sponsor fixes their own list
 | Target event | AAFE's 2027 gala |
 | Discovery call | October 1, 2026 |
 | Demo Day | November 10, 2026 |
-| Status | Discovery complete; AAFE's materials received Oct 5; stack decided (React + Supabase) |
+| Status | Discovery complete; AAFE's materials received Oct 5; stack decided (React + Supabase) <!-- modified 2026-10-05 16:51 Aisling --> |
 
 ## Team
 <!-- updated 2026-10-05 20:37 Aisling pairs -->
 
-| Person | Pair | Role | GitHub |
+| Person | Pair | Role | GitHub <!-- modified 2026-10-05 20:37 Aisling --> |
 | --- | --- | --- | --- |
-| Natalie Walker | Frontend | Product manager, client contact | wsvdesign |
-| Antonin Lesov | Frontend | Frontend | antoninlesov |
-| Aisling Leiva-Davila | Backend | Backend, GitHub and integrations | nessaisling-lab |
-| Cornell Robertson | Backend | Backend | CodeToTheCore |
+| Natalie Walker | Frontend | Product manager, client contact | wsvdesign <!-- modified 2026-10-05 20:37 Aisling --> |
+| Antonin Lesov | Frontend | Frontend | antoninlesov <!-- modified 2026-10-05 20:37 Aisling --> |
+| Aisling Leiva-Davila | Backend | Backend, GitHub and integrations | nessaisling-lab <!-- modified 2026-10-05 20:37 Aisling --> |
+| Cornell Robertson | Backend | Backend | CodeToTheCore <!-- modified 2026-10-05 20:37 Aisling --> |
 
-Build work is split between two pairs (decided Oct 5): **Frontend pair: Natalie + Antonin** (staff app, sponsor portal, check-in, branding) and **Backend pair: Aisling + Cornell** (Supabase backend, import, sign-in and roles, secure links, exports, emails). Natalie also stays product lead and client contact. Owners per component are on the [Build plan](#build-plan) page.
+Build work is split between two pairs (decided Oct 5): **Frontend pair: Natalie + Antonin** (staff app, sponsor portal, check-in, branding) and **Backend pair: Aisling + Cornell** (Supabase backend, import, sign-in and roles, secure links, exports, emails). Natalie also stays product lead and client contact. Owners per component are on the [Build plan](#build-plan) page. <!-- modified 2026-10-05 20:37 Aisling -->
 
 ## What we will not build
 

@@ -27,4 +27,4 @@ The top risk is about AAFE's materials, not code. The handoff risk is the one we
 
 - **AAFE decides not to adopt the tool.** The handoff still includes the market comparison on the [Research](#research) page, so AAFE can choose an existing product with full information.
 - **AAFE wants Give Lively replaced.** That reopens the build-versus-buy decision; ClickBid and RSVPify become serious options.
-- **More materials arrive.** Comp amounts, badge templates, and Give Lively screen recordings are still to come; the import adapts through column mapping.
+- **More materials arrive.** Comp amounts, badge templates, and Give Lively screen recordings are still to come; the import adapts through column mapping. <!-- modified 2026-10-05 16:51 Aisling -->

@@ -5,24 +5,24 @@ What the tool must do, in priority order. Bracketed tags show where each require
 ## Working PRD (until the final PRDs arrive)\*
 <!-- new 2026-10-06 04:16 Aisling -->
 
-Until Natalie's team PRD and Pursuit's PRD are final, these pages together are the team's product requirements. Build from them; if something isn't covered here, it goes to [Decisions](#decisions) before it gets built.
+Until Natalie's team PRD and Pursuit's PRD are final, these pages together are the team's product requirements. Build from them; if something isn't covered here, it goes to [Decisions](#decisions) before it gets built. <!-- new 2026-10-06 04:16 Aisling -->
 
-| PRD section | Where it lives now | Status |
+| PRD section | Where it lives now | Status <!-- new 2026-10-06 04:16 Aisling --> |
 | --- | --- | --- |
-| Problem and goal | [Overview](#overview); the three questions below | Settled at discovery, Oct 1 |
-| Users and their jobs | [Discovery](#discovery): staff, relationship managers, sponsors, the check-in desk | Settled |
-| Requirements, in priority order | This page: must have, should have | Settled; changes go through Decisions |
-| Out of scope | This page, "Later or out of scope"; [Overview](#overview), "What we will not build" | Settled |
-| Success measures | The three questions below; AAFE's feedback on the full path (Oct 30); Demo Day (Nov 10) | No numeric targets yet |
-| Data and AI rules | [Data and AI](#data-ai) | Settled; AAFE still to approve |
-| Import rules | [Import and matching](#import) | Settled Oct 6 |
-| Owners and timeline | [Build plan](#build-plan): two pairs, components C0–C12 | Settled Oct 5 |
-| Decisions and open questions | [Decisions](#decisions), including "Pending" | Updated as we go |
-| Risks | [Risks](#risks) | Updated as we go |
+| Problem and goal | [Overview](#overview); the three questions below | Settled at discovery, Oct 1 <!-- new 2026-10-06 04:16 Aisling --> |
+| Users and their jobs | [Discovery](#discovery): staff, relationship managers, sponsors, the check-in desk | Settled <!-- new 2026-10-06 04:16 Aisling --> |
+| Requirements, in priority order | This page: must have, should have | Settled; changes go through Decisions <!-- new 2026-10-06 04:16 Aisling --> |
+| Out of scope | This page, "Later or out of scope"; [Overview](#overview), "What we will not build" | Settled <!-- new 2026-10-06 04:16 Aisling --> |
+| Success measures | The three questions below; AAFE's feedback on the full path (Oct 30); Demo Day (Nov 10) | No numeric targets yet <!-- new 2026-10-06 04:16 Aisling --> |
+| Data and AI rules | [Data and AI](#data-ai) | Settled; AAFE still to approve <!-- new 2026-10-06 04:16 Aisling --> |
+| Import rules | [Import and matching](#import) | Settled Oct 6 <!-- new 2026-10-06 04:16 Aisling --> |
+| Owners and timeline | [Build plan](#build-plan): two pairs, components C0–C12 | Settled Oct 5 <!-- new 2026-10-06 04:16 Aisling --> |
+| Decisions and open questions | [Decisions](#decisions), including "Pending" | Updated as we go <!-- new 2026-10-06 04:16 Aisling --> |
+| Risks | [Risks](#risks) | Updated as we go <!-- new 2026-10-06 04:16 Aisling --> |
 
-When the final PRDs arrive, we compare them with this table and record every difference in [Decisions](#decisions).
+When the final PRDs arrive, we compare them with this table and record every difference in [Decisions](#decisions). <!-- new 2026-10-06 04:16 Aisling -->
 
-\* **Why it's set up this way.** The build had to start before a PRD existed. The discovery call with AAFE was October 1, and AAFE's spreadsheet, Give Lively export, and tier flyer arrived October 5, the same week the stack was chosen and building began. Demo Day (November 10) didn't move, so instead of waiting, the team built from what AAFE actually said and sent. Every requirement on this page carries its source in brackets: the call, the intake form, the project scope, or AAFE's data.
+\* **Why it's set up this way.** The build had to start before a PRD existed. The discovery call with AAFE was October 1, and AAFE's spreadsheet, Give Lively export, and tier flyer arrived October 5, the same week the stack was chosen and building began. Demo Day (November 10) didn't move, so instead of waiting, the team built from what AAFE actually said and sent. Every requirement on this page carries its source in brackets: the call, the intake form, the project scope, or AAFE's data. <!-- new 2026-10-06 04:16 Aisling -->
 
 ## The three questions the dashboard must answer
 
@@ -46,8 +46,8 @@ From AAFE's intake form, for staff and for the Demo Day mock investor:
 - **Exports:** a badge mail-merge file with table numbers, a check-in list, and a Salesforce-ready attendee file. [call]
 - **Logo and program-ad status** for each sponsor. [intake, call]
 - **Follow-up emails** drafted by the tool and approved by staff. [call]
-- **A category on every guest:** sponsor guest, ticket holder, comp, AAFE staff, volunteer, event staff, or government/VIP. [AAFE data]
-- **Seated or admitted.** Champion and above guarantee a table; Friend and Supporter tickets admit guests without one, so the guest list and badges show the difference. [AAFE data]
+- **A category on every guest:** sponsor guest, ticket holder, comp, AAFE staff, volunteer, event staff, or government/VIP. [AAFE data] <!-- updated 2026-10-05 16:51 Aisling -->
+- **Seated or admitted.** Champion and above guarantee a table; Friend and Supporter tickets admit guests without one, so the guest list and badges show the difference. [AAFE data] <!-- updated 2026-10-05 16:51 Aisling -->
 
 ## Should have
 <!-- updated 2026-10-05 16:51 Aisling -->
@@ -57,7 +57,7 @@ From AAFE's intake form, for staff and for the Demo Day mock investor:
 - **Blank sponsor name tags** for unnamed seats. [call]
 - **A multilingual sponsor form** in English, Chinese, Korean, and Spanish, reviewed by AAFE staff. [scope]
 - **aafe.org branding.** [call]
-- **Sponsor pipeline:** each prospect's stage (not started, reached out, in conversation, closed won, payment received, lost), the ask against the commitment, and the last two years' giving, as in AAFE's prospect tracker. [AAFE data]
+- **Sponsor pipeline:** each prospect's stage (not started, reached out, in conversation, closed won, payment received, lost), the ask against the commitment, and the last two years' giving, as in AAFE's prospect tracker. [AAFE data] <!-- updated 2026-10-05 16:51 Aisling -->
 
 ## Later or out of scope
 

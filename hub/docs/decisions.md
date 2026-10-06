@@ -5,22 +5,22 @@ Every decision with its reason and what would reopen it, newest first. Nothing h
 
 | Date | Decision | Why | Revisit if | Owner |
 | --- | --- | --- | --- | --- |
-| Oct 6 | Import: a guest list with some unclear entries still pre-fills its clear names; more names than seats pre-fills nothing | Sponsors confirm every name; keeping the good ones saves retyping | Natalie or AAFE prefers all-or-nothing | Aisling (Natalie reviewing) |
-| Oct 6 | Import: the same name on another order is a possible duplicate; double-booked only when the email or a known organization also matches | Respect each sponsor's list; staff still see it before gala night | Double bookings slip through | Aisling (Natalie reviewing) |
-| Oct 6 | Import: an upload stops until this gala's Give Lively page is chosen; then only that page is imported | A mixed export can't put another campaign on the guest list | — | Aisling (Natalie reviewing) |
-| Oct 6 | Staff map each Give Lively tier name to a package once per gala ("Ticket" → a package) | AAFE's export says just "Ticket"; every ticket would otherwise wait for review | Give Lively exports package names | Aisling, Natalie |
-| Oct 6 | QR e-tickets: random, stored hashed, one per seat, expire 6 a.m. the morning after the gala; a new guest on the seat voids the code | Hard rule 6: a QR code works like a door key | AAFE wants codes on printed badges | Aisling |
-| Oct 6 | Natalie's backend and guest portal merged into `main` as the base for the build, her history kept | Build on what exists instead of starting over | — | Aisling |
-| Oct 5 | Build work split into two pairs: Frontend (Natalie + Antonin) and Backend (Aisling + Cornell); Natalie stays product lead | Natalie is carrying most of the build; pairs keep two people on every area | A pair can't keep pace | Aisling, Natalie |
-| Oct 5 | Stack: React + TypeScript (Vite, Tailwind) on Supabase (Postgres, sign-in, server functions) | Matches Natalie's working prototype; mainstream tools a future partner can pick up | A partner needs a different host | Aisling, team |
-| Oct 5 | Supabase free plan for the prototype and the demo | Covers invented data; a free project pauses after a week idle, so wake it before demos | The demo needs more than the free plan | Aisling |
-| Oct 5 | GitHub Team plan; `main` protected: pull request, 1 approval, passing secret scan, no force-push | A professional repo with a stable `main` | — | Aisling |
-| Oct 5 | 2027 seats per tier follow AAFE's 2026 flyer (Platinum 12, Gold 10, Silver 10, Bronze 8, Champion 6, Friend 2, Supporter 1) | AAFE's own flyer, received Oct 5 | AAFE sets different 2027 packages | AAFE (data) |
-| Oct 5 | Trello is the team's task tracker; the hub summarizes and links to it | Pursuit asked for Trello; avoids entering tasks twice | — | Natalie, Aisling |
-| Oct 3 | A relationship manager sending their own comp ticket counts as staff approval; every send is logged | Client wants RMs to send comps themselves; RMs are staff | AAFE wants a second approver | Aisling |
-| Oct 3 | Real AAFE staff contact details are redacted from repo docs | The repo will be handed on | — | Aisling |
-| Oct 3 | Nov 9 is the team's last work day; Nov 10 is Demo Day and handoff | Clarifies dates used across the docs | Pursuit moves Demo Day | Aisling |
-| Oct 3 | AAFE logo and real event photos allowed in the private repo and internal reviews; public use, including Demo Day, needs AAFE's written approval | Repo is private and handed to AAFE; Demo Day is public and photos show real attendees | AAFE approves in writing | Aisling |
+| Oct 6 | Import: a guest list with some unclear entries still pre-fills its clear names; more names than seats pre-fills nothing | Sponsors confirm every name; keeping the good ones saves retyping | Natalie or AAFE prefers all-or-nothing | Aisling (Natalie reviewing) <!-- updated 2026-10-05 22:58 Aisling --> |
+| Oct 6 | Import: the same name on another order is a possible duplicate; double-booked only when the email or a known organization also matches | Respect each sponsor's list; staff still see it before gala night | Double bookings slip through | Aisling (Natalie reviewing) <!-- updated 2026-10-05 22:58 Aisling --> |
+| Oct 6 | Import: an upload stops until this gala's Give Lively page is chosen; then only that page is imported | A mixed export can't put another campaign on the guest list | — | Aisling (Natalie reviewing) <!-- updated 2026-10-05 22:58 Aisling --> |
+| Oct 6 | Staff map each Give Lively tier name to a package once per gala ("Ticket" → a package) | AAFE's export says just "Ticket"; every ticket would otherwise wait for review | Give Lively exports package names | Aisling, Natalie <!-- updated 2026-10-05 22:58 Aisling --> |
+| Oct 6 | QR e-tickets: random, stored hashed, one per seat, expire 6 a.m. the morning after the gala; a new guest on the seat voids the code | Hard rule 6: a QR code works like a door key | AAFE wants codes on printed badges | Aisling <!-- updated 2026-10-05 22:58 Aisling --> |
+| Oct 6 | Natalie's backend and guest portal merged into `main` as the base for the build, her history kept | Build on what exists instead of starting over | — | Aisling <!-- updated 2026-10-05 22:58 Aisling --> |
+| Oct 5 | Build work split into two pairs: Frontend (Natalie + Antonin) and Backend (Aisling + Cornell); Natalie stays product lead | Natalie is carrying most of the build; pairs keep two people on every area | A pair can't keep pace | Aisling, Natalie <!-- updated 2026-10-05 20:37 Aisling --> |
+| Oct 5 | Stack: React + TypeScript (Vite, Tailwind) on Supabase (Postgres, sign-in, server functions) | Matches Natalie's working prototype; mainstream tools a future partner can pick up | A partner needs a different host | Aisling, team <!-- updated 2026-10-05 16:51 Aisling --> |
+| Oct 5 | Supabase free plan for the prototype and the demo | Covers invented data; a free project pauses after a week idle, so wake it before demos | The demo needs more than the free plan | Aisling <!-- updated 2026-10-05 16:51 Aisling --> |
+| Oct 5 | GitHub Team plan; `main` protected: pull request, 1 approval, passing secret scan, no force-push | A professional repo with a stable `main` | — | Aisling <!-- updated 2026-10-05 16:51 Aisling --> |
+| Oct 5 | 2027 seats per tier follow AAFE's 2026 flyer (Platinum 12, Gold 10, Silver 10, Bronze 8, Champion 6, Friend 2, Supporter 1) | AAFE's own flyer, received Oct 5 | AAFE sets different 2027 packages | AAFE (data) <!-- updated 2026-10-05 16:51 Aisling --> |
+| Oct 5 | Trello is the team's task tracker; the hub summarizes and links to it | Pursuit asked for Trello; avoids entering tasks twice | — | Natalie, Aisling <!-- updated 2026-10-05 16:51 Aisling --> |
+| Oct 3 | A relationship manager sending their own comp ticket counts as staff approval; every send is logged | Client wants RMs to send comps themselves; RMs are staff | AAFE wants a second approver | Aisling <!-- updated 2026-10-03 11:36 Aisling --> |
+| Oct 3 | Real AAFE staff contact details are redacted from repo docs | The repo will be handed on | — | Aisling <!-- updated 2026-10-03 11:36 Aisling --> |
+| Oct 3 | Nov 9 is the team's last work day; Nov 10 is Demo Day and handoff | Clarifies dates used across the docs | Pursuit moves Demo Day | Aisling <!-- updated 2026-10-03 11:36 Aisling --> |
+| Oct 3 | AAFE logo and real event photos allowed in the private repo and internal reviews; public use, including Demo Day, needs AAFE's written approval | Repo is private and handed to AAFE; Demo Day is public and photos show real attendees | AAFE approves in writing | Aisling <!-- updated 2026-10-03 12:36 Aisling --> |
 | Oct 1 | We deliver a prototype with invented data, code, and documentation; production hosting is not selected during the capstone | AAFE should decide on adoption, and on a technical partner, after reviewing the finished prototype | AAFE asks the team to deploy for production | Natalie |
 | Oct 1 | Stripe is left out of the prototype; read-only payment confirmation is documented as a future option | With invented data there is nothing real to confirm | AAFE adopts the tool and wants it | Team |
 | Oct 1 | Matching uses plain rules (Give Lively ID, then email, then name and organization); AI explanations behind an admin switch, off by default | AAFE's draft AI policy keeps guest names out of AI tools; rules are easier to audit | AAFE approves AI use in writing | Aisling |
@@ -36,9 +36,9 @@ Every decision with its reason and what would reopen it, newest first. Nothing h
 
 | Decision | Who decides | When |
 | --- | --- | --- |
-| Demo preview host | Team | When the demo is deployable |
-| Whether AI features are required for Demo Day | Team, Pursuit | This week |
+| Demo preview host | Team | When the demo is deployable <!-- modified 2026-10-05 16:51 Aisling --> |
+| Whether AI features are required for Demo Day | Team, Pursuit | This week <!-- modified 2026-10-05 16:51 Aisling --> |
 | AI on or off, retention, dietary data | AAFE | After the data note is reviewed |
 | Code and IP ownership after Nov 10 | AAFE, Pursuit, team | Before the first commit |
-| Public use of AAFE's logo and event photos, including Demo Day | AAFE | Before Demo Day |
+| Public use of AAFE's logo and event photos, including Demo Day | AAFE | Before Demo Day <!-- updated 2026-10-03 12:36 Aisling --> |
 | Whether to adopt the tool, and with which technical partner | AAFE | After Demo Day |

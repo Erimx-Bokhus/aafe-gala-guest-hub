@@ -87,17 +87,17 @@ A custom tool is justified only if it keeps Give Lively, costs AAFE less per yea
 <!-- team -->
 <!-- updated 2026-10-05 16:51 Aisling -->
 
-Natalie's research predates the October 1 call. Where it differs, discovery and the decision log win:
+Natalie's research predates the October 1 call. Where it differs, discovery and the decision log win: <!-- new 2026-10-03 11:56 Aisling -->
 
-| Research said | Now |
+| Research said | Now <!-- new 2026-10-03 11:56 Aisling --> |
 | --- | --- |
-| Give Lively forms are embedded on aafe.org | Registration links out to Give Lively; it isn't embedded |
-| Option B: an AAFE Stripe checkout that collects names at purchase | Out of scope: the tool never processes payments |
-| Drag-and-drop seating chart | Later phase; a table number on the badge is enough |
-| A $50,000 sponsorship with 12 seats | Confirmed: AAFE's 2026 flyer gives Platinum ($50,000) 12 guaranteed seats |
-| November 9 presentation | Nov 9 is the team's last work day; Demo Day is Nov 10 |
+| Give Lively forms are embedded on aafe.org | Registration links out to Give Lively; it isn't embedded <!-- new 2026-10-03 11:56 Aisling --> |
+| Option B: an AAFE Stripe checkout that collects names at purchase | Out of scope: the tool never processes payments <!-- new 2026-10-03 11:56 Aisling --> |
+| Drag-and-drop seating chart | Later phase; a table number on the badge is enough <!-- new 2026-10-03 11:56 Aisling --> |
+| A $50,000 sponsorship with 12 seats | Confirmed: AAFE's 2026 flyer gives Platinum ($50,000) 12 guaranteed seats <!-- modified 2026-10-05 16:51 Aisling --> |
+| November 9 presentation | Nov 9 is the team's last work day; Demo Day is Nov 10 <!-- new 2026-10-03 11:56 Aisling --> |
 
-Natalie's clickable prototypes and seed data (Oct 2) are reviewed in `docs/research/prototype-review-2026-10-03.md`: six pieces of her schema were adopted into the data model, and four prototype behaviors (automatic emails, short readable sponsor links, sequential QR codes, real photos in public) change before Demo Day.
+Natalie's clickable prototypes and seed data (Oct 2) are reviewed in `docs/research/prototype-review-2026-10-03.md`: six pieces of her schema were adopted into the data model, and four prototype behaviors (automatic emails, short readable sponsor links, sequential QR codes, real photos in public) change before Demo Day. <!-- updated 2026-10-03 12:36 Aisling -->
 
 ## Give Lively's limits
 
