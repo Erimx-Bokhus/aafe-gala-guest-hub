@@ -1,0 +1,21 @@
+name: Real-data guard
+
+# Hard rule 1: no real donor data, ever. Fails on email addresses outside the demo domains,
+# phone numbers outside 555-0100 to 555-0199, spreadsheets, and CSVs outside seed/ and fixtures/.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/check-no-real-data.mjs
