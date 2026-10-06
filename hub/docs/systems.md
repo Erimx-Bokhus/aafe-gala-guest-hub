@@ -15,7 +15,7 @@ The tools AAFE already uses, and what each means for the build.
 ## Give Lively
 
 - **No public API.** The documented ways out are a CSV report from the admin portal and a read-only JSON donation feed that turns on when an admin creates a Zapier key. The feed can be asked for "everything changed since" a time.
-- **Event purchases come through as one line** with no tier breakdown. The per-ticket detail sits in a separate Attendee Data export.
+- **AAFE's ticket export is one row per purchase**, with the tier and ticket count, but guests' names sit in one free-text answer. <!-- modified 2026-10-06 06:12 Aisling -->
 - **Custom-question answers** are not in the main report.
 - **No comps.** Give Lively's own help center says event ticketing doesn't support complimentary tickets; the workaround is a hidden page where staff enter each guest by hand.
 - **Sponsors can't edit guest names** after adding them, and questions can't vary by package.
