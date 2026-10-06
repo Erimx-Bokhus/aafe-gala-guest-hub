@@ -1,6 +1,6 @@
 # Proposed data model (Postgres)
 
-Draft. **The build follows Natalie's Supabase schema** (`natalie-backend`: `prototype/database/schema.sql`, `backend.sql`); this page is the target shape to converge on. The Give Lively import adds only `import_runs`, `import_review`, and a `guaranteed_seating` flag to her schema (`docs/import-matching-spec.md`, section 9), instead of the contacts and override layer below. Merged with Natalie's prototype schema and seed data (Oct 2; review in `docs/research/prototype-review-2026-10-03.md`).
+Draft. **The build follows Natalie's Supabase schema** (`natalie-backend`: `prototype/database/schema.sql`, `backend.sql`); this page is the target shape to converge on. The Give Lively import adds only `import_runs`, `import_review`, `payments.purchase_key`, `guests.display_name`, `orders.imported_guest_text`, and a `guaranteed_seating` flag to her schema (`docs/import-matching-spec.md`, section 9), instead of the contacts and override layer below. Merged with Natalie's prototype schema and seed data (Oct 2; review in `docs/research/prototype-review-2026-10-03.md`).
 
 ## Merge plan with Natalie's prototype schema
 
