@@ -48,15 +48,16 @@ This is the demo in miniature. Pause on step 4: the sponsor fixes their own list
 | Status | Discovery complete; AAFE's materials received Oct 5; stack decided (React + Supabase) |
 
 ## Team
+<!-- updated Oct 5 (pairs) -->
 
-| Person | Role | GitHub |
-| --- | --- | --- |
-| Natalie Walker | Product manager, client contact | wsvdesign |
-| Aisling Leiva-Davila | Backend, GitHub and integrations | nessaisling-lab |
-| Cornell Robertson | Backend | CodeToTheCore |
-| Antonin Lesov | Frontend | antoninlesov |
+| Person | Pair | Role | GitHub |
+| --- | --- | --- | --- |
+| Natalie Walker | Frontend | Product manager, client contact | wsvdesign |
+| Antonin Lesov | Frontend | Frontend | antoninlesov |
+| Aisling Leiva-Davila | Backend | Backend, GitHub and integrations | nessaisling-lab |
+| Cornell Robertson | Backend | Backend | CodeToTheCore |
 
-Build areas are assigned the week of October 5. Proposed owners appear on the [Build plan](#build-plan) page.
+Build work is split between two pairs (decided Oct 5): **Frontend pair: Natalie + Antonin** (staff app, sponsor portal, check-in, branding) and **Backend pair: Aisling + Cornell** (Supabase backend, import, sign-in and roles, secure links, exports, emails). Natalie also stays product lead and client contact. Owners per component are on the [Build plan](#build-plan) page.
 
 ## What we will not build
 
