@@ -22,7 +22,7 @@ We are building a capstone prototype, not choosing AAFE's production infrastruct
 | Explains future considerations | Approves privacy, security, support, and maintenance policies |
 | Keeps the code portable | Decides which integrations are worth paying for |
 
-The prototype uses a standard, portable stack (React and TypeScript on Supabase's Postgres), so a future partner isn't tied to us.
+The prototype uses a standard, portable stack (React and TypeScript on Supabase's Postgres), so a future partner isn't tied to us. <!-- modified 2026-10-05 16:51 Aisling -->
 
 ```notes
 The point to land: AAFE isn't being asked to open accounts, pay for anything, or commit to maintenance before they've seen the finished product. That's their call after Demo Day.
@@ -46,15 +46,15 @@ Whoever runs a production version should be able to say yes to each of these, wh
 <!-- team -->
 <!-- modified 2026-10-05 16:51 Aisling -->
 
-- The demo runs under a team account with invented data, on Supabase's free plan (decided Oct 5). Where the web app itself is previewed is still open.
-- A free Supabase project pauses after a week without activity. Wake it before any demo, or rebuild it from the seed data.
+- The demo runs under a team account with invented data, on Supabase's free plan (decided Oct 5). Where the web app itself is previewed is still open. <!-- modified 2026-10-05 16:51 Aisling -->
+- A free Supabase project pauses after a week without activity. Wake it before any demo, or rebuild it from the seed data. <!-- modified 2026-10-05 16:51 Aisling -->
 - Free web services can sleep when idle; wake the preview before any demo.
 
 ## Future hosting paths, for the handoff notes
 <!-- team -->
 <!-- updated 2026-10-05 16:51 Aisling -->
 
-Reference for a future partner, not a decision for AAFE now. Because the prototype uses Supabase for data, sign-in, and server functions, paths that keep Supabase are the shortest; moving fully off it is more work. Costs are estimated base costs before usage, tax, optional storage, and vendor price changes.
+Reference for a future partner, not a decision for AAFE now. Because the prototype uses Supabase for data, sign-in, and server functions, paths that keep Supabase are the shortest; moving fully off it is more work. Costs are estimated base costs before usage, tax, optional storage, and vendor price changes. <!-- modified 2026-10-05 16:51 Aisling -->
 
 | Path | When it fits | Estimated base | Readiness work still required |
 | --- | --- | --- | --- |
