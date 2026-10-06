@@ -1,4 +1,4 @@
-name: Frontend build and demo data
+name: Frontend tests, build, and demo data
 
 on:
   push:
@@ -27,6 +27,8 @@ jobs:
         with:
           python-version: '3.11'
       - run: npm ci
+      # Unit tests: the build guard that keeps secret keys out of the browser, and app tests.
+      - run: npm test
       # Demo data comes from generate_seed.py. Regenerate it first: the apps bundle seed.json.
       - run: npm run seed
       # Type-checks and builds the guest portal and the staff app.
