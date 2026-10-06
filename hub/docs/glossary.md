@@ -1,5 +1,5 @@
 # Glossary
-<!-- updated Oct 5 -->
+<!-- updated Oct 6 -->
 
 Terms used across this hub, in plain language.
 
@@ -34,6 +34,10 @@ Gitleaks | A scanner that checks every change pushed to the repo for passwords a
 Production-readiness notes | The handoff section listing what a future partner must settle before real data is used: hosting, backups, access, support, and gala-night fallback.
 Restricted key | A Stripe key limited to reading payment status. Not used in the prototype; listed as a future option.
 Review queue | Close matches waiting for a staff member to confirm or keep separate.
+Purchase key | How the import recognizes a Give Lively purchase it has seen before: the buyer's email plus the purchase time, since AAFE's export has no transaction ID.
+Tier mapping | A short list staff fill in once per gala that links each Give Lively tier name (such as "Ticket") to one of AAFE's packages.
+Gala page name | The name of this year's gala page on Give Lively (such as "AAFE's 52nd Annual Gala"). Only purchases from that page are imported.
+Import engine | The part of the code that reads a Give Lively file and decides what each row means, before anything is saved.
 Salesforce file | An export of who actually attended, shaped for AAFE's Salesforce, live for the 2027 gala.
 Seat | One place at the gala, tied to a commitment. Moves from unnamed to submitted, reviewed, badge-ready, and printed.
 Sponsor link | A private, expiring web address where one sponsor names and edits their guests. No account needed.

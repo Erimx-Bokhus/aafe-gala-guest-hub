@@ -30,11 +30,17 @@ A GitHub check runs the typecheck and tests on every pull request that touches t
 tier mappings, sponsors, this gala's guests, earlier purchases) and returns the rows ready for
 `gl_import()` and the report. It never writes anything.
 
-## Not here yet
+## Into the database
 
-These need stored rows, so they belong in `gl_import()` (Natalie's `backend.sql`, spec §9): skipping
-unchanged rows, `guest_text_changed`, never filling seats a sponsor or staff already named, the
-all-or-nothing transaction, and the new tables (`import_runs`, `import_review`, `tier_mappings`). Spec
-test cases 3, 20, 21, 24, 32, and 36 are database tests and come with that work.
+`toGlImport(prepared, fileName, csv)` (`src/glImport.ts`) turns a prepared upload into the two arguments of
+`staff_import_givelively(p_rows, p_run)` in `prototype/database/backend.sql`. The database side does what
+needs stored rows: dedupe on `payments.purchase_key`, skip unchanged rows, pre-fill guests only into orders
+nobody has named, `guest_text_changed`, refunds, the review queue (`import_review`), tier mappings
+(`tier_mappings`), and one run record per upload (`import_runs`). One upload is one transaction.
+
+The staff app's upload screen is the remaining piece (frontend pair): read the file, call
+`prepareUpload` with a snapshot of the tables, show the report and any `GalaPageNotSetError` or unknown
+tiers, then call `staff_import_givelively` with `toGlImport`'s result. The database tests in
+`prototype/scripts/test-backend.mjs` run that whole path on a sample CSV.
 
 It uses Web Crypto rather than Node's `crypto`, so the same code can run in a Supabase Edge Function (Deno) later.
