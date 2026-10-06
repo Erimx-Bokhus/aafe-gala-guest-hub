@@ -73,7 +73,7 @@ The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus),
 
 ## Week of October 26
 
-- [ ] Exports: badges with table number, check-in list, Salesforce file — Backend pair <!-- modified 2026-10-05 20:37 Aisling -->
+- [ ] Exports: database side done (badge file with table numbers, check-in list, Salesforce file; PR #34); staff app buttons next, with the frontend pair — Backend pair <!-- modified 2026-10-06 06:30 Aisling -->
 - [ ] Approval screen, plus reminder and receipt templates (draft queue and approval built in the backend) — Backend pair <!-- modified 2026-10-06 06:12 Aisling -->
 - [ ] Check-in app: search, arrivals, walk-ins, blank sponsor seats — Frontend pair <!-- modified 2026-10-05 20:37 Aisling -->
 - [ ] Show AAFE the full path for feedback — Natalie
