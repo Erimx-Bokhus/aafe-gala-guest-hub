@@ -51,6 +51,14 @@ Date and time (New York), the kind (`new`, `updated`, `modified`, `removed`, `im
 
 On the published hub, each reader is identified by their claude.ai account; nobody types or picks a name. Their read state is saved in the artifact's shared storage under that account (each person can write only their own), and everyone sees who has read each change. The hub's owner (Aisling) links each account to a team name once, under "Link accounts to team names" on What's new; the storage rules let only the owner change those links. Locally, or signed out, read state stays in that browser. The page is team-only, so client view never shows it.
 
+## Review every page weekly
+
+Each page says when it was last checked against the repo, PRs, and decisions, with a line right under its `#` title:
+
+    <!-- reviewed 2026-10-06 Aisling -->
+
+The hub shows "Reviewed Oct 6 by Aisling · next review by Oct 13" under the title. Once a page goes more than 7 days without a review (or has no `reviewed` line), the sidebar flags it "Review" and What's new lists it under "Due for review". To review a page: read it, fix anything out of date (with change markers on the lines you change), then update the date and name on its `reviewed` line. What's new and History skip this, since they build themselves. Review flags are team-only; client view never shows them.
+
 ## Rebuild History before publishing
 
 The History page reads `docs/history.json`, which is built from git: every line changed in `hub/docs/` (removed text kept) and every merged pull request. Rebuild it from the repo root, commit it, then publish:
