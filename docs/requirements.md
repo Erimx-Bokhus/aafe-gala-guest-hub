@@ -38,6 +38,6 @@ Priorities are the team's proposal until confirmed with AAFE. Source in brackets
 The full list, with what each unlocks, is on the hub's Discovery page ("Required inputs before build"): an AAFE approval contact, 2027 tiers and seat counts, comp categories, spreadsheet column headers, Give Lively exports (Line Items and attendee reports), badge and check-in templates, deadlines, Give Lively screen recordings, sponsor email threads, and written approval for the logo, brand kit, and event photos.
 
 ## Open questions for AAFE
-- **Seats per tier.** The 2025 public flyer (used in the prototype seed data) gives Gold $25,000 = 10 seats; on the Oct 1 call AAFE said $25,000 comes with 7 tickets. The call also put the top tier at ~20 tickets, while Natalie's research example uses a $50,000 sponsorship with 12 seats. Confirm the 2027 packages.
+- ~~**Seats per tier.**~~ Answered Oct 5 by AAFE's 2026 sponsorship flyer (`docs/decisions.md`). Only Champion and above guarantee a seat; Friend and Supporter tickets admit guests without a guaranteed table.
 - **Logo and photos.** Written approval to use AAFE's logo and event photos in the prototype and at Demo Day.
 - **Goals per category** for the dashboard (sponsorship dollars, tickets, attendance).
