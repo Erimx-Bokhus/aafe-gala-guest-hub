@@ -1,0 +1,69 @@
+/* Animated AAFE logo — see AafeLogo.tsx for the measurements.
+   Geometry is in the 264×70 box of aafe.org's header logo, scaled by --s. */
+.aafe-logo {
+  --s: 1;
+  --aafe-logo-mark: var(--orange, #c64c28);
+  --aafe-logo-text: var(--ink, #000000);
+  height: calc(70px * var(--s));
+  width: calc(264px * var(--s));
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  line-height: 1;
+}
+.aafe-logo__mark {
+  width: calc(34px * var(--s));
+  height: calc(33px * var(--s));
+  margin-left: calc(8px * var(--s));
+  flex: 0 0 auto;
+  color: var(--aafe-logo-mark);
+}
+.aafe-logo__words {
+  position: relative;
+  height: 100%;
+  flex: 1;
+  margin-left: calc(12px * var(--s));
+}
+.aafe-logo__word {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(calc(-50% + 2px * var(--s)));
+  white-space: nowrap;
+  color: var(--aafe-logo-text);
+  font-family: "Poppins", "Noto Sans TC", "Noto Sans KR", sans-serif;
+  font-weight: 400;
+  opacity: 0;
+  animation: 6.2s linear infinite both;
+}
+.aafe-logo__word--en,
+.aafe-logo__word--es {
+  font-size: calc(17.5px * var(--s));
+  line-height: 1.02;
+}
+.aafe-logo__word--zh {
+  font-family: "Noto Sans TC", sans-serif;
+  font-size: calc(23.5px * var(--s));
+}
+.aafe-logo__word--ko {
+  font-family: "Noto Sans KR", sans-serif;
+  font-size: calc(23.5px * var(--s));
+}
+
+/* 6.2s loop: EN hold 2.0 · fade .3 · ES 1.0 · fade .3 · ZH 1.0 · fade .3 · KO 1.0 · fade .3 */
+.aafe-logo__word--en { animation-name: aafe-logo-en; }
+.aafe-logo__word--es { animation-name: aafe-logo-es; }
+.aafe-logo__word--zh { animation-name: aafe-logo-zh; }
+.aafe-logo__word--ko { animation-name: aafe-logo-ko; }
+@keyframes aafe-logo-en { 0%, 32.26% { opacity: 1; } 37.1%, 95.16% { opacity: 0; } 100% { opacity: 1; } }
+@keyframes aafe-logo-es { 0%, 32.26% { opacity: 0; } 37.1%, 53.23% { opacity: 1; } 58.06%, 100% { opacity: 0; } }
+@keyframes aafe-logo-zh { 0%, 53.23% { opacity: 0; } 58.06%, 74.19% { opacity: 1; } 79.03%, 100% { opacity: 0; } }
+@keyframes aafe-logo-ko { 0%, 74.19% { opacity: 0; } 79.03%, 95.16% { opacity: 1; } 100% { opacity: 0; } }
+
+/* White version for dark bars (e.g. check-in): <AafeLogo className="aafe-logo--white" /> */
+.aafe-logo--white { --aafe-logo-mark: #ffffff; --aafe-logo-text: #ffffff; }
+
+@media (prefers-reduced-motion: reduce) {
+  .aafe-logo__word { animation: none; opacity: 0; }
+  .aafe-logo__word--en { opacity: 1; }
+}

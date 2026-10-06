@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AAFE Brand Board</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--aafe-white); color: var(--aafe-black); font: 400 16px/1.55 var(--aafe-font); }
+  .wrap { max-width: var(--aafe-container); margin: 0 auto; padding: 56px var(--aafe-gutter) 80px; }
+  header.top { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding-bottom: 28px; border-bottom: 2px solid var(--aafe-orange); }
+  header.top img { height: 46px; }
+  header.top p { margin: 0; color: var(--aafe-grey-600); font-size: 13px; text-align: right; }
+  section { margin-top: 64px; }
+  .label { margin: 0 0 18px; font-size: 14px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--aafe-grey-900); }
+  .grid { display: grid; gap: 20px; }
+  .g2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .g5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .tile { border: 1px solid var(--aafe-grey-200); padding: 22px; }
+  .tile.dark { background: var(--aafe-black); border-color: var(--aafe-black); }
+  .tile.soft { background: var(--aafe-grey-100); border-color: var(--aafe-grey-100); }
+  .tile img { max-width: 100%; height: 56px; object-fit: contain; display: block; }
+  .tile small { display: block; margin-top: 12px; color: var(--aafe-grey-600); font-size: 12px; }
+  .tile.dark small { color: var(--aafe-grey-400); }
+  .sw { border: 1px solid var(--aafe-grey-200); }
+  .sw i { display: block; height: 84px; }
+  .sw div { padding: 10px 12px 12px; font-size: 12px; line-height: 1.45; }
+  .sw b { display: block; font-size: 13px; }
+  .sw code { font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
+  .type-row { display: grid; grid-template-columns: 170px 1fr; gap: 20px; align-items: baseline; padding: 14px 0; border-bottom: 1px solid var(--aafe-grey-200); }
+  .type-row span { color: var(--aafe-grey-600); font-size: 12px; }
+  .space { display: flex; align-items: flex-end; gap: 18px; flex-wrap: wrap; }
+  .space div { text-align: center; font-size: 11px; color: var(--aafe-grey-600); }
+  .space i { display: block; margin: 0 auto 6px; background: var(--aafe-orange); }
+  .rules { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+  .rules ul { margin: 0; padding-left: 18px; }
+  .rules li { margin: 6px 0; }
+  .keep h3 { color: #1e6b41; } .change h3 { color: var(--aafe-orange); }
+  .rules h3 { margin: 0 0 8px; font-size: 18px; }
+  .demo-row { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
+  .ghost { background: transparent; color: var(--aafe-orange); }
+  .ghost:hover { color: var(--aafe-white); }
+  .learn { display: inline-flex; align-items: center; gap: 10px; }
+  .learn svg { flex: 0 0 auto; }
+  .card { border-bottom: 4px solid var(--aafe-orange); padding-bottom: 18px; }
+  .card .ph { height: 120px; background: var(--aafe-grey-bg); }
+  .card h4 { margin: 14px 0 4px; font-size: 20px; }
+  .card p { margin: 0 0 14px; font-size: 16px; line-height: 25px; }
+  footer { margin-top: 64px; padding-top: 18px; border-top: 1px solid var(--aafe-grey-200); color: var(--aafe-grey-600); font-size: 12px; }
+  @media (max-width: 760px) { .g3, .g5, .g2, .rules { grid-template-columns: 1fr 1fr; } .type-row { grid-template-columns: 1fr; gap: 4px; } .aafe-section-title { gap: 24px; font-size: 30px; } .aafe-headline { font-size: 34px; line-height: 42px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <img src="logos/aafe-logo-orange.png" alt="Asian Americans for Equality">
+    <p>Brand board · measured from aafe.org<br>Oct 5, 2026 · internal use until AAFE approves</p>
+  </header>
+
+  <section>
+    <p class="label">Logo</p>
+    <div class="grid g3">
+      <div class="tile"><img src="logos/aafe-logo-orange.png" alt=""><small>aafe-logo-orange.png · 1200×313 · on light</small></div>
+      <div class="tile dark"><img src="logos/aafe-logo-white.png" alt=""><small>aafe-logo-white.png · on dark / photos</small></div>
+      <div class="tile"><img src="logos/aafe-mark-orange.svg" alt=""><small>aafe-mark-orange.svg · vector · app icon, favicon, small spaces</small></div>
+    </div>
+    <div class="grid g3" style="margin-top:20px">
+      <div class="tile"><img src="logos/header-logo-en.png" alt=""><small>Header logo rotates languages: English</small></div>
+      <div class="tile"><img src="logos/header-logo-es.png" alt=""><small>Spanish (captured mid-fade)</small></div>
+      <div class="tile"><img src="logos/header-logo-zh.png" alt=""><small>Traditional Chinese 亞洲人平等會</small></div>
+    </div>
+  </section>
+
+  <section>
+    <p class="label">Color</p>
+    <div class="grid g5">
+      <div class="sw"><i style="background:#C64C28"></i><div><b>Orange</b><code>#C64C28</code><br>Primary. White text 4.70:1 ✓</div></div>
+      <div class="sw"><i style="background:#BA4926"></i><div><b>Orange dark</b><code>#BA4926</code><br>Hover / pressed</div></div>
+      <div class="sw"><i style="background:#000"></i><div><b>Black</b><code>#000000</code><br>Headings, text, footer</div></div>
+      <div class="sw"><i style="background:#4D4C4C"></i><div><b>Grey 900</b><code>#4D4C4C</code><br>Secondary text 8.56:1</div></div>
+      <div class="sw"><i style="background:#707070"></i><div><b>Grey 600</b><code>#707070</code><br>Muted text 4.95:1</div></div>
+      <div class="sw"><i style="background:#BAB9B9"></i><div><b>Grey 400</b><code>#BAB9B9</code><br>Borders only</div></div>
+      <div class="sw"><i style="background:#EBEBEB"></i><div><b>Grey 200</b><code>#EBEBEB</code><br>Dividers</div></div>
+      <div class="sw"><i style="background:#F4F4F6"></i><div><b>Grey 100</b><code>#F4F4F6</code><br>Soft panels</div></div>
+      <div class="sw"><i style="background:#DADCDF"></i><div><b>Band</b><code>#DADCDF</code><br>Section bands</div></div>
+      <div class="sw"><i style="background:#fff"></i><div><b>White</b><code>#FFFFFF</code><br>Page background</div></div>
+    </div>
+  </section>
+
+  <section>
+    <p class="label">Typography · Poppins (Google Fonts, free)</p>
+    <div class="type-row"><span>Display · 44/56 · 700 · −1px</span><div style="font:700 44px/56px var(--aafe-font);letter-spacing:-1px">Support Our Mission</div></div>
+    <div class="type-row"><span>Section title · 40 · 700 · orange</span><div style="font:700 40px/1.2 var(--aafe-font);color:var(--aafe-orange)">What We Do</div></div>
+    <div class="type-row"><span>H2 · 36/60 · 700</span><div style="font:700 36px/60px var(--aafe-font)">Get Involved</div></div>
+    <div class="type-row"><span>H6 · 22.4/33.6 · 700</span><div style="font:700 22.4px/33.6px var(--aafe-font)">Other Ways to Give</div></div>
+    <div class="type-row"><span>Body · 20/30 · 400</span><div style="font:400 20px/30px var(--aafe-font)">Together we can build an equitable future for all.</div></div>
+    <div class="type-row"><span>Small · 16/25 · 400</span><div style="font:400 16px/25px var(--aafe-font)">Housing rights, social services, immigration, youth programs</div></div>
+    <div class="type-row"><span>Nav · 14 · 600 · caps</span><div style="font:600 14px/1 var(--aafe-font);text-transform:uppercase">Who we are &nbsp; What we do &nbsp; News &nbsp; Contact</div></div>
+    <div class="type-row"><span>Chinese / Korean</span><div style="font:500 20px/30px var(--aafe-font)">亞洲人平等會年度晚宴 · 아시아계 미국인 평등회</div></div>
+  </section>
+
+  <section>
+    <p class="label">Components</p>
+    <div class="demo-row">
+      <a class="aafe-button" href="#">Donate</a>
+      <a class="aafe-button" href="#" style="text-transform:none">Play Video</a>
+      <a class="aafe-button ghost" href="#">Volunteer</a>
+      <a class="aafe-link learn" href="#"><svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="#C64C28" stroke-width="2"><circle cx="16" cy="16" r="14"/><path d="M10 16h11M17 11l5 5-5 5"/></svg>Learn more</a>
+    </div>
+    <div class="grid g2" style="margin-top:40px">
+      <div><h2 class="aafe-headline" style="margin:0">Headline with<br>accent bar</h2></div>
+      <div class="card"><div class="ph"></div><h4>Card title</h4><p>Square photo, bold title, short text, 4px orange rule underneath.</p><a class="aafe-link learn" href="#"><svg width="28" height="28" viewBox="0 0 32 32" fill="none" stroke="#C64C28" stroke-width="2"><circle cx="16" cy="16" r="14"/><path d="M10 16h11M17 11l5 5-5 5"/></svg>Learn more</a></div>
+    </div>
+    <h2 class="aafe-section-title" style="margin:48px 0 0">Section title</h2>
+  </section>
+
+  <section>
+    <p class="label">Spacing scale (×1.5) · container 1080px · sections 100–120px tall padding</p>
+    <div class="space">
+      <div><i style="width:7px;height:7px"></i>7</div><div><i style="width:11px;height:11px"></i>11</div><div><i style="width:16px;height:16px"></i>16</div><div><i style="width:24px;height:24px"></i>24</div><div><i style="width:36px;height:36px"></i>36</div><div><i style="width:54px;height:54px"></i>54</div><div><i style="width:81px;height:81px"></i>81</div><div><i style="width:120px;height:120px;opacity:.25"></i>120 section</div>
+    </div>
+  </section>
+
+  <section>
+    <p class="label">What this means for our gala app</p>
+    <div class="rules">
+      <div class="tile keep"><h3>Match (identity)</h3><ul>
+        <li>Orange <b>#C64C28</b> for primary buttons, links, accents. Hover #BA4926.</li>
+        <li><b>Poppins</b> for headings and UI; Noto Sans TC / KR for Chinese and Korean.</li>
+        <li>Bold, short headlines in black; orange accent bar or rule as the signature detail.</li>
+        <li>Pill buttons (50px radius), 600 weight.</li>
+        <li>Black footer with the white logo; the orange mark as app icon.</li>
+        <li>Traditional Chinese, as on aafe.org.</li>
+      </ul></div>
+      <div class="tile change"><h3>Ours to adapt (product, not website)</h3><ul>
+        <li>Our cards may keep soft radius and glass chrome: the site has no app UI to copy.</li>
+        <li>Body 16–18px instead of 20px: denser screens, iPad check-in.</li>
+        <li>Sentence-case buttons inside the app; UPPERCASE only for one hero CTA.</li>
+        <li>Status colors (green / amber / grey / red) are ours; AAFE has none.</li>
+        <li>Replace Fraunces serif titles and #E0532A orange (white text only 3.86:1).</li>
+      </ul></div>
+    </div>
+  </section>
+
+  <footer>Measured from aafe.org computed CSS (home, /donate). Logo PNGs from our repo (prototype/shared/public/brand); SVG mark from aafe.org footer. AAFE logo and photos stay internal until AAFE approves in writing.</footer>
+</div>
+</body>
+</html>

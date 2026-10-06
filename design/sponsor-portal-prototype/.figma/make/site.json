@@ -1,0 +1,10 @@
+{
+  "description": "Effortlessly manage guest names for the AAFE gala with a user-friendly portal designed for sponsors, ensuring quick and efficient guest registration.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

@@ -1,0 +1,81 @@
+/* AAFE visual identity tokens
+   Measured from the live CSS of aafe.org (home + /donate), Oct 5, 2026.
+   "measured" = read from the site's computed CSS. "derived" = our suggestion, not on their site. */
+
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&family=Noto+Sans+KR:wght@400;500;700&display=swap");
+
+:root {
+  /* ---- Color (measured: WordPress theme presets on aafe.org) ---- */
+  --aafe-orange: #c64c28;        /* primary: buttons, links, accents, logo */
+  --aafe-orange-dark: #ba4926;   /* hover / pressed */
+  --aafe-black: #000000;         /* headings + body text, footer background */
+  --aafe-white: #ffffff;         /* page background */
+  --aafe-grey-900: #4d4c4c;      /* secondary text */
+  --aafe-grey-600: #707070;      /* muted text (passes AA on white) */
+  --aafe-grey-400: #bab9b9;      /* borders, disabled (decorative only) */
+  --aafe-grey-200: #ebebeb;      /* dividers */
+  --aafe-grey-100: #f4f4f6;      /* soft panel background (home hero) */
+  --aafe-grey-bg: #dadcdf;       /* section band background ("Get Involved") */
+
+  /* derived tints for status/soft backgrounds */
+  --aafe-orange-50: #fbefea;
+  --aafe-orange-100: #f6dccf;
+
+  /* ---- Typography (measured) ---- */
+  --aafe-font: "Poppins", "Noto Sans TC", "Noto Sans KR", system-ui, sans-serif;
+  --aafe-font-cjk-zh: "Noto Sans TC", "Poppins", sans-serif; /* derived: Poppins has no Chinese glyphs */
+  --aafe-font-cjk-ko: "Noto Sans KR", "Poppins", sans-serif; /* derived */
+
+  --aafe-text-body: 20px;        /* line-height 30px, weight 400 */
+  --aafe-text-body-sm: 16px;     /* card text, line-height 25px */
+  --aafe-text-nav: 14px;         /* top nav: 600, UPPERCASE */
+  --aafe-text-button: 16px;      /* 600, UPPERCASE (header DONATE: 15px) */
+  --aafe-text-h6: 22.4px;        /* 700, line-height 33.6px */
+  --aafe-text-h2: 36px;          /* 700, line-height 60px */
+  --aafe-text-display: 44px;     /* 700, line-height 56px, letter-spacing -1px */
+  --aafe-weight-regular: 400;
+  --aafe-weight-semibold: 600;
+  --aafe-weight-bold: 700;
+
+  /* ---- Spacing (measured: WordPress spacing presets, ~1.5x scale) ---- */
+  --aafe-space-20: 0.44rem;  /*  7px */
+  --aafe-space-30: 0.67rem;  /* 11px */
+  --aafe-space-40: 1rem;     /* 16px */
+  --aafe-space-50: 1.5rem;   /* 24px  = default block gap */
+  --aafe-space-60: 2.25rem;  /* 36px */
+  --aafe-space-70: 3.38rem;  /* 54px */
+  --aafe-space-80: 5.06rem;  /* 81px */
+  --aafe-section-y: 120px;   /* section padding top/bottom (102–120px on site) */
+  --aafe-container: 1080px;  /* content max width */
+  --aafe-gutter: 15px;       /* container side padding */
+
+  /* ---- Shape (measured) ---- */
+  --aafe-radius-pill: 50px;  /* all buttons */
+  --aafe-radius-photo: 0;    /* photos are square-cornered */
+  --aafe-accent-bar-w: 82px; /* short orange bar above big headlines */
+  --aafe-accent-bar-h: 4px;
+  --aafe-rule: 2px;          /* orange rule next to section titles / under cards */
+}
+
+/* ---- Components (measured) ---- */
+.aafe-button {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 8px 24px;
+  border: 2px solid var(--aafe-orange);
+  border-radius: var(--aafe-radius-pill);
+  background: var(--aafe-orange);
+  color: var(--aafe-white);
+  font: var(--aafe-weight-semibold) var(--aafe-text-button)/1.5 var(--aafe-font);
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+}
+.aafe-button:hover { background: var(--aafe-orange-dark); border-color: var(--aafe-orange-dark); }
+
+.aafe-headline { font: var(--aafe-weight-bold) var(--aafe-text-display)/56px var(--aafe-font); letter-spacing: -1px; color: var(--aafe-black); }
+.aafe-headline::before { content: ""; display: block; width: var(--aafe-accent-bar-w); height: var(--aafe-accent-bar-h); margin-bottom: 32px; background: var(--aafe-orange); }
+
+.aafe-section-title { display: flex; align-items: center; gap: 70px; color: var(--aafe-orange); font: var(--aafe-weight-bold) 40px/1.2 var(--aafe-font); }
+.aafe-section-title::after { content: ""; flex: 1; height: var(--aafe-rule); background: var(--aafe-orange); }
+
+.aafe-link { color: var(--aafe-orange); font-weight: var(--aafe-weight-bold); font-size: 16px; text-decoration: none; }
