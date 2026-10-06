@@ -52,10 +52,10 @@ export interface GuestFinding {
 /**
  * Checks one imported guest against guests on other orders of this gala:
  * 1. Same email and same last name → `double_booked`.
- * 2. Same name words (any order) and same organization → `double_booked`. An imported guest's
- *    organization is usually unknown (the free text rarely says); an unknown organization counts as
- *    the same, so "Susan Cho" named by two sponsors is caught. Two different known organizations
- *    downgrade it to `possible_duplicate`.
+ * 2. Same name words (any order) and the same known organization → `double_booked`. When either
+ *    organization is unknown (imported free text rarely says) or they differ → `possible_duplicate`,
+ *    a softer flag staff confirm, so one sponsor's guest list isn't treated as conflicting with another's
+ *    on a name alone (decided Oct 6).
  * 3. Same first initial and last name, same organization → `possible_duplicate`.
  * Returns the first finding, or null.
  */
@@ -76,8 +76,7 @@ export function matchGuest(
   if (byEmail) return finding('double_booked', byEmail)
 
   const byName = others.filter((g) => words && nameWordSet(g.displayName) === words)
-  const sameOrg = (g: ExistingGuest) => !org || !normOrg(g.organization) || normOrg(g.organization) === org
-  const booked = byName.find(sameOrg)
+  const booked = byName.find((g) => org && normOrg(g.organization) === org)
   if (booked) return finding('double_booked', booked)
   if (byName[0]) return finding('possible_duplicate', byName[0])
 

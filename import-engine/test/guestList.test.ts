@@ -110,8 +110,19 @@ describe('parseGuestList', () => {
     expect(names('grace.kim@example.org', 1)).toEqual([{ displayName: 'Grace Kim', email: 'grace.kim@example.org', isBuyer: true }])
   })
 
-  it('one unclear entry leaves the whole list for the sponsor, with every reason', () => {
-    const r = parseGuestList('Jane Doe\nSam\nJohn and Mary Smith', 4, buyer)
-    expect(r).toEqual({ kind: 'unclear', reasons: ['a one-word name: "Sam"', 'a couple or pair on one line: "John and Mary Smith"'] })
+  it('pre-fills the clear names and lists the unclear entries for the sponsor (Oct 6)', () => {
+    expect(parseGuestList('Jane Doe\nSam\nJohn and Mary Smith', 4, buyer)).toEqual({
+      kind: 'names',
+      guests: [{ displayName: 'Jane Doe', email: null, isBuyer: false }],
+      unread: ['a one-word name: "Sam"', 'a couple or pair on one line: "John and Mary Smith"'],
+    })
+  })
+
+  it('a clean list has nothing unread', () => {
+    expect(parseGuestList('Jane Doe', 1, buyer)).toEqual({ kind: 'names', guests: [{ displayName: 'Jane Doe', email: null, isBuyer: false }], unread: [] })
+  })
+
+  it('more names than seats pre-fills nothing, even with unclear entries mixed in', () => {
+    expect(parseGuestList('Jane Doe\nSam Lee\nBob', 1, buyer)).toEqual({ kind: 'unclear', reasons: ['2 names for 1 seat', 'a one-word name: "Bob"'] })
   })
 })

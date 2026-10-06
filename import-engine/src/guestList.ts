@@ -1,6 +1,7 @@
 // Splits the free-text guest-list answer into guests (spec section 3, "Splitting the free-text guest list").
-// The result only pre-fills the sponsor's portal; the sponsor confirms or fixes it. When anything is
-// unclear, no guests are created and the sponsor sees the original text instead.
+// The result only pre-fills the sponsor's portal; the sponsor confirms or fixes it. Clear names are
+// pre-filled even when other entries aren't (decided Oct 6); the sponsor sees the original text next to
+// them. More names than seats pre-fills nothing, since there's no way to know who to leave out.
 
 import { normEmail, normName, nameWordSet } from './normalize.ts'
 
@@ -22,8 +23,11 @@ export interface ParsedGuest {
 export type GuestList =
   /** Empty or "TBD": all seats stay unnamed. */
   | { kind: 'none' }
-  /** Read cleanly: pre-fill these, in order, into the next free seats. */
-  | { kind: 'names'; guests: ParsedGuest[] }
+  /**
+   * Pre-fill these, in order, into the next free seats. `unread` lists the entries that couldn't be
+   * read (empty when the whole list was clear); the portal shows them with the original text.
+   */
+  | { kind: 'names'; guests: ParsedGuest[]; unread: string[] }
   /** Left for the sponsor: no guests created; the portal shows the original text. */
   | { kind: 'unclear'; reasons: string[] }
 
@@ -107,8 +111,9 @@ export function parseGuestList(text: string | null, seatCount: number, buyer: Bu
     guests.push({ displayName: name, email: email === buyerEmail ? null : email, isBuyer: false })
   }
 
-  if (guests.length > seatCount) reasons.push(`${guests.length} names for ${seatCount} seat${seatCount === 1 ? '' : 's'}`)
-  if (reasons.length) return { kind: 'unclear', reasons }
-  if (guests.length === 0) return { kind: 'none' }
-  return { kind: 'names', guests }
+  if (guests.length > seatCount) {
+    return { kind: 'unclear', reasons: [`${guests.length} names for ${seatCount} seat${seatCount === 1 ? '' : 's'}`, ...reasons] }
+  }
+  if (guests.length === 0) return reasons.length ? { kind: 'unclear', reasons } : { kind: 'none' }
+  return { kind: 'names', guests, unread: reasons }
 }
