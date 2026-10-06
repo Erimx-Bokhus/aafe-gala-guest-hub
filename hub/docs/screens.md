@@ -80,4 +80,4 @@ This replaces the printed spreadsheet and the slow line. It has to keep working 
 
 - What goals does AAFE track per category: sponsorship dollars, tickets sold, attendance?
 - Does the sponsor form need logo upload, or does logo collection stay in email?
-- Who uses check-in: staff only, or volunteers too? That decides the "check-in" role's limits.
+- Confirm with AAFE that volunteers work check-in (the backend has a limited volunteer role that sees the check-in list, not the full guest list). <!-- modified 2026-10-06 06:12 Aisling -->

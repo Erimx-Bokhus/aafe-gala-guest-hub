@@ -5,7 +5,7 @@ One standard web app and one database. A small import-and-matching module sits b
 ```layers
 Sources | Give Lively attendee export — CSV, or the live link; Give Lively donation feed — read-only JSON; Staff entry — checks, ACH, comps; Legacy spreadsheet — one-time migration
 Import and matching | Parse and validate — columns found by name, clear errors; Match and dedupe — purchase key, then email and last name, then name; Review queue — staff confirm close calls
-Shared data | Postgres — guests, seats, sources, history; Staff sign-in — AAFE Google accounts; AI helper — optional, off by default
+Shared data | Postgres — guests, seats, sources, history; Staff sign-in — emailed link (Supabase Auth), Google later; AI helper — optional, off by default
 Screens | Staff dashboard — gaps by owner, goals; Sponsor form — private link, no account; Check-in — iPad, works offline
 Outputs | Badge file — mail merge with table number; Follow-up drafts — staff approve and send; Salesforce file — who actually attended
 ```
@@ -34,7 +34,7 @@ As of October 6, in the team repo. The build follows Natalie's Supabase schema; 
 | App | React + TypeScript, built with Vite and styled with Tailwind | Matches Natalie's working prototype; any web developer can maintain it <!-- modified 2026-10-05 16:51 Aisling --> |
 | Backend | Supabase: Postgres, sign-in, and server functions (Give Lively sync, email sending) | One managed service; free plan for the demo <!-- modified 2026-10-05 16:51 Aisling --> |
 | Database | Postgres, hosted by Supabase | Standard, portable, and fits the record structure <!-- modified 2026-10-05 16:51 Aisling --> |
-| Sign-in | Supabase Auth with staff roles (demo accounts for now) | AAFE's Google accounts can plug in if the tool is adopted <!-- modified 2026-10-05 16:51 Aisling --> |
+| Sign-in | Supabase Auth with staff roles: an emailed sign-in link (PR #27, in review); demo accounts until then | AAFE's Google accounts can plug in if the tool is adopted <!-- modified 2026-10-06 06:12 Aisling --> |
 | Demo preview | A free or low-cost tier on a team account | Production hosting is AAFE's decision after Demo Day; see [Hosting](#hosting) |
 | Repo | Team GitHub organization on GitHub Team, with `main` protected | Handed to AAFE, or the partner it chooses, at handoff <!-- modified 2026-10-05 16:51 Aisling --> |
 

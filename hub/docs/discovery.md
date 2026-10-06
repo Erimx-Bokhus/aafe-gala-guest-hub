@@ -88,4 +88,5 @@ Janelle sent the guest-list notes, the 2026 sponsorship flyer, a Give Lively tic
 
 - AAFE's goals per category (sponsorships, tickets, attendance) for the dashboard
 - Who maintains the tool after November 10
-- Traditional or simplified Chinese for the sponsor form
+- Confirm Traditional Chinese (used on aafe.org and in the portal) with AAFE <!-- modified 2026-10-06 06:12 Aisling -->
+- Whether Give Lively also has an Attendee Data report (one row per ticket) for AAFE's gala page <!-- updated 2026-10-06 06:12 Aisling -->

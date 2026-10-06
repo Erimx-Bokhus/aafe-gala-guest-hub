@@ -38,7 +38,7 @@ The import works end to end in code: a file in AAFE's export format goes through
 - **Import engine** (`import-engine/`): reads the file, converts times to UTC, splits guest lists, matches buyers and guests, builds the report. 94 automated tests. <!-- new 2026-10-05 22:58 Aisling -->
 - **Database side** (`prototype/database/backend.sql`): skips purchases it has seen, never overwrites a name a sponsor or staff entered, keeps a run record for every upload, and puts close calls in the review queue. 101 automated tests, including a sample file run all the way through. <!-- modified 2026-10-06 05:50 Aisling -->
 
-Three choices settled while building (Oct 6; Natalie reviewing in Slack): <!-- new 2026-10-05 22:58 Aisling -->
+Three choices settled while building (Oct 5; Natalie reviewing in Slack): <!-- modified 2026-10-06 06:12 Aisling -->
 
 | Question | Decision <!-- new 2026-10-05 22:58 Aisling --> |
 | --- | --- |
@@ -99,7 +99,7 @@ Nothing is deleted automatically. Refunded seats are cancelled, not removed, and
 <!-- updated 2026-10-05 21:28 Aisling -->
 
 - **Per-ticket ID:** none, and no transaction ID either. A purchase is keyed on email + purchase time in UTC. <!-- modified 2026-10-05 21:28 Aisling -->
-- **Tier:** just "Ticket" in the sample, so staff map tier names to packages (Oct 6). <!-- modified 2026-10-05 21:28 Aisling -->
+- **Tier:** just "Ticket" in the sample, so staff map tier names to packages (Oct 5). <!-- modified 2026-10-06 06:12 Aisling -->
 - **Page name:** "AAFE's 52nd Annual Gala", so the import filters on each gala's page name, not a fixed "AAFE Gala 2027" setting (Oct 6). <!-- modified 2026-10-05 21:28 Aisling -->
 - **Refunds:** yes, an "Amount Refunded" column and a "Status" column. <!-- modified 2026-10-05 16:51 Aisling -->
 - **Column headers and formats:** received. Dates look like `2026-02-05 05:14:46 PM EST`; amounts like `$1,000.00`; the donor-covered fee is its own column. <!-- modified 2026-10-05 16:51 Aisling -->

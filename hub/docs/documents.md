@@ -7,7 +7,8 @@ Everything the team has produced or collected, in one place. Living documents ar
 
 | Document | What it is | Status |
 | --- | --- | --- |
-| [Findings, Build Plan, and Tasks](https://claude.ai/code/artifact/25db30ba-7c5a-42dc-8e25-4c2b5dc47d2c) | Overview of findings, the component plan with estimates, the task tracker, and the decision log | Live tracker |
+| [AAFE Gala Project Hub](https://claude.ai/artifact/QVViUNx6SWRBZYKCfrAmp6) | This hub: plan, tasks, decisions, What's new, History, and the build so far | Live tracker, with Trello for day-to-day tasks <!-- updated 2026-10-06 06:12 Aisling --> |
+| [Findings, Build Plan, and Tasks](https://claude.ai/code/artifact/25db30ba-7c5a-42dc-8e25-4c2b5dc47d2c) | Overview of findings, the component plan with estimates, the task tracker, and the decision log | Superseded by this hub (Oct 5) <!-- modified 2026-10-06 06:12 Aisling --> |
 | [Discovery Guide v2](https://claude.ai/code/artifact/eedd8e14-cc7b-403e-9f92-4a5a6f96ea78) | Questions in decision order for the October 1 call | Used |
 | [Guest Data and AI Handling](https://claude.ai/code/artifact/1d0571f4-d854-4e4a-90df-b60a62de28ce) | What the tool stores, what it never stores, and how AI is used | Draft for AAFE |
 | [Future Hosting Notes](https://claude.ai/code/artifact/f74b0de5-c123-40b4-a9fd-c60be5297c41) | Engineering notes on future hosting paths, revised after Natalie's critique; rechecked Oct 3 | Internal <!-- modified 2026-10-05 16:51 Aisling --> |
