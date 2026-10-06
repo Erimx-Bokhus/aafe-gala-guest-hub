@@ -24,7 +24,7 @@ Rebuild the OPEN files after changes: `npm run build`, then `python3 scripts/mak
 ## Run
 ```bash
 npm install            # once, at this folder (npm workspaces)
-npm run dev:guest      # http://localhost:5173  -> open #/s/ac-6w9k3p5d
+npm run dev:guest      # http://localhost:5173  -> open #/s/acme-community-partners
 npm run dev:staff      # http://localhost:5174  -> pick a demo account
 npm run build          # builds both into */dist
 npm run seed           # regenerate synthetic data
@@ -45,7 +45,7 @@ Run `database/backend.sql` after the seed, then follow **`docs/BACKEND.md`** to 
 - 70 seats / 48 named guests, 11 tables × 10 seats, 8 relationship guests with QR tokens
 - Email log, 120+ audit entries, Salesforce sync map
 
-Demo portal links: `#/s/ac-6w9k3p5d` (pledged, check), `#/s/ng-5t1w8e3z` (paid on Give Lively, donor covered fee), `#/s/mf-2p8x4r1d` (partially paid by wire), `#/s/hb-7f3k9q2m` (Platinum, 20 seats).
+Demo portal links: `#/s/acme-community-partners` (pledged, check), `#/s/ng-5t1w8e3z` (paid on Give Lively, donor covered fee), `#/s/mf-2p8x4r1d` (partially paid by wire), `#/s/hb-7f3k9q2m` (Platinum, 20 seats).
 Staff demo accounts: Mei Lin Ortiz (gala admin), Daniel Seo (relationship manager), Kenji Abe (check-in volunteer — sees only check-in).
 
 Sponsorship tiers and seat counts are based on AAFE's public 2025 sponsorship flyer; confirm future-year packages with AAFE before production use. Photos are from AAFE's gala and community programs and need AAFE approval.
