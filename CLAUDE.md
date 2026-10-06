@@ -43,12 +43,14 @@ Natalie built clickable concepts of the sponsor portal and staff app (shared in 
 - Commit messages say what changed and why. Credit co-authors with `Co-authored-by:` trailers.
 
 ## Team
-| Person | GitHub | Role |
-| --- | --- | --- |
-| Natalie Walker | wsvdesign | Product lead, UI/UX, client contact |
-| Aisling Leiva-Davila | nessaisling-lab / aislingld-pursuit | Backend, GitHub and integrations |
-| Cornell Robertson | CodeToTheCore | Backend lead |
-| Antonin Lesov | antoninlesov | Frontend, UI/UX |
+| Person | GitHub | Pair | Role |
+| --- | --- | --- | --- |
+| Natalie Walker | wsvdesign | Frontend | Product lead, UI/UX, client contact |
+| Antonin Lesov | antoninlesov | Frontend | Frontend, UI/UX |
+| Aisling Leiva-Davila | nessaisling-lab / aislingld-pursuit | Backend | Backend, GitHub and integrations, repo admin |
+| Cornell Robertson | CodeToTheCore | Backend | Backend |
+
+Work is split between two pairs (Oct 5, `docs/decisions.md`): every build area has a pair, not one person. Frontend: staff app, sponsor portal, check-in, branding. Backend: Supabase backend, Give Lively import, sign-in and roles, secure links, exports, emails.
 
 ## Key dates
 - Oct 3–5: stack decided, areas assigned
