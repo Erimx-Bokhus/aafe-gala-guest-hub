@@ -1,9 +1,9 @@
 # Import and matching
-<!-- modified Oct 5 -->
+<!-- modified Oct 6 -->
 
 How a Give Lively export becomes guests, orders, and seats without duplicates, and why a staff correction is never lost. Plain rules, no AI. Full spec: `docs/import-matching-spec.md` in the repo.
 
-Updated Oct 5 for AAFE's real Give Lively export: one row per purchase, no transaction ID, and guest names typed into one free-text box. The full spec in the repo is being revised to match.
+Updated Oct 5 for AAFE's real Give Lively export: one row per purchase, no transaction ID, and guest names typed into one free-text box. Updated Oct 6 with Natalie's second review: a tier mapping staff fill in once per gala, and a filter on the gala's Give Lively page name.
 
 ## What happens on every import
 
@@ -11,8 +11,8 @@ Updated Oct 5 for AAFE's real Give Lively export: one row per purchase, no trans
 Upload | Staff upload the Give Lively ticket export. Columns are mapped once and remembered.
 Check | Rows missing a required field, or with an unreadable amount or date, are rejected with their row number and reason.
 Compare | Each row is compared with the last import. Unchanged rows are skipped, so re-importing the same file changes nothing.
-Identify | Each row is one purchase. With no transaction ID, a purchase is recognized by the buyer's email, purchase time, and tier, so re-importing never duplicates it.
-Split | The free-text guest list is split into names and emails; anything unclear goes to staff review.
+Identify | Each row is one purchase. With no transaction ID, a purchase is recognized by the buyer's email and purchase time (in UTC), so re-importing never duplicates it, even if the tier is renamed.
+Split | The free-text guest list is split into names and emails to pre-fill the sponsor's portal; the sponsor confirms or fixes them, and anything unclear is left for the sponsor.
 Match | Purchaser and each named guest are matched to people already in the list (rules below).
 Apply | New and changed data is written, except where a staff member or sponsor has corrected it.
 Report | A summary: new, updated, unchanged, rejected, and sent to review, with every held change listed.
@@ -29,6 +29,12 @@ One import is all-or-nothing: if anything fails partway, nothing is applied and 
 - **The buyer is not seated** unless a row names them as a guest. A coordinator buying for colleagues stays the contact; the colleagues get the badges.
 - **A new sponsorship with open seats** gets a private sponsor link and a **draft** email in the approval queue. The import never sends anything.
 - **Relationship owner** isn't in Give Lively's data. New guests show in the "no owner" view; if the buyer already has an owner, it's suggested, not set.
+
+## Tier names and the gala page
+<!-- new Oct 6 -->
+
+- **Tier mapping.** AAFE's export says just "Ticket" for the tier, which matches no package. Staff link each Give Lively tier name to a package once per gala; every later upload uses it. A name with no link goes to review, and linking it there saves it.
+- **Gala page.** Each gala stores its Give Lively page name ("AAFE's 52nd Annual Gala"). Only that page's purchases are imported; rows from another page are skipped and listed in the report.
 
 ## How matching works
 
@@ -66,7 +72,7 @@ An import only updates the Give Lively layer. If Give Lively changes a field tha
 | Shared email | Same email, different last name | Same person · Different person |
 | Guest under two sponsors | Someone named on two orders | Keep on one · Keep both |
 | Too many names | More names than seats | Add seats · Drop a name |
-| Unknown ticket type | A Give Lively ticket name not linked to a package | Link it, then re-run |
+| Unknown ticket type | A Give Lively tier name not yet in the tier mapping | Link it (saved for next time), then re-run |
 | Refund | Give Lively shows the order refunded | Keep seats cancelled · Reinstate |
 | Missing from export | A row that was there last time isn't now | Cancel seats · Keep (partial export) |
 
@@ -74,9 +80,11 @@ Nothing is deleted automatically. Refunded seats are cancelled, not removed, and
 
 ## What AAFE's export answered
 <!-- team -->
-<!-- updated Oct 5 -->
+<!-- updated Oct 6 -->
 
-- **Per-ticket ID:** none, and no transaction ID either. A purchase is keyed on email + purchase time + tier.
+- **Per-ticket ID:** none, and no transaction ID either. A purchase is keyed on email + purchase time in UTC.
+- **Tier:** just "Ticket" in the sample, so staff map tier names to packages (Oct 6).
+- **Page name:** "AAFE's 52nd Annual Gala", so the import filters on each gala's page name, not a fixed "AAFE Gala 2027" setting (Oct 6).
 - **Refunds:** yes, an "Amount Refunded" column and a "Status" column.
 - **Column headers and formats:** received. Dates look like `2026-02-05 05:14:46 PM EST`; amounts like `$1,000.00`; the donor-covered fee is its own column.
 - **Guest names:** one free-text answer per purchase ("Please list the name(s) and email address(es) of all guests…"). The sample has one row, so we don't yet know how messy real answers are.

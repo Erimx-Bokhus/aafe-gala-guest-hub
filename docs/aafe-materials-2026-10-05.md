@@ -41,8 +41,10 @@ Two tabs.
 One row **per purchase**, not per ticket. Columns: first name, last name, email, tier purchased, tier category, tickets purchased, total seats, amount spent, amount refunded, transaction fee covered, date/time of purchase, referrer URL, payment method, status, UTM source, page name, internal name, client application name, Double the Donation flag, company/organization, phone, **one free-text question holding every guest's name and email** ("Please list the name(s) and email address(es) of all guests…"), and address fields.
 
 What this changes for the import spec (`docs/import-matching-spec.md`):
-- **No transaction ID and no per-ticket ID.** A purchase is identified by purchaser email + purchase date/time + tier.
-- **Guest names arrive as free text** in one cell, in whatever format the buyer typed. They must be split into names and emails, with anything unclear sent to staff review.
+- **No transaction ID and no per-ticket ID.** A purchase is identified by purchaser email + purchase date/time in UTC. The tier is left out so a renamed tier doesn't create a duplicate (spec section 2).
+- **Guest names arrive as free text** in one cell, in whatever format the buyer typed. They are split into names and emails to pre-fill the sponsor's portal; anything unclear is left for the sponsor to confirm (spec section 3).
+- **The tier is generic.** Tier Purchased and Tier Category both say `Ticket` in the sample, which matches no app tier, so staff map Give Lively tier names to tiers once per gala (spec section 3).
+- **The page is named by year** ("AAFE's 52nd Annual Gala"), so the import filters on the page name stored for each gala, not a fixed campaign setting.
 - **Refunds are a column** (amount refunded) and status is a column, so refunds can be read directly.
 
 ## How sponsor communication works today
