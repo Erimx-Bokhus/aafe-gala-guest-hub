@@ -304,4 +304,46 @@ const unpinned = (await db.query(`select count(*)::int n from pg_proc where pron
 ok(unpinned === 0, 'helper functions pin search_path')
 ok((await db.query(`select count(*)::int n from pg_policies where schemaname = 'public' and cmd = 'ALL'`)).rows[0].n === 0, 'no FOR ALL policies overlap staff_read')
 
+// ---- Exports: badge mail merge, printed check-in list, Salesforce attendee file
+const cur = `(select id from gala_events where status <> 'closed' order by year desc limit 1)`
+for (const f of ['staff_export_badges(boolean)', 'staff_export_checkin()', 'staff_export_salesforce()'])
+  ok(!(await db.query(`select has_function_privilege('anon', $1, 'execute') e`, [f])).rows[0].e, `anon cannot execute ${f}`)
+
+await db.query(`update guests set badge_status = 'ready' where id = (select g.id from guests g join orders o on o.id = g.order_id
+  where g.table_id is null and o.event_id = ${cur} and o.status <> 'cancelled' order by g.id limit 1)`)   // an admitted guest, no table
+const badges = await as('authenticated', RM, `select * from staff_export_badges()`)
+const expectBadges = (await db.query(`select count(*)::int n from guests g join orders o on o.id = g.order_id
+  where o.event_id = ${cur} and o.status <> 'cancelled' and g.badge_status in ('ready','reprint_needed')`)).rows[0].n
+ok(badges.length === expectBadges && badges.length > 0, `badge file has every ready or reprint badge (${badges.length})`)
+ok(Object.keys(badges[0]).join() === 'first_name,last_name,title,organization,table_number,seat_number,sponsor,guest_type,badge_status',
+  'badge file carries only badge fields (no email, dietary, payment, notes)')
+const tables = badges.map(b => b.table_number).filter(n => n !== null)
+const firstUnseated = badges.findIndex(b => b.table_number === null)
+ok(tables.every((n, i) => i === 0 || tables[i - 1] <= n) && (firstUnseated === -1 || firstUnseated >= tables.length),
+  `badge file sorted by table, unseated guests last (${badges.length - tables.length} unseated)`)
+ok(badges.every(b => (b.guest_type === 'sponsor_guest') === (b.sponsor !== null)), 'sponsor line only on sponsor guests')
+ok((await as('authenticated', RM, `select count(*)::int n from staff_export_badges(true)`))[0].n >= badges.length, 'including printed badges adds rows')
+ok((await err('authenticated', vol, `select * from staff_export_badges()`))?.includes('forbidden'), 'volunteer cannot export badges')
+
+const sheet = await as('authenticated', vol, `select * from staff_export_checkin()`)
+const named = (await db.query(`select count(*)::int n from guests g join orders o on o.id = g.order_id
+  where o.event_id = ${cur} and o.status <> 'cancelled'`)).rows[0].n
+const open = (await db.query(`select count(*)::int n from seats s join orders o on o.id = s.order_id
+  where o.event_id = ${cur} and o.status <> 'cancelled' and s.guest_id is null and s.status <> 'cancelled'`)).rows[0].n
+ok(sheet.length === named + open && open > 0, `check-in list: ${named} guests plus ${open} unnamed sponsor seats (volunteer may export)`)
+ok(!('email' in sheet[0]) && !('dietary_needs' in sheet[0]), 'check-in list has no email or dietary needs')
+ok(sheet.findIndex(r => r.guest_type === 'unnamed_seat') === named, 'named guests first, unnamed seats after')
+ok(sheet.filter(r => r.arrived).length === (await db.query(`select count(*)::int n from guests g join orders o on o.id = g.order_id
+  where o.event_id = ${cur} and o.status <> 'cancelled' and g.attendance_status = 'checked_in'`)).rows[0].n, 'check-in list marks who arrived')
+
+ok((await err('authenticated', RM, `select * from staff_export_salesforce()`))?.includes('forbidden'), 'relationship manager cannot export the Salesforce file')
+ok((await err('authenticated', vol, `select * from staff_export_salesforce()`))?.includes('forbidden'), 'volunteer cannot export the Salesforce file')
+const sf = await as('authenticated', ADMIN, `select * from staff_export_salesforce()`)
+const arrivals = (await db.query(`select count(*)::int n from check_ins where event_id = ${cur}`)).rows[0].n
+ok(sf.length === arrivals && sf.length > 0, `Salesforce file has one row per arrival, walk-ins included (${sf.length})`)
+ok('email' in sf[0] && sf.every(r => r.checked_in_at), 'Salesforce file carries email and arrival time')
+
+const logged = (await db.query(`select action, count(*)::int n from audit_log where action like 'export.%' group by action`)).rows
+ok(['export.badges', 'export.checkin', 'export.salesforce'].every(a => logged.some(l => l.action === a)), 'every export is written to the activity log')
+
 console.log(`${pass} passed, ${fail} failed`)

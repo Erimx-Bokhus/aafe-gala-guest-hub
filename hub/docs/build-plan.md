@@ -59,14 +59,14 @@ As of October 6. Natalie's backend and guest portal are now in `main` (PRs #25 a
 | C1 | Data model and test data | In progress | Natalie's Supabase schema and seed in `main`; import tables added; demo data fixed for rule 6 (random links and QR codes, fictional phones) | Messier test data (~550 guests) for the import tests <!-- new 2026-10-05 22:58 Aisling --> |
 | C2 | Sign-in and roles | In progress | Emailed one-time sign-in link, role from the staff list (Cornell, PR #27, in review) | Roles checked on the server for every staff page (issue #9, Cornell) <!-- new 2026-10-05 22:58 Aisling --> |
 | C3 | Commitments and seats | Built in the backend | Pledges, payments, comps, seats, and seat statuses in Natalie's backend | Connect the staff app pages to it (with #9) <!-- new 2026-10-05 22:58 Aisling --> |
-| C4 | Import and matching | Ahead of schedule | Import engine (94 tests) and database side (101 backend tests, including a real-format CSV end to end); tier mapping; gala page filter; review queue | Upload screen and tier-mapping picker in the staff app (frontend pair) <!-- modified 2026-10-06 05:50 Aisling --> |
+| C4 | Import and matching | Ahead of schedule | Import engine (94 tests) and database side (backend tests, 119 in all, including a real-format CSV end to end); tier mapping; gala page filter; review queue | Upload screen and tier-mapping picker in the staff app (frontend pair) <!-- modified 2026-10-06 06:30 Aisling --> |
 | C5 | Sponsor guest form | Source in `main` | Natalie's portal: slots per package, hashed private links, English, 中文, Español | "From your purchase: please confirm" on imported names; Korean; connect to the backend <!-- new 2026-10-05 22:58 Aisling --> |
 | C6 | Staff dashboard | Prototype | Natalie's staff app (offline demo data) | Connect to the backend; gaps by owner <!-- new 2026-10-05 22:58 Aisling --> |
 | C7 | Follow-up emails | Built in the backend | Draft queue, staff approval, sending through Resend | Deadline reminder and receipt templates; approval screen <!-- new 2026-10-05 22:58 Aisling --> |
-| C8 | Exports | Not started | Prototype CSV exports in the staff app | Badge file with table numbers, check-in list, Salesforce file from the database <!-- new 2026-10-05 22:58 Aisling --> |
+| C8 | Exports | Database side done | Badge file with table numbers, printed check-in list, and Salesforce attendee file from the database, role-checked and logged, 18 tests (PR #34) | Staff app buttons call them; match AAFE's badge and check-in templates when they arrive <!-- modified 2026-10-06 06:30 Aisling --> |
 | C9 | Check-in app | Partly built | Check-in screen in the staff app; QR codes now hashed per seat and expiring (issue #10) | Connect to the backend; walk-ins; offline <!-- new 2026-10-05 22:58 Aisling --> |
 | C10 | Branding and languages | In progress | Design system (PR #14); AAFE orange and white | Korean; AAFE review of translations; Demo Day photo approval <!-- new 2026-10-05 22:58 Aisling --> |
-| C11 | Testing and security | In progress | 195 automated tests (94 import engine, 101 backend) | The testing list below <!-- modified 2026-10-06 05:50 Aisling --> |
+| C11 | Testing and security | In progress | 213 automated tests (94 import engine, 119 backend) | The testing list below <!-- modified 2026-10-06 06:30 Aisling --> |
 | C12 | Demo deploy and handoff | Not started | | Pick the demo host <!-- new 2026-10-05 22:58 Aisling --> |
 
 ## Testing: what to add
