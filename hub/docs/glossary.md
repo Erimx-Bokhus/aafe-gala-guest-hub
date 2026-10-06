@@ -41,7 +41,7 @@ Import engine | The part of the code that reads a Give Lively file and decides w
 Salesforce file | An export of who actually attended, shaped for AAFE's Salesforce, live for the 2027 gala.
 Seat | One place at the gala, tied to a commitment. Moves from unnamed to submitted, reviewed, badge-ready, and printed. <!-- modified 2026-10-03 12:36 Aisling -->
 Sponsor link | A private, expiring web address where one sponsor names and edits their guests. No account needed.
-Stretch | Work we do only if the must-haves are finished: QR tickets.
+Stretch | Work we do only if the must-haves are finished, such as automatic Give Lively sync. <!-- modified 2026-10-06 06:12 Aisling -->
 Synthetic data | Invented names and organizations used for building and the public demo. The prototype never holds real guest data.
 Walk-in | A guest who arrives without being on the list. The check-in lead decides, and the tool records it.
 ```

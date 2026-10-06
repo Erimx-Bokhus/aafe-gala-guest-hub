@@ -22,8 +22,8 @@ The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus),
 - [x] CI with secret scanning (gitleaks on every PR and on `main`), .gitignore, .env.example — Aisling <!-- modified 2026-10-06 05:50 Aisling -->
 - [x] Import and matching spec with 22 test cases (now 38, PRs #20, #22) — Aisling <!-- modified 2026-10-06 05:50 Aisling -->
 - [x] Seed data requirements for the import tests — Aisling <!-- modified 2026-10-03 11:56 Aisling -->
-- [ ] Staging deploy — Backend pair <!-- modified 2026-10-05 20:37 Aisling -->
-- [x] Database schema and migrations (Natalie's backend, merged Oct 6) — Backend pair <!-- modified 2026-10-05 22:58 Aisling -->
+- [ ] Web app preview deploy (database is live in the team Supabase project) — Backend pair <!-- modified 2026-10-06 06:12 Aisling -->
+- [x] Database schema and migrations (Natalie's backend, merged Oct 5) — Backend pair <!-- modified 2026-10-06 06:12 Aisling -->
 - [ ] Synthetic data generator (~550 guests, messy cases) — Backend pair <!-- modified 2026-10-05 20:37 Aisling -->
 - [ ] Supabase sign-in (#8, PR #27 in review) and server-side staff roles (#9) — Cornell <!-- modified 2026-10-05 22:58 Aisling -->
 - [x] Get AAFE's materials (received Oct 5) — Natalie <!-- modified 2026-10-05 22:58 Aisling -->
@@ -47,7 +47,8 @@ The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus),
 - [ ] Merge PR #27 after Cornell updates it from `main` (17 commits behind) — Aisling <!-- modified 2026-10-06 05:50 Aisling -->
 - [ ] Natalie's review of the three import choices (Slack) — Natalie <!-- modified 2026-10-05 22:58 Aisling -->
 - [ ] Share the Pursuit PRD and the team PRD with the backend pair — whoever has them <!-- modified 2026-10-05 22:58 Aisling -->
-- [ ] Trello access for Cornell; Supabase project URL and public key to Cornell — Natalie <!-- modified 2026-10-05 22:58 Aisling -->
+- [ ] Trello access for Cornell — Natalie <!-- modified 2026-10-06 06:12 Aisling -->
+- [ ] Supabase project URL and public (anon) key to Cornell, never the service_role key; open until he confirms — Aisling <!-- updated 2026-10-06 06:12 Aisling -->
 - [ ] Upload screen: import engine, report, page picker, tier-mapping picker — Frontend pair <!-- modified 2026-10-05 22:58 Aisling -->
 - [ ] Staff app: show "sent" and "resend" for QR codes instead of the code itself — Frontend pair <!-- modified 2026-10-05 22:58 Aisling -->
 - [ ] Portal: "From your purchase: please confirm" labels; Korean — Frontend pair <!-- modified 2026-10-05 22:58 Aisling -->
@@ -58,7 +59,7 @@ The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus),
 
 ## Week of October 12
 
-- [ ] Packages, commitments, seats, and manual entry — Backend pair <!-- modified 2026-10-05 20:37 Aisling -->
+- [ ] Connect staff app pages to the backend's pledges, payments, comps, and seats (with #9) — Backend pair <!-- modified 2026-10-06 06:12 Aisling -->
 - [x] Give Lively import: real export, free-text guest lists (import engine, PRs #23–#24) — Aisling <!-- modified 2026-10-05 22:58 Aisling -->
 - [ ] Staff dashboard shell and guest grid — Frontend pair <!-- modified 2026-10-05 20:37 Aisling -->
 - [ ] Clickable prototype of the sponsor form and dashboard for AAFE — Frontend pair <!-- modified 2026-10-05 20:37 Aisling -->
@@ -72,7 +73,7 @@ The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus),
 ## Week of October 26
 
 - [ ] Exports: badges with table number, check-in list, Salesforce file — Backend pair <!-- modified 2026-10-05 20:37 Aisling -->
-- [ ] Follow-up email drafts with staff approval — Backend pair <!-- modified 2026-10-05 20:37 Aisling -->
+- [ ] Approval screen, plus reminder and receipt templates (draft queue and approval built in the backend) — Backend pair <!-- modified 2026-10-06 06:12 Aisling -->
 - [ ] Check-in app: search, arrivals, walk-ins, blank sponsor seats — Frontend pair <!-- modified 2026-10-05 20:37 Aisling -->
 - [ ] Show AAFE the full path for feedback — Natalie
 

@@ -15,7 +15,7 @@ Until Natalie's team PRD and Pursuit's PRD are final, these pages together are t
 | Out of scope | This page, "Later or out of scope"; [Overview](#overview), "What we will not build" | Settled <!-- new 2026-10-06 04:16 Aisling --> |
 | Success measures | The three questions below; AAFE's feedback on the full path (Oct 30); Demo Day (Nov 10) | No numeric targets yet <!-- new 2026-10-06 04:16 Aisling --> |
 | Data and AI rules | [Data and AI](#data-ai) | Settled; AAFE still to approve <!-- new 2026-10-06 04:16 Aisling --> |
-| Import rules | [Import and matching](#import) | Settled Oct 6 <!-- new 2026-10-06 04:16 Aisling --> |
+| Import rules | [Import and matching](#import) | Settled Oct 5; three choices awaiting Natalie's review <!-- modified 2026-10-06 06:12 Aisling --> |
 | Owners and timeline | [Build plan](#build-plan): two pairs, components C0–C12 | Settled Oct 5 <!-- new 2026-10-06 04:16 Aisling --> |
 | Decisions and open questions | [Decisions](#decisions), including "Pending" | Updated as we go <!-- new 2026-10-06 04:16 Aisling --> |
 | Risks | [Risks](#risks) | Updated as we go <!-- new 2026-10-06 04:16 Aisling --> |
@@ -48,6 +48,7 @@ From AAFE's intake form, for staff and for the Demo Day mock investor:
 - **Follow-up emails** drafted by the tool and approved by staff. [call]
 - **A category on every guest:** sponsor guest, ticket holder, comp, AAFE staff, volunteer, event staff, or government/VIP. [AAFE data] <!-- updated 2026-10-05 16:51 Aisling -->
 - **Seated or admitted.** Champion and above guarantee a table; Friend and Supporter tickets admit guests without one, so the guest list and badges show the difference. [AAFE data] <!-- updated 2026-10-05 16:51 Aisling -->
+- **Activity log** visible to staff, and to each sponsor for their own seats. [prototype] <!-- updated 2026-10-06 06:12 Aisling -->
 
 ## Should have
 <!-- updated 2026-10-05 16:51 Aisling -->
@@ -58,11 +59,12 @@ From AAFE's intake form, for staff and for the Demo Day mock investor:
 - **A multilingual sponsor form** in English, Chinese, Korean, and Spanish, reviewed by AAFE staff. [scope]
 - **aafe.org branding.** [call]
 - **Sponsor pipeline:** each prospect's stage (not started, reached out, in conversation, closed won, payment received, lost), the ask against the commitment, and the last two years' giving, as in AAFE's prospect tracker. [AAFE data] <!-- updated 2026-10-05 16:51 Aisling -->
+- **Relationship guests** (comps for officials, board, and partners) with personal QR invites. [prototype] <!-- updated 2026-10-06 06:12 Aisling -->
 
 ## Later or out of scope
 
 - Seating chart builder
-- Automatic Give Lively sync (stretch)
+- Automatic Give Lively sync (exists in Natalie's backend; not part of the Demo Day path, which uses the file upload) <!-- modified 2026-10-06 06:12 Aisling -->
 - Direct Salesforce integration
 - Payments, checkout, auctions, donor CRM
 - Production hosting and real guest data (AAFE's decision after Demo Day)
