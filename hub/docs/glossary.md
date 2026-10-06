@@ -1,5 +1,5 @@
 # Glossary
-<!-- updated Oct 6 -->
+<!-- updated 2026-10-05 22:58 Aisling -->
 
 Terms used across this hub, in plain language.
 

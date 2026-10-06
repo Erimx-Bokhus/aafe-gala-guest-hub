@@ -21,23 +21,33 @@ Put `<!-- team -->` on the line after a `##` heading to hide that section in cli
 
 ## Mark what changed
 
-Put one of these on the line after a heading to badge it:
+Every marker is an HTML comment: the kind, the date and time in New York time, who made the change, and an optional note.
 
-| Marker | Use it when |
-| --- | --- |
-| `<!-- new Oct 3 -->` | The page or section didn't exist before |
-| `<!-- updated Oct 3 -->` | Existing content had something added (rows, tasks, terms) |
-| `<!-- modified Oct 3 -->` | Existing content was changed or corrected (wording, numbers, a rule) |
+    <!-- modified 2026-10-06 14:32 Aisling -->
 
-After the `#` title it marks the whole page; after a `##` heading it marks that section. The date is free text and optional. The sidebar shows the page's own marker, or else its most significant section marker (new, then modified, then updated); hover it to see which sections. Team-only sections don't count in client view. Badges stay until you delete the marker line. Each reader can also click a badge to mark it read: it disappears for them only, saved in their browser, and the sidebar badge clears once nothing on that page is unread.
+| Kind | Icon | Use it when |
+| --- | --- | --- |
+| `new` | ✦ | The page, section, or line didn't exist before |
+| `updated` | + | Something was added to existing content (rows, tasks, terms) |
+| `modified` | ✎ | Existing content was changed or corrected (wording, numbers, a rule) |
+| `removed` | − | Something was taken out; say what in the note: `<!-- removed 2026-10-06 14:32 Aisling Pending row on code ownership -->` |
+| `important` | ! | Everyone should act on it: a decision reversed, a rule changed, a deadline moved. Use rarely |
+
+Where the marker goes decides what it marks:
+
+- **On the line after the `#` title:** the whole page.
+- **On the line after a `##` heading:** that section. It shows as a labelled tag on the heading.
+- **At the end of a line, list item, or table cell:** that exact line. It shows as a small icon; in a table row, put it before the last `|`.
+
+Hovering any tag or icon shows the kind, date, time, who, and note. Clicking it marks it read for that person only (saved in their browser); clicking a section's tag also clears the icons inside that section. The sidebar badge shows the most significant unread marker on the page (important, then new, removed, modified, updated); team-only sections don't count in client view. Markers stay in the file until someone deletes them. Older markers with free-text dates (`<!-- new Oct 3 -->`) still work.
 
 ## Log the change on What's new
 
 Every hub update also adds one line at the top of the `changes` block in `docs/changes.md`:
 
-    2026-10-06 | Aisling | requirements.working-prd-until-the-final-prds-arrive | One sentence on what changed
+    2026-10-06 14:32 | new | Aisling | requirements.working-prd-until-the-final-prds-arrive | One sentence on what changed
 
-Date, whose work it was (one of the four team names, so "Made by" works), the page id and section to link to (the section is the heading in lowercase with dashes; leave it off to link the page), and what changed. Don't reword an old line: its wording is part of how readers' "read" state is remembered.
+Date and time (New York), the kind (`new`, `updated`, `modified`, `removed`, `important`), whose work it was (one of the four team names, so "Made by" works), the page id and section to link to (the section is the heading in lowercase with dashes; leave it off to link the page), and what changed. Don't reword an old line: its wording is part of how readers' "read" state is remembered.
 
 On the published hub, each reader is identified by their claude.ai account; nobody types or picks a name. Their read state is saved in the artifact's shared storage under that account (each person can write only their own), and everyone sees who has read each change. The hub's owner (Aisling) links each account to a team name once, under "Link accounts to team names" on What's new; the storage rules let only the owner change those links. Locally, or signed out, read state stays in that browser. The page is team-only, so client view never shows it.
 
