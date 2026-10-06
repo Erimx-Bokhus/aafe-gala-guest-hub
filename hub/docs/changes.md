@@ -5,6 +5,7 @@ Every change to this hub, newest first. Open it while signed in to claude.ai and
 Each change has a kind, shown the same way on every page next to the exact line that changed: **✦ New** (didn't exist before), **+ Updated** (rows, tasks, or terms added), **✎ Modified** (wording, numbers, or a rule changed), **− Removed** (taken out), and **! Important** (everyone should act on it). Hover an icon for the date, time (New York), and who made the change; click it to mark it read.
 
 ```changes
+2026-10-06 06:30 | updated | Aisling | build-plan.where-each-component-stands | Exports built in the database: badge file with table numbers, printed check-in list, and Salesforce attendee file (PR #34); backend tests now 119
 2026-10-06 06:25 | new | Aisling | changes | Weekly review check: every page shows when it was last reviewed, and the sidebar and What's new flag pages that go more than 7 days without one
 2026-10-06 06:12 | modified | Aisling | decisions | Answers to the audit's 17 questions: seven decisions logged and both decision logs synced, Korean and Traditional Chinese, sign-in, QR scope, Cornell's keys, hosting order, and New York dates
 2026-10-06 05:50 | modified | Aisling | tasks | Page audit: 41 outdated facts and wording fixed across 14 pages (test counts, PR states, branch protection, purchase key, risks, decisions); each line has its own icon
