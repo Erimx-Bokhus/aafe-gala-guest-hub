@@ -5,6 +5,7 @@ Every change to this hub, newest first. Open it while signed in to claude.ai and
 Each change has a kind, shown the same way on every page next to the exact line that changed: **✦ New** (didn't exist before), **+ Updated** (rows, tasks, or terms added), **✎ Modified** (wording, numbers, or a rule changed), **− Removed** (taken out), and **! Important** (everyone should act on it). Hover an icon for the date, time (New York), and who made the change; click it to mark it read.
 
 ```changes
+2026-10-06 05:34 | new | Aisling | history | New page: History, every hub edit (with removed text) and every merged pull request, filtered by day, week, or month
 2026-10-06 05:10 | modified | Aisling | changes | Change icons now sit at the left of every changed row, task, term, and paragraph across the hub (262 lines, dated from git history)
 2026-10-06 04:58 | new | Aisling | changes | Change icons: ✦ new, + updated, ✎ modified, − removed, ! important, next to the exact line that changed; hover for the date and time
 2026-10-06 04:24 | new | Aisling | changes | New page: What's new, with "unread by me", "made by me", and who on the team has read each change, tied to each person's claude.ai account

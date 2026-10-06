@@ -449,6 +449,34 @@ mark{background:var(--mark);color:inherit;border-radius:2px;padding:0 1px}
 .ch-receipts b{color:var(--ok);font-weight:600}
 .ch-empty{padding:16px 18px;border:1px dashed var(--rule-strong);border-radius:10px;color:var(--soft);font:400 14px/1.5 var(--f-ui);margin:0}
 
+/* ---------- history: every hub edit and merged PR ---------- */
+.hl-seg{display:inline-grid;grid-template-columns:repeat(4,auto)}
+.hl-nav{display:flex;align-items:center;flex-wrap:wrap;gap:8px 10px;font:600 15px/1.3 var(--f-ui)}
+.hl-nav b{flex:1 1 160px;min-width:0}
+.hl-summary{font:500 13px/1.9 var(--f-ui);color:var(--soft);margin:0}
+.hl-summary .chg{margin:0 2px}
+.doc .hl-list{list-style:none;margin:0;padding:0}
+.doc .hl-item{max-width:none;margin:0;display:grid;grid-template-columns:70px minmax(0,1fr);gap:12px;padding:12px 0;border-top:1px solid var(--rule)}
+.doc .hl-item::marker{content:none}
+.hl-time{font:500 12px/1.7 var(--f-ui);color:var(--faint);font-variant-numeric:tabular-nums}
+.hl-body{min-width:0;display:flex;flex-direction:column;gap:3px}
+.hl-body > b,.hl-body > a{font:600 14.5px/1.4 var(--f-ui)}
+.hl-tag{font:600 10px/1 var(--f-ui);letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.hl-pr .hl-tag{color:var(--k-update)}
+.hl-meta{font:400 12px/1.4 var(--f-ui);color:var(--faint)}
+.doc .hl-lines{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:9px}
+.doc .hl-line{max-width:none;margin:0;display:grid;grid-template-columns:18px minmax(0,1fr);gap:9px;align-items:start}
+.doc .hl-line::marker{content:none}
+.hl-line .chg-i{margin:2px 0 0;cursor:default}
+.hl-where{font:500 11.5px/1.4 var(--f-ui);color:var(--soft);text-decoration:none;display:block;margin-bottom:2px}
+.hl-where:hover{color:var(--accent-text)}
+.hl-line del,.hl-line ins{display:block;font-size:13.5px;line-height:1.5;overflow-wrap:anywhere;padding:2px 8px;border-radius:5px}
+.hl-line del{color:var(--soft);background:color-mix(in srgb,var(--crit) 9%,transparent);text-decoration:line-through;text-decoration-color:color-mix(in srgb,var(--crit) 55%,transparent)}
+.hl-line ins{color:var(--ink);background:var(--ok-wash);text-decoration:none}
+.hl-line del + ins{margin-top:3px}
+.hl-more > summary{font:600 12px/1.4 var(--f-ui)!important;color:var(--accent-text)!important}
+@media (max-width:620px){.doc .hl-item{grid-template-columns:minmax(0,1fr);gap:2px}}
+
 /* ---------- page-end nav + footer ---------- */
 .pager{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:56px 0 0}
 .pager a{display:flex;flex-direction:column;gap:3px;padding:14px 16px;border:1px solid var(--rule);border-radius:10px;background:var(--surface);text-decoration:none;color:var(--ink)}
@@ -618,6 +646,7 @@ const PAGES = [
   {id:'decisions',    title:'Decisions',     group:'Operate'},
   {id:'documents',    title:'Documents',     group:'Reference'},
   {id:'glossary',     title:'Glossary',      group:'Reference'},
+  {id:'history',      title:'History',       group:'Reference', team:true},
 ];
 const NUMERALS = ['一','二','三','四','五','六','七','八','九','十'];
 const OWNERS = {backend:'Backend pair: Aisling + Cornell', frontend:'Frontend pair: Natalie + Antonin', shared:'Everyone'};
@@ -1105,6 +1134,71 @@ function setLink(member, uid){
     .catch(() => toast("That link didn't save. Only the hub's owner can link accounts."));
 }
 
+/* --- history: every hub edit and merged PR, from docs/history.json (hub/scripts/build-history.mjs builds it from git) --- */
+let hist = null, histP = null;
+const histState = {period: store.get('aafe-hub-hist-period', 'week'), anchor: null, kind: '', who: '', page: '', type: 'all'};
+function fenceHistory(){ return '<div class="hist" data-hist><p class="loading">Loading the history…</p></div>'; }
+const dayOf = t => t.slice(0, 10);
+function periodStart(d, period){ const x = new Date(d); if (period === 'week') x.setDate(x.getDate() - (x.getDay() + 6) % 7); if (period === 'month') x.setDate(1); return x; }
+function periodShift(d, period, n){ const x = new Date(d); if (period === 'day') x.setDate(x.getDate() + n); else if (period === 'week') x.setDate(x.getDate() + 7 * n); else x.setMonth(x.getMonth() + n); return x; }
+function periodLabel(start, period){
+  if (period === 'day') return start.toLocaleDateString('en-US', {weekday: 'long', month: 'short', day: 'numeric', year: 'numeric'});
+  if (period === 'week'){ const e = periodShift(start, 'day', 6); return `Week of ${fmtR(start, e)}, ${e.getFullYear()}`; }
+  return start.toLocaleDateString('en-US', {month: 'long', year: 'numeric'});
+}
+function mountHistory(el){
+  if (hist){ renderHistory(el); return; }
+  (histP ||= fetch('docs/history.json', {cache: 'no-cache'}).then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); }))
+    .then(h => { hist = h; document.querySelectorAll('#doc [data-hist]').forEach(renderHistory); })
+    .catch(e => { histP = null; el.innerHTML = `<p class="ch-empty">The history couldn't load (${esc(e.message || e)}). Rebuild it with <code>node hub/scripts/build-history.mjs</code> and publish again.</p>`; });
+}
+function renderHistories(){ document.querySelectorAll('#doc [data-hist]').forEach(mountHistory); }
+function renderHistory(el){
+  const s = histState, h = hist;
+  const days = [...h.commits, ...h.prs].map(x => dayOf(x.t)).sort();
+  const latest = days.length ? parseDate(days[days.length - 1]) : new Date();
+  const start = s.period === 'all' ? null : periodStart(s.anchor || latest, s.period), end = start && periodShift(start, s.period, 1);
+  const inRange = t => { if (!start) return true; const d = parseDate(dayOf(t)); return d >= start && d < end; };
+  const commits = s.type === 'pr' ? [] : h.commits.filter(c => inRange(c.t) && (!s.who || c.who === s.who))
+    .map(c => ({...c, changes: c.changes.filter(x => (!s.kind || x.kind === s.kind) && (!s.page || x.page === s.page))})).filter(c => c.changes.length);
+  // kind and page describe hub edits, so they hide PRs unless the view is PRs only
+  const prs = s.type === 'hub' || (s.type !== 'pr' && (s.kind || s.page)) ? [] : h.prs.filter(p => inRange(p.t) && (!s.who || p.who === s.who));
+  const counts = {}; commits.forEach(c => c.changes.forEach(x => { counts[x.kind] = (counts[x.kind] || 0) + 1; }));
+  const nLines = Object.values(counts).reduce((a, b) => a + b, 0), pl = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+  const summary = `${pl(commits.length, 'hub edit')} · ${pl(nLines, 'line')}${Object.keys(CHG).filter(k => counts[k]).map(k => ` <span class="chg k-${k}">${counts[k]} ${CHG[k]}</span>`).join('')} · ${pl(prs.length, 'pull request')} merged`;
+  const pageTitle = id => (PAGES.find(p => p.id === id) || {title: id}).title;
+  const time = t => fmtTime(+t.slice(11, 13), t.slice(14, 16));
+  const line = x => `<li class="hl-line"><span class="chg-i k-${x.kind}" role="img" aria-label="${CHG[x.kind]}" data-tip="${CHG[x.kind]}"></span><div>
+    <a class="hl-where" href="#${esc(x.page)}${x.sec ? '.' + esc(x.sec) : ''}">${esc(pageTitle(x.page))}${x.sec ? ' › ' + esc(x.sec.replace(/-/g, ' ')) : ''}</a>
+    ${x.before ? `<del>${esc(x.before)}</del>` : ''}${x.after ? `<ins>${esc(x.after)}</ins>` : ''}</div></li>`;
+  const card = i => {
+    if (i.p) return `<li class="hl-item hl-pr"><span class="hl-time">${time(i.t)}</span><div class="hl-body"><span class="hl-tag">Pull request merged</span>
+      <a href="https://github.com/${esc(h.repo)}/pull/${i.p.n}" target="_blank" rel="noopener">#${i.p.n} ${esc(i.p.title)}</a><span class="hl-meta">${esc(i.p.who || 'Someone')} · ${esc(i.p.branch)}</span></div></li>`;
+    const c = i.c, first = c.changes.slice(0, 6), rest = c.changes.slice(6);
+    return `<li class="hl-item"><span class="hl-time">${time(i.t)}</span><div class="hl-body"><span class="hl-tag">Hub edit</span><b>${esc(c.msg)}</b>
+      <span class="hl-meta">${esc(c.who)} · ${pl(c.changes.length, 'line')} · ${esc(c.sha)}</span><ul class="hl-lines">${first.map(line).join('')}</ul>${
+      rest.length ? `<details class="hl-more"><summary>Show ${rest.length} more</summary><ul class="hl-lines">${rest.map(line).join('')}</ul></details>` : ''}</div></li>`;
+  };
+  const items = [...commits.map(c => ({t: c.t, c})), ...prs.map(p => ({t: p.t, p}))].sort((a, b) => (a.t < b.t ? 1 : -1));
+  const itemDays = [...new Set(items.map(i => dayOf(i.t)))];
+  const body = items.length ? itemDays.map(d => `<section><h3 class="ch-date">${esc(parseDate(d).toLocaleDateString('en-US', {weekday: 'long', month: 'short', day: 'numeric'}))}</h3><ol class="hl-list">${
+      items.filter(i => dayOf(i.t) === d).map(card).join('')}</ol></section>`).join('')
+    : `<p class="ch-empty">${start ? `Nothing in this ${s.period}. Use ← to step back.` : 'Nothing matches these filters.'}</p>`;
+  const opt = (v, cur, label) => `<option value="${esc(v)}"${v === cur ? ' selected' : ''}>${esc(label)}</option>`;
+  const pages = [...new Set(h.commits.flatMap(c => c.changes.map(x => x.page)))].sort((a, b) => pageTitle(a).localeCompare(pageTitle(b)));
+  const whos = [...new Set([...h.commits.map(c => c.who), ...h.prs.map(p => p.who)].filter(Boolean))].sort();
+  const seg = [['day', 'Day'], ['week', 'Week'], ['month', 'Month'], ['all', 'All time']]
+    .map(([v, l]) => `<button type="button" data-hp="${v}" aria-pressed="${s.period === v}">${l}</button>`).join('');
+  const nav = start ? `<div class="hl-nav"><button class="btn" type="button" data-hstep="-1" aria-label="Previous ${s.period}">←</button><b>${esc(periodLabel(start, s.period))}</b>
+    <button class="btn" type="button" data-hstep="1" aria-label="Next ${s.period}"${latest < end ? ' disabled' : ''}>→</button><button class="btn" type="button" data-hstep="0"${latest < end ? ' disabled' : ''}>Latest</button></div>` : '';
+  el.innerHTML = `<div class="ch-bar"><div class="seg hl-seg" role="group" aria-label="Period">${seg}</div>
+    <label for="hl-type">Show <select id="hl-type">${opt('all', s.type, 'Hub edits and PRs')}${opt('hub', s.type, 'Hub edits')}${opt('pr', s.type, 'Pull requests')}</select></label>
+    <label for="hl-kind">Kind <select id="hl-kind">${opt('', s.kind, 'Any')}${['new', 'updated', 'modified', 'removed'].map(k => opt(k, s.kind, CHG[k])).join('')}</select></label>
+    <label for="hl-page">Page <select id="hl-page">${opt('', s.page, 'Any')}${pages.map(p => opt(p, s.page, pageTitle(p))).join('')}</select></label>
+    <label for="hl-who">Who <select id="hl-who">${opt('', s.who, 'Anyone')}${whos.map(w => opt(w, s.who, w)).join('')}</select></label></div>
+    ${nav}<p class="hl-summary">${summary}</p>${body}<p class="ch-you">Built from the repository's history on ${esc(h.generated)} ET. Times are New York time.</p>`;
+}
+
 function fenceNotes(src){ return `<details class="notes" data-notes><summary>Speaker notes</summary><p>${esc(src.trim())}</p></details>`; }
 
 marked.use({ gfm:true, renderer:{
@@ -1125,6 +1219,7 @@ marked.use({ gfm:true, renderer:{
       case 'wireframe': return fenceWireframe(arg);
       case 'notes': return fenceNotes(code);
       case 'changes': return fenceChanges(code);
+      case 'history': return fenceHistory();
     }
     return `<pre><code${lang ? ` class="lang-${esc(lang)}"` : ''}>${esc(code)}</code></pre>`;
   },
@@ -1322,6 +1417,7 @@ function decorate(doc, id){
       if (host){ node.remove(); host.prepend(i); } else node.replaceWith(i); }); });
   doc.querySelectorAll('[data-wt]').forEach(mountWalkthrough);
   doc.querySelectorAll('[data-chlog]').forEach(renderChlog);
+  doc.querySelectorAll('[data-hist]').forEach(mountHistory);
   doc.querySelectorAll('[data-erd]').forEach(e => { drawErd(e); });
   // glossary filter
   doc.querySelectorAll('.gl-filter').forEach(inp => inp.addEventListener('input', () => {
@@ -1530,11 +1626,18 @@ document.addEventListener('click', e => {
   else if (t.dataset.chopen) readEntries([t.dataset.chopen]);   // the link still opens the change
 });
 function readInline(i){ readMarks = {...readMarks}; i.dataset.key.split('\n').forEach(k => { readMarks[k] = true; }); store.set('aafe-hub-read', readMarks); i.remove(); tip.hidden = true; buildNav(); updateNav(); }
-document.addEventListener('click', e => { const i = e.target.closest('.chg-i'); if (i){ e.preventDefault(); readInline(i); } });
-document.addEventListener('keydown', e => { const i = e.target.closest && e.target.closest('.chg-i'); if (i && (e.key === 'Enter' || e.key === ' ')){ e.preventDefault(); readInline(i); } });
+document.addEventListener('click', e => { const i = e.target.closest('.chg-i[data-key]'); if (i){ e.preventDefault(); readInline(i); } });
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-hp],[data-hstep]'); if (!t) return;
+  if (t.dataset.hp){ histState.period = t.dataset.hp; histState.anchor = null; store.set('aafe-hub-hist-period', t.dataset.hp); }
+  else { const n = +t.dataset.hstep; histState.anchor = n === 0 ? null : periodShift(periodStart(histState.anchor || parseDate(dayOf([...hist.commits, ...hist.prs].map(x => x.t).sort().pop())), histState.period), histState.period, n); }
+  renderHistories();
+});
+document.addEventListener('keydown', e => { const i = e.target.closest && e.target.closest('.chg-i[data-key]'); if (i && (e.key === 'Enter' || e.key === ' ')){ e.preventDefault(); readInline(i); } });
 document.addEventListener('change', e => {
   if (e.target.id === 'ch-who'){ chWho = e.target.value; renderChlogs(); }
   else if (e.target.id === 'ch-kind'){ chKind = e.target.value; renderChlogs(); }
+  else if (/^hl-(type|kind|page|who)$/.test(e.target.id)){ histState[e.target.id.slice(3)] = e.target.value; renderHistories(); }
   else if (e.target.dataset && e.target.dataset.link) setLink(e.target.dataset.link, e.target.value);
 });
 $('#q').addEventListener('input', e => runSearch(e.target.value));
