@@ -1,4 +1,5 @@
 # Discovery
+<!-- reviewed 2026-10-06 Aisling -->
 
 What AAFE told us on the October 1 call, in their words where it matters. Sarah ran the guest list for the 2026 gala while Janelle was on leave.
 

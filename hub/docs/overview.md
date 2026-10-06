@@ -1,5 +1,6 @@
 # Overview
 <!-- modified 2026-10-05 16:51 Aisling -->
+<!-- reviewed 2026-10-06 Aisling -->
 
 AAFE runs one gala a year for 500–600 guests, and its guest list lives in a single spreadsheet that staff rebuild by hand from Give Lively purchases, emailed sponsorship pledges, checks, and comps. We are building one reliable guest list on top of Give Lively that sponsors can update themselves and staff can trust from first purchase to gala-night check-in.
 
