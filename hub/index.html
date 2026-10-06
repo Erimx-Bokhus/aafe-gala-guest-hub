@@ -1011,7 +1011,7 @@ function pageMark(id){
   const own = m.find(x => x.page); if (own) return {kind: own.kind, tip: `${CHG[own.kind]} page${own.on ? ' · ' + own.on : ''}`};
   if (!m.length) return null;
   const top = m.reduce((a, b) => CHG_RANK[b.kind] > CHG_RANK[a.kind] ? b : a);
-  return {kind: top.kind, tip: m.map(x => `${CHG[x.kind]}: ${x.label}`).join(' · ')};
+  return {kind: top.kind, sec: m[0].key.split('|')[1], tip: m.map(x => `${CHG[x.kind]}: ${x.label}`).join(' · ')};
 }
 
 /* ============ nav ============ */
@@ -1021,7 +1021,7 @@ function buildNav(){
   $('#nav').innerHTML = groups.map(g => `<div class="nav-group"><div class="nav-label">${g}</div>${
     vis.filter(p => p.group === g).map(p => { const i = vis.indexOf(p);
       const mk = pageMark(p.id);
-      const tags = (mk ? `<span class="chg k-${mk.kind}" title="${esc(mk.tip)}">${CHG[mk.kind]}</span>` : '') + (p.team ? '<span class="tag">Team</span>' : '');
+      const tags = (mk ? `<span class="chg k-${mk.kind}" title="${esc(mk.tip)}${mk.sec ? ' · click to go there' : ''}"${mk.sec ? ` data-sec="${mk.sec}"` : ''}>${CHG[mk.kind]}</span>` : '') + (p.team ? '<span class="tag">Team</span>' : '');
       return `<a href="#${p.id}" data-id="${p.id}"><span class="n">${pad(i+1)}</span><span>${esc(p.title)}</span>${tags ? `<span class="tags">${tags}</span>` : ''}</a><ul class="toc" data-toc="${p.id}" hidden></ul>`; }).join('')
   }</div>`).join('');
   document.querySelectorAll('[data-mode]').forEach(b => b.setAttribute('aria-pressed', String((b.dataset.mode === 'client') === client)));
@@ -1036,8 +1036,9 @@ function updateNav(){
     t.innerHTML = hs.map(h => `<li><button type="button" data-h="${h.id}">${esc(h.dataset.label)}</button></li>`).join('');
     t.hidden = hs.length === 0;
   });
-  const a = document.querySelector(`#nav a[data-id="${current}"]`);
-  if (a && window.matchMedia('(max-width:900px)').matches) a.scrollIntoView({block:'nearest', inline:'center'});
+  const a = document.querySelector(`#nav a[data-id="${current}"]`), nav = $('#nav');
+  // scroll only the tab strip: scrollIntoView would also scroll the page up to the sticky strip
+  if (a && window.matchMedia('(max-width:900px)').matches) nav.scrollLeft = a.offsetLeft - (nav.clientWidth - a.offsetWidth) / 2;
 }
 
 /* ============ load + render ============ */
@@ -1294,6 +1295,9 @@ window.addEventListener('hashchange', () => {
 
 /* ============ events ============ */
 document.addEventListener('click', e => {
+  const badge = e.target.closest('#nav .chg[data-sec]');
+  if (badge){ e.preventDefault(); const id = badge.closest('a').dataset.id;
+    if (id === current) show(id, {section: badge.dataset.sec}); else location.hash = `${id}.${badge.dataset.sec}`; return; }
   const t = e.target.closest('[data-present],[data-go],[data-h],[data-mode],[data-copy],#prev,#next,#exit,#notes-btn,#copy-view'); if (!t) return;
   if (t.matches('[data-present]')) setPresenting(true);
   else if (t.matches('[data-mode]')) setClient(t.dataset.mode === 'client');
