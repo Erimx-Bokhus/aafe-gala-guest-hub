@@ -52,9 +52,9 @@ ok(await err('anon', null, `select gl_import('[]', 'x')`) !== null, 'anon cannot
 ok((await as('authenticated', ADMIN, `select staff_me() m`))[0].m.role === 'gala_admin', 'staff_me resolves role')
 ok((await as('authenticated', RM, `select count(*)::int n from guests`))[0].n > 0, 'RM reads guests')
 ok((await as('authenticated', vol, `select count(*)::int n from guests`))[0].n === 0, 'volunteer cannot read guests table')
-ok((await as('authenticated', 'stranger@x.org', `select count(*)::int n from orders`))[0].n === 0, 'non-staff user reads nothing')
+ok((await as('authenticated', 'stranger@example.org', `select count(*)::int n from orders`))[0].n === 0, 'non-staff user reads nothing')
 ok((await as('authenticated', vol, `select jsonb_array_length(checkin_list()) n`))[0].n > 0, 'volunteer gets check-in list')
-ok((await err('authenticated', vol, `select staff_add_pledge('a','b','c@x.org','gold','check')`)) === 'forbidden', 'volunteer cannot add pledge')
+ok((await err('authenticated', vol, `select staff_add_pledge('a','b','c@example.org','gold','check')`)) === 'forbidden', 'volunteer cannot add pledge')
 ok((await err('authenticated', RM, `update audit_log set summary='x'`)) !== null || (await as('authenticated', RM, `select count(*)::int n from audit_log where summary='x'`))[0].n === 0, 'audit_log not updatable')
 ok((await err('authenticated', RM, `insert into guests (id) values ('x')`)) !== null, 'no direct writes')
 

@@ -51,7 +51,7 @@ The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus),
 - [ ] Upload screen: import engine, report, page picker, tier-mapping picker — Frontend pair
 - [ ] Staff app: show "sent" and "resend" for QR codes instead of the code itself — Frontend pair
 - [ ] Portal: "From your purchase: please confirm" labels; Korean — Frontend pair
-- [ ] Frontend build check, demo-data drift check, real-data guard in CI — Backend pair
+- [x] Frontend build check, demo-data drift check, real-data guard in CI — Backend pair
 - [ ] Informal client demo, Wednesday Oct 7 — Natalie
 
 ## Week of October 12
