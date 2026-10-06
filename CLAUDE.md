@@ -10,6 +10,7 @@ technical partner.** Production hosting and real data are AAFE's decisions after
 
 ## Read first
 - `docs/discovery-2026-10-01.md`: what the client actually said (highest authority after the client)
+- `docs/aafe-materials-2026-10-05.md`: structure of AAFE's real spreadsheet, Give Lively export, tiers, and deadlines (the files stay out of the repo)
 - `docs/requirements.md`: prioritized requirements
 - `docs/decisions.md`: decision log; do not reopen a decision without new information
 - `docs/data-model.md`: proposed schema and the merge plan with Natalie's prototype schema
@@ -29,26 +30,27 @@ technical partner.** Production hosting and real data are AAFE's decisions after
 9. **Maintainability over cleverness.** AAFE's tech capacity is "pretty low." Prefer mainstream, well-documented choices a future partner can pick up.
 
 ## Stack
-**Status: pending team decision (Oct 3–5).** Do not scaffold until `docs/decisions.md` records the choice.
-Candidates on the table: React + TypeScript with Supabase Postgres (matches Natalie's prototype and seed data), or Next.js + TypeScript with Postgres. Either way: Postgres, typed code, and the import/matching logic isolated in its own tested module.
+**Decided Oct 5** (`docs/decisions.md`): React + TypeScript (Vite, Tailwind) on Supabase (Postgres, Auth, Edge Functions), on Supabase's free plan for the prototype. Matches Natalie's prototype in `prototype/`. Keep the import/matching logic isolated in its own tested module.
 
 ## Reference prototype
 Natalie built clickable concepts of the sponsor portal and staff app (shared in Slack Oct 2; source link pending). Treat them as the UI reference, not the scope: emails, seating chart, fee analytics, and Salesforce sync are trimmed per `docs/requirements.md`. Her seed data is in `seed/natalie-prototype/`; what was adopted and what must change is in `docs/research/prototype-review-2026-10-03.md`.
 
 ## Working in this repo
-- **Never commit or push to `main`.** GitHub's free plan can't lock `main` on a private repo, so nothing stops a direct push; this rule is the protection. Changes reach `main` only through a pull request.
+- **Never commit or push to `main`.** `main` is protected (GitHub Team, Oct 5): changes reach it only through a pull request with 1 approval and a passing secret scan (`gitleaks`); no force-pushes or deletion.
 - Branches: each person works on their own branch (`aisling`, `natalie`, `cornell`, `antonin`) or a short feature branch off it (`aisling-import-engine`; a `name/...` prefix is impossible while a branch called `name` exists).
 - Aisling is the repo admin: every pull request is reviewed and merged by Aisling (`nessaisling-lab` or `aislingld-pursuit`).
 - Merge `main` into your branch often; send work back as small pull requests.
 - Commit messages say what changed and why. Credit co-authors with `Co-authored-by:` trailers.
 
 ## Team
-| Person | GitHub | Role |
-| --- | --- | --- |
-| Natalie Walker | wsvdesign | Product lead, UI/UX, client contact |
-| Aisling Leiva-Davila | nessaisling-lab / aislingld-pursuit | Backend, GitHub and integrations |
-| Cornell Robertson | CodeToTheCore | Backend lead |
-| Antonin Lesov | antoninlesov | Frontend, UI/UX |
+| Person | GitHub | Pair | Role |
+| --- | --- | --- | --- |
+| Natalie Walker | wsvdesign | Frontend | Product lead, UI/UX, client contact |
+| Antonin Lesov | antoninlesov | Frontend | Frontend, UI/UX |
+| Aisling Leiva-Davila | nessaisling-lab / aislingld-pursuit | Backend | Backend, GitHub and integrations, repo admin |
+| Cornell Robertson | CodeToTheCore | Backend | Backend |
+
+Work is split between two pairs (Oct 5, `docs/decisions.md`): every build area has a pair, not one person. Frontend: staff app, sponsor portal, check-in, branding. Backend: Supabase backend, Give Lively import, sign-in and roles, secure links, exports, emails.
 
 ## Key dates
 - Oct 3–5: stack decided, areas assigned

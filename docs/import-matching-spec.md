@@ -1,221 +1,347 @@
 # Give Lively import and matching spec
 
-Status: draft, Oct 3 2026. Written before AAFE's sample Give Lively exports arrive (promised ~Oct 8).
-Column names and the per-ticket ID below are assumptions; revisit this spec when the samples land.
+Status: **revised Oct 5, 2026** for AAFE's real Give Lively ticket export (`docs/aafe-materials-2026-10-05.md`)
+and Natalie's Supabase backend (`natalie-backend` branch: `prototype/database/schema.sql`, `backend.sql`),
+then updated the same day with Natalie's review: sponsors confirm imported names, names print exactly as
+typed, a sturdier purchase key, date-range-aware missing checks, and four parsing gaps. Updated Oct 6
+from Natalie's second review of the real export: a staff-maintained tier mapping (the export's tier is
+just "Ticket") and a gala page filter that matches AAFE's real page name. Three rules settled Oct 6
+while building the engine (`docs/decisions.md`): partly clear guest lists still pre-fill, a name-only
+match is a possible duplicate, and an upload with no gala page set asks for it.
+Replaces the Oct 3 draft, which assumed one row per ticket and a transaction ID; the real export has neither.
 
-Applies hard rules 1, 4, 6, and 7 in `CLAUDE.md`. Table names follow `docs/data-model.md` (draft schema)
-and its merge plan with Natalie's prototype schema (`commitments` = her `orders`, `contacts` = her
-`guests` and `sponsors`).
+Applies hard rules 1, 4, 5, 6, and 7 in `CLAUDE.md`. All examples and test data are invented.
 
-The import logic lives in its own module with no UI or HTTP code in it, so it can be tested on its own
-against the cases at the end of this document.
+## 0. Where the import lives
 
-## 1. Input
+The import builds on Natalie's backend instead of a separate set of tables. Both entry points already
+normalize rows and call one database function, `gl_import(p_rows jsonb, p_actor text)`:
 
-A CSV exported from Give Lively's event attendee report, uploaded by staff. One row per ticket.
-Rows from the same purchase share a transaction ID and repeat the purchaser's details.
+- **CSV upload** from the staff app (`staff_import_givelively`), admin only. **This is the path for the
+  real ticket export and for the demo.**
+- **Automatic sync** from Give Lively's Zapier JSON feed (`givelively-sync` edge function). Stretch goal.
 
-Columns are mapped once per source and saved, so staff do not remap every upload:
+The parsing and matching rules (sections 2–4) live in one TypeScript module with no UI or database code,
+so they can be unit-tested (section 11). `gl_import()` stays the single place that writes to the database.
 
-| Field | Required | Notes |
-| --- | --- | --- |
-| `transaction_id` | yes | Give Lively donation/transaction ID; groups rows into one order |
-| `ticket_id` | if present | Per-ticket ID. **Open:** confirm the export has one (see section 9) |
-| `ticket_type` | yes | Ticket or sponsorship name; mapped to a package (section 3) |
-| `purchaser_first_name`, `purchaser_last_name` | yes | |
-| `purchaser_email` | yes | |
-| `purchaser_organization` | no | |
-| `attendee_first_name`, `attendee_last_name` | no | Blank means an unnamed seat |
-| `attendee_email`, `attendee_title`, `attendee_organization` | no | |
-| `amount` | yes | Parsed to integer cents |
-| `purchased_at` | yes | Parsed to a timestamp in America/New_York |
-| `status` | no | e.g. completed / refunded, if the export carries it |
+### What changes in Natalie's current `gl_import()`
 
-Anything else in the row is kept in `source_records.raw` but not used.
+| # | Today | Change | Why |
+| --- | --- | --- | --- |
+| 1 | Skips any row without a transaction ID | Every purchase gets a **purchase key** from email + purchase moment in UTC (section 2) | The real export has no transaction ID; every row would be skipped |
+| 2 | Never reads guest names | Parse the free-text guest list and **pre-fill the sponsor's portal** for them to confirm (section 3) | Eval blocker: "Import attendee names from Give Lively"; sponsors editing their own guests is AAFE's top priority |
+| 3 | Unknown tier → defaults to Community Ticket | Tier resolved through a **staff-maintained tier mapping**; still unknown → staff review, nothing created until mapped (section 3) | A wrong default gives wrong seat counts silently; the real export's tier is just "Ticket" |
+| 4 | Buyer matched to a sponsor by email only | Email **and** last name (section 4) | Shared inboxes must not merge two people |
+| 5 | Rows missing from a later export go unnoticed | Flag them, within the uploaded file's date range (section 5) | Eval blocker: "Flag rows absent from later imports" |
+| 6 | Seats = tier seat count × quantity | Use the export's **Total Seats** column; fall back to tier × quantity | The export states it directly |
+| 7 | JSON sync keeps campaigns whose name contains `GIVELIVELY_CAMPAIGNS` (`"AAFE Gala 2027"`) | Match the gala's **Give Lively page name**, stored per gala (section 3) | The real page is "AAFE's 52nd Annual Gala"; with today's setting every real purchase is ignored |
 
-## 2. Pipeline
+Kept as they are: idempotent re-import, refunds updating payments, fees stored as reported, portal-link
+email queued as a **draft** for staff approval (hard rule 4), hashed portal tokens (hard rule 6).
 
-One import is one database transaction. If any step throws, nothing is applied and the run is
-recorded as `failed` with the error.
+## 1. Input: Give Lively ticket export
 
-1. **Record the run.** `import_runs` row: who, when, file name, SHA-256 of the file.
-2. **Parse and validate** each row. A row with a missing required field, an unparseable amount or
-   date, or no mapping for its columns is **rejected**: it is listed in the report with its row number
-   and reason and goes no further. A second row with the same `source_id` in one file is also rejected
-(duplicate). Rejected rows are not review items; the fix is a corrected file.
-3. **Stage.** Upsert each valid row into `source_records` keyed by `(source, source_id)`, storing the
-   raw row and a hash of its mapped fields. `source_id` is `ticket_id` if the export has one,
-   otherwise `transaction_id:n` where `n` is the row's position within its transaction (see section 9).
-   A row whose hash is unchanged since the last import is **unchanged** and skipped.
-4. **Group** new and changed rows by `transaction_id` into orders.
-5. **Match** purchaser and attendees to contacts (section 4).
-6. **Apply** to commitments, seats, and contacts, respecting overrides (section 6).
-7. **Detect** missing rows and conflicts (section 5), add review items.
-8. **Report** (section 7) and mark the run `succeeded`.
+One row **per purchase**. Columns are matched by header name (case and spacing ignored), so column order
+doesn't matter.
+
+| Export column | Normalized field | Required | Notes |
+| --- | --- | --- | --- |
+| First Name, Last Name | `first`, `last` | yes | The buyer |
+| Email | `email` | yes | The buyer |
+| Tier Purchased | `ticket_level` | yes | Mapped to a sponsorship tier (section 3) |
+| Tier Category | `tier_category` | no | Ticket vs sponsorship, as Give Lively labels it |
+| Tickets Purchased | `quantity` | no | |
+| Total Seats | `seats` | no | Preferred seat count |
+| Amount Spent | `gross` | yes | `$1,000.00` → 1000.00 |
+| Amount Refunded | `refunded` | no | |
+| Transaction Fee Covered | `covered` | no | Donor-covered fee |
+| Date/Time of Purchase | `date` | yes | `2026-02-05 05:14:46 PM EST`; converted to UTC |
+| Payment Method | `method` | no | e.g. "Stripe Card" |
+| Status | `status` | no | e.g. "succeeded"; refunds and failures read from here |
+| Page Name / Internal Name | `campaign` | no | Which gala page the purchase came from |
+| Company/Organization Name | `company` | no | |
+| Phone Number | — | — | **Not imported.** Phones aren't needed for the guest list |
+| Please list the name(s) and email address(es) of all guests… | `guest_text` | no | Free text; section 3. Matched by its start ("Please list the name") |
+| Address columns, Referrer URL, UTM Source, Client Application Name, Double the Donation | — | — | Not imported; kept in the raw row |
+
+Fully blank rows (the sample export ends with two) are ignored, not reported.
+
+## 2. Pipeline and purchase key
+
+One upload is one database transaction: if anything fails, nothing is applied and the run is recorded as
+failed with the error.
+
+1. **Record the run** in `import_runs`: who, when, file name, file hash, and the earliest and latest
+   purchase time in the file.
+2. **Parse and validate** each row. Missing required field, unreadable amount or date → **rejected**,
+   listed with its row number and reason. Rejected rows aren't review items; the fix is a corrected file.
+3. **Purchase key** = SHA-256 of (lower-cased, trimmed buyer email | purchase moment converted to UTC,
+   to the second). The tier is deliberately left out, so a tier renamed mid-campaign doesn't turn past
+   purchases into new ones. One buyer making two purchases in the same second doesn't happen; a second
+   row with the same key in one file is rejected as a duplicate.
+   - `gl_import()` dedupes on this key (a `purchase_key` column on `payments`, unique), not on the
+     transaction ID.
+   - **Both entry points compute the same key** from the same two fields, so the CSV upload and the JSON
+     sync recognize each other's purchases. When a transaction ID exists (JSON sync, or the optional
+     "Line Items (All)" report in section 10), it's stored alongside the key.
+4. **Unchanged rows skip.** A key already imported with the same raw row changes nothing.
+5. **Create or update** the order, payment, seats, and imported guest names (sections 3–5).
+6. **Detect** purchases missing since the last upload, within this file's date range (section 5).
+7. **Report** (section 8).
 
 Re-importing the same file changes nothing and reports every row as unchanged.
 
-## 3. Rows to orders, guests, and seats
+## 3. Rows to orders, seats, and guests (Natalie's schema)
 
-- **Order → commitment and payment.** One commitment per `transaction_id`, `source = givelively`,
-  amount = sum of the rows, plus one `payments` row (`method = givelively`,
-  `reference = transaction_id`). The commitment's `payment_status` is derived from its payments.
-- **Package.** `ticket_type` is looked up in a staff-maintained table of ticket type → package
-  (Give Lively ticket names change between years; packages belong to one `gala_events` row). A ticket type with
-  no mapping sends the whole order to review (`unknown_ticket_type`) and creates nothing until staff
-  map it.
-- **Kind.** The package decides it: individual tickets → `ticket`, sponsorship packages → `sponsorship`.
-- **Seats.**
-  - Ticket orders: one seat per row.
-  - Sponsorship orders: `package.seat_count` seats, whatever the row count. Attendee rows fill seats
-    in row order; the rest stay unnamed (`attendee_id IS NULL`).
-  - More named attendees than seats → review (`seat_overflow`); extra names are held, not dropped.
-- **Purchaser vs attendee.** The purchaser is a contact linked as `commitments.purchaser_id`. An
-  attendee row with a name becomes (or matches) a separate contact linked to the seat. A purchaser is
-  only seated if a row names them as an attendee.
-- **Seat source link.** Each seat created from a row stores that row's `source_record_id`, so the
-  next import of the same row updates the same seat (`source_record_id` in `docs/data-model.md`).
-- **Sponsor link.** A new sponsorship order with unnamed seats gets a `sponsor_links` row (random
-  token, hashed) and a **draft** email in the approval queue. Nothing is sent by the import (rule 4).
-- **Relationship owner.** Not in the Give Lively data. Left blank and shown in the "no owner" view;
-  if the purchaser already has an owner on another commitment, that owner is suggested, not set.
+- **Order and payment.** One `orders` row per purchase key, `source = givelively`, plus one `payments`
+  row. Status `paid`, or `partially_paid` if refunds bring it below the commitment.
+- **Tier.** Resolved in this order (details below): the gala's tier mapping, then Natalie's longest-name
+  match against `sponsorship_tiers`. No match → staff review `unknown_tier`; nothing is created for that
+  row until staff map the tier and re-run.
+- **Seats.** `Total Seats` seats (fallback: tier seat count × tickets purchased). Advertising-only tiers
+  get none.
+- **Seated or admitted.** Champion and above guarantee a table; Friend, Supporter, and single tickets are
+  admitted without one (AAFE's 2026 flyer). Proposed: a `guaranteed_seating` flag on `sponsorship_tiers`,
+  so the guest list and badges can show it.
+
+### Tier mapping
+
+AAFE's real export says only `Ticket` in both Tier Purchased and Tier Category, and no app tier is called
+that. Without a mapping, every ordinary ticket purchase would land in staff review.
+
+Proposed table `tier_mappings` (id, event, Give Lively tier name, tier, created by, created at), unique on
+event + normalized Give Lively name (NFKC, case-folded, trimmed, inner spaces collapsed):
+
+1. Staff fill it in **once per gala**, before the first upload, from a short list of the tier names seen in
+   the file. The import report lists any tier name with no mapping.
+2. The import looks up Tier Purchased in the mapping first, then falls back to the longest-name match.
+3. Resolving an `unknown_tier` review item saves a mapping, so every row with that name resolves on the
+   re-run and on later uploads; staff don't map the same name twice.
+4. Changing a mapping doesn't rewrite orders already imported; the change is logged and those orders keep
+   their tier until staff change them (hard rule 7).
+
+One Give Lively name maps to one tier. If AAFE sells more than one ticket type under the same name (for
+example, Friend and Supporter both as "Ticket"), the mapping can't tell them apart; see section 10.
+
+### Gala page
+
+Each gala stores its Give Lively page name (proposed `gala_events.givelively_page_name`, e.g. "AAFE's
+52nd Annual Gala"), set by staff for each year.
+
+- **JSON sync:** imports only donations whose page or internal name matches it (normalized, exact),
+  replacing the `GIVELIVELY_CAMPAIGNS` substring setting. Not set → the sync does nothing and says so.
+- **CSV upload:** rows whose Page Name is set and differs are skipped and listed in the report with their
+  row numbers, so a mixed export never puts another event's purchases on the gala list. A blank Page Name
+  is imported. If the gala has no page name yet, nothing is imported: the upload lists the page names
+  found in the file (with row counts), staff pick this gala's page once, and it's saved for the year.
+
+### Sponsors confirm the imported names
+
+The import doesn't decide who is attending; it **pre-fills** the sponsor's portal and asks them to
+confirm. The sponsor knows their guests, staff do far less review, and no AI is needed.
+
+1. Names the splitter reads cleanly become `guests` rows on the order (`last_updated_by = givelively_sync`)
+   in the next free seats, which move to `submitted`. The portal marks them "From your purchase: please
+   confirm or fix."
+2. Entries the splitter can't read cleanly (below) create no guest; the clear names in the same list are
+   still pre-filled. The original text is shown in the portal ("You wrote: …"), with the entries that
+   couldn't be read, and on the order in the staff app; the remaining seats stay `unnamed` for the
+   sponsor to fill.
+3. The portal-link email, queued as a **draft** that staff approve (hard rule 4), says: "Here are the
+   guests we have from your purchase. Please confirm or fix them by [deadline]."
+4. When the sponsor saves, the guest becomes theirs (`last_updated_by = guest_portal`). Staff still review
+   every name before badges, as today.
+
+### Names print exactly as typed
+
+Names are stored and printed **as the buyer typed them** (proposed `display_name` on `guests`, used for
+badges, check-in, and the portal). Splitting into first and last name happens **only for duplicate
+matching** (section 4): "Chen Wei", written family-name-first, prints as "Chen Wei", never re-ordered.
+`first_name` and `last_name` (required in Natalie's schema) hold the best-effort split for sorting.
+
+### Splitting the free-text guest list
+
+The column answers "Please list the name(s) and email address(es) of all guests. To revise, email
+gala@aafe.org." Buyers type it however they like. Plain rules, in this order:
+
+1. **Nothing to name:** empty, or only "TBD", "TBA", "to follow", "N/A", "none" → all seats stay unnamed.
+2. **Split into entries** on line breaks, semicolons, and list markers (`1.`, `2)`, `-`, `•`). One line
+   holding two or more email addresses is split around each address.
+3. **Commas between names without emails** ("Jane Doe, Sam Lee"): split on commas **only if** that gives
+   no more entries than the purchase has seats **and** every piece has two or more words. Otherwise the
+   line counts as unclear.
+4. **Read each entry:** an email address if present (lower-cased); the rest, minus separators such as
+   `-`, `:`, `<>` and `()`, is the name, kept exactly as written.
+5. **The buyer themself:** "me", "myself", "self", or the buyer's own name → the buyer is seated, with
+   their email.
+6. **Unclear → left for the sponsor to confirm** (the original text shows in the portal; no guest is
+   created for that entry, and the clear names in the list are still pre-filled): an entry with an email
+   but no name, a one-word name, a couple ("John and Mary Smith", "J & M Smith"), or an entry that can't
+   be read. **More names than seats** pre-fills nothing at all, since there's no way to know who to leave
+   out (all names stay visible in the original text; nothing is dropped).
+
+Revisions arrive later through the portal or by email to gala@aafe.org (staff enter those in the staff
+app). Either way they win over the import (section 6).
 
 ## 4. Matching
 
-Each purchaser and named attendee is matched to an existing contact, in this order. The first rule
-that produces a result wins.
+**Normalization** (matching only, never for display): Unicode NFKC, case-folded, trimmed, inner spaces
+collapsed, punctuation removed. Names drop honorifics and suffixes (Dr, Mr, Ms, Mrs, Hon, Rev, Jr, Sr,
+II, III). Organizations drop legal suffixes (Inc, LLC, LLP, Corp, Co, Ltd), a leading "The", and treat
+`&` as "and". Emails are trimmed and lower-cased only.
 
-**Normalization** (used by every rule): Unicode NFKC, case-folded, trimmed, inner whitespace
-collapsed, punctuation removed. Names also drop honorifics and suffixes (Dr, Mr, Ms, Mrs, Hon, Jr,
-Sr, II, III). Organizations also drop legal suffixes (Inc, LLC, LLP, Corp, Co, Ltd), a leading
-"The", and treat `&` as "and". Emails are trimmed and lower-cased only.
+**Buyer → sponsor** (`sponsors`), first rule that answers:
 
-1. **Give Lively ID.** The row's `source_id` is already linked to a contact from an earlier import →
-   that contact. No review.
-2. **Email.** Exactly one contact has the same normalized email **and** the same normalized last name
-   → match. Same email but a different last name → review (`email_name_conflict`); a shared inbox is
-   common and must not merge two people.
-   *Exception:* an attendee email equal to the purchaser's email on the same order is the purchaser's
-   inbox, not the attendee's. It is ignored for matching and not stored on the attendee.
-3. **Name and organization.** Exactly one contact with the same normalized full name and the same
-   normalized organization, and no conflicting email on file → match.
-4. **Possible duplicates → review, never auto-merged:**
-   - same name tokens in a different order ("Chen Wei" / "Wei Chen"), same organization;
-   - same first initial and last name, same organization;
-   - same full name, different or missing organization.
+1. Same email **and** same last name → that sponsor.
+2. Same email, different last name → staff review `email_name_conflict` (a shared inbox); a new sponsor
+   is created meanwhile so the order isn't lost.
+3. Otherwise → new sponsor. The organization is the Company column, else the buyer's name.
 
-   The review item names the candidate contact and the rule that flagged it.
-5. **No match** → new contact.
+**Imported guest → existing guests of this gala** (one person on two orders), first rule that answers:
 
-Nicknames (Bob / Robert) and typos are not detected. This is deliberate: no fuzzy-matching library to
-maintain, and every heuristic above is explainable to staff. Staff can merge such duplicates by hand
-from the guest list.
+1. Same email and same last name, on a different order → staff review `double_booked`.
+2. Same full name (as a set of words, so word order doesn't matter) and the same known organization, on
+   a different order → staff review `double_booked`.
+3. Same full name on a different order where either organization is unknown or they differ → staff
+   review `possible_duplicate`. Imported guest lists rarely give an organization, so this is the usual
+   case for a name typed by two sponsors: a softer flag staff confirm, not a conflict.
+4. Same first initial and last name, same organization → staff review `possible_duplicate`.
 
-## 5. Conflicts and missing rows
+A guest whose email equals the buyer's email (a coordinator listing colleagues with their own inbox)
+doesn't get that email stored. Nicknames and typos aren't detected; staff merge those by hand. Natalie's
+schema keeps guests per order and has no cross-year contacts table, so matching across galas is out of
+MVP scope.
 
-- **Guest under two sponsors.** A matched attendee already seated on a different commitment →
-  review (`double_booked`). Both seats keep the guest until staff choose; the other seat then
-  returns to unnamed.
-- **Refund.** A row whose `status` is refunded, or an order whose amount drops to zero → commitment
-  `payment_status = refunded`, seat `status = cancelled`, and a
-  review item (`refund`) so the relationship owner can follow up. Nothing is deleted; badges and
-  check-in skip cancelled seats.
-- **Amount change** (partial refund or edit in Give Lively) → amount updated, listed in the report.
-- **Row missing from a later export.** Give Lively exports are full snapshots, so a row seen before
-  and absent now is reported as `missing_from_source` and added to review. Nothing is deleted or
-  cancelled automatically: a filtered or partial export must not wipe guests.
+## 5. Refunds, changes, and missing rows
 
-## 6. Staff corrections survive re-import
+- **Refund.** Amount Refunded changes → payment updated (Natalie's code already does this). Refunded in
+  full, or Status shows refunded or failed → order `cancelled`, its seats `cancelled`, and staff review
+  `refund` so the relationship owner can follow up. Nothing is deleted; badges and check-in skip
+  cancelled seats.
+- **Amount change** on an imported purchase → payment updated, listed in the report.
+- **Guest list text changed** on re-import → nothing is overwritten; staff review `guest_text_changed`
+  shows the old and new text.
+- **The portal got there first.** If the sponsor (or staff) already named seats on an order, names from
+  a later export never fill over them, even into seats that look empty; staff review
+  `guest_text_changed` shows what the export says.
+- **Missing from a later export.** A purchase from an earlier upload whose purchase time falls **inside
+  this file's date range** (earliest to latest purchase in the file) but isn't in the file → staff review
+  `missing_from_source`. Purchases outside the range aren't checked, so a "this month only" export
+  doesn't flag everything older. Nothing is cancelled automatically. (The JSON sync is incremental, so
+  this check runs on CSV uploads only.)
 
-Every editable field has one effective value, in this order of precedence:
+## 6. Staff and sponsor corrections survive re-import
 
-1. **Staff edit** (`field_overrides`, `set_by` = staff)
-2. **Sponsor portal edit** (`field_overrides`, `set_by` = sponsor link)
-3. **Latest import value**
+The import creates guests **once**, from the first upload that names them, and only into seats nobody has
+named. After that it never edits a guest: sponsor edits in the portal and staff edits in the staff app
+are authoritative, and every edit is in `audit_log`. A later change in Give Lively raises
+`guest_text_changed` instead of overwriting (section 5). The original text stays in `givelively_raw`.
 
-Import only ever writes the import layer. It never writes or deletes an override. So:
+## 7. Staff review queue
 
-- If a field has no override, the new import value takes effect and the change is logged in
-  `audit_log` with actor `import:<run id>`.
-- If a field has an override and the import value **changed** since the last import, the override
-  stays in effect and the report lists it under "held by staff/sponsor edits" with old and new import
-  values, so staff can decide whether to clear the override.
-- If the import value now equals the override, the report says so; the override is left in place.
-- A blank import value never clears a value entered by staff or a sponsor (e.g. a sponsor names a
-  guest in the portal; Give Lively still shows the seat unnamed).
+Proposed table `import_review` (id, import run, purchase key, reason, details jsonb with the original text
+and any candidate, status open/resolved, resolved by, resolved at). A resolved item doesn't come back for
+the same row and the same data. Unclear guest lists are **not** here: sponsors confirm those (section 3).
 
-The original source value is always available in `source_records.raw`.
-
-## 7. Import report
-
-Shown to staff at the end of every run and kept with the `import_runs` row:
-
-- File name, file hash, who ran it, start and finish time, status.
-- Counts: rows read, **new**, **updated**, **unchanged**, **rejected**, **sent to review**
-  (`n_new`, `n_updated`, `n_unchanged`, `n_rejected`, `n_review` in `import_runs`).
-- Rejected rows: row number and reason.
-- Review items created: reason code, row number, candidate.
-- Changes held by overrides: field, override value, old and new import values.
-- Rows missing from this file that were in the last one.
-- New sponsor-link email drafts waiting for approval.
-
-The dashboard shows the time of the last successful import, so stale data is visible.
-The report is staff-only and is never sent to an AI service (rule 5).
-
-## 8. Review queue
-
-| Reason code | Raised when | Staff choices |
+| Reason | Raised when | Staff choose |
 | --- | --- | --- |
-| `possible_duplicate` | Section 4 rule 4 | Same person (merge) · Different person (new contact) |
-| `email_name_conflict` | Same email, different last name | Same person · Different person |
-| `double_booked` | Guest already seated on another commitment | Keep on A · Keep on B · Keep both (data error) |
-| `seat_overflow` | More names than seats | Add seats · Drop a name |
-| `unknown_ticket_type` | Ticket type has no package mapping | Map ticket type to package, then re-run the order |
-| `refund` | Refunded order | Acknowledge (seats stay cancelled) · Reinstate |
-| `missing_from_source` | Row absent from later export | Cancel seats · Keep (export was partial) |
+| `unknown_tier` | Tier Purchased has no tier mapping and matches no tier | Map it to a tier (saved as a tier mapping), then re-run |
+| `guest_text_changed` | The export's guest list differs from last time, or names arrive after the portal already has names | Apply the export's names · Keep current guests |
+| `email_name_conflict` | Same buyer email, different last name | Same person (merge sponsors) · Different person |
+| `double_booked` | An imported guest is already on another order | Keep on this order · Keep on the other · Keep both |
+| `possible_duplicate` | Close but not certain name match | Same person · Different person |
+| `refund` | Order refunded or failed | Acknowledge · Reinstate |
+| `missing_from_source` | Purchase absent from an upload covering its date | Cancel the order · Keep it |
 
-A resolution records who resolved it and when, and is remembered: the same row with the same data
-does not raise the same item on the next import.
+## 8. Import report
 
-## 9. Open questions (need AAFE's sample exports)
+Shown at the end of every upload and kept with its `import_runs` row: file name and hash, who ran it,
+start and finish, status, the file's date range; counts of rows read, new, updated, unchanged, rejected,
+names pre-filled, lists left for sponsors to confirm, and staff review items; rejected rows with row number
+and reason; purchases missing within the date range; portal-link drafts waiting for approval. Staff-only;
+never sent to an AI service.
 
-- Does the attendee export carry a per-ticket ID? If not, `transaction_id:n` breaks when Give Lively
-  reorders rows within a transaction; fall back to matching rows within a transaction by attendee
-  name before position.
-- Does the export carry refund status, or do refunds only show as a separate report?
-- Exact column headers, date format, and whether amounts include the donor-covered fee.
-- Are sponsorships bought on Give Lively exported in the same report as tickets?
-- **Which report:** Give Lively has a "Line Items (All)" purchase report (one row per purchase, with
-  the transaction ID; Natalie's prototype imports this one) and a per-ticket attendee report (guest
-  names). The likely answer is both: Line Items for commitments and payments, the attendee report for
-  seats and guests, joined on transaction ID. Confirm with the samples which columns each carries.
+## 9. Proposed changes to Natalie's backend
 
-## 10. Test cases
+Agreed in principle with Natalie on Oct 5; implemented by the backend pair (Aisling + Cornell), with the
+portal changes by the frontend pair (Natalie + Antonin).
 
-Each case is a unit test of the import module: starting state, one or more CSV files, expected result.
-Seed data for them is listed in `docs/seed-data-requirements.md`.
+1. CSV normalizer for the real export (section 1) and the shared purchase-key function (section 2), used
+   by both the CSV upload and the JSON sync.
+2. Guest-list splitter (section 3) and matching (section 4) as a tested TypeScript module the CSV path
+   calls before `gl_import()`.
+3. `gl_import()`: dedupe on `payments.purchase_key`; accept parsed guests per row and fill only unnamed
+   seats on orders with no portal or staff names; unknown tier → review instead of defaulting; store the
+   original guest text on the order; resolve the tier through `tier_mappings` first (section 3).
+4. Schema: `payments.purchase_key` (unique), `guests.display_name`, `orders.imported_guest_text`,
+   `sponsorship_tiers.guaranteed_seating`, `gala_events.givelively_page_name`, and new tables
+   `import_runs`, `import_review`, and `tier_mappings`.
+5. Portal (frontend pair): "From your purchase: please confirm or fix" on imported names, and "You
+   wrote: …" when the list was unclear. Email template text for the draft link email.
+6. Missing-purchase check within the file's date range on CSV uploads.
+7. Tier mapping screen (staff app): the tier names in the file, each with a tier picker.
+8. `givelively-sync`: filter on `gala_events.givelively_page_name` instead of `GIVELIVELY_CAMPAIGNS`.
+
+## 10. Open questions for AAFE
+
+- **One more file, optional:** Give Lively's "Line Items (All)" report includes a real transaction ID.
+  Joined to the ticket export on buyer email + purchase time, it gives each purchase a true ID.
+- Do purchases of sponsorship tiers on Give Lively appear in this same export? (The Tier Category column
+  suggests yes.)
+- A few more redacted rows with real-world guest lists, to test the splitter on how buyers actually type.
+- **Tier names on Give Lively:** is every ticket sold as "Ticket", or does each package have its own
+  name? If two packages share a name (e.g. Friend at $2,500 and Supporter at $1,000), the mapping needs
+  the amount too.
+- **Page name:** is the gala page renamed each year ("AAFE's 52nd Annual Gala", then 53rd)? The page name
+  is stored per gala, so either works.
+- Is the guest-list question worded the same every year? The header is matched by its start ("Please list
+  the name") to tolerate small changes.
+
+## 11. Test cases
+
+Unit tests of the parsing and matching module, plus database tests of `gl_import()` against invented seed
+data (`docs/seed-data-requirements.md`, `seed/natalie-prototype/`).
 
 | # | Case | Given | Import | Expected |
 | --- | --- | --- | --- | --- |
-| 1 | New ticket, purchaser attends | Empty DB | 1 row, attendee = purchaser | 1 contact, 1 ticket commitment, 1 named seat |
-| 2 | Coordinator buys for others | Empty DB | 2 rows, attendees ≠ purchaser, attendee email = purchaser email | 3 contacts; purchaser unseated; attendees have no email stored |
-| 3 | Same file twice | Case 1 imported | Same file again | 0 new, 0 updated, all unchanged; no audit entries |
-| 4 | Duplicate row in one file | Empty DB | Two rows with the same `ticket_id` | 1 seat; second row rejected as a duplicate (needs per-ticket ID, section 9) |
-| 5 | Email match, case/space variant | Contact `grace.kim@example.org` | Row with ` Grace.Kim@Example.org ` | Matched, no new contact |
-| 6 | Name variant normalizes | Contact "Grace Kim", org "Lotus Bank" | "Dr. Grace  Kim", "Lotus Bank, Inc." | Matched by name + org |
-| 7 | Name order swap | Contact "Wei Chen", org "Harbor Health" | "Chen Wei", "Harbor Health", no email | Review `possible_duplicate`; no new contact until resolved |
-| 8 | Same name, other org | Contact "Daniel Park", org A | "Daniel Park", org B, no email | Review `possible_duplicate` |
-| 9 | Shared inbox, different person | Contact "Ana Ruiz", `events@example.com` | "Mark Lee", `events@example.com`, different order | Review `email_name_conflict`; not merged |
-| 10 | Guest under two sponsors | "Susan Cho" seated on sponsor A | Sponsor B order names "Susan Cho" (same email) | Matched contact; review `double_booked`; seated on both until resolved |
-| 11 | Sponsorship with partial names | Empty DB | Sponsorship order, package of 10 seats, 3 attendee rows | 10 seats, 3 named, 7 unnamed; sponsor link + draft email queued, not sent |
-| 12 | Refund | Case 1 imported | Same row, status refunded | `payment_status = refunded`, seat cancelled, review `refund` |
-| 13 | Re-import, changed name, no override | Seat from import named "Jon Tan" | Same `source_id`, "Jonathan Tan" | Seat attendee updated; audit entry by import |
-| 14 | Re-import, changed title, staff override | Staff corrected title to "CFO" | Import title changes "VP" → "SVP" | Title stays "CFO"; report lists held change |
-| 15 | Sponsor-named seat, import blank | Sponsor named seat 4 in portal | Re-import, seat 4 attendee blank | Sponsor's name kept |
-| 16 | Missing required field | — | Row with no transaction ID | Rejected with row number; rest of file imports |
-| 17 | Unknown ticket type | No mapping for "VIP Table 2027" | Order with that type | Review `unknown_ticket_type`; nothing created |
-| 18 | Too many names | Package of 2 seats | 3 attendee rows | 2 seats filled; review `seat_overflow` holds the third |
-| 19 | Row disappears | Two orders imported | Next file has only one | Review `missing_from_source`; nothing deleted |
-| 20 | Check pledge, then Give Lively purchase | Contact from staff-entered check pledge | Ticket row with same email | Matched to existing contact; separate commitment |
-| 21 | Amount change | Order imported at $500 | Same order at $250 | Amount updated; listed in report |
-| 22 | Failed import rolls back | Any | File that throws mid-apply | No changes; run status `failed` |
+| 1 | Ticket, buyer attends | Empty gala | 1 ticket, guest text "me" | 1 order, 1 seat, buyer seated |
+| 2 | Coordinator buys for colleagues | Empty gala | 2 tickets, text lists 2 names with the buyer's email | 2 guests pre-filled, no email stored on them, buyer not seated |
+| 3 | Same file twice | Case 1 imported | Same file | Nothing new; all rows unchanged |
+| 4 | Duplicate purchase in one file | — | Two identical rows | One order; second row rejected as duplicate |
+| 5 | Blank rows | — | Export with trailing blank rows | Ignored, not reported |
+| 6 | Names on separate lines | — | "Jane Doe jane@example.org⏎Sam Lee sam@example.org" | 2 guests pre-filled with emails, names as typed |
+| 7 | Numbered list | — | "1. Jane Doe 2. Sam Lee" | 2 guests pre-filled |
+| 8 | Two emails on one line | — | "Jane Doe jane@example.org, Sam Lee sam@example.org" | 2 guests pre-filled |
+| 9 | Nothing yet | — | "TBD" | All seats unnamed; portal draft queued |
+| 10 | One-word name | — | "Jane" | No guest created; original text shown in the portal for the sponsor; no staff review |
+| 10b | Partly clear list | 3-seat purchase | "Jane Doe⏎Sam Lee⏎Bob" | Jane Doe and Sam Lee pre-filled; "Bob" shown for the sponsor; 1 seat unnamed |
+| 11 | More names than seats | 2-seat purchase | 3 names | No guests created; all 3 names shown in the portal for the sponsor to choose |
+| 12 | Sponsorship, partial names | — | Champion, 6 seats, 3 names | 6 seats, 3 pre-filled, 3 unnamed; portal draft "please confirm" queued, not sent |
+| 13 | Unknown tier | No tier "VIP Table 2027" | Row with that tier | Review `unknown_tier`; nothing created |
+| 14 | Shared inbox | Sponsor "Ana Ruiz", `events@example.com` | Buyer "Mark Lee", same email | Review `email_name_conflict`; new sponsor created |
+| 15 | Same buyer, case and spaces | Sponsor `grace.kim@example.org`, Kim | Buyer ` Grace.Kim@Example.org `, Kim | Same sponsor |
+| 16 | Guest on two orders | "Susan Cho" on sponsor A's order | Sponsor B lists "Susan Cho", no email | Review `possible_duplicate` (organization unknown) |
+| 16b | Same email on two orders | "Susan Cho", susan@example.org, on sponsor A's order | Sponsor B lists her with the same email | Review `double_booked` |
+| 17 | Name order swap | "Wei Chen", Harbor Health | "Chen Wei", Harbor Health, another order | Review `double_booked` (same words, same organization) |
+| 18 | Full refund | Case 1 imported | Same purchase, fully refunded | Order and seat cancelled; review `refund` |
+| 19 | Partial refund | $500 purchase | $250 refunded | Payment updated; order partially paid; in report |
+| 20 | Guest text changed | Case 6 imported | Same purchase, a name changed | Guests unchanged; review `guest_text_changed` |
+| 21 | Staff edit survives | Staff corrected a title | Same file re-imported | Title stays as staff set it |
+| 22 | Purchase disappears | Two purchases imported | Next upload covers both dates, has one | Review `missing_from_source`; nothing cancelled |
+| 23 | Missing required field | — | Row with no email | Rejected with row number; rest imports |
+| 24 | Failed import rolls back | Any | File that fails partway | Nothing applied; run marked failed |
+| 25 | Phone never imported | — | Row with a phone number | No phone stored anywhere from the import |
+| 26 | Commas, no emails | 2-seat purchase | "Jane Doe, Sam Lee" | 2 guests pre-filled |
+| 27 | Commas that don't fit | 2-seat purchase | "Jane Doe, Sam Lee, Ana Ruiz" | No guests; text shown for the sponsor |
+| 28 | Couple | 2-seat purchase | "John and Mary Smith" | No guests; text shown for the sponsor |
+| 29 | Family name first | — | "Chen Wei" | Badge, portal, and check-in show "Chen Wei" exactly |
+| 30 | Tier renamed mid-campaign | Purchase imported under "Champion" | Same purchase, tier now "Champion Sponsor" | Recognized as the same purchase; nothing duplicated |
+| 31 | Filtered export | Purchases from Feb and Mar imported | Upload with Mar only | No `missing_from_source` for Feb |
+| 32 | Portal named first | Sponsor named 2 seats in the portal | Later export lists names | Portal names kept; review `guest_text_changed` |
+| 33 | Same purchase from both sources | Purchase arrived by JSON sync | Same purchase in a CSV upload | Recognized by purchase key; nothing duplicated |
+| 34 | Generic tier name | Mapping "Ticket" → Supporter | Row with Tier Purchased "Ticket" | Order on Supporter; no review item |
+| 35 | Unmapped tier, mapped in review | No mapping for "Ticket" | 3 rows with "Ticket" | 1 `unknown_tier` item per row; mapping it saves "Ticket" → tier, re-run creates 3 orders, next upload raises no review |
+| 36 | Tier mapping changed later | 2 orders imported via "Ticket" → Supporter | Mapping changed to Friend, file re-imported | Existing orders keep Supporter; change logged |
+| 37b | Gala page not set | No page name for the gala | Any upload | Nothing imported; the page names in the file listed with row counts for staff to pick |
+| 37 | Another gala page in the file | Page name "AAFE's 52nd Annual Gala" | Rows from that page plus 1 row from "Year-End Appeal" | 1 row skipped and listed in the report; others imported |
+| 38 | Sync page filter | Page name "AAFE's 52nd Annual Gala" | JSON donations from that page and from "Year-End Appeal" | Only the gala page's donations imported |

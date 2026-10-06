@@ -1,6 +1,6 @@
 # Architecture
 
-One standard web app and one database. A small import-and-matching module sits between Give Lively and the database, and every screen reads from the same tables. The stack is a proposal until the team records its decision the week of October 5.
+One standard web app and one database. A small import-and-matching module sits between Give Lively and the database, and every screen reads from the same tables. The stack was decided October 5: React and TypeScript on Supabase.
 
 ```layers
 Sources | Give Lively attendee export — CSV, or the live link; Give Lively donation feed — read-only JSON; Staff entry — checks, ACH, comps; Legacy spreadsheet — one-time migration
@@ -10,18 +10,19 @@ Screens | Staff dashboard — gaps by owner, goals; Sponsor form — private lin
 Outputs | Badge file — mail merge with table number; Follow-up drafts — staff approve and send; Salesforce file — who actually attended
 ```
 
-## Proposed stack
+## Stack
+<!-- modified Oct 5 -->
 
 | Layer | Choice | Why |
 | --- | --- | --- |
-| App | Next.js with TypeScript | The team knows React and TypeScript; any web developer can maintain it |
-| Database | Postgres | Standard, portable, and fits the record structure |
-| Sign-in | Demo accounts with staff roles | AAFE's Google Workspace is the natural option if the tool is adopted |
+| App | React + TypeScript, built with Vite and styled with Tailwind | Matches Natalie's working prototype; any web developer can maintain it |
+| Backend | Supabase: Postgres, sign-in, and server functions (Give Lively sync, email sending) | One managed service; free plan for the demo |
+| Database | Postgres, hosted by Supabase | Standard, portable, and fits the record structure |
+| Sign-in | Supabase Auth with staff roles (demo accounts for now) | AAFE's Google accounts can plug in if the tool is adopted |
 | Demo preview | A free or low-cost tier on a team account | Production hosting is AAFE's decision after Demo Day; see [Hosting](#hosting) |
-| Repo | Team GitHub organization | Handed to AAFE, or the partner it chooses, at handoff |
+| Repo | Team GitHub organization on GitHub Team, with `main` protected | Handed to AAFE, or the partner it chooses, at handoff |
 
 ## How matching works
-<!-- modified Oct 3 -->
 
 Each incoming row goes through the same checks, in order. The first check that answers yes decides what happens.
 
@@ -44,9 +45,9 @@ Matching is deliberately boring: plain rules anyone can audit, no AI deciding wh
 Nothing merges on a guess. Every import ends with a report such as "12 new, 3 updated, 40 unchanged, 2 need review, 1 rejected." A staff or sponsor correction always wins over incoming data, and the original value is kept in the history.
 
 ## Data model
-<!-- modified Oct 3 -->
+<!-- updated Oct 5 -->
 
-A draft until AAFE's spreadsheet column headers arrive. Arrows point from a field to the table it refers to.
+AAFE's real spreadsheet (received Oct 5) adds three fields to plan for: a guest category, whether a seat is guaranteed or admittance only, and a sponsor's pipeline stage. Arrows point from a field to the table it refers to.
 
 ```erd
 contacts @1,1 | first_name; last_name; title; organization; email; phone
