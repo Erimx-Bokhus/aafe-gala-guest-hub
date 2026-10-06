@@ -1,88 +1,89 @@
 # Tasks
-<!-- updated Oct 6 -->
+<!-- updated 2026-10-05 22:58 Aisling -->
 
-The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus), kept by Natalie at Pursuit's request. This page is a snapshot for planning; when they differ, Trello wins. Build work belongs to a pair (Oct 5): **Frontend: Natalie + Antonin**; **Backend: Aisling + Cornell**.
+The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus), kept by Natalie at Pursuit's request. This page is a snapshot for planning; when they differ, Trello wins. Build work belongs to a pair (Oct 5): **Frontend: Natalie + Antonin**; **Backend: Aisling + Cornell**. <!-- modified 2026-10-05 20:37 Aisling -->
 
-## Groundwork: this week
+## Groundwork (from the first week) <!-- modified 2026-10-06 05:50 Aisling -->
 
 - [ ] Post the GreyBox Creative correction in the team thread — Aisling
 - [ ] Team review of the data and AI handling note — Team
 - [ ] Fold the hosting critique into the production-readiness notes — Aisling
 - [ ] Send AAFE the recap, including the no-payment-data correction — Natalie
-- [ ] Propose component owners — Aisling
-- [ ] Ask AAFE for sample Give Lively exports and goals per category — Natalie
+- [x] Propose component owners (pairs, Oct 5) — Aisling <!-- modified 2026-10-06 05:50 Aisling -->
+- [ ] Ask AAFE for goals per category (sample export received Oct 5) — Natalie <!-- modified 2026-10-06 05:50 Aisling -->
 - [ ] Settle code ownership and a team agreement with Pursuit — Team
 
 ## Week of October 5
-<!-- updated Oct 5 -->
+<!-- updated 2026-10-05 16:51 Aisling -->
 
-- [x] Record the stack decision: React + Supabase — Aisling
-- [ ] Pick the demo preview host — Team
-- [x] Commit the handoff package to the team repo (Erimx-Bokhus) — Aisling
-- [x] CI with secret scanning (gitleaks on every push and PR), .gitignore, .env.example — Aisling
-- [x] Import and matching spec with 22 test cases — Aisling
-- [x] Seed data requirements for the import tests — Aisling
-- [ ] Staging deploy — Backend pair
-- [x] Database schema and migrations (Natalie's backend, merged Oct 6) — Backend pair
-- [ ] Synthetic data generator (~550 guests, messy cases) — Backend pair
-- [ ] Supabase sign-in (#8, PR #27 in review) and server-side staff roles (#9) — Cornell
-- [x] Get AAFE's materials (received Oct 5) — Natalie
-- [x] Check AAFE's sample export against the import spec — Aisling
-- [x] Revise the import spec for the real Give Lively export — Aisling
-- [ ] Confirm 2027 seats per sponsorship tier with AAFE — Natalie
-- [x] Share the prototype source (seed.sql, seed.json) — Natalie
-- [x] Merge PRs #7 (staff app) and #14 (design doc) once the secret scan passes — Aisling
-- [x] Bring the backend and guest-portal branches into `main` (PRs #25, #26) — Aisling
-- [ ] Decide whether AI features are required for Demo Day — Team
-- [ ] Ask AAFE for written approval of the logo and event photos for Demo Day; swap the name-badge photo — Natalie
-- [x] Seed loader: Natalie's data with random hashed tokens and draft-only emails — Backend pair
+- [x] Record the stack decision: React + Supabase — Aisling <!-- modified 2026-10-05 22:58 Aisling -->
+- [ ] Pick the demo preview host — Team <!-- modified 2026-10-05 16:51 Aisling -->
+- [x] Commit the handoff package to the team repo (Erimx-Bokhus) — Aisling <!-- modified 2026-10-03 11:56 Aisling -->
+- [x] CI with secret scanning (gitleaks on every PR and on `main`), .gitignore, .env.example — Aisling <!-- modified 2026-10-06 05:50 Aisling -->
+- [x] Import and matching spec with 22 test cases (now 38, PRs #20, #22) — Aisling <!-- modified 2026-10-06 05:50 Aisling -->
+- [x] Seed data requirements for the import tests — Aisling <!-- modified 2026-10-03 11:56 Aisling -->
+- [ ] Web app preview deploy (database is live in the team Supabase project) — Backend pair <!-- modified 2026-10-06 06:12 Aisling -->
+- [x] Database schema and migrations (Natalie's backend, merged Oct 5) — Backend pair <!-- modified 2026-10-06 06:12 Aisling -->
+- [ ] Synthetic data generator (~550 guests, messy cases) — Backend pair <!-- modified 2026-10-05 20:37 Aisling -->
+- [ ] Supabase sign-in (#8, PR #27 in review) and server-side staff roles (#9) — Cornell <!-- modified 2026-10-05 22:58 Aisling -->
+- [x] Get AAFE's materials (received Oct 5) — Natalie <!-- modified 2026-10-05 22:58 Aisling -->
+- [x] Check AAFE's sample export against the import spec — Aisling <!-- modified 2026-10-05 22:58 Aisling -->
+- [x] Revise the import spec for the real Give Lively export — Aisling <!-- modified 2026-10-05 22:58 Aisling -->
+- [ ] Confirm 2027 seats per sponsorship tier with AAFE — Natalie <!-- updated 2026-10-03 11:56 Aisling -->
+- [x] Share the prototype source (seed.sql, seed.json) — Natalie <!-- modified 2026-10-05 22:58 Aisling -->
+- [x] Merge PRs #7 (staff app) and #14 (design doc) once the secret scan passes — Aisling <!-- modified 2026-10-05 22:58 Aisling -->
+- [x] Bring the backend and guest-portal branches into `main` (PRs #25, #26) — Aisling <!-- modified 2026-10-05 22:58 Aisling -->
+- [ ] Decide whether AI features are required for Demo Day — Team <!-- updated 2026-10-05 16:51 Aisling -->
+- [ ] Ask AAFE for written approval of the logo and event photos for Demo Day; swap the name-badge photo — Natalie <!-- updated 2026-10-03 12:36 Aisling -->
+- [x] Seed loader: Natalie's data with random hashed tokens and draft-only emails — Backend pair <!-- modified 2026-10-05 22:58 Aisling -->
 
 ## Added October 6
-<!-- new Oct 6 -->
+<!-- new 2026-10-05 22:58 Aisling -->
 
-- [x] Import engine: reads the real export, splits guest lists, matches buyers and guests (PR #23) — Aisling
-- [x] Tier mapping and gala page filter from Natalie's review (PR #22) — Aisling
-- [x] Three import choices decided and posted for Natalie's review (PR #24) — Aisling
-- [x] Backend tests run on every PR (PR #26) — Aisling
-- [ ] Merge PR #26, then PR #27 after Cornell updates it from `main` — Aisling
-- [ ] Natalie's review of the three import choices (Slack) — Natalie
-- [ ] Share the Pursuit PRD and the team PRD with the backend pair — whoever has them
-- [ ] Trello access for Cornell; Supabase project URL and public key to Cornell — Natalie
-- [ ] Upload screen: import engine, report, page picker, tier-mapping picker — Frontend pair
-- [ ] Staff app: show "sent" and "resend" for QR codes instead of the code itself — Frontend pair
-- [ ] Portal: "From your purchase: please confirm" labels; Korean — Frontend pair
-- [x] Frontend build check, demo-data drift check, real-data guard in CI — Backend pair
-- [x] Supabase project loaded (schema, seed, backend); access rules verified, security warnings cleared (PR #30) — Aisling
-- [x] Real-data guard required before merging to `main`, alongside the secret scan — Aisling
-- [ ] Informal client demo, Wednesday Oct 7 — Natalie
+- [x] Import engine: reads the real export, splits guest lists, matches buyers and guests (PR #23) — Aisling <!-- modified 2026-10-05 22:58 Aisling -->
+- [x] Tier mapping and gala page filter from Natalie's review (spec PR #22; built in PRs #23–#26) — Aisling <!-- modified 2026-10-06 05:50 Aisling -->
+- [x] Three import choices decided and posted for Natalie's review (PR #24) — Aisling <!-- modified 2026-10-05 22:58 Aisling -->
+- [x] Backend tests run on PRs that touch `prototype/` or `import-engine/` (PR #26) — Aisling <!-- modified 2026-10-06 05:50 Aisling -->
+- [ ] Merge PR #27 after Cornell updates it from `main` (17 commits behind) — Aisling <!-- modified 2026-10-06 05:50 Aisling -->
+- [ ] Natalie's review of the three import choices (Slack) — Natalie <!-- modified 2026-10-05 22:58 Aisling -->
+- [ ] Share the Pursuit PRD and the team PRD with the backend pair — whoever has them <!-- modified 2026-10-05 22:58 Aisling -->
+- [ ] Trello access for Cornell — Natalie <!-- modified 2026-10-06 06:12 Aisling -->
+- [ ] Supabase project URL and public (anon) key to Cornell, never the service_role key; open until he confirms — Aisling <!-- updated 2026-10-06 06:12 Aisling -->
+- [ ] Upload screen: import engine, report, page picker, tier-mapping picker — Frontend pair <!-- modified 2026-10-05 22:58 Aisling -->
+- [ ] Staff app: show "sent" and "resend" for QR codes instead of the code itself — Frontend pair <!-- modified 2026-10-05 22:58 Aisling -->
+- [ ] Portal: "From your purchase: please confirm" labels; Korean — Frontend pair <!-- modified 2026-10-05 22:58 Aisling -->
+- [x] Frontend build check, demo-data drift check, real-data guard in CI — Backend pair <!-- modified 2026-10-06 01:13 Aisling -->
+- [x] Supabase project loaded (schema, seed, backend); access rules (RLS) on for all 18 tables; Supabase advisor warnings cut from 41 to 28, all by design (PR #30) — Aisling <!-- modified 2026-10-06 05:50 Aisling -->
+- [x] Real-data guard required before merging to `main`, alongside the secret scan — Aisling <!-- updated 2026-10-06 03:05 Aisling -->
+- [ ] Informal client demo, Wednesday Oct 7 — Natalie <!-- modified 2026-10-05 22:58 Aisling -->
 
 ## Week of October 12
 
-- [ ] Packages, commitments, seats, and manual entry — Backend pair
-- [x] Give Lively import: real export, free-text guest lists (import engine, PRs #23–#24) — Aisling
-- [ ] Staff dashboard shell and guest grid — Frontend pair
-- [ ] Clickable prototype of the sponsor form and dashboard for AAFE — Frontend pair
+- [ ] Connect staff app pages to the backend's pledges, payments, comps, and seats (with #9) — Backend pair <!-- modified 2026-10-06 06:12 Aisling -->
+- [x] Give Lively import: real export, free-text guest lists (import engine, PRs #23–#24) — Aisling <!-- modified 2026-10-05 22:58 Aisling -->
+- [ ] Staff dashboard shell and guest grid — Frontend pair <!-- modified 2026-10-05 20:37 Aisling -->
+- [ ] Clickable prototype of the sponsor form and dashboard for AAFE — Frontend pair <!-- modified 2026-10-05 20:37 Aisling -->
 
 ## Week of October 19
 
-- [x] Matching, review queue, corrections that survive re-import (database side, PR #26) — Aisling
-- [ ] Sponsor guest form on private links — Frontend pair, with Backend pair
-- [ ] Gaps by owner, goal tracking, review before print — Frontend pair
+- [x] Matching, review queue, corrections that survive re-import (database side, PR #26) — Aisling <!-- modified 2026-10-05 22:58 Aisling -->
+- [ ] Sponsor guest form on private links — Frontend pair, with Backend pair <!-- modified 2026-10-05 20:37 Aisling -->
+- [ ] Gaps by owner, goal tracking, review before print — Frontend pair <!-- modified 2026-10-05 20:37 Aisling -->
 
 ## Week of October 26
 
-- [ ] Exports: badges with table number, check-in list, Salesforce file — Backend pair
-- [ ] Follow-up email drafts with staff approval — Backend pair
-- [ ] Check-in app: search, arrivals, walk-ins, blank sponsor seats — Frontend pair
+- [ ] Exports: badges with table number, check-in list, Salesforce file — Backend pair <!-- modified 2026-10-05 20:37 Aisling -->
+- [ ] Approval screen, plus reminder and receipt templates (draft queue and approval built in the backend) — Backend pair <!-- modified 2026-10-06 06:12 Aisling -->
+- [ ] Check-in app: search, arrivals, walk-ins, blank sponsor seats — Frontend pair <!-- modified 2026-10-05 20:37 Aisling -->
 - [ ] Show AAFE the full path for feedback — Natalie
 
 ## Week of November 2
 
-- [ ] AAFE branding and sponsor-form translations, reviewed by AAFE — Frontend pair
+- [ ] AAFE branding and sponsor-form translations, reviewed by AAFE — Frontend pair <!-- modified 2026-10-05 20:37 Aisling -->
 - [ ] End-to-end tests, accessibility, data-handling check — Everyone
-- [x] QR e-tickets stored hashed, one per seat, expiring (issue #10, PR #26) — Aisling
+- [x] QR e-tickets stored hashed, one per seat, expiring (issue #10, PR #26) — Aisling <!-- modified 2026-10-05 22:58 Aisling -->
 
 ## Week of November 9
 
-- [ ] Demo deploy, setup docs, handoff package, production-readiness notes — Everyone
+- [ ] Demo deploy, setup docs, handoff package, production-readiness notes — Everyone <!-- modified 2026-10-05 20:37 Aisling -->
 - [ ] Demo rehearsal with synthetic data — Everyone
