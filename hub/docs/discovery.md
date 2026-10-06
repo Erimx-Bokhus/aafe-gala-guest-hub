@@ -14,7 +14,7 @@ What AAFE told us on the October 1 call, in their words where it matters. Sarah 
 
 - **Individual tickets** are bought on Give Lively, downloaded, and pasted into the spreadsheet.
 - **Sponsors** often pledge by email or verbally, then pay by check or ACH to avoid Give Lively's fees. Staff email them for guest names and logos by a deadline.
-- **Package sizes:** the top tier holds about 20 tickets and a middle tier about 10. A $25,000 gift comes with 7 tickets; $1,000 comes with 2.
+- **Package sizes:** the top tier holds about 20 tickets and a middle tier about 10. A $25,000 gift comes with 7 tickets; $1,000 comes with 2. (AAFE's 2026 flyer, received Oct 5, supersedes these: Platinum $50,000 = 12 seats, Silver $25,000 = 10; see [Decisions](#decisions).) <!-- modified 2026-10-06 05:50 Aisling -->
 - **Comps** go to community partners and elected officials, tracked by whichever staff member holds the relationship.
 - **The spreadsheet also tracks** logo collection and payment type and date, which AAFE's fiscal team uses to tag gala revenue.
 - **Name tags** are a mail merge. In 2026, wrong titles and affiliations were caught only because a relationship manager glanced at them just before printing.

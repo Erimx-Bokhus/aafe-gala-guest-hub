@@ -55,7 +55,7 @@ The starter files for the code repository: `CLAUDE.md` (project rules for Claude
 | `docs/seed-data-requirements.md` | The invented records and two Give Lively export files the tests need <!-- updated 2026-10-03 11:56 Aisling --> |
 | `docs/aafe-materials-2026-10-05.md` | Structure of AAFE's real spreadsheet, Give Lively export, tiers, and deadlines (the files stay out of the repo) <!-- updated 2026-10-05 16:51 Aisling --> |
 | `docs/design.md` | Natalie's design system: AAFE orange and white, type, components (PR #14) <!-- updated 2026-10-05 16:51 Aisling --> |
-| `prototype/` | Natalie's staff app, guest portal, and Supabase backend (PRs #7, #25, #26). `prototype/docs/BACKEND.md` covers setup and every server function <!-- modified 2026-10-05 22:58 Aisling --> |
+| `prototype/` | Natalie's staff app, guest portal, and Supabase backend (PRs #7, #25, #26; later #28–#31). `prototype/docs/BACKEND.md` covers setup and every server function <!-- modified 2026-10-06 05:50 Aisling --> |
 | `import-engine/` | The Give Lively import rules as a tested TypeScript module (PRs #23, #24); its README explains how it feeds the database <!-- modified 2026-10-05 22:58 Aisling --> |
 | `seed/natalie-prototype/` | Natalie's seed data as CSVs, the demo's base state; its README lists what the app's loader must fix <!-- updated 2026-10-03 12:36 Aisling --> |
 | `docs/research/prototype-review-2026-10-03.md` | What we adopted from Natalie's prototype and seed data, and where it meets the hard rules <!-- updated 2026-10-03 12:36 Aisling --> |
@@ -66,7 +66,7 @@ The starter files for the code repository: `CLAUDE.md` (project rules for Claude
 
 - `main` only changes through pull requests. Aisling is the repo admin and reviews and merges every pull request. <!-- new 2026-10-03 11:56 Aisling -->
 - Each person works on their own branch (`aisling`, `natalie`, `cornell`, `antonin`) or a feature branch named `name-topic`, such as `aisling-import-engine`. A `name/topic` branch can't be created while a branch called `name` exists. <!-- new 2026-10-03 11:56 Aisling -->
-- Every push and pull request is scanned for secrets. Spreadsheet and CSV exports are blocked by `.gitignore`, except invented ones under `seed/` or `fixtures/`. <!-- new 2026-10-03 11:56 Aisling -->
+- Every pull request, and `main` after each merge, is scanned for secrets (pushes to a branch without a PR are not), and a real-data guard runs on every PR. Spreadsheet and CSV exports are blocked by `.gitignore`, except invented ones under `seed/` or `fixtures/`. <!-- modified 2026-10-06 05:50 Aisling -->
 
 ## Credits
 
