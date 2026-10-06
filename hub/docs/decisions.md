@@ -1,10 +1,16 @@
 # Decisions
-<!-- updated Oct 5 (pairs) -->
+<!-- updated Oct 6 -->
 
 Every decision with its reason and what would reopen it, newest first. Nothing here is reopened without new information.
 
 | Date | Decision | Why | Revisit if | Owner |
 | --- | --- | --- | --- | --- |
+| Oct 6 | Import: a guest list with some unclear entries still pre-fills its clear names; more names than seats pre-fills nothing | Sponsors confirm every name; keeping the good ones saves retyping | Natalie or AAFE prefers all-or-nothing | Aisling (Natalie reviewing) |
+| Oct 6 | Import: the same name on another order is a possible duplicate; double-booked only when the email or a known organization also matches | Respect each sponsor's list; staff still see it before gala night | Double bookings slip through | Aisling (Natalie reviewing) |
+| Oct 6 | Import: an upload stops until this gala's Give Lively page is chosen; then only that page is imported | A mixed export can't put another campaign on the guest list | — | Aisling (Natalie reviewing) |
+| Oct 6 | Staff map each Give Lively tier name to a package once per gala ("Ticket" → a package) | AAFE's export says just "Ticket"; every ticket would otherwise wait for review | Give Lively exports package names | Aisling, Natalie |
+| Oct 6 | QR e-tickets: random, stored hashed, one per seat, expire 6 a.m. the morning after the gala; a new guest on the seat voids the code | Hard rule 6: a QR code works like a door key | AAFE wants codes on printed badges | Aisling |
+| Oct 6 | Natalie's backend and guest portal merged into `main` as the base for the build, her history kept | Build on what exists instead of starting over | — | Aisling |
 | Oct 5 | Build work split into two pairs: Frontend (Natalie + Antonin) and Backend (Aisling + Cornell); Natalie stays product lead | Natalie is carrying most of the build; pairs keep two people on every area | A pair can't keep pace | Aisling, Natalie |
 | Oct 5 | Stack: React + TypeScript (Vite, Tailwind) on Supabase (Postgres, sign-in, server functions) | Matches Natalie's working prototype; mainstream tools a future partner can pick up | A partner needs a different host | Aisling, team |
 | Oct 5 | Supabase free plan for the prototype and the demo | Covers invented data; a free project pauses after a week idle, so wake it before demos | The demo needs more than the free plan | Aisling |
