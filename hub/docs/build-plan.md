@@ -54,7 +54,7 @@ As of October 6. Natalie's backend and guest portal are now in `main` (PRs #25 a
 
 | # | Component | Status | Done | Next |
 | --- | --- | --- | --- | --- |
-| C0 | Setup and guardrails | Mostly done | Secret scan on every PR; automatic checks for the import engine and the backend tests; `main` protected | Frontend build check; demo preview host |
+| C0 | Setup and guardrails | Mostly done | Secret scan and real-data guard required on every PR; import engine, backend, and frontend build checks; demo-data drift check; `main` protected | Demo preview host |
 | C1 | Data model and test data | In progress | Natalie's Supabase schema and seed in `main`; import tables added; demo data fixed for rule 6 (random links and QR codes, fictional phones) | Messier test data (~550 guests) for the import tests |
 | C2 | Sign-in and roles | In progress | Emailed one-time sign-in link, role from the staff list (Cornell, PR #27, in review) | Roles checked on the server for every staff page (issue #9, Cornell) |
 | C3 | Commitments and seats | Built in the backend | Pledges, payments, comps, seats, and seat statuses in Natalie's backend | Connect the staff app pages to it (with #9) |
@@ -76,9 +76,9 @@ What the automated checks don't cover yet, most important first.
 
 | # | Add | Why |
 | --- | --- | --- |
-| 1 | Frontend build check in CI | Nothing checks that the staff app and portal still build |
-| 2 | Demo-data drift check | Regenerate the seed and fail if it differs from what's committed |
-| 3 | Real-data guard | Fail on any email outside `example.org` or phone outside 555-0100–0199 (hard rule 1) |
+| 1 | ~~Frontend build check in CI~~ Done (PR #28) | Nothing checked that the staff app and portal still build |
+| 2 | ~~Demo-data drift check~~ Done (PR #28) | Regenerate the seed and fail if it differs from what's committed |
+| 3 | ~~Real-data guard~~ Done (PR #28), required on `main` | Fail on any email outside `example.org` or phone outside 555-0100–0199 (hard rule 1) |
 | 4 | Email and sync function tests | `send-emails` and `givelively-sync` have none: prove an unapproved email never sends and codes are stored only as hashes |
 | 5 | Access rules for every table and role | Only a few are covered |
 | 6 | Sponsor link limits | Expires after the deadline; can't see another order, payments, or staff notes |
