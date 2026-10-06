@@ -1,4 +1,5 @@
 # Discovery
+<!-- reviewed 2026-10-06 Aisling -->
 
 What AAFE told us on the October 1 call, in their words where it matters. AAFE's gala lead ran the guest list for the 2026 gala while AAFE's project contact was on leave.
 

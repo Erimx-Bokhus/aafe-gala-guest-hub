@@ -1,4 +1,5 @@
 # Hosting
+<!-- reviewed 2026-10-06 Aisling -->
 
 We are building a capstone prototype, not choosing AAFE's production infrastructure. The team delivers a working, AAFE-branded prototype with invented data, plus code and documentation that any qualified partner can pick up. **Production hosting is intentionally not selected during this project.** AAFE decides that, if it adopts the tool, after reviewing the finished prototype.
 

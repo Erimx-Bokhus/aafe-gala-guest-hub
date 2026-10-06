@@ -1,5 +1,6 @@
 # Decisions
 <!-- updated 2026-10-05 22:58 Aisling -->
+<!-- reviewed 2026-10-06 Aisling -->
 
 Every decision with its reason and what would reopen it, newest first. Nothing here is reopened without new information.
 

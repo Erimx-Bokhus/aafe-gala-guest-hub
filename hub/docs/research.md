@@ -1,4 +1,5 @@
 # Research
+<!-- reviewed 2026-10-06 Aisling -->
 
 What already exists, what it costs, and why we are building a companion to Give Lively rather than replacing it. Market research by Natalie Walker (Source of Truth v3, §13); prices collected September 29, 2026 from vendor pages and third-party listings. Several vendors quote privately and prices change often, so confirm before quoting any figure to AAFE.
 
