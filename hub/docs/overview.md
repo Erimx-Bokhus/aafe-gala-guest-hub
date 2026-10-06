@@ -1,5 +1,6 @@
 # Overview
-<!-- modified Oct 5 -->
+<!-- modified 2026-10-05 16:51 Aisling -->
+<!-- reviewed 2026-10-06 Aisling -->
 
 AAFE runs one gala a year for 500–600 guests, and its guest list lives in a single spreadsheet that staff rebuild by hand from Give Lively purchases, emailed sponsorship pledges, checks, and comps. We are building one reliable guest list on top of Give Lively that sponsors can update themselves and staff can trust from first purchase to gala-night check-in.
 
@@ -45,19 +46,19 @@ This is the demo in miniature. Pause on step 4: the sponsor fixes their own list
 | Target event | AAFE's 2027 gala |
 | Discovery call | October 1, 2026 |
 | Demo Day | November 10, 2026 |
-| Status | Discovery complete; AAFE's materials received Oct 5; stack decided (React + Supabase) |
+| Status | Building. Import engine and its database side done and tested; Natalie's staff app, sponsor portal, and Supabase backend in `main`; team Supabase project loaded; staff sign-in in review (PR #27) <!-- modified 2026-10-06 05:50 Aisling --> |
 
 ## Team
-<!-- updated Oct 5 (pairs) -->
+<!-- updated 2026-10-05 20:37 Aisling pairs -->
 
-| Person | Pair | Role | GitHub |
+| Person | Pair | Role | GitHub <!-- modified 2026-10-05 20:37 Aisling --> |
 | --- | --- | --- | --- |
-| Natalie Walker | Frontend | Product manager, client contact | wsvdesign |
-| Antonin Lesov | Frontend | Frontend | antoninlesov |
-| Aisling Leiva-Davila | Backend | Backend, GitHub and integrations | nessaisling-lab |
-| Cornell Robertson | Backend | Backend | CodeToTheCore |
+| Natalie Walker | Frontend | Product lead, UI/UX, client contact | wsvdesign <!-- modified 2026-10-06 05:50 Aisling --> |
+| Antonin Lesov | Frontend | Frontend | antoninlesov <!-- modified 2026-10-05 20:37 Aisling --> |
+| Aisling Leiva-Davila | Backend | Backend, GitHub and integrations | nessaisling-lab / aislingld-pursuit <!-- modified 2026-10-06 05:50 Aisling --> |
+| Cornell Robertson | Backend | Backend | CodeToTheCore <!-- modified 2026-10-05 20:37 Aisling --> |
 
-Build work is split between two pairs (decided Oct 5): **Frontend pair: Natalie + Antonin** (staff app, sponsor portal, check-in, branding) and **Backend pair: Aisling + Cornell** (Supabase backend, import, sign-in and roles, secure links, exports, emails). Natalie also stays product lead and client contact. Owners per component are on the [Build plan](#build-plan) page.
+Build work is split between two pairs (decided Oct 5): **Frontend pair: Natalie + Antonin** (staff app, sponsor portal, check-in, branding) and **Backend pair: Aisling + Cornell** (Supabase backend, import, sign-in and roles, secure links, exports, emails). Natalie also stays product lead and client contact. Owners per component are on the [Build plan](#build-plan) page. <!-- modified 2026-10-05 20:37 Aisling -->
 
 ## What we will not build
 
