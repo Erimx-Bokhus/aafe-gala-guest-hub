@@ -1,4 +1,5 @@
 # Documents
+<!-- reviewed 2026-10-06 Aisling -->
 
 Everything the team has produced or collected, in one place. Living documents are linked; the markdown copies in the repo's `docs/` folder are the version Claude Code reads.
 

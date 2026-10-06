@@ -1,5 +1,6 @@
 # Tasks
 <!-- updated 2026-10-05 22:58 Aisling -->
+<!-- reviewed 2026-10-06 Aisling -->
 
 The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus), kept by Natalie at Pursuit's request. This page is a snapshot for planning; when they differ, Trello wins. Build work belongs to a pair (Oct 5): **Frontend: Natalie + Antonin**; **Backend: Aisling + Cornell**. <!-- modified 2026-10-05 20:37 Aisling -->
 

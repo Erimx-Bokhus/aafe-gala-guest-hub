@@ -1,4 +1,5 @@
 # Requirements
+<!-- reviewed 2026-10-06 Aisling -->
 
 What the tool must do, in priority order. Bracketed tags show where each requirement came from.
 

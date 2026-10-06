@@ -1,5 +1,6 @@
 # Import and matching
 <!-- modified 2026-10-05 21:28 Aisling -->
+<!-- reviewed 2026-10-06 Aisling -->
 
 How a Give Lively export becomes guests, orders, and seats without duplicates, and why a staff correction is never lost. Plain rules, no AI. Full spec: `docs/import-matching-spec.md` in the repo.
 
