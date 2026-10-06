@@ -1,5 +1,5 @@
 # Import and matching
-<!-- modified Oct 6 -->
+<!-- modified 2026-10-05 21:28 Aisling -->
 
 How a Give Lively export becomes guests, orders, and seats without duplicates, and why a staff correction is never lost. Plain rules, no AI. Full spec: `docs/import-matching-spec.md` in the repo.
 
@@ -31,7 +31,7 @@ One import is all-or-nothing: if anything fails partway, nothing is applied and 
 - **Relationship owner** isn't in Give Lively's data. New guests show in the "no owner" view; if the buyer already has an owner, it's suggested, not set.
 
 ## Built and tested
-<!-- new Oct 6 -->
+<!-- new 2026-10-05 22:58 Aisling -->
 
 The import works end to end in code: a file in AAFE's export format goes through the import engine and into the database in one step that either fully succeeds or changes nothing. What's left is the staff app's upload screen (frontend pair).
 
@@ -47,7 +47,7 @@ Three choices settled while building (Oct 6; Natalie reviewing in Slack):
 | An upload before this gala's Give Lively page is set | The upload stops and lists the pages in the file; staff pick one, once a year |
 
 ## Tier names and the gala page
-<!-- new Oct 6 -->
+<!-- new 2026-10-05 21:28 Aisling -->
 
 - **Tier mapping.** AAFE's export says just "Ticket" for the tier, which matches no package. Staff link each Give Lively tier name to a package once per gala; every later upload uses it. A name with no link goes to review, and linking it there saves it.
 - **Gala page.** Each gala stores its Give Lively page name ("AAFE's 52nd Annual Gala"). Only that page's purchases are imported; rows from another page are skipped and listed in the report.
@@ -96,7 +96,7 @@ Nothing is deleted automatically. Refunded seats are cancelled, not removed, and
 
 ## What AAFE's export answered
 <!-- team -->
-<!-- updated Oct 6 -->
+<!-- updated 2026-10-05 21:28 Aisling -->
 
 - **Per-ticket ID:** none, and no transaction ID either. A purchase is keyed on email + purchase time in UTC.
 - **Tier:** just "Ticket" in the sample, so staff map tier names to packages (Oct 6).
@@ -119,7 +119,7 @@ The test cases below are being updated to match: cases that relied on ticket IDs
 
 ## Test cases
 <!-- team -->
-<!-- modified Oct 6 -->
+<!-- modified 2026-10-05 22:58 Aisling -->
 
 The original 22 cases, kept for reference. The spec now has 38 (`docs/import-matching-spec.md`, section 11), written for the real export's purchase key instead of ticket IDs; nearly all are automated tests, each labelled with its case number.
 

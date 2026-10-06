@@ -3,7 +3,7 @@
 What the tool must do, in priority order. Bracketed tags show where each requirement came from.
 
 ## Working PRD (until the final PRDs arrive)\*
-<!-- new Oct 6 -->
+<!-- new 2026-10-06 04:16 Aisling -->
 
 Until Natalie's team PRD and Pursuit's PRD are final, these pages together are the team's product requirements. Build from them; if something isn't covered here, it goes to [Decisions](#decisions) before it gets built.
 
@@ -33,7 +33,7 @@ From AAFE's intake form, for staff and for the Demo Day mock investor:
 3. How are we tracking to goal on sponsorships, tickets, and other categories?
 
 ## Must have for Demo Day
-<!-- updated Oct 5 -->
+<!-- updated 2026-10-05 16:51 Aisling -->
 
 - **Commitments and seats.** Every purchase or pledge has a package and a seat count; each seat is named or open. [call]
 - **Manual entry** for checks, ACH, and verbal pledges, with payment method, date, and status. [call]
@@ -50,7 +50,7 @@ From AAFE's intake form, for staff and for the Demo Day mock investor:
 - **Seated or admitted.** Champion and above guarantee a table; Friend and Supporter tickets admit guests without one, so the guest list and badges show the difference. [AAFE data]
 
 ## Should have
-<!-- updated Oct 5 -->
+<!-- updated 2026-10-05 16:51 Aisling -->
 
 - **QR-code e-tickets** emailed to each guest and scanned on an iPad. [call]
 - **A check-in app** that searches by guest or sponsor, marks arrivals, and handles walk-ins and unnamed sponsor seats. [call]

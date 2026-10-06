@@ -29,7 +29,7 @@ The prototype uses invented data only. This page sets out what a production vers
 - **Provider terms:** a paid service that doesn't train on submitted data, confirmed in writing before any real data is used.
 
 ## AI features for Demo Day
-<!-- new Oct 5 -->
+<!-- new 2026-10-05 16:51 Aisling -->
 
 Antonin flagged on Oct 3 that AI Native Demo Day may expect two or three real AI features; the team is confirming whether that is required. Candidates that fit the rules above (off by default, staff approve everything, no emails, phone numbers, or payment details sent to AI):
 

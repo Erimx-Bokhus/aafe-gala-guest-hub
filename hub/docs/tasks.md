@@ -1,5 +1,5 @@
 # Tasks
-<!-- updated Oct 6 -->
+<!-- updated 2026-10-05 22:58 Aisling -->
 
 The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus), kept by Natalie at Pursuit's request. This page is a snapshot for planning; when they differ, Trello wins. Build work belongs to a pair (Oct 5): **Frontend: Natalie + Antonin**; **Backend: Aisling + Cornell**.
 
@@ -14,7 +14,7 @@ The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus),
 - [ ] Settle code ownership and a team agreement with Pursuit — Team
 
 ## Week of October 5
-<!-- updated Oct 5 -->
+<!-- updated 2026-10-05 16:51 Aisling -->
 
 - [x] Record the stack decision: React + Supabase — Aisling
 - [ ] Pick the demo preview host — Team
@@ -38,7 +38,7 @@ The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus),
 - [x] Seed loader: Natalie's data with random hashed tokens and draft-only emails — Backend pair
 
 ## Added October 6
-<!-- new Oct 6 -->
+<!-- new 2026-10-05 22:58 Aisling -->
 
 - [x] Import engine: reads the real export, splits guest lists, matches buyers and guests (PR #23) — Aisling
 - [x] Tier mapping and gala page filter from Natalie's review (PR #22) — Aisling
@@ -51,9 +51,9 @@ The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus),
 - [ ] Upload screen: import engine, report, page picker, tier-mapping picker — Frontend pair
 - [ ] Staff app: show "sent" and "resend" for QR codes instead of the code itself — Frontend pair
 - [ ] Portal: "From your purchase: please confirm" labels; Korean — Frontend pair
-- [x] Frontend build check, demo-data drift check, real-data guard in CI — Backend pair
-- [x] Supabase project loaded (schema, seed, backend); access rules verified, security warnings cleared (PR #30) — Aisling
-- [x] Real-data guard required before merging to `main`, alongside the secret scan — Aisling
+- [x] Frontend build check, demo-data drift check, real-data guard in CI — Backend pair <!-- modified 2026-10-06 01:13 Aisling -->
+- [x] Supabase project loaded (schema, seed, backend); access rules verified, security warnings cleared (PR #30) — Aisling <!-- updated 2026-10-06 03:05 Aisling -->
+- [x] Real-data guard required before merging to `main`, alongside the secret scan — Aisling <!-- updated 2026-10-06 03:05 Aisling -->
 - [ ] Informal client demo, Wednesday Oct 7 — Natalie
 
 ## Week of October 12

@@ -1,5 +1,5 @@
 # Overview
-<!-- modified Oct 5 -->
+<!-- modified 2026-10-05 16:51 Aisling -->
 
 AAFE runs one gala a year for 500–600 guests, and its guest list lives in a single spreadsheet that staff rebuild by hand from Give Lively purchases, emailed sponsorship pledges, checks, and comps. We are building one reliable guest list on top of Give Lively that sponsors can update themselves and staff can trust from first purchase to gala-night check-in.
 
@@ -48,7 +48,7 @@ This is the demo in miniature. Pause on step 4: the sponsor fixes their own list
 | Status | Discovery complete; AAFE's materials received Oct 5; stack decided (React + Supabase) |
 
 ## Team
-<!-- updated Oct 5 (pairs) -->
+<!-- updated 2026-10-05 20:37 Aisling pairs -->
 
 | Person | Pair | Role | GitHub |
 | --- | --- | --- | --- |

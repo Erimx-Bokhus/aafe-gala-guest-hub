@@ -19,7 +19,7 @@
   --gold:#8a6a2e; --mark:#f6dca6;
   --own-backend:#c64c28; --own-frontend:#2a78d6; --own-shared:#8a8478;
   --k-update:#2a78d6; --k-review:#a8770f; --k-new:#c64c28; --k-reject:#8a8478;
-  --ok:#17795a; --ok-wash:rgba(23,121,90,.1);
+  --ok:#17795a; --ok-wash:rgba(23,121,90,.1); --crit:#b42318;
   --shadow:0 1px 2px rgba(31,29,26,.06),0 8px 24px rgba(31,29,26,.06);
   --f-display:"Shippori Mincho","Noto Serif","Georgia",serif;
   --f-body:"Zen Kaku Gothic New","Segoe UI",system-ui,-apple-system,sans-serif;
@@ -33,7 +33,7 @@
   --gold:#cfa860; --mark:#6b4f1f;
   --own-backend:#d95926; --own-frontend:#3987e5; --own-shared:#8e877b;
   --k-update:#3987e5; --k-review:#c99a2e; --k-new:#e0714d; --k-reject:#8e877b;
-  --ok:#4cc79a; --ok-wash:rgba(76,199,154,.12);
+  --ok:#4cc79a; --ok-wash:rgba(76,199,154,.12); --crit:#f97066;
   --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25); color-scheme:dark;
 }}
 :root[data-theme="dark"]{
@@ -43,7 +43,7 @@
   --gold:#cfa860; --mark:#6b4f1f;
   --own-backend:#d95926; --own-frontend:#3987e5; --own-shared:#8e877b;
   --k-update:#3987e5; --k-review:#c99a2e; --k-new:#e0714d; --k-reject:#8e877b;
-  --ok:#4cc79a; --ok-wash:rgba(76,199,154,.12);
+  --ok:#4cc79a; --ok-wash:rgba(76,199,154,.12); --crit:#f97066;
   --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25); color-scheme:dark;
 }
 [hidden]{display:none!important}
@@ -93,7 +93,15 @@ mark{background:var(--mark);color:inherit;border-radius:2px;padding:0 1px}
 .nav a .tags{display:flex;gap:4px;align-items:baseline}
 /* change markers: <!-- new|updated|modified [date] --> under a heading; label always in text, color is a second cue */
 .chg{--c:var(--accent);display:inline-block;vertical-align:middle;font:600 9.5px/1 var(--f-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--c);border:1px solid var(--c);border-radius:4px;padding:3px 5px;white-space:nowrap}
-.chg.k-updated{--c:var(--ok)} .chg.k-modified{--c:var(--k-review)}
+.chg.k-updated{--c:var(--ok)} .chg.k-modified{--c:var(--k-review)} .chg.k-removed{--c:var(--soft)} .chg.k-important{--c:var(--crit)}
+/* one glyph per kind, drawn from CSS so it never enters page text, search, or checkbox keys */
+.k-new{--g:"✦"} .k-updated{--g:"+"} .k-modified{--g:"✎"} .k-removed{--g:"−"} .k-important{--g:"!"}
+.chg::before{content:var(--g);margin-right:4px;font-weight:700;letter-spacing:0}
+/* inline marker next to the exact line that changed; hover or focus shows kind, time, and who */
+.chg-i{--c:var(--accent);display:inline-grid;place-items:center;width:18px;height:18px;margin:0 2px 0 6px;border-radius:50%;border:1.5px solid var(--c);color:var(--c);background:var(--surface);font:700 11px/1 var(--f-ui);vertical-align:1px;cursor:pointer;text-decoration:none;text-indent:0}
+.chg-i::before{content:var(--g)}
+.chg-i.k-updated{--c:var(--ok)} .chg-i.k-modified{--c:var(--k-review)} .chg-i.k-removed{--c:var(--soft)} .chg-i.k-important{--c:var(--crit);background:var(--crit);color:var(--surface)}
+.chg-i:hover,.chg-i:focus-visible{background:var(--c);color:var(--surface)}
 .doc h1 .chg,.doc h2 .chg{margin-left:10px;position:relative;top:-3px;font-size:10px;padding:4px 6px;background:none;cursor:pointer}
 .doc h1 .chg:hover,.doc h2 .chg:hover{background:color-mix(in srgb,var(--c) 12%,transparent)}
 .doc h1 .chg:hover::after,.doc h2 .chg:hover::after{content:" · mark read"}
@@ -427,6 +435,7 @@ mark{background:var(--mark);color:inherit;border-radius:2px;padding:0 1px}
 .ch-main{display:flex;flex-direction:column;gap:3px;min-width:0}
 .ch-meta{font:500 11.5px/1.3 var(--f-ui);color:var(--faint)}
 .ch-who{font:600 11px/1 var(--f-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--accent-text);margin-right:6px}
+.ch-meta .chg{margin-right:8px;vertical-align:1px}
 .ch-text{font:500 15px/1.5 var(--f-body);color:var(--ink);text-decoration:none}
 .ch-text:hover{text-decoration:underline}
 .ch-item.read .ch-text{color:var(--soft);font-weight:400}
@@ -990,7 +999,7 @@ function fenceWireframe(kind){ const f = WF[kind]; return f ? `<div class="wf-wr
 const TEAM = ['Aisling','Natalie','Cornell','Antonin'];
 let chlog = [];                                            // newest first, as written in docs/changes.md
 let myReads = new Set(store.get('aafe-hub-chlog-read', []));
-let chFilter = store.get('aafe-hub-chlog-filter', 'unread'), chWho = '';
+let chFilter = store.get('aafe-hub-chlog-filter', 'unread'), chWho = '', chKind = '';
 /* Who someone is comes from their claude.ai account, never from a name they pick. Only the hub's
    owner links an account to a team name (roster/team; the db rule lets only the owner write it). */
 let userNs = null, myUid = null, amOwner = false, readsDb = null, rosterDb = null;
@@ -998,8 +1007,10 @@ let readers = {}, roster = {}, names = {}, readsMerged = false, readsWrite = Pro
 const teamOf = uid => (uid && TEAM.find(n => roster[n] === uid)) || '';
 const nameOf = uid => teamOf(uid) || names[uid] || 'Someone';
 function fenceChanges(src){
-  chlog = lines(src).map(cells).filter(r => r.length >= 4).map(([date, who, target, text]) => ({date, who, target, text}));
-  chlog.forEach(e => { e.key = slug(`${e.date} ${e.target} ${e.text}`).slice(0, 96); });
+  // "2026-10-06 14:32 | modified | Aisling | page.section | what changed" (time is New York time)
+  chlog = lines(src).map(cells).filter(r => r.length >= 5).map(([stamp, kind, who, target, text]) => {
+    const [date, time = ''] = stamp.split(/\s+/); return {date, time, kind: CHG[kind.toLowerCase()] ? kind.toLowerCase() : 'updated', who, target, text}; });
+  chlog.forEach(e => { e.key = slug(`${e.target} ${e.text}`).slice(0, 96); });   // not the time, so correcting a timestamp keeps read state
   return '<div class="chlog" data-chlog></div>';
 }
 function saveReads(){
@@ -1043,6 +1054,7 @@ function renderChlog(el){
   const unread = chlog.filter(e => !myReads.has(e.key));
   let list = chFilter === 'unread' ? unread : chFilter === 'mine' ? chlog.filter(e => mine && e.who === mine) : chlog;
   if (chWho) list = list.filter(e => e.who === chWho);
+  if (chKind) list = list.filter(e => e.kind === chKind);
   const opt = (v, cur, label) => `<option value="${esc(v)}"${v === cur ? ' selected' : ''}>${esc(label)}</option>`;
   const seg = [['unread', `Unread by me · ${unread.length}`], ['mine', 'Made by me'], ['all', 'All']]
     .map(([v, l]) => `<button type="button" data-chf="${v}" aria-pressed="${chFilter === v}"${v === 'mine' && !mine ? ' disabled title="Works once your account is linked to your team name"' : ''}>${esc(l)}</button>`).join('');
@@ -1071,12 +1083,13 @@ function renderChlog(el){
       const by = Object.keys(rb).filter(uid => rb[uid].read.has(e.key)).map(nameOf);
       const notYet = TEAM.filter(n => !(roster[n] && rb[roster[n]] && rb[roster[n]].read.has(e.key)));
       const receipts = anyShared ? `<p class="ch-receipts">${by.length ? `<b>Read by</b> ${esc(by.join(', '))}` : 'Nobody has read this yet'}${by.length && notYet.length ? ` · not yet: ${esc(notYet.join(', '))}` : ''}</p>` : '';
-      return `<li class="ch-item${read ? ' read' : ''}"><div class="ch-main"><span class="ch-meta"><span class="ch-who">${esc(e.who)}</span>${esc(page ? page.title : pg)}</span>
+      return `<li class="ch-item${read ? ' read' : ''}"><div class="ch-main"><span class="ch-meta"><span class="chg k-${e.kind}" data-tip="${esc(markTip(parseMark(e.kind, `${e.date} ${e.time} ${e.who}`)))}">${CHG[e.kind]}</span><span class="ch-who">${esc(e.who)}</span>${esc(page ? page.title : pg)}${e.time ? ` · ${esc(fmtTime(+e.time.split(':')[0], e.time.split(':')[1]))} ET` : ''}</span>
         <a class="ch-text" href="#${esc(e.target)}" data-chopen="${e.key}">${esc(e.text)}</a></div>
         <button type="button" class="ch-mark" data-chmark="${e.key}" aria-pressed="${read}">${read ? 'Read ✓' : 'Mark read'}</button>${receipts}</li>`; }).join('')}</ol></section>`).join('');
   }
   el.innerHTML = `<p class="ch-you">${you}</p>
     <div class="ch-bar"><div class="seg ch-seg" role="group" aria-label="Show">${seg}</div>
+    <label for="ch-kind">Kind <select id="ch-kind">${opt('', chKind, 'Any')}${Object.keys(CHG).map(k => opt(k, chKind, CHG[k])).join('')}</select></label>
     <label for="ch-who">Made by <select id="ch-who">${opt('', chWho, 'Anyone')}${TEAM.map(n => opt(n, chWho, n)).join('')}</select></label>
     <button class="btn" type="button" data-chall${unread.length ? '' : ' disabled'}>Mark all read</button></div>${team}${rosterPanel}${body}`;
 }
@@ -1128,7 +1141,7 @@ function sectionize(container){
   for (const k of kids){
     if (k.nodeName === 'H2'){ s = document.createElement('section'); s.className = 'slide'; container.appendChild(s); }
     if (k.nodeType === 8 && k.data.trim() === 'team'){ s.dataset.team = ''; continue; }
-    const cm = k.nodeType === 8 && k.data.trim().match(/^(new|updated|modified)\b\s*(.*)$/i);
+    const cm = k.nodeType === 8 && k.data.trim().match(CHG_RE);
     if (cm){ s.dataset.mark = cm[1].toLowerCase(); s.dataset.markOn = cm[2].trim(); continue; }
     s.appendChild(k);
   }
@@ -1136,18 +1149,44 @@ function sectionize(container){
 }
 
 /* ============ change markers ============ */
-const CHG = {new:'New', updated:'Updated', modified:'Modified'}, CHG_RANK = {new:3, modified:2, updated:1};
+const CHG = {new:'New', updated:'Updated', modified:'Modified', removed:'Removed', important:'Important'};
+const CHG_RANK = {important:5, new:4, removed:3, modified:2, updated:1};
+const CHG_RE = /^(new|updated|modified|removed|important)\b\s*(.*)$/is;
+/* "<!-- modified 2026-10-06 14:32 Aisling optional note -->": time is New York wall-clock time.
+   Older markers carry free text ("Oct 5 (pairs)") and still work. */
+const fmtTime = (h, mm) => `${(h % 12) || 12}:${mm} ${h < 12 ? 'AM' : 'PM'}`;
+function parseMark(kind, raw){
+  const d = (raw || '').trim().match(/^(\d{4}-\d{2}-\d{2})(?:[ T](\d{1,2}):(\d{2}))?\s*(.*)$/s);
+  if (!d) return {kind, on: (raw || '').trim(), when: '', who: '', note: ''};
+  let note = d[4].trim(); const who = TEAM.find(n => note === n || note.startsWith(n + ' ')) || '';
+  if (who) note = note.slice(who.length).trim();
+  const day = fmt(parseDate(d[1]));
+  return {kind, on: day, when: day + (d[2] ? `, ${fmtTime(+d[2], d[3])} ET` : ''), who, note};
+}
+const markTip = m => [CHG[m.kind], m.when || m.on, m.who, m.note].filter(Boolean).join(' · ');
 /* read state: per viewer, in this browser only (a convenience, so it may reset) */
 let readMarks = store.get('aafe-hub-read', {});
 const markKey = (id, section, kind, on) => `${id}|${section}|${kind}|${on}`;
 const isRead = key => !!readMarks[key];
-function markRead(key){ readMarks = {...readMarks, [key]: true}; store.set('aafe-hub-read', readMarks);
+function markRead(key){ readMarks = {...readMarks, [key]: true};
   const [pg, sec] = key.split('|'), target = sec === 'page' ? pg : `${pg}.${sec}`;
+  (docs[pg] && docs[pg].marks || []).filter(m => m.inline && m.key.startsWith(`${pg}|${sec}|`)).forEach(m => { readMarks[m.key] = true; });
+  document.querySelectorAll(`#doc .chg-i[data-sec="${sec}"]`).forEach(i => i.remove());
+  store.set('aafe-hub-read', readMarks);
   const keys = chlog.filter(e => e.target === target && !myReads.has(e.key)).map(e => e.key);
   if (keys.length) readEntries(keys); else { buildNav(); updateNav(); } }
-function chgTag(kind, on, key){ const t = document.createElement('button'); t.type = 'button'; t.className = `chg k-${kind}`;
-  t.textContent = CHG[kind] + (on ? ` · ${on}` : ''); t.title = 'Mark as read'; t.setAttribute('aria-label', `${t.textContent}. Mark as read`);
+function chgTag(kind, on, key){ const m = parseMark(kind, on), t = document.createElement('button'); t.type = 'button'; t.className = `chg k-${kind}`;
+  t.textContent = CHG[kind] + (m.on ? ` · ${m.on}` : ''); t.dataset.tip = `${markTip(m)} · click to mark read`;
+  t.setAttribute('aria-label', `${markTip(m)}. Mark as read`);
   t.addEventListener('click', () => { markRead(key); t.remove(); }); return t; }
+/* inline markers: comments inside a paragraph, list item, or table cell (not the ones right under a heading) */
+function inlineMarks(slideEl){
+  const out = [], w = document.createTreeWalker(slideEl, NodeFilter.SHOW_COMMENT);
+  while (w.nextNode()){ const c = w.currentNode, cm = c.data.trim().match(CHG_RE);
+    if (cm && c.parentNode !== slideEl) out.push({node: c, kind: cm[1].toLowerCase(), raw: cm[2].trim()}); }
+  return out;
+}
+const lineLabel = el => (el.closest('li,tr,p,td') || el.parentElement).textContent.replace(/\s+/g, ' ').trim().slice(0, 70);
 /* page badge: the page's own unread marker, else its most significant unread section marker (hidden team sections skipped in client view) */
 function pageMark(id){
   const m = (docs[id] && docs[id].marks || []).filter(x => !(client && x.team) && !isRead(x.key));
@@ -1199,6 +1238,9 @@ async function load(id){
     const marks = secs.filter(s => s.dataset.mark).map(s => ({kind: s.dataset.mark, on: s.dataset.markOn,
       page: s === secs[0], team: 'team' in s.dataset, label: (s.querySelector('h2') || {}).textContent || '',
       key: markKey(id, s === secs[0] ? 'page' : slug(s.querySelector('h2').textContent), s.dataset.mark, s.dataset.markOn)}));
+    secs.forEach(s => { const h2 = s.querySelector('h2'), sec = h2 ? slug(h2.textContent) : 'page';
+      inlineMarks(s).forEach(m => marks.push({kind: m.kind, on: m.raw, inline: true, team: 'team' in s.dataset,
+        label: lineLabel(m.node.parentNode.nodeType === 1 ? m.node.parentNode : s), key: markKey(id, sec, m.kind, m.raw)})); });
     docs[id] = {md, html, marks, text: textOf(secs), pub: textOf(secs.filter(s => !('team' in s.dataset)))};
   } catch (e) { docs[id] = {error: String(e.message || e)}; }
   return docs[id];
@@ -1249,6 +1291,9 @@ function decorate(doc, id){
   const boxes = doc.querySelectorAll('input[type=checkbox]');
   boxes.forEach(b => {
     const li = b.closest('li'); b.dataset.key = keyFor(id, li);
+    // the li is a flex row: keep the text (code spans, change icons) in one flowing item next to the box
+    if (b.parentNode === li){ const body = document.createElement('span'); body.className = 'li-body';
+      while (b.nextSibling) body.appendChild(b.nextSibling); li.appendChild(body); }
     b.removeAttribute('disabled'); b.setAttribute('aria-label', li.textContent.trim());
     b.addEventListener('change', () => setCheck(b.dataset.key, b.checked));
   });
@@ -1257,6 +1302,13 @@ function decorate(doc, id){
     const firstH2 = doc.querySelector('.slide:first-child'); firstH2.appendChild(n);
   }
   applyChecks();
+  slides.forEach(sl => { const h2 = sl.querySelector('h2'), sec = h2 ? h2.id : 'page';
+    inlineMarks(sl).forEach(({node, kind, raw}) => { const key = markKey(id, sec, kind, raw);
+      if (isRead(key)){ node.remove(); return; }
+      const m = parseMark(kind, raw), i = document.createElement('span');
+      i.className = `chg-i k-${kind}`; i.tabIndex = 0; i.setAttribute('role', 'button'); i.dataset.sec = sec; i.dataset.key = key;
+      i.dataset.tip = `${markTip(m)} · click to mark read`; i.setAttribute('aria-label', `${markTip(m)}. Mark as read`);
+      node.replaceWith(i); }); });
   doc.querySelectorAll('[data-wt]').forEach(mountWalkthrough);
   doc.querySelectorAll('[data-chlog]').forEach(renderChlog);
   doc.querySelectorAll('[data-erd]').forEach(e => { drawErd(e); });
@@ -1466,8 +1518,12 @@ document.addEventListener('click', e => {
   else if (t.hasAttribute('data-chall')) readEntries(chlog.map(x => x.key));
   else if (t.dataset.chopen) readEntries([t.dataset.chopen]);   // the link still opens the change
 });
+function readInline(i){ readMarks = {...readMarks, [i.dataset.key]: true}; store.set('aafe-hub-read', readMarks); i.remove(); tip.hidden = true; buildNav(); updateNav(); }
+document.addEventListener('click', e => { const i = e.target.closest('.chg-i'); if (i){ e.preventDefault(); readInline(i); } });
+document.addEventListener('keydown', e => { const i = e.target.closest && e.target.closest('.chg-i'); if (i && (e.key === 'Enter' || e.key === ' ')){ e.preventDefault(); readInline(i); } });
 document.addEventListener('change', e => {
   if (e.target.id === 'ch-who'){ chWho = e.target.value; renderChlogs(); }
+  else if (e.target.id === 'ch-kind'){ chKind = e.target.value; renderChlogs(); }
   else if (e.target.dataset && e.target.dataset.link) setLink(e.target.dataset.link, e.target.value);
 });
 $('#q').addEventListener('input', e => runSearch(e.target.value));

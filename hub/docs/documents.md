@@ -3,7 +3,7 @@
 Everything the team has produced or collected, in one place. Living documents are linked; the markdown copies in the repo's `docs/` folder are the version Claude Code reads.
 
 ## Living documents
-<!-- updated Oct 5 -->
+<!-- updated 2026-10-05 16:51 Aisling -->
 
 | Document | What it is | Status |
 | --- | --- | --- |
@@ -45,7 +45,7 @@ Repo copies: `docs/research/`. Where this research differs from later discovery 
 | Code repository | [github.com/Erimx-Bokhus/aafe-gala-guest-hub](https://github.com/Erimx-Bokhus/aafe-gala-guest-hub) (private; team members invited) |
 
 ## Repo handoff package
-<!-- updated Oct 6 -->
+<!-- updated 2026-10-05 22:58 Aisling -->
 
 The starter files for the code repository: `CLAUDE.md` (project rules for Claude Code), `README.md`, `KICKOFF_PROMPT.md`, and `docs/` with requirements, decisions, data model, data handling, and research. This hub sits beside them in `hub/`.
 
@@ -59,7 +59,7 @@ The starter files for the code repository: `CLAUDE.md` (project rules for Claude
 | `import-engine/` | The Give Lively import rules as a tested TypeScript module (PRs #23, #24); its README explains how it feeds the database |
 | `seed/natalie-prototype/` | Natalie's seed data as CSVs, the demo's base state; its README lists what the app's loader must fix |
 | `docs/research/prototype-review-2026-10-03.md` | What we adopted from Natalie's prototype and seed data, and where it meets the hard rules |
-| `.github/workflows/` | Checks on every pull request: secret scan (`gitleaks.yml`), import engine tests (`import-engine.yml`), backend tests (`backend.yml`), app build plus generated demo files up to date (`frontend.yml`), real-data guard (`real-data.yml`, runs `scripts/check-no-real-data.mjs`). The secret scan and real-data guard must pass before anything merges to `main`; the others run only when their folder changes |
+| `.github/workflows/` | Checks on every pull request: secret scan (`gitleaks.yml`), import engine tests (`import-engine.yml`), backend tests (`backend.yml`), app build plus generated demo files up to date (`frontend.yml`), real-data guard (`real-data.yml`, runs `scripts/check-no-real-data.mjs`). The secret scan and real-data guard must pass before anything merges to `main`; the others run only when their folder changes <!-- modified 2026-10-06 03:05 Aisling --> |
 
 ## Working in the repo
 <!-- team -->

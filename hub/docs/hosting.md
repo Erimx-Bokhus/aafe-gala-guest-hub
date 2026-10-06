@@ -44,7 +44,7 @@ Whoever runs a production version should be able to say yes to each of these, wh
 
 ## Demo preview: team notes
 <!-- team -->
-<!-- modified Oct 5 -->
+<!-- modified 2026-10-05 16:51 Aisling -->
 
 - The demo runs under a team account with invented data, on Supabase's free plan (decided Oct 5). Where the web app itself is previewed is still open.
 - A free Supabase project pauses after a week without activity. Wake it before any demo, or rebuild it from the seed data.
@@ -52,7 +52,7 @@ Whoever runs a production version should be able to say yes to each of these, wh
 
 ## Future hosting paths, for the handoff notes
 <!-- team -->
-<!-- updated Oct 5 -->
+<!-- updated 2026-10-05 16:51 Aisling -->
 
 Reference for a future partner, not a decision for AAFE now. Because the prototype uses Supabase for data, sign-in, and server functions, paths that keep Supabase are the shortest; moving fully off it is more work. Costs are estimated base costs before usage, tax, optional storage, and vendor price changes.
 
