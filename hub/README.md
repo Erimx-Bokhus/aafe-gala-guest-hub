@@ -31,6 +31,16 @@ Put one of these on the line after a heading to badge it:
 
 After the `#` title it marks the whole page; after a `##` heading it marks that section. The date is free text and optional. The sidebar shows the page's own marker, or else its most significant section marker (new, then modified, then updated); hover it to see which sections. Team-only sections don't count in client view. Badges stay until you delete the marker line. Each reader can also click a badge to mark it read: it disappears for them only, saved in their browser, and the sidebar badge clears once nothing on that page is unread.
 
+## Log the change on What's new
+
+Every hub update also adds one line at the top of the `changes` block in `docs/changes.md`:
+
+    2026-10-06 | Aisling | requirements.working-prd-until-the-final-prds-arrive | One sentence on what changed
+
+Date, whose work it was (one of the four team names, so "Made by" works), the page id and section to link to (the section is the heading in lowercase with dashes; leave it off to link the page), and what changed. Don't reword an old line: its wording is part of how readers' "read" state is remembered.
+
+On the published hub, each person picks their name once on What's new. Their read state is saved in the artifact's shared storage under their claude.ai account, and everyone sees who has read each change. Locally, or signed out, it stays in that browser. The page is team-only, so client view never shows it.
+
 ## Custom blocks
 
 Write these as fenced code blocks with the name after the backticks.
