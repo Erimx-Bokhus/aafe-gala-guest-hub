@@ -24,7 +24,7 @@ Guest Portal ──anon key──▶ portal_* functions ──▶  Postgres (sch
 ## Setup
 
 1. **Database.** Supabase dashboard → SQL editor: run `database/schema.sql`, then `seed.sql`, then `backend.sql`.
-2. **Staff logins.** Authentication → Providers: turn **off** "Allow new users to sign up". Authentication → Users → **Invite** each staff member using the exact email in `staff_users`. Login is matched to the role by email. Demo seed emails are `@aafe-demo.example.org`, so change them to real team inboxes (`update staff_users set email = ...`) to test.
+2. **Staff logins.** Authentication → Providers: turn **off** "Allow new users to sign up". Authentication → Users → **Invite** each staff member using the exact email in `staff_users`. Login is matched to the role by email. Demo seed emails are `@aafe-demo.example.org`, so change them to real team inboxes (`update staff_users set email = ...`) to test. Then copy `staff-app/.env.example` to `staff-app/.env.local` with the project URL and anon key: the Staff App's login page switches from demo accounts to an emailed one-time sign-in link, and an email not in `staff_users` is signed straight back out. Authentication → URL Configuration: add the Staff App's address (e.g. `http://localhost:5174/`) to the redirect URLs.
 3. **Edge functions.**
    ```bash
    npx supabase login
@@ -148,8 +148,8 @@ Errors come back as the Postgres message: `forbidden`, `not_found`, `invalid_lin
 ## Not done yet
 
 - **Guest Portal is connected** when `guest-portal/.env.local` is set, and runs offline on the synthetic data when it isn't (the `OPEN-*.html` files). The landing page's demo cards still come from the built-in data. Their links work against the backend only if `seed.sql` was loaded.
-- **Staff App still uses in-memory data.** To connect it:
-  - Swap `staff-app/src/store.ts` and `Login.tsx` to the calls above.
+- **Staff App still uses in-memory data** after sign-in. Login is real when `staff-app/.env.local` is set (issue #8); the pages still read and write the synthetic data. To connect them (issue #9):
+  - Swap `staff-app/src/store.ts` to the calls above.
   - Sponsors → "copy portal link" becomes "send new link", because tokens are stored hashed.
 - **Team-rule gaps.** QR codes are per guest and stored in plain text, so staff can display them. Hard rule 6 wants them per seat, hashed, and expiring after gala night. The seed's demo sponsor links are short (8 characters), fine for the demo but below rule 6's 128 bits; real links are minted at 128 bits by `send-emails`.
 - **Email.** Only `portal_link` and `qr_invitation` templates are built, in English (the portal page itself has 中文 and Español). Scheduled deadline reminders and payment receipts aren't built.

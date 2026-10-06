@@ -8,6 +8,7 @@ import { DisplayControls, go, Link, PrototypeBanner, Toast, useDisplayPrefs, use
 import type { DB, Role, StaffUser } from '@shared/types'
 import { StaffCtx } from './store'
 import Login from './pages/Login'
+import { currentStaff, signOut, supabase } from './supabase'
 import Dashboard from './pages/Dashboard'
 import GalaInfo from './pages/GalaInfo'
 import Sponsors, { SponsorDetail } from './pages/Sponsors'
@@ -39,15 +40,46 @@ export default function App() {
   const path = useRoute()
   const [db, setDb] = useState<DB>(loadDB)
   const [user, setUser] = useState<StaffUser | null>(null)
+  const [authChecked, setAuthChecked] = useState(!supabase) // demo mode has no session to restore
+  const [notice, setNotice] = useState('')
   const [msg, setMsg] = useState<string | null>(null)
   const [menu, setMenu] = useState(false)
   const prefs = useDisplayPrefs()
   const update = useCallback((fn: (d: DB) => DB) => setDb((d) => fn(d)), [])
   const toast = useCallback((m: string) => setMsg(m), [])
+  // LIVE: restore the session on load and follow sign-in/sign-out (including the emailed link landing here).
+  // A signed-in email that isn't in staff_users is signed straight back out.
+  useEffect(() => {
+    if (!supabase) return
+    const refresh = async () => {
+      try {
+        const hadSession = !!(await supabase!.auth.getSession()).data.session
+        const me = await currentStaff()
+        if (hadSession && !me) {
+          await signOut()
+          setNotice('That email isn’t on the AAFE staff list. Ask the gala admin to add you.')
+        }
+        setUser((prev) => {
+          if (me && !prev) go(me.role === 'check_in_volunteer' ? '/checkin' : '/')
+          return me
+        })
+      } catch {
+        setNotice('Sign-in failed. Try again, or ask the gala admin.')
+        setUser(null)
+      } finally { setAuthChecked(true) }
+    }
+    void refresh()
+    // Supabase advises against awaiting other auth calls inside this callback, so defer the refresh.
+    const { data } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') setTimeout(() => void refresh(), 0)
+    })
+    return () => data.subscription.unsubscribe()
+  }, [])
   useEffect(() => setMenu(false), [path]) // close the phone menu after navigating
   useEffect(() => { const k = (e: KeyboardEvent) => e.key === 'Escape' && setMenu(false); window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k) }, [])
 
-  if (!user) return <><PrototypeBanner /><Login db={db} prefs={prefs} onLogin={(u) => { setUser(u); go(u.role === 'check_in_volunteer' ? '/checkin' : '/') }} /></>
+  if (!authChecked) return <PrototypeBanner />
+  if (!user) return <><PrototypeBanner /><Login db={db} prefs={prefs} notice={notice} onLogin={(u) => { setUser(u); go(u.role === 'check_in_volunteer' ? '/checkin' : '/') }} /></>
 
   const nav = NAV.filter((n) => n.roles.includes(user.role))
   const allowed = (p: string) => nav.some((n) => (n.to === '/' ? p === '/' : p.startsWith(n.to)))
@@ -88,7 +120,7 @@ export default function App() {
       <div className="border-t border-brand-600 p-4">
         <div className="text-sm font-semibold text-white">{user.name}</div>
         <div className="text-xs text-white">{ROLE_LABEL[user.role]}</div>
-        <button className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-white underline-offset-2 hover:underline" onClick={() => { setUser(null); go('/') }}><LogOut size={14} /> Sign out</button>
+        <button className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-white underline-offset-2 hover:underline" onClick={() => { void signOut(); setNotice(''); setUser(null); go('/') }}><LogOut size={14} /> Sign out</button>
       </div>
     </nav>
   )
