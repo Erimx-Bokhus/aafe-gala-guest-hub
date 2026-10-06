@@ -32,17 +32,17 @@ const ADMIN = 'mei.ortiz@aafe-demo.example.org', RM = 'daniel.seo@aafe-demo.exam
 const vol = (await db.query(`select email from staff_users where role='check_in_volunteer'`)).rows[0].email
 
 // ---- Guest portal
-const v = (await as('anon', null, `select portal_get_view('acme-community-partners') v`))[0].v
+const v = (await as('anon', null, `select portal_get_view('ac-6w9k3p5d') v`))[0].v
 ok(v.organization && v.seats.length > 0, 'portal view loads with seed token')
 ok(!JSON.stringify(v).match(/transaction_fee|internal_notes|method|relationship_note|check_number/), 'portal view hides staff-only fields')
 ok(await err('anon', null, `select portal_get_view('wrong-token')`) === 'invalid_link', 'bad token rejected')
 ok((await err('anon', null, `select * from orders`))?.includes('permission') || (await as('anon', null, `select * from orders`)).length === 0, 'anon cannot read tables')
 const slot = v.seats.find((s) => s.status === 'unnamed').slot
-const v2 = (await as('anon', null, `select portal_save_guest('acme-community-partners', $1, $2) v`, [slot, { first_name: 'Test', last_name: 'Person', dietary_needs: 'vegan' }]))[0].v
+const v2 = (await as('anon', null, `select portal_save_guest('ac-6w9k3p5d', $1, $2) v`, [slot, { first_name: 'Test', last_name: 'Person', dietary_needs: 'vegan' }]))[0].v
 ok(v2.seats.find((s) => s.slot === slot).status === 'submitted', 'guest saved -> submitted')
 ok(v2.activity[0].summary.includes('Test Person added'), 'guest activity logged')
-ok((await err('anon', null, `select portal_save_guest('acme-community-partners', $1, $2)`, [slot, { first_name: '' }]))?.startsWith('invalid_input'), 'empty name rejected')
-const v3 = (await as('anon', null, `select portal_release_seat('acme-community-partners', $1) v`, [slot]))[0].v
+ok((await err('anon', null, `select portal_save_guest('ac-6w9k3p5d', $1, $2)`, [slot, { first_name: '' }]))?.startsWith('invalid_input'), 'empty name rejected')
+const v3 = (await as('anon', null, `select portal_release_seat('ac-6w9k3p5d', $1) v`, [slot]))[0].v
 ok(v3.seats.find((s) => s.slot === slot).status === 'unnamed', 'seat released')
 ok(await err('anon', null, `select staff_add_pledge('a','b','c','gold','check')`) !== null, 'anon cannot call staff functions')
 ok(await err('anon', null, `select gl_import('[]', 'x')`) !== null, 'anon cannot call gl_import')
