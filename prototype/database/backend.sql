@@ -73,6 +73,21 @@ update orders
    set portal_token = encode(sha256(convert_to(portal_token, 'UTF8')), 'hex')
  where portal_token is not null and portal_token !~ '^[0-9a-f]{64}$';
 
+-- QR e-tickets (hard rule 6): one per seat, stored only as a hash, valid until 6 a.m. New York time
+-- the morning after gala night. The code itself exists only in the email that carries it: send-emails
+-- mints it when an approved qr_invitation goes out and hands back the hash (email_mark_sent).
+alter table seats add column if not exists qr_token_hash       text;
+alter table seats add column if not exists qr_token_expires_at timestamptz;
+create unique index if not exists seats_qr_token_hash_uq on seats (qr_token_hash) where qr_token_hash is not null;
+
+-- Seed QR codes are plain text on guests; move each to its guest's seat as a hash, once.
+update seats s
+   set qr_token_hash = encode(sha256(convert_to(upper(g.qr_token), 'UTF8')), 'hex'),
+       qr_token_expires_at = ((e.event_date + 1)::timestamp + interval '6 hours') at time zone 'America/New_York'
+  from guests g join orders o on o.id = g.order_id join gala_events e on e.id = o.event_id
+ where s.guest_id = g.id and g.qr_token is not null;
+update guests set qr_token = null where qr_token is not null;
+
 -- ---------------------------------------------------------------------
 -- 2. Helpers
 -- ---------------------------------------------------------------------
@@ -86,6 +101,36 @@ language sql volatile as $$ select prefix || '-' || left(replace(gen_random_uuid
 -- 128 random bits (32 hex chars), used for QR codes.
 create or replace function new_qr_token() returns text
 language sql volatile as $$ select 'AAFE-' || upper(left(replace(gen_random_uuid()::text, '-', '') || replace(gen_random_uuid()::text, '-', ''), 32)) $$;
+
+-- When a QR e-ticket for this event stops working: 6 a.m. New York time the morning after gala night.
+create or replace function qr_expiry(p_event_id text) returns timestamptz
+language sql stable security definer set search_path = public as $$
+  select ((event_date + 1)::timestamp + interval '6 hours') at time zone 'America/New_York' from gala_events where id = p_event_id
+$$;
+
+-- A QR code admits whoever holds the seat, so it stops working when the seat gets a different guest,
+-- or when the guest on it becomes a different person (name or email edited). Staff send a new one.
+create or replace function seats_void_qr() returns trigger
+language plpgsql as $$
+begin
+  if new.guest_id is distinct from old.guest_id or new.status = 'cancelled' then
+    new.qr_token_hash := null; new.qr_token_expires_at := null;
+  end if;
+  return new;
+end $$;
+drop trigger if exists seats_void_qr on seats;
+create trigger seats_void_qr before update of guest_id, status on seats for each row execute function seats_void_qr();
+
+create or replace function guests_void_qr() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if (new.first_name, new.last_name, new.email) is distinct from (old.first_name, old.last_name, old.email) then
+    update seats set qr_token_hash = null, qr_token_expires_at = null where guest_id = new.id and qr_token_hash is not null;
+  end if;
+  return new;
+end $$;
+drop trigger if exists guests_void_qr on guests;
+create trigger guests_void_qr after update of first_name, last_name, email on guests for each row execute function guests_void_qr();
 
 -- The gala being run now: the latest one not closed.
 create or replace function current_event_id() returns text
@@ -514,7 +559,7 @@ begin
   insert into guests (id, order_id, first_name, last_name, title, organization, email, guest_type, relationship_note, qr_token, last_updated_by)
   values (v_guest, v_order, v_first, v_last, nullif(trim(coalesce(p_guest ->> 'title', '')), ''),
           nullif(trim(coalesce(p_guest ->> 'organization', '')), ''), nullif(trim(coalesce(p_guest ->> 'email', '')), ''),
-          'comp_relationship', v_note, new_qr_token(), 'staff');
+          'comp_relationship', v_note, null, 'staff');
   insert into seats (id, order_id, slot_number, guest_id, status) values ('seat-' || v_order || '-' || v_slot, v_order, v_slot, v_guest, 'reviewed');
   perform write_audit('staff', me.name, 'guest', v_guest, v_order, 'comp_guest.added', null, 'reviewed', false,
     format('%s %s added as relationship guest (%s).', v_first, v_last, coalesce(v_note, 'no note')));
@@ -527,7 +572,10 @@ language plpgsql security definer set search_path = public as $$
 declare me staff_users := require_staff(array['gala_admin','relationship_manager']); g guests;
 begin
   select * into g from guests where id = p_guest_id;
-  if g.id is null or g.qr_token is null then raise exception 'not_found: guest has no QR code'; end if;
+  if g.id is null then raise exception 'not_found'; end if;
+  if not exists (select 1 from seats where guest_id = g.id and status <> 'cancelled') then
+    raise exception 'invalid_input: guest has no seat';
+  end if;
   if g.email is null then raise exception 'invalid_input: guest has no email'; end if;
   return enqueue_email('qr_invitation', g.email, g.first_name || ' ' || g.last_name, g.order_id, g.id, 'staff_manual', me.name);
 end $$;
@@ -577,11 +625,14 @@ end $$;
 -- checkIn (QR scan or typed code). Returns the guest so the screen can show who arrived.
 create or replace function staff_check_in_qr(p_code text) returns jsonb
 language plpgsql security definer set search_path = public as $$
-declare g guests; v_new boolean;
+declare g guests; v_new boolean; v_guest_id text; v_expires timestamptz;
 begin
   perform require_staff(array['gala_admin','relationship_manager','check_in_volunteer']);
-  select * into g from guests where upper(qr_token) = upper(trim(p_code));
+  select s.guest_id, s.qr_token_expires_at into v_guest_id, v_expires from seats s
+   where s.qr_token_hash = hash_token(upper(trim(coalesce(p_code, '')))) and s.status <> 'cancelled' and s.guest_id is not null;
+  select * into g from guests where id = v_guest_id;
   if g.id is null then raise exception 'not_found: unknown QR code'; end if;
+  if v_expires <= now() then raise exception 'expired: QR code has expired'; end if;
   v_new := staff_check_in(g.id, 'qr');
   return jsonb_build_object('guest_id', g.id, 'first_name', g.first_name, 'last_name', g.last_name, 'already_checked_in', not v_new);
 end $$;
@@ -750,22 +801,28 @@ end $$;
 
 -- Called only by the send-emails edge function.
 
--- Mark sent. For portal links, the worker passes the hash of the token it
--- just emailed; that becomes the order's only valid link.
-create or replace function email_mark_sent(p_email_id text, p_portal_token_hash text default null) returns void
+-- Mark sent. For portal links and QR invitations, the worker passes the hash
+-- of the token it just emailed; that becomes the only valid link or code
+-- (for the order, or for the guest's seat).
+drop function if exists email_mark_sent(text, text);
+create or replace function email_mark_sent(p_email_id text, p_token_hash text default null) returns void
 language plpgsql security definer set search_path = public as $$
 declare m email_log; v_deadline date;
 begin
   update email_log set status = 'sent', sent_at = now(), attempts = attempts + 1, last_error = null
    where id = p_email_id and status = 'queued' and approved_at is not null returning * into m;
   if m.id is null then return; end if;
-  if m.template = 'portal_link' and p_portal_token_hash is not null then
+  if m.template = 'portal_link' and p_token_hash is not null then
     -- The link works through the end of AAFE's guest-list deadline day (New York time).
     select coalesce(o.guest_list_deadline, e.guest_list_deadline, e.event_date) into v_deadline
       from orders o join gala_events e on e.id = o.event_id where o.id = m.order_id;
-    update orders set portal_token = p_portal_token_hash, portal_link_sent_at = now(),
+    update orders set portal_token = p_token_hash, portal_link_sent_at = now(),
            portal_token_expires_at = (v_deadline + 1)::timestamp at time zone 'America/New_York', updated_at = now()
      where id = m.order_id;
+  elsif m.template = 'qr_invitation' and p_token_hash is not null then
+    update seats set qr_token_hash = p_token_hash, qr_token_expires_at = qr_expiry(o.event_id), updated_at = now()
+      from orders o
+     where seats.guest_id = m.guest_id and seats.status <> 'cancelled' and o.id = seats.order_id;
   end if;
   perform write_audit('system', 'Email service', 'email', m.id, m.order_id,
     case when m.template = 'portal_link' then 'portal_link.sent' else m.template || '.sent' end, null, 'sent',
@@ -790,7 +847,7 @@ begin
   -- Nothing is callable by default.
   for f in select p.oid::regprocedure::text from pg_proc p join pg_namespace n on n.oid = p.pronamespace
             where n.nspname = 'public' and p.proname in (
-              'hash_token','new_id','new_qr_token','current_event_id','current_staff','staff_role','require_staff',
+              'hash_token','new_id','new_qr_token','qr_expiry','current_event_id','current_staff','staff_role','require_staff',
               'write_audit','enqueue_email','create_seats','money_fmt','portal_order','portal_get_view','portal_save_guest',
               'portal_release_seat','staff_me','staff_update_guest','staff_set_seat_status','staff_mark_printed',
               'staff_assign_seat','staff_seat_order_at_table','staff_record_payment','staff_add_pledge','staff_add_comp_guest',
