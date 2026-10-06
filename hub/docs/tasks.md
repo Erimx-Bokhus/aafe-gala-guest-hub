@@ -3,14 +3,14 @@
 
 The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus), kept by Natalie at Pursuit's request. This page is a snapshot for planning; when they differ, Trello wins. Build work belongs to a pair (Oct 5): **Frontend: Natalie + Antonin**; **Backend: Aisling + Cornell**. <!-- modified 2026-10-05 20:37 Aisling -->
 
-## Groundwork: this week
+## Groundwork (from the first week) <!-- modified 2026-10-06 05:50 Aisling -->
 
 - [ ] Post the GreyBox Creative correction in the team thread — Aisling
 - [ ] Team review of the data and AI handling note — Team
 - [ ] Fold the hosting critique into the production-readiness notes — Aisling
 - [ ] Send AAFE the recap, including the no-payment-data correction — Natalie
-- [ ] Propose component owners — Aisling
-- [ ] Ask AAFE for sample Give Lively exports and goals per category — Natalie
+- [x] Propose component owners (pairs, Oct 5) — Aisling <!-- modified 2026-10-06 05:50 Aisling -->
+- [ ] Ask AAFE for goals per category (sample export received Oct 5) — Natalie <!-- modified 2026-10-06 05:50 Aisling -->
 - [ ] Settle code ownership and a team agreement with Pursuit — Team
 
 ## Week of October 5
@@ -19,8 +19,8 @@ The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus),
 - [x] Record the stack decision: React + Supabase — Aisling <!-- modified 2026-10-05 22:58 Aisling -->
 - [ ] Pick the demo preview host — Team <!-- modified 2026-10-05 16:51 Aisling -->
 - [x] Commit the handoff package to the team repo (Erimx-Bokhus) — Aisling <!-- modified 2026-10-03 11:56 Aisling -->
-- [x] CI with secret scanning (gitleaks on every push and PR), .gitignore, .env.example — Aisling <!-- modified 2026-10-03 11:56 Aisling -->
-- [x] Import and matching spec with 22 test cases — Aisling <!-- modified 2026-10-03 11:56 Aisling -->
+- [x] CI with secret scanning (gitleaks on every PR and on `main`), .gitignore, .env.example — Aisling <!-- modified 2026-10-06 05:50 Aisling -->
+- [x] Import and matching spec with 22 test cases (now 38, PRs #20, #22) — Aisling <!-- modified 2026-10-06 05:50 Aisling -->
 - [x] Seed data requirements for the import tests — Aisling <!-- modified 2026-10-03 11:56 Aisling -->
 - [ ] Staging deploy — Backend pair <!-- modified 2026-10-05 20:37 Aisling -->
 - [x] Database schema and migrations (Natalie's backend, merged Oct 6) — Backend pair <!-- modified 2026-10-05 22:58 Aisling -->
@@ -41,10 +41,10 @@ The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus),
 <!-- new 2026-10-05 22:58 Aisling -->
 
 - [x] Import engine: reads the real export, splits guest lists, matches buyers and guests (PR #23) — Aisling <!-- modified 2026-10-05 22:58 Aisling -->
-- [x] Tier mapping and gala page filter from Natalie's review (PR #22) — Aisling <!-- modified 2026-10-05 22:58 Aisling -->
+- [x] Tier mapping and gala page filter from Natalie's review (spec PR #22; built in PRs #23–#26) — Aisling <!-- modified 2026-10-06 05:50 Aisling -->
 - [x] Three import choices decided and posted for Natalie's review (PR #24) — Aisling <!-- modified 2026-10-05 22:58 Aisling -->
-- [x] Backend tests run on every PR (PR #26) — Aisling <!-- modified 2026-10-05 22:58 Aisling -->
-- [ ] Merge PR #26, then PR #27 after Cornell updates it from `main` — Aisling <!-- modified 2026-10-05 22:58 Aisling -->
+- [x] Backend tests run on PRs that touch `prototype/` or `import-engine/` (PR #26) — Aisling <!-- modified 2026-10-06 05:50 Aisling -->
+- [ ] Merge PR #27 after Cornell updates it from `main` (17 commits behind) — Aisling <!-- modified 2026-10-06 05:50 Aisling -->
 - [ ] Natalie's review of the three import choices (Slack) — Natalie <!-- modified 2026-10-05 22:58 Aisling -->
 - [ ] Share the Pursuit PRD and the team PRD with the backend pair — whoever has them <!-- modified 2026-10-05 22:58 Aisling -->
 - [ ] Trello access for Cornell; Supabase project URL and public key to Cornell — Natalie <!-- modified 2026-10-05 22:58 Aisling -->
@@ -52,7 +52,7 @@ The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus),
 - [ ] Staff app: show "sent" and "resend" for QR codes instead of the code itself — Frontend pair <!-- modified 2026-10-05 22:58 Aisling -->
 - [ ] Portal: "From your purchase: please confirm" labels; Korean — Frontend pair <!-- modified 2026-10-05 22:58 Aisling -->
 - [x] Frontend build check, demo-data drift check, real-data guard in CI — Backend pair <!-- modified 2026-10-06 01:13 Aisling -->
-- [x] Supabase project loaded (schema, seed, backend); access rules verified, security warnings cleared (PR #30) — Aisling <!-- updated 2026-10-06 03:05 Aisling -->
+- [x] Supabase project loaded (schema, seed, backend); access rules (RLS) on for all 18 tables; Supabase advisor warnings cut from 41 to 28, all by design (PR #30) — Aisling <!-- modified 2026-10-06 05:50 Aisling -->
 - [x] Real-data guard required before merging to `main`, alongside the secret scan — Aisling <!-- updated 2026-10-06 03:05 Aisling -->
 - [ ] Informal client demo, Wednesday Oct 7 — Natalie <!-- modified 2026-10-05 22:58 Aisling -->
 

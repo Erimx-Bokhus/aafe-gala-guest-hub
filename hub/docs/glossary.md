@@ -15,7 +15,7 @@ Donation feed | A read-only JSON feed of Give Lively donations, switched on by c
 Give Lively | AAFE's free fundraising platform for tickets, donations, and tax receipts. The tool reads from it and never replaces it.
 Import report | The summary after each import: new, updated, unchanged, needs review, and rejected rows, each with a reason, plus any Give Lively changes held back by a correction. <!-- modified 2026-10-03 11:56 Aisling -->
 Line Items report | Give Lively's purchase report. Each line carries the Stripe charge ID.
-Match | Deciding whether an incoming row is a guest we already have. Checked by Give Lively ID, then email with last name, then name and organization. Anything less certain goes to review. <!-- modified 2026-10-03 11:56 Aisling -->
+Match | Deciding whether an incoming row is a guest we already have. Checked by purchase key (buyer email + purchase time), then email with last name, then name and organization. Anything less certain goes to review. <!-- modified 2026-10-06 05:50 Aisling -->
 React | The web framework the app is built with (decided Oct 5), written in TypeScript so most web developers can maintain it. <!-- modified 2026-10-05 16:51 Aisling -->
 Supabase | The hosted service the prototype runs on: a Postgres database, staff sign-in, and server functions. Free plan for the demo. <!-- modified 2026-10-05 16:51 Aisling -->
 Guest category | What kind of guest someone is: sponsor guest, ticket holder, comp, AAFE staff, volunteer, event staff, or government/VIP. <!-- modified 2026-10-05 16:51 Aisling -->
@@ -25,12 +25,12 @@ Needs reprint | A badge already printed whose name, title, organization, or tabl
 Open seat | A seat in a package with no guest named yet. The dashboard groups these by relationship owner.
 P0, P1, P2 | Priority. P0 must work by Demo Day; P1 should; P2 is a stretch goal.
 Package | A sponsorship or ticket tier and how many seats it includes, such as Silver at $25,000 with 10 seats (AAFE's 2026 flyer). <!-- modified 2026-10-05 16:51 Aisling -->
-Postgres | The database we propose: standard, free, and offered by every major host.
+Postgres | The database the prototype uses, hosted by Supabase: standard, free, and offered by every major host. <!-- modified 2026-10-06 05:50 Aisling -->
 Relationship owner | The AAFE staff member responsible for a guest or sponsor, and the one who follows up.
 Render | A hosting company. One option a future partner could consider, at an estimated base of about $13 a month.
 Demo preview | The temporary copy of the prototype the team runs for Demo Day, with invented data only. Not a production system.
 Exception (check-in) | Someone admitted who isn't on the list as named, such as a walk-in for a sponsor's unnamed seat. Recorded with a note and the staff member who approved it. <!-- updated 2026-10-03 12:36 Aisling -->
-Gitleaks | A scanner that checks every change pushed to the repo for passwords and keys before it can merge. <!-- updated 2026-10-03 11:56 Aisling -->
+Gitleaks | A scanner that checks every pull request (and `main` after each merge) for passwords and keys; it must pass before anything merges. <!-- modified 2026-10-06 05:50 Aisling -->
 Production-readiness notes | The handoff section listing what a future partner must settle before real data is used: hosting, backups, access, support, and gala-night fallback.
 Restricted key | A Stripe key limited to reading payment status. Not used in the prototype; listed as a future option.
 Review queue | Close matches waiting for a staff member to confirm or keep separate.
