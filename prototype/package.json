@@ -10,7 +10,9 @@
     "dev:guest": "npm run dev -w guest-portal",
     "dev:staff": "npm run dev -w staff-app",
     "build": "npm run build -w guest-portal && npm run build -w staff-app",
-    "test:backend": "node scripts/test-backend.mjs && node scripts/test-givelively.mts"
+    "test:backend": "node scripts/test-backend.mjs && node scripts/test-givelively.mts",
+    "db:backend": "supabase db query --linked -f database/backend.sql",
+    "db:advisors": "supabase db advisors --linked --type all"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.109.0",
@@ -27,9 +29,11 @@
     "@vitejs/plugin-react": "^5.0.0",
     "autoprefixer": "^10.4.20",
     "postcss": "^8.4.49",
+    "supabase": "2.119.0",
     "tailwindcss": "^3.4.17",
     "typescript": "~5.6.3",
     "vite": "^6.0.0",
     "vite-plugin-singlefile": "^2.3.3"
-  }
+  },
+  "type": "module"
 }
