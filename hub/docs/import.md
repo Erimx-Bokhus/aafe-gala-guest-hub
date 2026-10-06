@@ -30,6 +30,22 @@ One import is all-or-nothing: if anything fails partway, nothing is applied and 
 - **A new sponsorship with open seats** gets a private sponsor link and a **draft** email in the approval queue. The import never sends anything.
 - **Relationship owner** isn't in Give Lively's data. New guests show in the "no owner" view; if the buyer already has an owner, it's suggested, not set.
 
+## Built and tested
+<!-- new Oct 6 -->
+
+The import works end to end in code: a file in AAFE's export format goes through the import engine and into the database in one step that either fully succeeds or changes nothing. What's left is the staff app's upload screen (frontend pair).
+
+- **Import engine** (`import-engine/`): reads the file, converts times to UTC, splits guest lists, matches buyers and guests, builds the report. 94 automated tests.
+- **Database side** (`prototype/database/backend.sql`): skips purchases it has seen, never overwrites a name a sponsor or staff entered, keeps a run record for every upload, and puts close calls in the review queue. 97 automated tests, including a sample file run all the way through.
+
+Three choices settled while building (Oct 6; Natalie reviewing in Slack):
+
+| Question | Decision |
+| --- | --- |
+| A guest list with clear names and one unclear entry | The clear names are pre-filled for the sponsor to confirm; the unclear one shows as written. More names than seats pre-fills nothing |
+| The same guest name on two sponsors' orders | A possible duplicate for staff to confirm, unless the email or a known organization also matches |
+| An upload before this gala's Give Lively page is set | The upload stops and lists the pages in the file; staff pick one, once a year |
+
 ## Tier names and the gala page
 <!-- new Oct 6 -->
 
@@ -68,9 +84,9 @@ An import only updates the Give Lively layer. If Give Lively changes a field tha
 
 | Reason | When | Staff choose |
 | --- | --- | --- |
-| Possible duplicate | A close but not certain name match | Same person · Different person |
+| Possible duplicate | A close name match, or the same name on another order with no email or organization to confirm it | Same person · Different person |
 | Shared email | Same email, different last name | Same person · Different person |
-| Guest under two sponsors | Someone named on two orders | Keep on one · Keep both |
+| Guest under two sponsors | Someone on two orders with the same email, or the same name at the same organization | Keep on one · Keep both |
 | Too many names | More names than seats | Add seats · Drop a name |
 | Unknown ticket type | A Give Lively tier name not yet in the tier mapping | Link it (saved for next time), then re-run |
 | Refund | Give Lively shows the order refunded | Keep seats cancelled · Reinstate |
@@ -103,8 +119,9 @@ The test cases below are being updated to match: cases that relied on ticket IDs
 
 ## Test cases
 <!-- team -->
+<!-- modified Oct 6 -->
 
-Each is a unit test of the import module. Seed data for them is listed below.
+The original 22 cases, kept for reference. The spec now has 38 (`docs/import-matching-spec.md`, section 11), written for the real export's purchase key instead of ticket IDs; nearly all are automated tests, each labelled with its case number.
 
 | # | Case | Expected |
 | --- | --- | --- |

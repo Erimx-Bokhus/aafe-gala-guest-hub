@@ -38,7 +38,7 @@ The two apps never talk to each other directly. Both read and write the **same d
 | **Give Lively, card or bank (ACH)** | 1. Backend job polls Give Lively every 10–15 minutes. 2. Creates sponsor, order, payment and empty seats from the package. 3. Generates a private portal token. 4. **Emails the portal link automatically.** | Automatic |
 | **Check in the mail** | 1. Relationship manager records a **pledge** in the staff app (Sponsors → New pledge). 2. Seats and the token are created, and the **portal link is emailed right away**, so guests can be named before the check arrives. 3. When the check arrives, staff record it (Payments → Record check/ACH) with the check number and deposit date. | Staff |
 | **ACH or wire straight to AAFE's bank (not through Give Lively)** | Same as a check: record the pledge, then record the payment when it shows on the bank statement. These payments have no processor fee. Later, a bank-feed integration (e.g. Plaid) could match deposits automatically. That is out of scope for the MVP. | Staff |
-| **Relationship / comp guests** (the Executive Director's or board's guests) | 1. Staff add the guest (Relationship guests → Add). 2. A QR code is generated. 3. Staff send the QR invitation email. 4. The guest shows the QR at the door. | Staff |
+| **Relationship / comp guests** (the Executive Director's or board's guests) | 1. Staff add the guest (Relationship guests → Add). 2. Staff send the QR invitation email. 3. The QR code is created as the email sends; only its hash is stored, on the guest's seat. 4. The guest shows the QR at the door. | Staff |
 
 > Note: ACH paid **through Give Lively** arrives with the rest of the Give Lively data automatically. It runs on Stripe and costs 0.8%, capped at $5 ([Give Lively fees](https://www.givelively.org/fees-and-disbursement); [Give Lively ACH via Stripe Financial Connections](https://www.givelively.org/resources/learn-about-ach-bank-payments-via-stripe-financial-connections)). Only ACH or wires sent **directly to AAFE's bank** need staff entry. Checks always need staff entry.
 
@@ -95,7 +95,7 @@ Recommended stack: **Supabase**. It provides Postgres, Auth, Row-Level Security,
 | 6 | **Email service** | Use Resend, Postmark or SendGrid, sending from an AAFE domain. Templates: `portal_link`, `qr_invitation`, `guest_list_reminder`, `payment_receipt`. Each send is logged in `email_log`. Scheduled reminders go out N days before `guest_list_deadline` to orders with unnamed seats. |
 | 7 | **Audit trigger** | A Postgres trigger on `guests`, `seats`, `orders` and `payments` writes `audit_log` (who, when, from → to). This is the "every change records date and time" requirement. |
 | 8 | **Salesforce sync** | A queue in `salesforce_sync`, processed by a job that upserts Account, Contact, Opportunity, Payment and CampaignMember through the Salesforce REST API (OAuth connected app). See section 5. |
-| 9 | **QR tokens** | Random and unguessable (e.g. 128-bit), unique per guest. The door scan looks up `guests.qr_token`. Never encode personal info in the QR. |
+| 9 | **QR tokens** | Random and unguessable (128-bit), one per seat, stored only as a hash (`seats.qr_token_hash`), expiring the morning after gala night. The door scan hashes the code and looks up the seat. Never encode personal info in the QR. |
 | 10 | **Backups and retention** | Daily backups. AAFE approves how long guest data is kept after the gala. |
 
 ## 4. What the FRONT END needs (Natalie, Antonin)
