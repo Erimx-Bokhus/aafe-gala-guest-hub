@@ -1,5 +1,5 @@
 # Build plan
-<!-- modified Oct 5 (pairs) -->
+<!-- updated Oct 6 (component status) -->
 
 Core features land by October 30, leaving the last ten days for testing and handoff. We deliver a working prototype with invented data; production hosting is not part of the plan. Build work is split between two pairs (decided Oct 5): **Frontend pair: Natalie + Antonin** (staff app, sponsor portal, check-in, branding) and **Backend pair: Aisling + Cornell** (Supabase backend, import, sign-in and roles, secure links, exports, emails). Natalie also stays product lead and client contact.
 
@@ -42,10 +42,51 @@ Read it left to right: setup and data the first week, the import and the sponsor
 | C6 | Staff dashboard | Gaps by owner, goal tracking, guest grid, review before print | P0 | Frontend |
 | C7 | Follow-up emails | Drafts, staff approval, send or copy out | P1 | Backend |
 | C8 | Exports | Badge mail merge, check-in list, Salesforce file | P0 | Backend |
-| C9 | Check-in app | iPad search, arrivals, walk-ins, blank sponsor seats; QR as a stretch | P1 | Frontend |
+| C9 | Check-in app | iPad search, arrivals, walk-ins, blank sponsor seats; QR e-tickets (hashed per seat, built in the backend) | P1 | Frontend |
 | C10 | Branding and languages | aafe.org look; sponsor form in four languages | P1 | Frontend |
 | C11 | Testing and security | End-to-end tests, accessibility, data-handling check | P0 | Everyone |
 | C12 | Demo deploy and handoff | Demo preview, setup docs, handoff package, production-readiness notes, rehearsal | P0 | Everyone |
+
+## Where each component stands
+<!-- new Oct 6 -->
+
+As of October 6. Natalie's backend and guest portal are now in `main` (PRs #25 and #26), so the backend pair builds on her work instead of starting over.
+
+| # | Component | Status | Done | Next |
+| --- | --- | --- | --- | --- |
+| C0 | Setup and guardrails | Mostly done | Secret scan on every PR; automatic checks for the import engine and the backend tests; `main` protected | Frontend build check; demo preview host |
+| C1 | Data model and test data | In progress | Natalie's Supabase schema and seed in `main`; import tables added; demo data fixed for rule 6 (random links and QR codes, fictional phones) | Messier test data (~550 guests) for the import tests |
+| C2 | Sign-in and roles | In progress | Emailed one-time sign-in link, role from the staff list (Cornell, PR #27, in review) | Roles checked on the server for every staff page (issue #9, Cornell) |
+| C3 | Commitments and seats | Built in the backend | Pledges, payments, comps, seats, and seat statuses in Natalie's backend | Connect the staff app pages to it (with #9) |
+| C4 | Import and matching | Ahead of schedule | Import engine (94 tests) and database side (97 backend tests, including a real-format CSV end to end); tier mapping; gala page filter; review queue | Upload screen and tier-mapping picker in the staff app (frontend pair) |
+| C5 | Sponsor guest form | Source in `main` | Natalie's portal: slots per package, hashed private links, English, 中文, Español | "From your purchase: please confirm" on imported names; Korean; connect to the backend |
+| C6 | Staff dashboard | Prototype | Natalie's staff app (offline demo data) | Connect to the backend; gaps by owner |
+| C7 | Follow-up emails | Built in the backend | Draft queue, staff approval, sending through Resend | Deadline reminder and receipt templates; approval screen |
+| C8 | Exports | Not started | Prototype CSV exports in the staff app | Badge file with table numbers, check-in list, Salesforce file from the database |
+| C9 | Check-in app | Partly built | Check-in screen in the staff app; QR codes now hashed per seat and expiring (issue #10) | Connect to the backend; walk-ins; offline |
+| C10 | Branding and languages | In progress | Design system (PR #14); AAFE orange and white | Korean; AAFE review of translations; Demo Day photo approval |
+| C11 | Testing and security | In progress | 191 automated tests across the import engine and backend | The testing list below |
+| C12 | Demo deploy and handoff | Not started | | Pick the demo host |
+
+## Testing: what to add
+<!-- new Oct 6 -->
+<!-- team -->
+
+What the automated checks don't cover yet, most important first.
+
+| # | Add | Why |
+| --- | --- | --- |
+| 1 | Frontend build check in CI | Nothing checks that the staff app and portal still build |
+| 2 | Demo-data drift check | Regenerate the seed and fail if it differs from what's committed |
+| 3 | Real-data guard | Fail on any email outside `example.org` or phone outside 555-0100–0199 (hard rule 1) |
+| 4 | Email and sync function tests | `send-emails` and `givelively-sync` have none: prove an unapproved email never sends and codes are stored only as hashes |
+| 5 | Access rules for every table and role | Only a few are covered |
+| 6 | Sponsor link limits | Expires after the deadline; can't see another order, payments, or staff notes |
+| 7 | Every staff action is logged | One test walking each staff function |
+| 8 | Frontend tests | None yet: guest slots, editing locked after the deadline, every language has every phrase |
+| 9 | Page smoke and accessibility test | The two single-file pages load without errors and pass an accessibility check |
+| 10 | Import edge cases | Daylight-saving day, a 2,000-row file, "Internal Name" only |
+| 11 | Real guest lists | Once AAFE sends more redacted rows |
 
 ## Capacity
 <!-- team -->

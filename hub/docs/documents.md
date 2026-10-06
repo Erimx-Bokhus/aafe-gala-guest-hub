@@ -45,20 +45,21 @@ Repo copies: `docs/research/`. Where this research differs from later discovery 
 | Code repository | [github.com/Erimx-Bokhus/aafe-gala-guest-hub](https://github.com/Erimx-Bokhus/aafe-gala-guest-hub) (private; team members invited) |
 
 ## Repo handoff package
-<!-- updated Oct 5 -->
+<!-- updated Oct 6 -->
 
 The starter files for the code repository: `CLAUDE.md` (project rules for Claude Code), `README.md`, `KICKOFF_PROMPT.md`, and `docs/` with requirements, decisions, data model, data handling, and research. This hub sits beside them in `hub/`.
 
 | Repo document | What it is |
 | --- | --- |
-| `docs/import-matching-spec.md` | How Give Lively rows become orders, guests, and seats; matching; review queue; corrections; import report; 22 test cases. Summarized on [Import and matching](#import) |
+| `docs/import-matching-spec.md` | How Give Lively rows become orders, guests, and seats; matching; tier mapping; review queue; corrections; import report; 38 test cases. Summarized on [Import and matching](#import) |
 | `docs/seed-data-requirements.md` | The invented records and two Give Lively export files the tests need |
 | `docs/aafe-materials-2026-10-05.md` | Structure of AAFE's real spreadsheet, Give Lively export, tiers, and deadlines (the files stay out of the repo) |
 | `docs/design.md` | Natalie's design system: AAFE orange and white, type, components (PR #14) |
-| `prototype/` | Natalie's staff app and guest portal source (PR #7; backend and portal PRs to follow) |
+| `prototype/` | Natalie's staff app, guest portal, and Supabase backend (PRs #7, #25, #26). `prototype/docs/BACKEND.md` covers setup and every server function |
+| `import-engine/` | The Give Lively import rules as a tested TypeScript module (PRs #23, #24); its README explains how it feeds the database |
 | `seed/natalie-prototype/` | Natalie's seed data as CSVs, the demo's base state; its README lists what the app's loader must fix |
 | `docs/research/prototype-review-2026-10-03.md` | What we adopted from Natalie's prototype and seed data, and where it meets the hard rules |
-| `.github/workflows/gitleaks.yml` | Secret scan on every push and pull request |
+| `.github/workflows/` | Checks on every pull request: secret scan (`gitleaks.yml`), import engine tests (`import-engine.yml`), backend tests (`backend.yml`) |
 
 ## Working in the repo
 <!-- team -->
