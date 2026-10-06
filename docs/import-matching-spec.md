@@ -3,7 +3,9 @@
 Status: **revised Oct 5, 2026** for AAFE's real Give Lively ticket export (`docs/aafe-materials-2026-10-05.md`)
 and Natalie's Supabase backend (`natalie-backend` branch: `prototype/database/schema.sql`, `backend.sql`),
 then updated the same day with Natalie's review: sponsors confirm imported names, names print exactly as
-typed, a sturdier purchase key, date-range-aware missing checks, and four parsing gaps.
+typed, a sturdier purchase key, date-range-aware missing checks, and four parsing gaps. Updated Oct 6
+from Natalie's second review of the real export: a staff-maintained tier mapping (the export's tier is
+just "Ticket") and a gala page filter that matches AAFE's real page name.
 Replaces the Oct 3 draft, which assumed one row per ticket and a transaction ID; the real export has neither.
 
 Applies hard rules 1, 4, 5, 6, and 7 in `CLAUDE.md`. All examples and test data are invented.
@@ -26,10 +28,11 @@ so they can be unit-tested (section 11). `gl_import()` stays the single place th
 | --- | --- | --- | --- |
 | 1 | Skips any row without a transaction ID | Every purchase gets a **purchase key** from email + purchase moment in UTC (section 2) | The real export has no transaction ID; every row would be skipped |
 | 2 | Never reads guest names | Parse the free-text guest list and **pre-fill the sponsor's portal** for them to confirm (section 3) | Eval blocker: "Import attendee names from Give Lively"; sponsors editing their own guests is AAFE's top priority |
-| 3 | Unknown tier → defaults to Community Ticket | Unknown tier → staff review; nothing created until mapped | A wrong default gives wrong seat counts silently |
+| 3 | Unknown tier → defaults to Community Ticket | Tier resolved through a **staff-maintained tier mapping**; still unknown → staff review, nothing created until mapped (section 3) | A wrong default gives wrong seat counts silently; the real export's tier is just "Ticket" |
 | 4 | Buyer matched to a sponsor by email only | Email **and** last name (section 4) | Shared inboxes must not merge two people |
 | 5 | Rows missing from a later export go unnoticed | Flag them, within the uploaded file's date range (section 5) | Eval blocker: "Flag rows absent from later imports" |
 | 6 | Seats = tier seat count × quantity | Use the export's **Total Seats** column; fall back to tier × quantity | The export states it directly |
+| 7 | JSON sync keeps campaigns whose name contains `GIVELIVELY_CAMPAIGNS` (`"AAFE Gala 2027"`) | Match the gala's **Give Lively page name**, stored per gala (section 3) | The real page is "AAFE's 52nd Annual Gala"; with today's setting every real purchase is ignored |
 
 Kept as they are: idempotent re-import, refunds updating payments, fees stored as reported, portal-link
 email queued as a **draft** for staff approval (hard rule 4), hashed portal tokens (hard rule 6).
@@ -90,14 +93,44 @@ Re-importing the same file changes nothing and reports every row as unchanged.
 
 - **Order and payment.** One `orders` row per purchase key, `source = givelively`, plus one `payments`
   row. Status `paid`, or `partially_paid` if refunds bring it below the commitment.
-- **Tier.** Matched from Tier Purchased against `sponsorship_tiers` (Natalie's longest-name match).
-  No match → staff review `unknown_tier`; nothing is created for that row until staff map the tier and
-  re-run.
+- **Tier.** Resolved in this order (details below): the gala's tier mapping, then Natalie's longest-name
+  match against `sponsorship_tiers`. No match → staff review `unknown_tier`; nothing is created for that
+  row until staff map the tier and re-run.
 - **Seats.** `Total Seats` seats (fallback: tier seat count × tickets purchased). Advertising-only tiers
   get none.
 - **Seated or admitted.** Champion and above guarantee a table; Friend, Supporter, and single tickets are
   admitted without one (AAFE's 2026 flyer). Proposed: a `guaranteed_seating` flag on `sponsorship_tiers`,
   so the guest list and badges can show it.
+
+### Tier mapping
+
+AAFE's real export says only `Ticket` in both Tier Purchased and Tier Category, and no app tier is called
+that. Without a mapping, every ordinary ticket purchase would land in staff review.
+
+Proposed table `tier_mappings` (id, event, Give Lively tier name, tier, created by, created at), unique on
+event + normalized Give Lively name (NFKC, case-folded, trimmed, inner spaces collapsed):
+
+1. Staff fill it in **once per gala**, before the first upload, from a short list of the tier names seen in
+   the file. The import report lists any tier name with no mapping.
+2. The import looks up Tier Purchased in the mapping first, then falls back to the longest-name match.
+3. Resolving an `unknown_tier` review item saves a mapping, so every row with that name resolves on the
+   re-run and on later uploads; staff don't map the same name twice.
+4. Changing a mapping doesn't rewrite orders already imported; the change is logged and those orders keep
+   their tier until staff change them (hard rule 7).
+
+One Give Lively name maps to one tier. If AAFE sells more than one ticket type under the same name (for
+example, Friend and Supporter both as "Ticket"), the mapping can't tell them apart; see section 10.
+
+### Gala page
+
+Each gala stores its Give Lively page name (proposed `gala_events.givelively_page_name`, e.g. "AAFE's
+52nd Annual Gala"), set by staff for each year.
+
+- **JSON sync:** imports only donations whose page or internal name matches it (normalized, exact),
+  replacing the `GIVELIVELY_CAMPAIGNS` substring setting. Not set → the sync does nothing and says so.
+- **CSV upload:** rows whose Page Name is set and differs are skipped and listed in the report with their
+  row numbers, so a mixed export never puts another event's purchases on the gala list. A blank Page Name
+  is imported.
 
 ### Sponsors confirm the imported names
 
@@ -204,7 +237,7 @@ the same row and the same data. Unclear guest lists are **not** here: sponsors c
 
 | Reason | Raised when | Staff choose |
 | --- | --- | --- |
-| `unknown_tier` | Tier Purchased matches no tier | Map it to a tier, then re-run that row |
+| `unknown_tier` | Tier Purchased has no tier mapping and matches no tier | Map it to a tier (saved as a tier mapping), then re-run |
 | `guest_text_changed` | The export's guest list differs from last time, or names arrive after the portal already has names | Apply the export's names · Keep current guests |
 | `email_name_conflict` | Same buyer email, different last name | Same person (merge sponsors) · Different person |
 | `double_booked` | An imported guest is already on another order | Keep on this order · Keep on the other · Keep both |
@@ -231,12 +264,15 @@ portal changes by the frontend pair (Natalie + Antonin).
    calls before `gl_import()`.
 3. `gl_import()`: dedupe on `payments.purchase_key`; accept parsed guests per row and fill only unnamed
    seats on orders with no portal or staff names; unknown tier → review instead of defaulting; store the
-   original guest text on the order.
+   original guest text on the order; resolve the tier through `tier_mappings` first (section 3).
 4. Schema: `payments.purchase_key` (unique), `guests.display_name`, `orders.imported_guest_text`,
-   `sponsorship_tiers.guaranteed_seating`, and new tables `import_runs` and `import_review`.
+   `sponsorship_tiers.guaranteed_seating`, `gala_events.givelively_page_name`, and new tables
+   `import_runs`, `import_review`, and `tier_mappings`.
 5. Portal (frontend pair): "From your purchase: please confirm or fix" on imported names, and "You
    wrote: …" when the list was unclear. Email template text for the draft link email.
 6. Missing-purchase check within the file's date range on CSV uploads.
+7. Tier mapping screen (staff app): the tier names in the file, each with a tier picker.
+8. `givelively-sync`: filter on `gala_events.givelively_page_name` instead of `GIVELIVELY_CAMPAIGNS`.
 
 ## 10. Open questions for AAFE
 
@@ -245,6 +281,11 @@ portal changes by the frontend pair (Natalie + Antonin).
 - Do purchases of sponsorship tiers on Give Lively appear in this same export? (The Tier Category column
   suggests yes.)
 - A few more redacted rows with real-world guest lists, to test the splitter on how buyers actually type.
+- **Tier names on Give Lively:** is every ticket sold as "Ticket", or does each package have its own
+  name? If two packages share a name (e.g. Friend at $2,500 and Supporter at $1,000), the mapping needs
+  the amount too.
+- **Page name:** is the gala page renamed each year ("AAFE's 52nd Annual Gala", then 53rd)? The page name
+  is stored per gala, so either works.
 - Is the guest-list question worded the same every year? The header is matched by its start ("Please list
   the name") to tolerate small changes.
 
@@ -288,3 +329,8 @@ data (`docs/seed-data-requirements.md`, `seed/natalie-prototype/`).
 | 31 | Filtered export | Purchases from Feb and Mar imported | Upload with Mar only | No `missing_from_source` for Feb |
 | 32 | Portal named first | Sponsor named 2 seats in the portal | Later export lists names | Portal names kept; review `guest_text_changed` |
 | 33 | Same purchase from both sources | Purchase arrived by JSON sync | Same purchase in a CSV upload | Recognized by purchase key; nothing duplicated |
+| 34 | Generic tier name | Mapping "Ticket" → Supporter | Row with Tier Purchased "Ticket" | Order on Supporter; no review item |
+| 35 | Unmapped tier, mapped in review | No mapping for "Ticket" | 3 rows with "Ticket" | 1 `unknown_tier` item per row; mapping it saves "Ticket" → tier, re-run creates 3 orders, next upload raises no review |
+| 36 | Tier mapping changed later | 2 orders imported via "Ticket" → Supporter | Mapping changed to Friend, file re-imported | Existing orders keep Supporter; change logged |
+| 37 | Another gala page in the file | Page name "AAFE's 52nd Annual Gala" | Rows from that page plus 1 row from "Year-End Appeal" | 1 row skipped and listed in the report; others imported |
+| 38 | Sync page filter | Page name "AAFE's 52nd Annual Gala" | JSON donations from that page and from "Year-End Appeal" | Only the gala page's donations imported |
