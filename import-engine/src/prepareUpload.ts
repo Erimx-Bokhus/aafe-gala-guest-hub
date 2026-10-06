@@ -12,7 +12,7 @@ import { readExport, type PurchaseRow, type RejectedRow } from './readExport.ts'
 import { isGalaPage, resolveTier, seatCount, tierMappingKey, type Tier, type TierMapping } from './tiers.ts'
 
 export interface UploadContext {
-  /** `gala_events.givelively_page_name`. Not set → the page filter is off and the report says so. */
+  /** `gala_events.givelively_page_name`. Not set → GalaPageNotSetError, listing the pages in the file. */
   galaPageName: string | null
   tiers: Tier[]
   tierMappings: TierMapping[]
@@ -55,10 +55,22 @@ export interface UploadReport {
   /** Give Lively tier names with no mapping and no matching tier, with the rows that used them. */
   unknownTiers: { givelivelyName: string; rowNumbers: number[] }[]
   namesPrefilled: number
+  /** Guest lists with entries left for the sponsor (all of the list, or only the entries that couldn't be read). */
   listsForSponsor: number
   reviewItems: ReviewItem[]
   dateRange: { earliest: string; latest: string } | null
-  warnings: string[]
+}
+
+/**
+ * The gala has no Give Lively page name yet (decided Oct 6). Nothing is imported; the staff app shows
+ * `pages` so staff pick this gala's page once, saves it to `gala_events.givelively_page_name`, and
+ * runs the upload again.
+ */
+export class GalaPageNotSetError extends Error {
+  constructor(readonly pages: { pageName: string | null; rows: number }[]) {
+    super("Choose this gala's Give Lively page before importing. Pages in this file: " +
+      pages.map((p) => `${p.pageName ?? '(no page name)'} (${p.rows} row${p.rows === 1 ? '' : 's'})`).join(', '))
+  }
 }
 
 export interface PreparedUpload {
@@ -71,9 +83,14 @@ const isCancelled = (r: PurchaseRow) =>
 
 export async function prepareUpload(csv: string, ctx: UploadContext): Promise<PreparedUpload> {
   const read = await readExport(csv)
-  const warnings: string[] = []
-  if (!ctx.galaPageName?.trim()) {
-    warnings.push("This gala has no Give Lively page name set, so rows weren't filtered by page.")
+  const galaPageName = ctx.galaPageName?.trim()
+  if (!galaPageName) {
+    const pages = new Map<string | null, number>()
+    for (const r of read.rows) {
+      const name = r.pageName ?? r.internalName
+      pages.set(name, (pages.get(name) ?? 0) + 1)
+    }
+    throw new GalaPageNotSetError([...pages].map(([pageName, rows]) => ({ pageName, rows })))
   }
 
   const rows: PreparedRow[] = []
@@ -85,7 +102,7 @@ export async function prepareUpload(csv: string, ctx: UploadContext): Promise<Pr
   let listsForSponsor = 0
 
   for (const row of read.rows) {
-    if (ctx.galaPageName?.trim() && !isGalaPage(row, ctx.galaPageName, { allowBlank: true })) {
+    if (!isGalaPage(row, galaPageName, { allowBlank: true })) {
       skippedOtherPage.push({ rowNumber: row.rowNumber, pageName: row.pageName ?? row.internalName })
       continue
     }
@@ -120,6 +137,7 @@ export async function prepareUpload(csv: string, ctx: UploadContext): Promise<Pr
         }
         guestPool.push({ id: `${row.purchaseKey}#${i}`, orderId, displayName: g.displayName, email: g.email, organization: null })
       })
+      if (guestList.unread.length) listsForSponsor += 1
     } else if (guestList.kind === 'unclear') {
       listsForSponsor += 1
     }
@@ -158,7 +176,6 @@ export async function prepareUpload(csv: string, ctx: UploadContext): Promise<Pr
       listsForSponsor,
       reviewItems,
       dateRange: read.dateRange,
-      warnings,
     },
   }
 }

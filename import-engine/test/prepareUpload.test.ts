@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { prepareUpload, purchaseKey } from '../src/index.ts'
+import { GalaPageNotSetError, prepareUpload, purchaseKey } from '../src/index.ts'
 import { context, exportCsv } from './helpers.ts'
 
 describe('prepareUpload', () => {
@@ -8,9 +8,9 @@ describe('prepareUpload', () => {
     expect(rows).toHaveLength(1)
     expect(rows[0]).toMatchObject({
       tierId: 'supporter', tierVia: 'mapping', seatCount: 1, cancelled: false, buyerMatch: { kind: 'new', organizationName: 'Grace Kim' },
-      guestList: { kind: 'names', guests: [{ displayName: 'Grace Kim', email: 'grace.kim@example.org', isBuyer: true }] },
+      guestList: { kind: 'names', guests: [{ displayName: 'Grace Kim', email: 'grace.kim@example.org', isBuyer: true }], unread: [] },
     })
-    expect(report).toMatchObject({ rowsRead: 1, namesPrefilled: 1, listsForSponsor: 0, reviewItems: [], rejected: [], warnings: [] })
+    expect(report).toMatchObject({ rowsRead: 1, namesPrefilled: 1, listsForSponsor: 0, reviewItems: [], rejected: [] })
   })
 
   it('case 12: a Champion sponsorship with 3 of 6 names', async () => {
@@ -54,11 +54,23 @@ describe('prepareUpload', () => {
     expect(report.reviewItems).toMatchObject([{ reason: 'email_name_conflict', rowNumber: 2 }])
   })
 
-  it('case 16: a guest already on another order', async () => {
+  it('case 16: a guest name already on another order is a possible duplicate', async () => {
     const existingGuests = [{ id: 'g-susan', orderId: 'ord-a', displayName: 'Susan Cho', email: null, organization: 'Acme Partners' }]
     const { rows, report } = await prepareUpload(exportCsv({ Guests: 'Susan Cho' }), context({ existingGuests }))
-    expect(rows[0]!.guestFindings).toEqual([{ reason: 'double_booked', existingGuestId: 'g-susan', existingOrderId: 'ord-a' }])
-    expect(report.reviewItems).toMatchObject([{ reason: 'double_booked', details: { guest: 'Susan Cho' } }])
+    expect(rows[0]!.guestFindings).toEqual([{ reason: 'possible_duplicate', existingGuestId: 'g-susan', existingOrderId: 'ord-a' }])
+    expect(report.reviewItems).toMatchObject([{ reason: 'possible_duplicate', details: { guest: 'Susan Cho' } }])
+  })
+
+  it('a guest whose email is already on another order is double-booked', async () => {
+    const existingGuests = [{ id: 'g-susan', orderId: 'ord-a', displayName: 'Susan Cho', email: 'susan@example.org', organization: null }]
+    const { report } = await prepareUpload(exportCsv({ Guests: 'Susan Cho susan@example.org' }), context({ existingGuests }))
+    expect(report.reviewItems).toMatchObject([{ reason: 'double_booked' }])
+  })
+
+  it('a partly clear list pre-fills the clear names and counts the list for the sponsor', async () => {
+    const { rows, report } = await prepareUpload(exportCsv({ 'Total Seats': '3', Guests: 'Jane Doe\nSam Lee\nBob' }), context())
+    expect(rows[0]!.guestList).toMatchObject({ kind: 'names', unread: ['a one-word name: "Bob"'] })
+    expect(report).toMatchObject({ namesPrefilled: 2, listsForSponsor: 1 })
   })
 
   it('the same guest named on two purchases in one file is caught', async () => {
@@ -66,7 +78,7 @@ describe('prepareUpload', () => {
       { Guests: 'Susan Cho' },
       { Email: 'b@example.org', 'First Name': 'Bo', 'Last Name': 'Park', Guests: 'Susan Cho' },
     ), context())
-    expect(report.reviewItems).toMatchObject([{ reason: 'double_booked', rowNumber: 3 }])
+    expect(report.reviewItems).toMatchObject([{ reason: 'possible_duplicate', rowNumber: 3 }])
   })
 
   it('a re-import is not matched against its own guests', async () => {
@@ -137,10 +149,17 @@ describe('prepareUpload', () => {
     expect(report.skippedOtherPage).toEqual([{ rowNumber: 3, pageName: 'Year-End Appeal' }])
   })
 
-  it('with no gala page set, imports everything and says so', async () => {
-    const { rows, report } = await prepareUpload(exportCsv({ 'Page Name': 'Year-End Appeal' }), context({ galaPageName: null }))
-    expect(rows).toHaveLength(1)
-    expect(report.warnings).toEqual(["This gala has no Give Lively page name set, so rows weren't filtered by page."])
+  it('with no gala page set, stops and lists the pages in the file (Oct 6)', async () => {
+    const csv = exportCsv({}, { Email: 'b@example.org' }, { Email: 'c@example.org', 'Page Name': 'Year-End Appeal' }, { Email: 'd@example.org', 'Page Name': '' })
+    const err = await prepareUpload(csv, context({ galaPageName: '  ' })).catch((e: unknown) => e)
+    expect(err).toBeInstanceOf(GalaPageNotSetError)
+    expect((err as GalaPageNotSetError).pages).toEqual([
+      { pageName: "AAFE's 52nd Annual Gala", rows: 2 },
+      { pageName: 'Year-End Appeal', rows: 1 },
+      { pageName: null, rows: 1 },
+    ])
+    expect((err as Error).message).toBe(
+      "Choose this gala's Give Lively page before importing. Pages in this file: AAFE's 52nd Annual Gala (2 rows), Year-End Appeal (1 row), (no page name) (1 row)")
   })
 
   it('reports rows read, rejected, and the date range', async () => {
