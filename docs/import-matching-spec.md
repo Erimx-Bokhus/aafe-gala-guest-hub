@@ -5,7 +5,9 @@ and Natalie's Supabase backend (`natalie-backend` branch: `prototype/database/sc
 then updated the same day with Natalie's review: sponsors confirm imported names, names print exactly as
 typed, a sturdier purchase key, date-range-aware missing checks, and four parsing gaps. Updated Oct 6
 from Natalie's second review of the real export: a staff-maintained tier mapping (the export's tier is
-just "Ticket") and a gala page filter that matches AAFE's real page name.
+just "Ticket") and a gala page filter that matches AAFE's real page name. Three rules settled Oct 6
+while building the engine (`docs/decisions.md`): partly clear guest lists still pre-fill, a name-only
+match is a possible duplicate, and an upload with no gala page set asks for it.
 Replaces the Oct 3 draft, which assumed one row per ticket and a transaction ID; the real export has neither.
 
 Applies hard rules 1, 4, 5, 6, and 7 in `CLAUDE.md`. All examples and test data are invented.
@@ -130,7 +132,8 @@ Each gala stores its Give Lively page name (proposed `gala_events.givelively_pag
   replacing the `GIVELIVELY_CAMPAIGNS` substring setting. Not set → the sync does nothing and says so.
 - **CSV upload:** rows whose Page Name is set and differs are skipped and listed in the report with their
   row numbers, so a mixed export never puts another event's purchases on the gala list. A blank Page Name
-  is imported.
+  is imported. If the gala has no page name yet, nothing is imported: the upload lists the page names
+  found in the file (with row counts), staff pick this gala's page once, and it's saved for the year.
 
 ### Sponsors confirm the imported names
 
@@ -140,8 +143,9 @@ confirm. The sponsor knows their guests, staff do far less review, and no AI is 
 1. Names the splitter reads cleanly become `guests` rows on the order (`last_updated_by = givelively_sync`)
    in the next free seats, which move to `submitted`. The portal marks them "From your purchase: please
    confirm or fix."
-2. Anything the splitter can't read cleanly (below) creates no guest. The original text is shown in the
-   portal ("You wrote: …") and on the order in the staff app, and the seats stay `unnamed` for the
+2. Entries the splitter can't read cleanly (below) create no guest; the clear names in the same list are
+   still pre-filled. The original text is shown in the portal ("You wrote: …"), with the entries that
+   couldn't be read, and on the order in the staff app; the remaining seats stay `unnamed` for the
    sponsor to fill.
 3. The portal-link email, queued as a **draft** that staff approve (hard rule 4), says: "Here are the
    guests we have from your purchase. Please confirm or fix them by [deadline]."
@@ -171,9 +175,10 @@ gala@aafe.org." Buyers type it however they like. Plain rules, in this order:
 5. **The buyer themself:** "me", "myself", "self", or the buyer's own name → the buyer is seated, with
    their email.
 6. **Unclear → left for the sponsor to confirm** (the original text shows in the portal; no guest is
-   created): an entry with an email but no name, a one-word name, a couple ("John and Mary Smith",
-   "J & M Smith"), an entry that can't be read, or **more names than seats** (all names stay visible in
-   the original text; nothing is dropped).
+   created for that entry, and the clear names in the list are still pre-filled): an entry with an email
+   but no name, a one-word name, a couple ("John and Mary Smith", "J & M Smith"), or an entry that can't
+   be read. **More names than seats** pre-fills nothing at all, since there's no way to know who to leave
+   out (all names stay visible in the original text; nothing is dropped).
 
 Revisions arrive later through the portal or by email to gala@aafe.org (staff enter those in the staff
 app). Either way they win over the import (section 6).
@@ -195,9 +200,12 @@ II, III). Organizations drop legal suffixes (Inc, LLC, LLP, Corp, Co, Ltd), a le
 **Imported guest → existing guests of this gala** (one person on two orders), first rule that answers:
 
 1. Same email and same last name, on a different order → staff review `double_booked`.
-2. Same full name (as a set of words, so word order doesn't matter) and same organization, on a
-   different order → staff review `double_booked`.
-3. Same first initial and last name, same organization → staff review `possible_duplicate`.
+2. Same full name (as a set of words, so word order doesn't matter) and the same known organization, on
+   a different order → staff review `double_booked`.
+3. Same full name on a different order where either organization is unknown or they differ → staff
+   review `possible_duplicate`. Imported guest lists rarely give an organization, so this is the usual
+   case for a name typed by two sponsors: a softer flag staff confirm, not a conflict.
+4. Same first initial and last name, same organization → staff review `possible_duplicate`.
 
 A guest whose email equals the buyer's email (a coordinator listing colleagues with their own inbox)
 doesn't get that email stored. Nicknames and typos aren't detected; staff merge those by hand. Natalie's
@@ -306,12 +314,14 @@ data (`docs/seed-data-requirements.md`, `seed/natalie-prototype/`).
 | 8 | Two emails on one line | — | "Jane Doe jane@example.org, Sam Lee sam@example.org" | 2 guests pre-filled |
 | 9 | Nothing yet | — | "TBD" | All seats unnamed; portal draft queued |
 | 10 | One-word name | — | "Jane" | No guest created; original text shown in the portal for the sponsor; no staff review |
+| 10b | Partly clear list | 3-seat purchase | "Jane Doe⏎Sam Lee⏎Bob" | Jane Doe and Sam Lee pre-filled; "Bob" shown for the sponsor; 1 seat unnamed |
 | 11 | More names than seats | 2-seat purchase | 3 names | No guests created; all 3 names shown in the portal for the sponsor to choose |
 | 12 | Sponsorship, partial names | — | Champion, 6 seats, 3 names | 6 seats, 3 pre-filled, 3 unnamed; portal draft "please confirm" queued, not sent |
 | 13 | Unknown tier | No tier "VIP Table 2027" | Row with that tier | Review `unknown_tier`; nothing created |
 | 14 | Shared inbox | Sponsor "Ana Ruiz", `events@example.com` | Buyer "Mark Lee", same email | Review `email_name_conflict`; new sponsor created |
 | 15 | Same buyer, case and spaces | Sponsor `grace.kim@example.org`, Kim | Buyer ` Grace.Kim@Example.org `, Kim | Same sponsor |
-| 16 | Guest on two orders | "Susan Cho" on sponsor A's order | Sponsor B lists "Susan Cho" | Review `double_booked` |
+| 16 | Guest on two orders | "Susan Cho" on sponsor A's order | Sponsor B lists "Susan Cho", no email | Review `possible_duplicate` (organization unknown) |
+| 16b | Same email on two orders | "Susan Cho", susan@example.org, on sponsor A's order | Sponsor B lists her with the same email | Review `double_booked` |
 | 17 | Name order swap | "Wei Chen", Harbor Health | "Chen Wei", Harbor Health, another order | Review `double_booked` (same words, same organization) |
 | 18 | Full refund | Case 1 imported | Same purchase, fully refunded | Order and seat cancelled; review `refund` |
 | 19 | Partial refund | $500 purchase | $250 refunded | Payment updated; order partially paid; in report |
@@ -332,5 +342,6 @@ data (`docs/seed-data-requirements.md`, `seed/natalie-prototype/`).
 | 34 | Generic tier name | Mapping "Ticket" → Supporter | Row with Tier Purchased "Ticket" | Order on Supporter; no review item |
 | 35 | Unmapped tier, mapped in review | No mapping for "Ticket" | 3 rows with "Ticket" | 1 `unknown_tier` item per row; mapping it saves "Ticket" → tier, re-run creates 3 orders, next upload raises no review |
 | 36 | Tier mapping changed later | 2 orders imported via "Ticket" → Supporter | Mapping changed to Friend, file re-imported | Existing orders keep Supporter; change logged |
+| 37b | Gala page not set | No page name for the gala | Any upload | Nothing imported; the page names in the file listed with row counts for staff to pick |
 | 37 | Another gala page in the file | Page name "AAFE's 52nd Annual Gala" | Rows from that page plus 1 row from "Year-End Appeal" | 1 row skipped and listed in the report; others imported |
 | 38 | Sync page filter | Page name "AAFE's 52nd Annual Gala" | JSON donations from that page and from "Year-End Appeal" | Only the gala page's donations imported |
