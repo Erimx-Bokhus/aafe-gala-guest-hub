@@ -154,14 +154,14 @@ create table if not exists tier_mappings (
 -- ---------------------------------------------------------------------
 
 create or replace function hash_token(t text) returns text
-language sql immutable as $$ select encode(sha256(convert_to(t, 'UTF8')), 'hex') $$;
+language sql immutable set search_path = public as $$ select encode(sha256(convert_to(t, 'UTF8')), 'hex') $$;
 
 create or replace function new_id(prefix text) returns text
-language sql volatile as $$ select prefix || '-' || left(replace(gen_random_uuid()::text, '-', ''), 12) $$;
+language sql volatile set search_path = public as $$ select prefix || '-' || left(replace(gen_random_uuid()::text, '-', ''), 12) $$;
 
 -- 128 random bits (32 hex chars), used for QR codes.
 create or replace function new_qr_token() returns text
-language sql volatile as $$ select 'AAFE-' || upper(left(replace(gen_random_uuid()::text, '-', '') || replace(gen_random_uuid()::text, '-', ''), 32)) $$;
+language sql volatile set search_path = public as $$ select 'AAFE-' || upper(left(replace(gen_random_uuid()::text, '-', '') || replace(gen_random_uuid()::text, '-', ''), 32)) $$;
 
 -- When a QR e-ticket for this event stops working: 6 a.m. New York time the morning after gala night.
 create or replace function qr_expiry(p_event_id text) returns timestamptz
@@ -172,7 +172,7 @@ $$;
 -- A QR code admits whoever holds the seat, so it stops working when the seat gets a different guest,
 -- or when the guest on it becomes a different person (name or email edited). Staff send a new one.
 create or replace function seats_void_qr() returns trigger
-language plpgsql as $$
+language plpgsql set search_path = public as $$
 begin
   if new.guest_id is distinct from old.guest_id or new.status = 'cancelled' then
     new.qr_token_hash := null; new.qr_token_expires_at := null;
@@ -246,7 +246,7 @@ language sql security definer set search_path = public as $$
 $$;
 
 create or replace function money_fmt(n numeric) returns text
-language sql immutable as $$ select '$' || to_char(n, 'FM999,999,990.00') $$;
+language sql immutable set search_path = public as $$ select '$' || to_char(n, 'FM999,999,990.00') $$;
 
 -- ---------------------------------------------------------------------
 -- 3. Row-level security
@@ -271,9 +271,18 @@ begin
 
   foreach t in array array['gala_events','sponsorship_tiers','event_tables','staff_users']
   loop
+    -- Separate insert/update/delete policies: a FOR ALL policy would also cover SELECT and
+    -- overlap staff_read (Supabase advisor: multiple permissive policies).
     execute format('drop policy if exists admin_write on %I', t);
-    execute format($p$create policy admin_write on %I for all to authenticated
+    execute format('drop policy if exists admin_insert on %I', t);
+    execute format('drop policy if exists admin_update on %I', t);
+    execute format('drop policy if exists admin_delete on %I', t);
+    execute format($p$create policy admin_insert on %I for insert to authenticated
+                     with check (staff_role() = 'gala_admin')$p$, t);
+    execute format($p$create policy admin_update on %I for update to authenticated
                      using (staff_role() = 'gala_admin') with check (staff_role() = 'gala_admin')$p$, t);
+    execute format($p$create policy admin_delete on %I for delete to authenticated
+                     using (staff_role() = 'gala_admin')$p$, t);
   end loop;
 end $$;
 
@@ -729,7 +738,7 @@ end $$;
 -- Same key as import-engine/src/purchaseKey.ts: SHA-256 of
 -- "<email, trimmed and lower-cased>|<purchase time in UTC, to the second>".
 create or replace function purchase_key(p_email text, p_at timestamptz) returns text
-language sql immutable as $$
+language sql immutable set search_path = public as $$
   select encode(sha256(convert_to(
     lower(btrim(coalesce(p_email, ''), E' \t\r\n')) || '|' || to_char(p_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
     'UTF8')), 'hex')
@@ -737,7 +746,7 @@ $$;
 
 -- Tier names and page names compare NFKC, case-folded, trimmed, inner spaces collapsed.
 create or replace function name_key(p text) returns text
-language sql immutable as $$ select lower(regexp_replace(btrim(normalize(coalesce(p, ''), NFKC)), '\s+', ' ', 'g')) $$;
+language sql immutable set search_path = public as $$ select lower(regexp_replace(btrim(normalize(coalesce(p, ''), NFKC)), '\s+', ' ', 'g')) $$;
 
 -- One staff review item, unless the same one (same purchase, reason and details) already exists,
 -- open or resolved: a resolved item doesn't come back for the same data.
@@ -1130,7 +1139,7 @@ begin
               'staff_send_qr_invite','staff_resend_portal_link','staff_approve_email','staff_cancel_email','checkin_list','staff_check_in','staff_check_in_qr',
               'staff_check_in_exception','gl_import','staff_import_givelively','email_mark_sent','email_mark_failed',
               'purchase_key','name_key','add_import_review','import_fill_guests','staff_set_tier_mapping','staff_set_gala_page',
-              'staff_resolve_import_review')
+              'staff_resolve_import_review','seats_void_qr','guests_void_qr')
   loop
     execute format('revoke all on function %s from public, anon, authenticated', f);
   end loop;
