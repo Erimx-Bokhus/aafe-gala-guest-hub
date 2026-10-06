@@ -36,7 +36,7 @@ One import is all-or-nothing: if anything fails partway, nothing is applied and 
 The import works end to end in code: a file in AAFE's export format goes through the import engine and into the database in one step that either fully succeeds or changes nothing. What's left is the staff app's upload screen (frontend pair). <!-- new 2026-10-05 22:58 Aisling -->
 
 - **Import engine** (`import-engine/`): reads the file, converts times to UTC, splits guest lists, matches buyers and guests, builds the report. 94 automated tests. <!-- new 2026-10-05 22:58 Aisling -->
-- **Database side** (`prototype/database/backend.sql`): skips purchases it has seen, never overwrites a name a sponsor or staff entered, keeps a run record for every upload, and puts close calls in the review queue. 97 automated tests, including a sample file run all the way through. <!-- new 2026-10-05 22:58 Aisling -->
+- **Database side** (`prototype/database/backend.sql`): skips purchases it has seen, never overwrites a name a sponsor or staff entered, keeps a run record for every upload, and puts close calls in the review queue. 101 automated tests, including a sample file run all the way through. <!-- modified 2026-10-06 05:50 Aisling -->
 
 Three choices settled while building (Oct 6; Natalie reviewing in Slack): <!-- new 2026-10-05 22:58 Aisling -->
 
@@ -106,10 +106,12 @@ Nothing is deleted automatically. Refunded seats are cancelled, not removed, and
 - **Guest names:** one free-text answer per purchase ("Please list the name(s) and email address(es) of all guests…"). The sample has one row, so we don't yet know how messy real answers are. <!-- modified 2026-10-05 16:51 Aisling -->
 - **Still open:** whether sponsorships bought on Give Lively appear in the same export (the "Tier Category" column suggests they do). <!-- modified 2026-10-05 16:51 Aisling -->
 
-The test cases below are being updated to match: cases that relied on ticket IDs change, and cases for free-text guest lists are added. <!-- modified 2026-10-05 16:51 Aisling -->
+Done: the spec's test cases (section 11) now use the purchase key and cover free-text guest lists; the table below is the original list. <!-- modified 2026-10-06 05:50 Aisling -->
 
 ## Earlier questions
 <!-- team -->
+
+Answered Oct 5; see "What AAFE's export answered" above. <!-- updated 2026-10-06 05:50 Aisling -->
 
 - Does the attendee export carry a **per-ticket ID**? Without one, rows are identified by their position in the transaction, which breaks if Give Lively reorders them.
 - Does it show **refunds**, or are they only in another report?
@@ -121,7 +123,7 @@ The test cases below are being updated to match: cases that relied on ticket IDs
 <!-- team -->
 <!-- modified 2026-10-05 22:58 Aisling -->
 
-The original 22 cases, kept for reference. The spec now has 38 (`docs/import-matching-spec.md`, section 11), written for the real export's purchase key instead of ticket IDs; nearly all are automated tests, each labelled with its case number. <!-- modified 2026-10-05 22:58 Aisling -->
+The original 22 cases, kept for reference. The spec now has 38 numbered cases, 41 with 10b, 16b, and 37b (`docs/import-matching-spec.md`, section 11), written for the real export's purchase key instead of ticket IDs; nearly all are automated tests, each labelled with its case number. <!-- modified 2026-10-06 05:50 Aisling -->
 
 | # | Case | Expected |
 | --- | --- | --- |

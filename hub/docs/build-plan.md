@@ -54,18 +54,18 @@ As of October 6. Natalie's backend and guest portal are now in `main` (PRs #25 a
 
 | # | Component | Status | Done | Next <!-- new 2026-10-05 22:58 Aisling --> |
 | --- | --- | --- | --- | --- |
-| C0 | Setup and guardrails | Mostly done | Secret scan and real-data guard required on every PR; import engine, backend, and frontend build checks; demo-data drift check; `main` protected | Demo preview host <!-- modified 2026-10-06 03:06 Aisling --> |
+| C0 | Setup and guardrails | Mostly done | Secret scan and real-data guard required on every PR; import engine, backend, and frontend build checks; demo-data drift check; `main` protected; Supabase CLI pinned (2.119.0) with db scripts; team Supabase project loaded, access rules on for all 18 tables, advisor warnings 41 → 28, all by design (PR #30) | Demo preview host <!-- modified 2026-10-06 05:50 Aisling --> |
 | C1 | Data model and test data | In progress | Natalie's Supabase schema and seed in `main`; import tables added; demo data fixed for rule 6 (random links and QR codes, fictional phones) | Messier test data (~550 guests) for the import tests <!-- new 2026-10-05 22:58 Aisling --> |
 | C2 | Sign-in and roles | In progress | Emailed one-time sign-in link, role from the staff list (Cornell, PR #27, in review) | Roles checked on the server for every staff page (issue #9, Cornell) <!-- new 2026-10-05 22:58 Aisling --> |
 | C3 | Commitments and seats | Built in the backend | Pledges, payments, comps, seats, and seat statuses in Natalie's backend | Connect the staff app pages to it (with #9) <!-- new 2026-10-05 22:58 Aisling --> |
-| C4 | Import and matching | Ahead of schedule | Import engine (94 tests) and database side (97 backend tests, including a real-format CSV end to end); tier mapping; gala page filter; review queue | Upload screen and tier-mapping picker in the staff app (frontend pair) <!-- new 2026-10-05 22:58 Aisling --> |
+| C4 | Import and matching | Ahead of schedule | Import engine (94 tests) and database side (101 backend tests, including a real-format CSV end to end); tier mapping; gala page filter; review queue | Upload screen and tier-mapping picker in the staff app (frontend pair) <!-- modified 2026-10-06 05:50 Aisling --> |
 | C5 | Sponsor guest form | Source in `main` | Natalie's portal: slots per package, hashed private links, English, 中文, Español | "From your purchase: please confirm" on imported names; Korean; connect to the backend <!-- new 2026-10-05 22:58 Aisling --> |
 | C6 | Staff dashboard | Prototype | Natalie's staff app (offline demo data) | Connect to the backend; gaps by owner <!-- new 2026-10-05 22:58 Aisling --> |
 | C7 | Follow-up emails | Built in the backend | Draft queue, staff approval, sending through Resend | Deadline reminder and receipt templates; approval screen <!-- new 2026-10-05 22:58 Aisling --> |
 | C8 | Exports | Not started | Prototype CSV exports in the staff app | Badge file with table numbers, check-in list, Salesforce file from the database <!-- new 2026-10-05 22:58 Aisling --> |
 | C9 | Check-in app | Partly built | Check-in screen in the staff app; QR codes now hashed per seat and expiring (issue #10) | Connect to the backend; walk-ins; offline <!-- new 2026-10-05 22:58 Aisling --> |
 | C10 | Branding and languages | In progress | Design system (PR #14); AAFE orange and white | Korean; AAFE review of translations; Demo Day photo approval <!-- new 2026-10-05 22:58 Aisling --> |
-| C11 | Testing and security | In progress | 191 automated tests across the import engine and backend | The testing list below <!-- new 2026-10-05 22:58 Aisling --> |
+| C11 | Testing and security | In progress | 195 automated tests (94 import engine, 101 backend) | The testing list below <!-- modified 2026-10-06 05:50 Aisling --> |
 | C12 | Demo deploy and handoff | Not started | | Pick the demo host <!-- new 2026-10-05 22:58 Aisling --> |
 
 ## Testing: what to add
@@ -78,9 +78,9 @@ What the automated checks don't cover yet, most important first. <!-- new 2026-1
 | --- | --- | --- |
 | 1 | ~~Frontend build check in CI~~ Done (PR #28) | Nothing checked that the staff app and portal still build <!-- modified 2026-10-06 03:06 Aisling --> |
 | 2 | ~~Demo-data drift check~~ Done (PR #28) | Regenerate the seed and fail if it differs from what's committed <!-- modified 2026-10-06 03:06 Aisling --> |
-| 3 | ~~Real-data guard~~ Done (PR #28), required on `main` | Fail on any email outside `example.org` or phone outside 555-0100–0199 (hard rule 1) <!-- modified 2026-10-06 03:06 Aisling --> |
+| 3 | ~~Real-data guard~~ Done (PR #28), required on `main` | Fail on any email outside the reserved demo domains (example.org/.com/.net, .test) or phone outside 555-0100–0199 (hard rule 1) <!-- modified 2026-10-06 05:50 Aisling --> |
 | 4 | Email and sync function tests | `send-emails` and `givelively-sync` have none: prove an unapproved email never sends and codes are stored only as hashes <!-- new 2026-10-05 22:58 Aisling --> |
-| 5 | Access rules for every table and role | Only a few are covered <!-- new 2026-10-05 22:58 Aisling --> |
+| 5 | Access rules for every table and role | Access rules (RLS) are on for every table; tests cover only a few role and table pairs <!-- modified 2026-10-06 05:50 Aisling --> |
 | 6 | Sponsor link limits | Expires after the deadline; can't see another order, payments, or staff notes <!-- new 2026-10-05 22:58 Aisling --> |
 | 7 | Every staff action is logged | One test walking each staff function <!-- new 2026-10-05 22:58 Aisling --> |
 | 8 | Frontend tests | None yet: guest slots, editing locked after the deadline, every language has every phrase <!-- new 2026-10-05 22:58 Aisling --> |
@@ -125,6 +125,6 @@ Pairs replaced single owners on Oct 5 so every area has two people on it. If one
 ## Schedule risks
 <!-- team -->
 
-- **Late materials from AAFE.** If spreadsheet headers slip past October 8, build against the intake form's fields and adapt.
+- **Late materials from AAFE.** Badge and check-in templates, Give Lively screen recordings, comp amounts, and goals per category are still to come; build against placeholders and adapt. <!-- modified 2026-10-06 05:50 Aisling -->
 - **Uneven AI fluency and activity.** Each pair works together on every component, so no area depends on one person. <!-- modified 2026-10-05 20:37 Aisling -->
 - **Scope creep toward a full event platform.** Hold to P0 until the full path works end to end.

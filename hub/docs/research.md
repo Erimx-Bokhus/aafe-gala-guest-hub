@@ -63,7 +63,7 @@ Both are AGPL-3.0: if modified and run as a web service, the modified source mus
 | --- | --- | --- |
 | A. Build a focused companion to Give Lively | Moderate; the core fits if we hold to P0 | **Recommended** |
 | B. Fork pretix or Hi.Events | High; weeks to learn the codebase, duplicates Give Lively checkout | Design reference only |
-| C. Extend an existing teammate app | Unknown until reviewed | Decided after a walkthrough |
+| C. Extend an existing teammate app | Moderate | **Adopted with A**: the build continues on Natalie's backend and portal (PRs #25, #26) <!-- modified 2026-10-06 05:50 Aisling --> |
 | D. Recommend an existing product, build only an import helper | Low | Honest fallback |
 
 A custom tool is justified only if it keeps Give Lively, costs AAFE less per year than a mid-priced gala tool, and has a named owner after Demo Day. If those conditions fail, recommending an existing product is the more honest outcome.
@@ -97,7 +97,7 @@ Natalie's research predates the October 1 call. Where it differs, discovery and 
 | A $50,000 sponsorship with 12 seats | Confirmed: AAFE's 2026 flyer gives Platinum ($50,000) 12 guaranteed seats <!-- modified 2026-10-05 16:51 Aisling --> |
 | November 9 presentation | Nov 9 is the team's last work day; Demo Day is Nov 10 <!-- new 2026-10-03 11:56 Aisling --> |
 
-Natalie's clickable prototypes and seed data (Oct 2) are reviewed in `docs/research/prototype-review-2026-10-03.md`: six pieces of her schema were adopted into the data model, and four prototype behaviors (automatic emails, short readable sponsor links, sequential QR codes, real photos in public) change before Demo Day. <!-- updated 2026-10-03 12:36 Aisling -->
+Natalie's clickable prototypes and seed data (Oct 2) are reviewed in `docs/research/prototype-review-2026-10-03.md`: six pieces of her schema were adopted into the data model, and four prototype behaviors had to change: automatic emails, readable sponsor links, and sequential QR codes are fixed (PR #26); real photos still need AAFE's written approval before Demo Day. <!-- modified 2026-10-06 05:50 Aisling -->
 
 ## Give Lively's limits
 

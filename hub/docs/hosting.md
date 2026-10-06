@@ -46,6 +46,8 @@ Whoever runs a production version should be able to say yes to each of these, wh
 <!-- team -->
 <!-- modified 2026-10-05 16:51 Aisling -->
 
+The team Supabase project is loaded with the schema, seed, and backend (Oct 6); `npm run db:backend` in `prototype/` re-applies it. <!-- updated 2026-10-06 05:50 Aisling -->
+
 - The demo runs under a team account with invented data, on Supabase's free plan (decided Oct 5). Where the web app itself is previewed is still open. <!-- modified 2026-10-05 16:51 Aisling -->
 - A free Supabase project pauses after a week without activity. Wake it before any demo, or rebuild it from the seed data. <!-- modified 2026-10-05 16:51 Aisling -->
 - Free web services can sleep when idle; wake the preview before any demo.
