@@ -1,0 +1,114 @@
+// Splits the free-text guest-list answer into guests (spec section 3, "Splitting the free-text guest list").
+// The result only pre-fills the sponsor's portal; the sponsor confirms or fixes it. When anything is
+// unclear, no guests are created and the sponsor sees the original text instead.
+
+import { normEmail, normName, nameWordSet } from './normalize.ts'
+
+export interface Buyer {
+  first: string
+  last: string
+  email: string
+}
+
+export interface ParsedGuest {
+  /** Exactly as written; printed on badges, check-in, and the portal. */
+  displayName: string
+  /** Lower-cased. null when none was given, or when it was the buyer's own inbox (a coordinator). */
+  email: string | null
+  /** The buyer named themself ("me", their own name, or their own email alone). */
+  isBuyer: boolean
+}
+
+export type GuestList =
+  /** Empty or "TBD": all seats stay unnamed. */
+  | { kind: 'none' }
+  /** Read cleanly: pre-fill these, in order, into the next free seats. */
+  | { kind: 'names'; guests: ParsedGuest[] }
+  /** Left for the sponsor: no guests created; the portal shows the original text. */
+  | { kind: 'unclear'; reasons: string[] }
+
+const NOTHING = /^(tbd|tba|to follow|to be (determined|announced)|n\/?a|none|-+)\.?$/i
+const SELF = /^(me|myself|self|me \(buyer\)|myself \(buyer\))$/i
+const EMAIL = /[^\s<>(),;:"'[\]]+@[^\s<>(),;:"'[\]]+\.[a-z]{2,}/gi
+const COUPLE = /(^|\s)(and|&|\+)(\s|$)|&/i
+
+/** Split on line breaks, semicolons, numbered markers ("1." "2)"), and bullets. */
+function splitEntries(text: string): string[] {
+  return text
+    .split(/\r?\n|;/)
+    .flatMap((line) => line.split(/(?:^|\s)\d{1,2}[.)]\s+/))
+    .flatMap((line) => line.split(/(?:^|\s)[•·*]\s*/))
+    .map((line) => line.replace(/^\s*-\s+/, ''))
+    .flatMap(splitAroundEmails)
+    .map((e) => e.trim())
+    .filter(Boolean)
+}
+
+/** "Jane Doe jane@x.org, Sam Lee sam@x.org" → one entry per address, each ending at its address. */
+function splitAroundEmails(line: string): string[] {
+  const matches = [...line.matchAll(EMAIL)]
+  if (matches.length < 2) return [line]
+  const entries: string[] = []
+  let start = 0
+  for (const m of matches) {
+    const end = m.index! + m[0].length
+    entries.push(line.slice(start, end))
+    start = end
+  }
+  const rest = line.slice(start).replace(/^[\s,]+/, '')
+  if (rest) entries.push(rest)
+  return entries
+}
+
+/** Remove the address and separators (`-`, `:`, `,`, `<>`, `()`) around it; keep the name as written. */
+function readEntry(entry: string): { name: string; email: string | null } {
+  const found = entry.match(EMAIL)
+  const email = found ? normEmail(found[0]) : null
+  const name = entry
+    .replace(EMAIL, ' ')
+    .replace(/[<>()[\]"]/g, ' ')
+    .replace(/\s[-–:,]+(?=\s|$)/g, ' ')
+    .replace(/^[\s,:\-–]+|[\s,:\-–]+$/g, '')
+    .replace(/\s+/g, ' ')
+  return { name, email }
+}
+
+export function parseGuestList(text: string | null, seatCount: number, buyer: Buyer): GuestList {
+  const trimmed = (text ?? '').trim()
+  if (trimmed === '' || NOTHING.test(trimmed)) return { kind: 'none' }
+
+  let entries = splitEntries(trimmed)
+
+  // Commas between names without emails: split only if every piece is two or more words and it
+  // gives no more entries than seats.
+  const reasons: string[] = []
+  entries = entries.flatMap((entry) => {
+    if (!entry.includes(',') || entry.match(EMAIL)) return [entry]
+    const pieces = entry.split(',').map((p) => p.trim()).filter(Boolean)
+    if (pieces.length <= seatCount && pieces.every((p) => p.split(/\s+/).length >= 2)) return pieces
+    reasons.push(`commas that don't separate full names: "${entry}"`)
+    return []
+  })
+
+  const buyerEmail = normEmail(buyer.email)
+  const buyerName = `${buyer.first} ${buyer.last}`.trim()
+  const guests: ParsedGuest[] = []
+
+  for (const entry of entries) {
+    const { name, email } = readEntry(entry)
+    if (SELF.test(name) || (name === '' && email === buyerEmail) || (name && nameWordSet(name) === nameWordSet(buyerName))) {
+      guests.push({ displayName: name && !SELF.test(name) ? name : buyerName, email: buyerEmail, isBuyer: true })
+      continue
+    }
+    if (name === '') { reasons.push(`an email address with no name: "${entry}"`); continue }
+    if (!/\p{L}/u.test(name) || /\d|@/.test(name)) { reasons.push(`can't be read: "${entry}"`); continue }
+    if (COUPLE.test(name)) { reasons.push(`a couple or pair on one line: "${entry}"`); continue }
+    if (normName(name).split(' ').filter(Boolean).length < 2) { reasons.push(`a one-word name: "${entry}"`); continue }
+    guests.push({ displayName: name, email: email === buyerEmail ? null : email, isBuyer: false })
+  }
+
+  if (guests.length > seatCount) reasons.push(`${guests.length} names for ${seatCount} seat${seatCount === 1 ? '' : 's'}`)
+  if (reasons.length) return { kind: 'unclear', reasons }
+  if (guests.length === 0) return { kind: 'none' }
+  return { kind: 'names', guests }
+}
