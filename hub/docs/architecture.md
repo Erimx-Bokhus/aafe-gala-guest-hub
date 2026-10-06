@@ -4,11 +4,27 @@ One standard web app and one database. A small import-and-matching module sits b
 
 ```layers
 Sources | Give Lively attendee export — CSV, or the live link; Give Lively donation feed — read-only JSON; Staff entry — checks, ACH, comps; Legacy spreadsheet — one-time migration
-Import and matching | Parse and validate — mapped columns, clear errors; Match and dedupe — ID, then email, then name; Review queue — staff confirm close calls
+Import and matching | Parse and validate — columns found by name, clear errors; Match and dedupe — purchase key, then email and last name, then name; Review queue — staff confirm close calls
 Shared data | Postgres — guests, seats, sources, history; Staff sign-in — AAFE Google accounts; AI helper — optional, off by default
 Screens | Staff dashboard — gaps by owner, goals; Sponsor form — private link, no account; Check-in — iPad, works offline
 Outputs | Badge file — mail merge with table number; Follow-up drafts — staff approve and send; Salesforce file — who actually attended
 ```
+
+## What's built
+<!-- new Oct 6 -->
+
+As of October 6, in the team repo. The build follows Natalie's Supabase schema; the data model below is the target it converges on.
+
+| Part | Where | What it does |
+| --- | --- | --- |
+| Import engine | `import-engine/` | Reads AAFE's Give Lively export, converts times to UTC, splits free-text guest lists, matches buyers and guests, builds the import report. Plain TypeScript, no screens, 94 tests |
+| Database and server functions | `prototype/database/` | Natalie's schema and seed, plus the import tables (`import_runs`, `import_review`, `tier_mappings`). Every staff action goes through a function that writes the history |
+| Server jobs | `prototype/supabase/functions/` | Give Lively sync (this gala's page only) and the email sender (staff-approved only) |
+| Staff app | `prototype/staff-app/` | Natalie's staff workspace; real sign-in in review (PR #27); still on demo data |
+| Sponsor portal | `prototype/guest-portal/` | Natalie's guest-name form on a private link; English, 中文, Español |
+| Checks on every PR | `.github/workflows/` | Secret scan, import engine tests, backend tests (97, run on an in-memory Postgres) |
+
+**Secrets are stored as hashes.** Sponsor links and QR e-tickets are random, shown only in the email that carries them, and stored only as hashes. A QR code belongs to one seat and stops working the morning after the gala, or as soon as the seat gets a different guest.
 
 ## Stack
 <!-- modified Oct 5 -->
@@ -29,7 +45,7 @@ Each incoming row goes through the same checks, in order. The first check that a
 ```decision
 start: A row arrives from Give Lively, the sponsor form, or staff entry
 !Has a name and a source? | Rejected, with the reason in the import report | reject
-Same Give Lively ID as a guest we have? | Update that guest | update
+Same purchase as one already imported (email + purchase time)? | Update that purchase, never its guests | update
 Same email and same last name? | Update that guest | update
 Same name and same organization? | Update that guest | update
 Close but not certain (shared email, names swapped, other organization)? | Review queue: staff confirm or keep separate | review
