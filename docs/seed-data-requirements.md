@@ -1,8 +1,8 @@
 # Seed data requirements
 
 What the team's synthetic seed data must contain so the import tests in
-`docs/import-matching-spec.md` (section 10) and the demo have something real to work on.
-Case numbers below refer to that table.
+`docs/import-matching-spec.md` (section 11) and the demo have something real to work on.
+Case numbers below refer to that table. Revised Oct 5 for the real Give Lively export shape.
 
 ## Rules for all seed data
 
@@ -11,84 +11,97 @@ Case numbers below refer to that table.
   `example.net` only, so nothing can ever be mailed to a real inbox. Phone numbers use the
   `555-01xx` fiction range.
 - **No payment details** beyond method, date, status, and amount (hard rule 2).
-- **Package seat counts are placeholders.** The 2027 tiers are pending (`docs/decisions.md`). Tests
-  must read `seat_count` from the package, never hard-code 7 or 10.
+- **Seat counts come from the tiers.** Tiers follow AAFE's 2026 flyer (`docs/decisions.md`, Oct 5).
+  Tests read the seat count from the tier, never hard-code it.
 - Seed CSVs live under a `seed/` or `fixtures/` folder (the only CSVs `.gitignore` allows).
 
 ## Starting point
 
-Natalie's seed data (`seed/natalie-prototype/`) is the demo's base state: galas, staff, tiers, sponsors, orders, payments, guests, seats, and check-ins. The records below are added alongside it for the import tests; reuse her staff and tiers rather than inventing a second set.
+Natalie's seed data (`seed/natalie-prototype/`, and `prototype/database/seed.sql` in her backend) is the
+demo's base state: galas, staff, tiers, sponsors, orders, payments, guests, seats, and check-ins. The
+records below are added alongside it for the import tests; reuse her staff and tiers rather than
+inventing a second set.
 
 ## Three layers
 
 1. **Base database state** (rows loaded before any import).
-2. **`givelively-export-1.csv`**: the first Give Lively attendee export.
-3. **`givelively-export-2.csv`**: the next export of the same report, with changes. Importing it
-   after file 1 exercises the re-import cases.
+2. **`givelively-export-1.csv`**: a Give Lively ticket export **in the real format**: the same column
+   headers as AAFE's export (`docs/aafe-materials-2026-10-05.md`), **one row per purchase**, no
+   transaction ID, and guests typed into the free-text "Please list the name(s) and email address(es)
+   of all guests…" column. Ends with two fully blank rows, as the real one does.
+3. **`givelively-export-2.csv`**: the same export taken later, with changes. Importing it after file 1
+   exercises the re-import cases.
 
 ## 1. Base database state
 
 | Item | Needed for |
 | --- | --- |
-| 1 gala year (2027) and 4 staff users: 1 admin, 2 staff (relationship owners), 1 check-in | Owner grouping, roles |
-| Packages: at least 2 individual ticket types and 3 sponsorship tiers with different `seat_count` | Seat creation |
-| Ticket type → package mapping for every ticket type in file 1 **except one** | Case 17 |
-| Contact "Grace Kim", Lotus Bank, `grace.kim@example.org` | Cases 5, 6 |
-| Contact "Wei Chen", Harbor Health, no email | Case 7 |
-| Contact "Daniel Park", organization A, no email | Case 8 |
-| Contact "Ana Ruiz", `events@example.com` | Case 9 |
-| Sponsorship A (staff entry, check, received) with "Susan Cho" named on one seat | Case 10 |
-| A check pledge (staff entry, `pledged`) whose purchaser has an email that appears in file 1 | Case 20 |
-| A comp commitment (kind `comp`, payment `n/a`) for an invented elected official, owner assigned | Comps, no balance owed |
-| A sponsorship with a live sponsor link, some seats named via the portal | Portal demo |
-| A sponsorship with all seats unnamed, link sent 2+ weeks ago, no response | Missing-names view, reminder drafts |
-| At least one contact with no relationship owner | "No owner" view |
+| 2027 gala, staff with each role, tiers from the 2026 flyer | Everything |
+| **No** tier named "VIP Table 2027" | Case 13 |
+| Sponsor "Ana Ruiz", `events@example.com` | Case 14 |
+| Sponsor with email `grace.kim@example.org`, contact last name Kim | Case 15 |
+| An order for sponsor A with guest "Susan Cho" | Case 16 |
+| A guest "Wei Chen", Harbor Health, on some order | Case 17 |
+| A comp order for an invented elected official | Comps, no balance owed |
+| A sponsorship with all seats unnamed, link sent 2+ weeks ago | Missing-names view, reminder drafts |
 
-Cases 14 and 15 need edits on records that came from file 1, so the test applies them **between**
-the two imports: a staff override setting the "VP" guest's title to "CFO", and a sponsor naming
-an unnamed seat of the case 11 sponsorship through the portal.
+Case 21 needs a staff edit between the two imports: correct the title of one guest created by file 1.
 
 ## 2. `givelively-export-1.csv`
 
-| Rows | Needed for |
+One row per purchase. "Guest text" is the free-text guest-list column.
+
+| Row | Needed for |
 | --- | --- |
-| One ticket where purchaser = attendee | Case 1 |
-| One order of 2 tickets bought by a coordinator for two colleagues, attendee email = coordinator's email | Case 2 |
-| "Grace.Kim@Example.org" with surrounding spaces as an attendee email | Case 5 |
-| "Dr. Grace  Kim", "Lotus Bank, Inc." (double space, honorific, legal suffix) | Case 6 |
-| "Chen Wei", Harbor Health, no email | Case 7 |
-| "Daniel Park", organization B, no email | Case 8 |
-| "Mark Lee", `events@example.com` on a different order from Ana Ruiz | Case 9 |
-| Sponsorship B naming "Susan Cho" with the same email as in the base state | Case 10 |
-| A sponsorship order with 3 attendee rows for a 10-seat package (or whatever the tier holds) | Case 11 |
-| A ticket for the check-pledge purchaser's email | Case 20 |
-| A row with the unmapped ticket type | Case 17 |
-| A row with no transaction ID | Case 16 |
-| Two rows with the same ticket ID | Case 4 |
-| A 2-seat order with 3 attendee rows | Case 18 |
-| An attendee "Jon Tan" | Case 13 |
-| An attendee whose title is "VP" | Case 14 |
-| An order at $500 | Case 21 |
-| Names with non-ASCII characters (e.g. accented Spanish names, a Chinese name in Han characters, a Korean name in Hangul) | Normalization, multilingual form, badges |
+| 1 ticket; guest text "me" | Case 1 |
+| 2 tickets by a coordinator; guest text lists 2 colleagues, each followed by the coordinator's own email | Case 2 |
+| Two identical rows (same buyer, time, tier) | Case 4 |
+| Guest text with two names and emails on separate lines | Cases 6, 20 |
+| Guest text "1. Jane Doe 2. Sam Lee" | Case 7 |
+| Guest text with two names and emails on one line, comma-separated | Case 8 |
+| Guest text "TBD" | Case 9 |
+| Guest text with a one-word name | Case 10 |
+| 2-seat purchase whose guest text lists 3 names | Case 11 |
+| Champion sponsorship (6 seats) with 3 names | Case 12 |
+| Tier Purchased "VIP Table 2027" | Case 13 |
+| Buyer "Mark Lee", `events@example.com` | Case 14 |
+| Buyer ` Grace.Kim@Example.org ` (spaces, capitals), last name Kim | Case 15 |
+| Sponsor B's purchase listing "Susan Cho" | Case 16 |
+| Guest "Chen Wei", Harbor Health | Case 17 |
+| A $500 purchase | Cases 18, 19 |
+| A row with no Email | Case 23 |
+| A row with a phone number filled in | Case 25 |
+| 2-seat purchase, guest text "Jane Doe, Sam Lee" (no emails) | Case 26 |
+| 2-seat purchase, guest text with three comma-separated names | Case 27 |
+| 2-seat purchase, guest text "John and Mary Smith" | Case 28 |
+| Guest written family-name-first, e.g. "Chen Wei" | Case 29 |
+| A Champion purchase, tier spelled "Champion" | Case 30 |
+| Purchases dated in February and in March | Cases 22, 31 |
+| Names with non-ASCII characters (accented Spanish names, a Chinese name in Han characters, a Korean name in Hangul) | Normalization, badges |
 
 ## 3. `givelively-export-2.csv`
 
-Same report as file 1, with these differences only:
+The same export taken later, with these differences only:
 
 | Change from file 1 | Needed for |
 | --- | --- |
-| Case 1's ticket now has status refunded | Case 12 |
-| "Jon Tan" now "Jonathan Tan", same ticket ID | Case 13 |
-| The overridden guest's title now "SVP" | Case 14 |
-| The case 11 sponsorship unchanged: the seat the sponsor named is still blank in Give Lively | Case 15 |
-| One order from file 1 removed entirely | Case 19 |
-| The $500 order now $250 | Case 21 |
+| Case 1's purchase refunded in full | Case 18 |
+| The $500 purchase with $250 refunded | Case 19 |
+| One name changed in the separate-lines guest text | Case 20 |
+| One purchase removed (its date inside the file's date range) | Case 22 |
+| Case 30's purchase with the tier spelled "Champion Sponsor" | Case 30 |
 
-Also keep an exact copy of file 1 to re-import for case 3.
+Also keep:
+- an exact copy of file 1 to re-import for cases 3 and 21;
+- **`givelively-export-march.csv`**: only the March purchases from file 1 (case 31);
+- a JSON sync payload for one of file 1's purchases, imported before file 1 (case 33).
+
+Between file 1 and file 2, the test also names 2 seats through the portal on one order whose purchase has
+a guest list in file 2 (case 32).
 
 ## Demo volume (not needed by tests)
 
-For a believable dashboard and check-in demo: about 300 seated guests across about 25 sponsors and
-150 individual tickets, mixed payment methods (Give Lively, check, ACH, comp), several table
-numbers, and at least a third of sponsor seats still unnamed (Natalie's research: real sponsors do not
-respond instantly, and the reminder tooling needs something to do).
+For a believable dashboard and check-in demo, shaped like AAFE's 2026 gala: about 550 guests across
+sponsor guests, ticket holders, comps, government/VIP, and staff; roughly 200 with guaranteed tables;
+mixed payment methods (Give Lively, check, ACH, comp); and at least a third of sponsor seats still unnamed
+so the reminder tooling has something to do.
