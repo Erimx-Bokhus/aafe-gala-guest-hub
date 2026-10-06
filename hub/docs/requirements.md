@@ -2,6 +2,28 @@
 
 What the tool must do, in priority order. Bracketed tags show where each requirement came from.
 
+## Working PRD (until the final PRDs arrive)\*
+<!-- new Oct 6 -->
+
+Until Natalie's team PRD and Pursuit's PRD are final, these pages together are the team's product requirements. Build from them; if something isn't covered here, it goes to [Decisions](#decisions) before it gets built.
+
+| PRD section | Where it lives now | Status |
+| --- | --- | --- |
+| Problem and goal | [Overview](#overview); the three questions below | Settled at discovery, Oct 1 |
+| Users and their jobs | [Discovery](#discovery): staff, relationship managers, sponsors, the check-in desk | Settled |
+| Requirements, in priority order | This page: must have, should have | Settled; changes go through Decisions |
+| Out of scope | This page, "Later or out of scope"; [Overview](#overview), "What we will not build" | Settled |
+| Success measures | The three questions below; AAFE's feedback on the full path (Oct 30); Demo Day (Nov 10) | No numeric targets yet |
+| Data and AI rules | [Data and AI](#data-ai) | Settled; AAFE still to approve |
+| Import rules | [Import and matching](#import) | Settled Oct 6 |
+| Owners and timeline | [Build plan](#build-plan): two pairs, components C0–C12 | Settled Oct 5 |
+| Decisions and open questions | [Decisions](#decisions), including "Pending" | Updated as we go |
+| Risks | [Risks](#risks) | Updated as we go |
+
+When the final PRDs arrive, we compare them with this table and record every difference in [Decisions](#decisions).
+
+\* **Why it's set up this way.** The build had to start before a PRD existed. The discovery call with AAFE was October 1, and AAFE's spreadsheet, Give Lively export, and tier flyer arrived October 5, the same week the stack was chosen and building began. Demo Day (November 10) didn't move, so instead of waiting, the team built from what AAFE actually said and sent. Every requirement on this page carries its source in brackets: the call, the intake form, the project scope, or AAFE's data.
+
 ## The three questions the dashboard must answer
 
 From AAFE's intake form, for staff and for the Demo Day mock investor:
