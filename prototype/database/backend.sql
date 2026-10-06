@@ -1123,7 +1123,87 @@ language sql security definer set search_path = public as $$
 $$;
 
 -- ---------------------------------------------------------------------
--- 8. Who may call what
+-- 8. EXPORTS  (rows for the staff app to save as CSV; every export is logged)
+-- Columns are a first proposal until AAFE sends its badge and check-in templates.
+-- ---------------------------------------------------------------------
+
+-- Badge mail merge. Only what prints on a badge: never email, dietary or accessibility needs,
+-- payment, or staff notes. A guest with no table is admitted without a guaranteed seat.
+create or replace function staff_export_badges(p_include_printed boolean default false)
+returns table (first_name text, last_name text, title text, organization text,
+               table_number int, seat_number int, sponsor text, guest_type text, badge_status text)
+language plpgsql security definer set search_path = public as $$
+declare me staff_users := require_staff(array['gala_admin','relationship_manager']); v_n int;
+begin
+  return query
+    select g.first_name, g.last_name, g.title, g.organization, t.number, g.seat_number,
+           case when g.guest_type = 'sponsor_guest' then sp.organization_name end, g.guest_type, g.badge_status
+    from guests g join orders o on o.id = g.order_id join sponsors sp on sp.id = o.sponsor_id
+    left join event_tables t on t.id = g.table_id
+    where o.event_id = current_event_id() and o.status <> 'cancelled'
+      and (g.badge_status in ('ready', 'reprint_needed') or (p_include_printed and g.badge_status = 'printed'))
+    order by t.number nulls last, g.seat_number nulls last, g.last_name, g.first_name;
+  get diagnostics v_n = row_count;
+  perform write_audit('staff', me.name, 'export', 'badges', null, 'export.badges', null, null, false,
+    format('Badge file exported: %s badge(s)%s.', v_n, case when p_include_printed then ', including printed' else '' end));
+end $$;
+
+-- Printed check-in list: the fallback if the iPad or the venue's internet fails. Every named guest
+-- by last name, plus one row per unnamed sponsor seat so the desk knows who may bring a walk-in.
+-- Volunteers may export it; it carries no email, phone, payment, dietary needs, or staff notes.
+create or replace function staff_export_checkin()
+returns table (last_name text, first_name text, organization text, sponsor text, table_number int,
+               seat_number int, guest_type text, accessibility_needs text, arrived boolean)
+language plpgsql security definer set search_path = public as $$
+declare me staff_users := require_staff(array['gala_admin','relationship_manager','check_in_volunteer']); v_n int;
+begin
+  return query
+    select * from (
+      select g.last_name, g.first_name, g.organization, sp.organization_name, t.number, g.seat_number,
+             g.guest_type, g.accessibility_needs, g.attendance_status = 'checked_in'
+      from guests g join orders o on o.id = g.order_id join sponsors sp on sp.id = o.sponsor_id
+      left join event_tables t on t.id = g.table_id
+      where o.event_id = current_event_id() and o.status <> 'cancelled'
+      union all
+      select 'Unnamed seat', null, null, sp.organization_name, null, s.slot_number, 'unnamed_seat', null, false
+      from seats s join orders o on o.id = s.order_id join sponsors sp on sp.id = o.sponsor_id
+      where o.event_id = current_event_id() and o.status <> 'cancelled' and s.guest_id is null and s.status <> 'cancelled'
+    ) x
+    order by (x.guest_type = 'unnamed_seat'), x.last_name, x.first_name nulls last, x.organization_name;
+  get diagnostics v_n = row_count;
+  perform write_audit('staff', me.name, 'export', 'checkin', null, 'export.checkin', null, null, false,
+    format('Check-in list exported: %s row(s).', v_n));
+end $$;
+
+-- Salesforce attendee file: who actually came, shaped for a Contact + Campaign Member import into
+-- AAFE's Salesforce (NPSP). Includes email, so gala admins only. Walk-ins recorded at the door
+-- without a guest record come through by the name the desk wrote down.
+create or replace function staff_export_salesforce()
+returns table (first_name text, last_name text, email text, title text, organization text, sponsor text,
+               salesforce_account_id text, salesforce_opportunity_id text, guest_type text,
+               checked_in_at timestamptz, check_in_method text)
+language plpgsql security definer set search_path = public as $$
+declare me staff_users := require_staff(array['gala_admin']); v_n int;
+begin
+  return query
+    select g.first_name, g.last_name, nullif(g.email, ''), g.title, g.organization, sp.organization_name,
+           sp.salesforce_account_id, o.salesforce_opportunity_id, g.guest_type, c.checked_in_at, c.method
+    from check_ins c join guests g on g.id = c.guest_id
+    join orders o on o.id = g.order_id join sponsors sp on sp.id = o.sponsor_id
+    where c.event_id = current_event_id()
+    union all
+    select null, c.arrival_name, null, null, null, sp.organization_name,
+           sp.salesforce_account_id, o.salesforce_opportunity_id, 'walk_in', c.checked_in_at, c.method
+    from check_ins c left join orders o on o.id = c.order_id left join sponsors sp on sp.id = o.sponsor_id
+    where c.event_id = current_event_id() and c.guest_id is null
+    order by 2, 1 nulls last;
+  get diagnostics v_n = row_count;
+  perform write_audit('staff', me.name, 'export', 'salesforce', null, 'export.salesforce', null, null, false,
+    format('Salesforce attendee file exported: %s attendee(s).', v_n));
+end $$;
+
+-- ---------------------------------------------------------------------
+-- 9. Who may call what
 -- ---------------------------------------------------------------------
 
 do $$
@@ -1139,7 +1219,8 @@ begin
               'staff_send_qr_invite','staff_resend_portal_link','staff_approve_email','staff_cancel_email','checkin_list','staff_check_in','staff_check_in_qr',
               'staff_check_in_exception','gl_import','staff_import_givelively','email_mark_sent','email_mark_failed',
               'purchase_key','name_key','add_import_review','import_fill_guests','staff_set_tier_mapping','staff_set_gala_page',
-              'staff_resolve_import_review','seats_void_qr','guests_void_qr')
+              'staff_resolve_import_review','seats_void_qr','guests_void_qr',
+              'staff_export_badges','staff_export_checkin','staff_export_salesforce')
   loop
     execute format('revoke all on function %s from public, anon, authenticated', f);
   end loop;
@@ -1160,7 +1241,8 @@ grant execute on function
   staff_add_comp_guest(jsonb), staff_send_qr_invite(text), staff_resend_portal_link(text), staff_approve_email(text), staff_cancel_email(text),
   checkin_list(), staff_check_in(text, text), staff_check_in_qr(text), staff_check_in_exception(text, text, text, text),
   staff_import_givelively(jsonb, jsonb), staff_set_tier_mapping(text, text), staff_set_gala_page(text),
-  staff_resolve_import_review(text, text)
+  staff_resolve_import_review(text, text),
+  staff_export_badges(boolean), staff_export_checkin(), staff_export_salesforce()
   to authenticated;
 
 -- Edge functions (service role)
