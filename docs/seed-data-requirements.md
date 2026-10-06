@@ -71,6 +71,12 @@ One row per purchase. "Guest text" is the free-text guest-list column.
 | A $500 purchase | Cases 18, 19 |
 | A row with no Email | Case 23 |
 | A row with a phone number filled in | Case 25 |
+| 2-seat purchase, guest text "Jane Doe, Sam Lee" (no emails) | Case 26 |
+| 2-seat purchase, guest text with three comma-separated names | Case 27 |
+| 2-seat purchase, guest text "John and Mary Smith" | Case 28 |
+| Guest written family-name-first, e.g. "Chen Wei" | Case 29 |
+| A Champion purchase, tier spelled "Champion" | Case 30 |
+| Purchases dated in February and in March | Cases 22, 31 |
 | Names with non-ASCII characters (accented Spanish names, a Chinese name in Han characters, a Korean name in Hangul) | Normalization, badges |
 
 ## 3. `givelively-export-2.csv`
@@ -82,9 +88,16 @@ The same export taken later, with these differences only:
 | Case 1's purchase refunded in full | Case 18 |
 | The $500 purchase with $250 refunded | Case 19 |
 | One name changed in the separate-lines guest text | Case 20 |
-| One purchase removed | Case 22 |
+| One purchase removed (its date inside the file's date range) | Case 22 |
+| Case 30's purchase with the tier spelled "Champion Sponsor" | Case 30 |
 
-Also keep an exact copy of file 1 to re-import for cases 3 and 21.
+Also keep:
+- an exact copy of file 1 to re-import for cases 3 and 21;
+- **`givelively-export-march.csv`**: only the March purchases from file 1 (case 31);
+- a JSON sync payload for one of file 1's purchases, imported before file 1 (case 33).
+
+Between file 1 and file 2, the test also names 2 seats through the portal on one order whose purchase has
+a guest list in file 2 (case 32).
 
 ## Demo volume (not needed by tests)
 
