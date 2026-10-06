@@ -294,4 +294,14 @@ ok(sofia.n === 2 && sofia.c > 0, '2 community tickets, donor-covered fee kept')
 const live = (await as('service_role', null, `select demo_givelively_purchase('Live Demo Co', 'Ana', 'Lopez', 'ana@live.example.org', 'Platinum — Lead Sponsor', 50000) p`))[0].p
 ok(classify(normalize(live), ['AAFE Gala 2027']) === 'import' && normalize(live).fee === 1100.3, 'staged live purchase maps with Stripe fee')
 
+// Supabase advisor cleanup: trigger functions aren't API-callable, helpers pin search_path,
+// and admin writes don't overlap staff_read on SELECT.
+for (const f of ['seats_void_qr()', 'guests_void_qr()'])
+  ok(!(await db.query(`select has_function_privilege('anon', $1, 'execute') e`, [f])).rows[0].e, `anon cannot execute ${f}`)
+const unpinned = (await db.query(`select count(*)::int n from pg_proc where pronamespace = 'public'::regnamespace
+  and proname in ('hash_token','new_id','new_qr_token','seats_void_qr','money_fmt','purchase_key','name_key')
+  and not coalesce(proconfig, '{}') @> array['search_path=public']`)).rows[0].n
+ok(unpinned === 0, 'helper functions pin search_path')
+ok((await db.query(`select count(*)::int n from pg_policies where schemaname = 'public' and cmd = 'ALL'`)).rows[0].n === 0, 'no FOR ALL policies overlap staff_read')
+
 console.log(`${pass} passed, ${fail} failed`)
