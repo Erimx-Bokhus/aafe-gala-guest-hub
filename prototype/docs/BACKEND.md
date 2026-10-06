@@ -24,6 +24,16 @@ Guest Portal ──anon key──▶ portal_* functions ──▶  Postgres (sch
 ## Setup
 
 1. **Database.** Supabase dashboard → SQL editor: run `database/schema.sql`, then `seed.sql`, then `backend.sql`.
+   Or from the command line, with the Supabase CLI this folder installs (`npm ci`, then `npx supabase …`):
+   ```bash
+   npx supabase login                                   # opens the browser once
+   npx supabase link --project-ref <PROJECT-REF>        # press Enter at the database password prompt
+   npx supabase db query --linked -f database/schema.sql
+   npx supabase db query --linked -f database/seed.sql
+   npm run db:backend                                   # backend.sql; safe to re-run after every change to it
+   npm run db:advisors                                  # Supabase's security and performance checks
+   ```
+   `db query --linked` goes through your Supabase login, so no database password is needed or stored. `supabase link` keeps its state in `supabase/.temp/`, which git ignores.
 2. **Staff logins.** Authentication → Providers: turn **off** "Allow new users to sign up". Authentication → Users → **Invite** each staff member using the exact email in `staff_users`. Login is matched to the role by email. Demo seed emails are `@aafe-demo.example.org`, so change them to real team inboxes (`update staff_users set email = ...`) to test.
 3. **Edge functions.**
    ```bash
