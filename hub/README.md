@@ -37,7 +37,7 @@ Where the marker goes decides what it marks:
 
 - **On the line after the `#` title:** the whole page.
 - **On the line after a `##` heading:** that section. It shows as a labelled tag on the heading.
-- **At the end of a line, list item, or table cell:** that exact line. It shows as a small icon; in a table row, put it before the last `|`.
+- **At the end of a line, list item, table row, or glossary term:** that exact item. It shows as a small icon at the start (left) of the item; in a table row, put it before the last `|`. One icon per kind per item; its tooltip lists every time.
 
 Hovering any tag or icon shows the kind, date, time, who, and note. Clicking it marks it read for that person only (saved in their browser); clicking a section's tag also clears the icons inside that section. The sidebar badge shows the most significant unread marker on the page (important, then new, removed, modified, updated); team-only sections don't count in client view. Markers stay in the file until someone deletes them. Older markers with free-text dates (`<!-- new Oct 3 -->`) still work.
 

@@ -98,10 +98,14 @@ mark{background:var(--mark);color:inherit;border-radius:2px;padding:0 1px}
 .k-new{--g:"✦"} .k-updated{--g:"+"} .k-modified{--g:"✎"} .k-removed{--g:"−"} .k-important{--g:"!"}
 .chg::before{content:var(--g);margin-right:4px;font-weight:700;letter-spacing:0}
 /* inline marker next to the exact line that changed; hover or focus shows kind, time, and who */
-.chg-i{--c:var(--accent);display:inline-grid;place-items:center;width:18px;height:18px;margin:0 2px 0 6px;border-radius:50%;border:1.5px solid var(--c);color:var(--c);background:var(--surface);font:700 11px/1 var(--f-ui);vertical-align:1px;cursor:pointer;text-decoration:none;text-indent:0}
+.chg-i{--c:var(--accent);display:inline-grid;place-items:center;width:18px;height:18px;margin:0 7px 0 0;border-radius:50%;border:1.5px solid var(--c);color:var(--c);background:var(--surface);font:700 11px/1 var(--f-ui);vertical-align:1px;cursor:pointer;text-decoration:none;text-indent:0}
 .chg-i::before{content:var(--g)}
 .chg-i.k-updated{--c:var(--ok)} .chg-i.k-modified{--c:var(--k-review)} .chg-i.k-removed{--c:var(--soft)} .chg-i.k-important{--c:var(--crit);background:var(--crit);color:var(--surface)}
 .chg-i:hover,.chg-i:focus-visible{background:var(--c);color:var(--surface)}
+/* in tables the icon sits in a gutter left of the row, so columns stay aligned */
+.doc table:has(.chg-i) :is(td,th):first-child{padding-left:38px}
+.doc td:first-child{position:relative}
+.doc td:first-child > .chg-i{position:absolute;left:11px;top:12px;margin:0}
 .doc h1 .chg,.doc h2 .chg{margin-left:10px;position:relative;top:-3px;font-size:10px;padding:4px 6px;background:none;cursor:pointer}
 .doc h1 .chg:hover,.doc h2 .chg:hover{background:color-mix(in srgb,var(--c) 12%,transparent)}
 .doc h1 .chg:hover::after,.doc h2 .chg:hover::after{content:" · mark read"}
@@ -429,9 +433,8 @@ mark{background:var(--mark);color:inherit;border-radius:2px;padding:0 1px}
 .ch-person.done{border-color:var(--ok)}
 .ch-date{font:600 11px/1 var(--f-ui);letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin:12px 0 4px}
 .doc .ch-list{list-style:none;margin:0;padding:0}
-.doc .ch-item{max-width:none;margin:0;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 14px;padding:12px 4px 12px 14px;border-top:1px solid var(--rule);box-shadow:inset 3px 0 0 var(--accent)}
+.doc .ch-item{max-width:none;margin:0;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 14px;padding:12px 4px;border-top:1px solid var(--rule)}
 .doc .ch-item::marker{content:none}
-.doc .ch-item.read{box-shadow:none}
 .ch-main{display:flex;flex-direction:column;gap:3px;min-width:0}
 .ch-meta{font:500 11.5px/1.3 var(--f-ui);color:var(--faint)}
 .ch-who{font:600 11px/1 var(--f-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--accent-text);margin-right:6px}
@@ -952,7 +955,8 @@ function fenceGlossary(src){
   rows.forEach(([t, d]) => { const L = /[A-Za-z]/.test(t[0]) ? t[0].toUpperCase() : '#'; (groups[L] ||= []).push([t, d]); });
   return `<div class="gl"><input class="gl-filter" type="search" placeholder="Filter ${rows.length} terms" aria-label="Filter glossary">${
     Object.entries(groups).map(([L, items]) => `<section data-gl><div class="gl-letter">${L}</div><dl>${
-      items.map(([t, d]) => `<dt id="term-${slug(t)}">${esc(t)}</dt><dd>${esc(d)}</dd>`).join('')}</dl></section>`).join('')}</div>`;
+      items.map(([t, d = '']) => { const cm = d.match(/\s*(<!--[\s\S]*?-->)\s*$/), def = cm ? d.slice(0, cm.index) : d;
+        return `<dt id="term-${slug(t)}">${esc(t)}</dt><dd>${cm ? cm[1] : ''}${esc(def)}</dd>`; }).join('')}</dl></section>`).join('')}</div>`;
 }
 
 /* --- wireframes --- */
@@ -1305,10 +1309,17 @@ function decorate(doc, id){
   slides.forEach(sl => { const h2 = sl.querySelector('h2'), sec = h2 ? h2.id : 'page';
     inlineMarks(sl).forEach(({node, kind, raw}) => { const key = markKey(id, sec, kind, raw);
       if (isRead(key)){ node.remove(); return; }
-      const m = parseMark(kind, raw), i = document.createElement('span');
+      const m = parseMark(kind, raw), par = node.parentElement;
+      const item = par.closest('tr') || par.closest('li') || par.closest('dd, p, blockquote, h3, h4, td, th');
+      const host = !item ? null : item.tagName === 'TR' ? item.cells[0] : item.tagName === 'LI' ? (item.querySelector(':scope > .li-body') || item) : item;
+      const same = host && host.querySelector(`:scope > .chg-i.k-${kind}`);
+      if (same){   // one icon per kind per item; its tooltip lists every time
+        same.dataset.key += '\n' + key; same.dataset.tip = same.dataset.tip.replace(' · click to mark read', '') + ` | ${m.when || m.on}` + ' · click to mark read';
+        node.remove(); return; }
+      const i = document.createElement('span');
       i.className = `chg-i k-${kind}`; i.tabIndex = 0; i.setAttribute('role', 'button'); i.dataset.sec = sec; i.dataset.key = key;
       i.dataset.tip = `${markTip(m)} · click to mark read`; i.setAttribute('aria-label', `${markTip(m)}. Mark as read`);
-      node.replaceWith(i); }); });
+      if (host){ node.remove(); host.prepend(i); } else node.replaceWith(i); }); });
   doc.querySelectorAll('[data-wt]').forEach(mountWalkthrough);
   doc.querySelectorAll('[data-chlog]').forEach(renderChlog);
   doc.querySelectorAll('[data-erd]').forEach(e => { drawErd(e); });
@@ -1518,7 +1529,7 @@ document.addEventListener('click', e => {
   else if (t.hasAttribute('data-chall')) readEntries(chlog.map(x => x.key));
   else if (t.dataset.chopen) readEntries([t.dataset.chopen]);   // the link still opens the change
 });
-function readInline(i){ readMarks = {...readMarks, [i.dataset.key]: true}; store.set('aafe-hub-read', readMarks); i.remove(); tip.hidden = true; buildNav(); updateNav(); }
+function readInline(i){ readMarks = {...readMarks}; i.dataset.key.split('\n').forEach(k => { readMarks[k] = true; }); store.set('aafe-hub-read', readMarks); i.remove(); tip.hidden = true; buildNav(); updateNav(); }
 document.addEventListener('click', e => { const i = e.target.closest('.chg-i'); if (i){ e.preventDefault(); readInline(i); } });
 document.addEventListener('keydown', e => { const i = e.target.closest && e.target.closest('.chg-i'); if (i && (e.key === 'Enter' || e.key === ' ')){ e.preventDefault(); readInline(i); } });
 document.addEventListener('change', e => {

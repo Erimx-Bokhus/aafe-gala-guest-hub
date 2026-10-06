@@ -1,6 +1,6 @@
 # Architecture
 
-One standard web app and one database. A small import-and-matching module sits between Give Lively and the database, and every screen reads from the same tables. The stack was decided October 5: React and TypeScript on Supabase.
+One standard web app and one database. A small import-and-matching module sits between Give Lively and the database, and every screen reads from the same tables. The stack was decided October 5: React and TypeScript on Supabase. <!-- modified 2026-10-05 16:51 Aisling -->
 
 ```layers
 Sources | Give Lively attendee export — CSV, or the live link; Give Lively donation feed — read-only JSON; Staff entry — checks, ACH, comps; Legacy spreadsheet — one-time migration
@@ -13,30 +13,30 @@ Outputs | Badge file — mail merge with table number; Follow-up drafts — staf
 ## What's built
 <!-- new 2026-10-05 22:58 Aisling -->
 
-As of October 6, in the team repo. The build follows Natalie's Supabase schema; the data model below is the target it converges on.
+As of October 6, in the team repo. The build follows Natalie's Supabase schema; the data model below is the target it converges on. <!-- new 2026-10-05 22:58 Aisling -->
 
-| Part | Where | What it does |
+| Part | Where | What it does <!-- new 2026-10-05 22:58 Aisling --> |
 | --- | --- | --- |
-| Import engine | `import-engine/` | Reads AAFE's Give Lively export, converts times to UTC, splits free-text guest lists, matches buyers and guests, builds the import report. Plain TypeScript, no screens, 94 tests |
-| Database and server functions | `prototype/database/` | Natalie's schema and seed, plus the import tables (`import_runs`, `import_review`, `tier_mappings`). Every staff action goes through a function that writes the history |
-| Server jobs | `prototype/supabase/functions/` | Give Lively sync (this gala's page only) and the email sender (staff-approved only) |
-| Staff app | `prototype/staff-app/` | Natalie's staff workspace; real sign-in in review (PR #27); still on demo data |
-| Sponsor portal | `prototype/guest-portal/` | Natalie's guest-name form on a private link; English, 中文, Español |
+| Import engine | `import-engine/` | Reads AAFE's Give Lively export, converts times to UTC, splits free-text guest lists, matches buyers and guests, builds the import report. Plain TypeScript, no screens, 94 tests <!-- new 2026-10-05 22:58 Aisling --> |
+| Database and server functions | `prototype/database/` | Natalie's schema and seed, plus the import tables (`import_runs`, `import_review`, `tier_mappings`). Every staff action goes through a function that writes the history <!-- new 2026-10-05 22:58 Aisling --> |
+| Server jobs | `prototype/supabase/functions/` | Give Lively sync (this gala's page only) and the email sender (staff-approved only) <!-- new 2026-10-05 22:58 Aisling --> |
+| Staff app | `prototype/staff-app/` | Natalie's staff workspace; real sign-in in review (PR #27); still on demo data <!-- new 2026-10-05 22:58 Aisling --> |
+| Sponsor portal | `prototype/guest-portal/` | Natalie's guest-name form on a private link; English, 中文, Español <!-- new 2026-10-05 22:58 Aisling --> |
 | Checks on every PR | `.github/workflows/` | Secret scan and real-data guard (both required), import engine tests, backend tests (101, run on an in-memory Postgres), frontend build <!-- modified 2026-10-06 03:06 Aisling --> |
 
-**Secrets are stored as hashes.** Sponsor links and QR e-tickets are random, shown only in the email that carries them, and stored only as hashes. A QR code belongs to one seat and stops working the morning after the gala, or as soon as the seat gets a different guest.
+**Secrets are stored as hashes.** Sponsor links and QR e-tickets are random, shown only in the email that carries them, and stored only as hashes. A QR code belongs to one seat and stops working the morning after the gala, or as soon as the seat gets a different guest. <!-- new 2026-10-05 22:58 Aisling -->
 
 ## Stack
 <!-- modified 2026-10-05 16:51 Aisling -->
 
 | Layer | Choice | Why |
 | --- | --- | --- |
-| App | React + TypeScript, built with Vite and styled with Tailwind | Matches Natalie's working prototype; any web developer can maintain it |
-| Backend | Supabase: Postgres, sign-in, and server functions (Give Lively sync, email sending) | One managed service; free plan for the demo |
-| Database | Postgres, hosted by Supabase | Standard, portable, and fits the record structure |
-| Sign-in | Supabase Auth with staff roles (demo accounts for now) | AAFE's Google accounts can plug in if the tool is adopted |
+| App | React + TypeScript, built with Vite and styled with Tailwind | Matches Natalie's working prototype; any web developer can maintain it <!-- modified 2026-10-05 16:51 Aisling --> |
+| Backend | Supabase: Postgres, sign-in, and server functions (Give Lively sync, email sending) | One managed service; free plan for the demo <!-- modified 2026-10-05 16:51 Aisling --> |
+| Database | Postgres, hosted by Supabase | Standard, portable, and fits the record structure <!-- modified 2026-10-05 16:51 Aisling --> |
+| Sign-in | Supabase Auth with staff roles (demo accounts for now) | AAFE's Google accounts can plug in if the tool is adopted <!-- modified 2026-10-05 16:51 Aisling --> |
 | Demo preview | A free or low-cost tier on a team account | Production hosting is AAFE's decision after Demo Day; see [Hosting](#hosting) |
-| Repo | Team GitHub organization on GitHub Team, with `main` protected | Handed to AAFE, or the partner it chooses, at handoff |
+| Repo | Team GitHub organization on GitHub Team, with `main` protected | Handed to AAFE, or the partner it chooses, at handoff <!-- modified 2026-10-05 16:51 Aisling --> |
 
 ## How matching works
 
@@ -52,18 +52,18 @@ Close but not certain (shared email, names swapped, other organization)? | Revie
 else | Create a new guest | new
 ```
 
-"Wei Chen" and "Chen Wei" at the same organization is a close match: it waits for a person instead of merging. Full rules, the review queue, and the test cases: [Import and matching](#import).
+"Wei Chen" and "Chen Wei" at the same organization is a close match: it waits for a person instead of merging. Full rules, the review queue, and the test cases: [Import and matching](#import). <!-- modified 2026-10-03 11:56 Aisling -->
 
 ```notes
 Matching is deliberately boring: plain rules anyone can audit, no AI deciding who is who. That matters because AAFE's draft AI policy keeps names out of AI tools.
 ```
 
-Nothing merges on a guess. Every import ends with a report such as "12 new, 3 updated, 40 unchanged, 2 need review, 1 rejected." A staff or sponsor correction always wins over incoming data, and the original value is kept in the history.
+Nothing merges on a guess. Every import ends with a report such as "12 new, 3 updated, 40 unchanged, 2 need review, 1 rejected." A staff or sponsor correction always wins over incoming data, and the original value is kept in the history. <!-- modified 2026-10-03 11:56 Aisling -->
 
 ## Data model
 <!-- updated 2026-10-05 16:51 Aisling -->
 
-AAFE's real spreadsheet (received Oct 5) adds three fields to plan for: a guest category, whether a seat is guaranteed or admittance only, and a sponsor's pipeline stage. Arrows point from a field to the table it refers to.
+AAFE's real spreadsheet (received Oct 5) adds three fields to plan for: a guest category, whether a seat is guaranteed or admittance only, and a sponsor's pipeline stage. Arrows point from a field to the table it refers to. <!-- modified 2026-10-05 16:51 Aisling -->
 
 ```erd
 contacts @1,1 | first_name; last_name; title; organization; email; phone
@@ -84,7 +84,7 @@ field_overrides | entity; field; value; set_by (staff or sponsor link)
 audit_log | actor → staff; entity; action; before; after; sponsor_visible
 ```
 
-A printed badge whose name, title, organization, or table changes goes to `needs_reprint`, so the 2026 wrong-title problem gets caught at the printer. Walk-ins and other exceptions at the door are recorded with a note and the staff member who approved them. Several of these pieces come from Natalie's prototype schema.
+A printed badge whose name, title, organization, or table changes goes to `needs_reprint`, so the 2026 wrong-title problem gets caught at the printer. Walk-ins and other exceptions at the door are recorded with a note and the staff member who approved them. Several of these pieces come from Natalie's prototype schema. <!-- updated 2026-10-03 12:36 Aisling -->
 
 <details>
 <summary>Full column list</summary>
@@ -127,4 +127,4 @@ audit_log        (id, actor, entity, entity_id, action, before, after, sponsor_v
 
 </details>
 
-**The core query:** unnamed seats, grouped by relationship owner. That single view answers "who's missing, and who chases them."
+**The core query:** unnamed seats, grouped by relationship owner. That single view answers "who's missing, and who chases them." <!-- modified 2026-10-03 12:36 Aisling -->
