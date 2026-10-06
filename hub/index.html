@@ -17,7 +17,7 @@
   --rule:rgba(31,29,26,.14); --rule-strong:rgba(31,29,26,.28);
   --accent:#c64c28; --accent-text:#ad3f1d; --accent-wash:rgba(198,76,40,.09);
   --gold:#8a6a2e; --mark:#f6dca6;
-  --own-aisling:#c64c28; --own-cornell:#2a78d6; --own-antonin:#1baf7a; --own-shared:#8a8478;
+  --own-backend:#c64c28; --own-frontend:#2a78d6; --own-shared:#8a8478;
   --k-update:#2a78d6; --k-review:#a8770f; --k-new:#c64c28; --k-reject:#8a8478;
   --ok:#17795a; --ok-wash:rgba(23,121,90,.1);
   --shadow:0 1px 2px rgba(31,29,26,.06),0 8px 24px rgba(31,29,26,.06);
@@ -31,7 +31,7 @@
   --rule:rgba(239,233,221,.13); --rule-strong:rgba(239,233,221,.26);
   --accent:#e0714d; --accent-text:#f08c69; --accent-wash:rgba(224,113,77,.13);
   --gold:#cfa860; --mark:#6b4f1f;
-  --own-aisling:#d95926; --own-cornell:#3987e5; --own-antonin:#199e70; --own-shared:#8e877b;
+  --own-backend:#d95926; --own-frontend:#3987e5; --own-shared:#8e877b;
   --k-update:#3987e5; --k-review:#c99a2e; --k-new:#e0714d; --k-reject:#8e877b;
   --ok:#4cc79a; --ok-wash:rgba(76,199,154,.12);
   --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25); color-scheme:dark;
@@ -41,7 +41,7 @@
   --rule:rgba(239,233,221,.13); --rule-strong:rgba(239,233,221,.26);
   --accent:#e0714d; --accent-text:#f08c69; --accent-wash:rgba(224,113,77,.13);
   --gold:#cfa860; --mark:#6b4f1f;
-  --own-aisling:#d95926; --own-cornell:#3987e5; --own-antonin:#199e70; --own-shared:#8e877b;
+  --own-backend:#d95926; --own-frontend:#3987e5; --own-shared:#8e877b;
   --k-update:#3987e5; --k-review:#c99a2e; --k-new:#e0714d; --k-reject:#8e877b;
   --ok:#4cc79a; --ok-wash:rgba(76,199,154,.12);
   --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25); color-scheme:dark;
@@ -571,7 +571,7 @@ const PAGES = [
   {id:'glossary',     title:'Glossary',      group:'Reference'},
 ];
 const NUMERALS = ['一','二','三','四','五','六','七','八','九','十'];
-const OWNERS = {aisling:'Aisling', cornell:'Cornell', antonin:'Antonin', shared:'Shared'};
+const OWNERS = {backend:'Backend pair: Aisling + Cornell', frontend:'Frontend pair: Natalie + Antonin', shared:'Everyone'};
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -722,7 +722,7 @@ function fenceWorkload(src){
     if (r.stretch){ o.slo += a; o.shi += b; } else { o.lo += a; o.hi += b; }
     o.items.push(`${r.id}${r.stretch ? ' (stretch)' : ''}`);
   }
-  const order = ['aisling','cornell','antonin','shared'].filter(k => acc[k]);
+  const order = ['backend','frontend','shared'].filter(k => acc[k]);
   const max = Math.ceil(Math.max(...order.map(k => acc[k].hi + acc[k].shi)) / 2) * 2 + 2;
   const sc = scaleFn(`linear 0 ${max}`); sc.ticks = []; for (let t = 0; t <= max; t += 2) sc.ticks.push(t);
   let html = '';
