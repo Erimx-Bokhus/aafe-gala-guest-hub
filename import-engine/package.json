@@ -1,0 +1,23 @@
+{
+  "name": "@aafe/import-engine",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Give Lively import and matching rules for the AAFE gala guest list (docs/import-matching-spec.md). Pure TypeScript: no UI, no database.",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "papaparse": "^5.7.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "@types/papaparse": "^5.5.2",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.3"
+  }
+}
