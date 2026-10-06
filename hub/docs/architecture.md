@@ -22,7 +22,7 @@ As of October 6, in the team repo. The build follows Natalie's Supabase schema; 
 | Server jobs | `prototype/supabase/functions/` | Give Lively sync (this gala's page only) and the email sender (staff-approved only) |
 | Staff app | `prototype/staff-app/` | Natalie's staff workspace; real sign-in in review (PR #27); still on demo data |
 | Sponsor portal | `prototype/guest-portal/` | Natalie's guest-name form on a private link; English, 中文, Español |
-| Checks on every PR | `.github/workflows/` | Secret scan, import engine tests, backend tests (97, run on an in-memory Postgres) |
+| Checks on every PR | `.github/workflows/` | Secret scan and real-data guard (both required), import engine tests, backend tests (101, run on an in-memory Postgres), frontend build |
 
 **Secrets are stored as hashes.** Sponsor links and QR e-tickets are random, shown only in the email that carries them, and stored only as hashes. A QR code belongs to one seat and stops working the morning after the gala, or as soon as the seat gets a different guest.
 
