@@ -125,7 +125,7 @@ create table if not exists guests (
   seat_number         int,
   badge_status        text not null default 'needs_review' check (badge_status in ('needs_review','ready','printed','reprint_needed')),
   attendance_status   text not null default 'expected' check (attendance_status in ('expected','checked_in','no_show')),
-  qr_token            text unique,     -- comp/relationship guests (and optionally all guests)
+  qr_token            text unique,     -- seed/demo only: backend.sql moves these to seats.qr_token_hash and clears them
   last_updated_by     text not null check (last_updated_by in ('guest_portal','staff','givelively_sync')),
   created_at          timestamptz not null default now(),
   updated_at          timestamptz not null default now(),
