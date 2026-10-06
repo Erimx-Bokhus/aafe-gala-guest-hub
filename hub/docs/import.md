@@ -37,7 +37,7 @@ One import is all-or-nothing: if anything fails partway, nothing is applied and 
 The import works end to end in code: a file in AAFE's export format goes through the import engine and into the database in one step that either fully succeeds or changes nothing. What's left is the staff app's upload screen (frontend pair). <!-- new 2026-10-05 22:58 Aisling -->
 
 - **Import engine** (`import-engine/`): reads the file, converts times to UTC, splits guest lists, matches buyers and guests, builds the report. 94 automated tests. <!-- new 2026-10-05 22:58 Aisling -->
-- **Database side** (`prototype/database/backend.sql`): skips purchases it has seen, never overwrites a name a sponsor or staff entered, keeps a run record for every upload, and puts close calls in the review queue. 101 automated tests, including a sample file run all the way through. <!-- modified 2026-10-06 05:50 Aisling -->
+- **Database side** (`prototype/database/backend.sql`): skips purchases it has seen, never overwrites a name a sponsor or staff entered, keeps a run record for every upload, and puts close calls in the review queue. 119 backend tests in all, including a sample file run all the way through. <!-- modified 2026-10-06 06:30 Aisling -->
 
 Three choices settled while building (Oct 5; Natalie reviewing in Slack): <!-- modified 2026-10-06 06:12 Aisling -->
 
