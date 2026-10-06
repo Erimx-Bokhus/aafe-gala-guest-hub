@@ -1,6 +1,7 @@
 // Backend tests: loads schema.sql + seed.sql + backend.sql into in-memory Postgres (PGlite)
 // with stand-ins for Supabase roles and auth.jwt(), then runs both apps' flows.  npm run test:backend
 import { PGlite } from '@electric-sql/pglite'
+import { randomBytes } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 const D = fileURLToPath(new URL('../database/', import.meta.url))
@@ -93,9 +94,37 @@ ok((await as('authenticated', vol, `select staff_check_in($1) r`, [gid]))[0].r =
 ok((await as('authenticated', vol, `select staff_check_in($1) r`, [gid]))[0].r === false, 'double check-in is a no-op')
 ok((await err('anon', null, `select portal_release_seat('new-link-abc', 1)`))?.startsWith('seat_locked'), 'checked-in seat locked in portal')
 const comp = (await as('authenticated', ADMIN, `select staff_add_comp_guest($1) id`, [{ first_name: 'Rep', last_name: 'Chen', email: 'rep@x.example.org', relationship_note: 'Council' }]))[0].id
-const qr = (await db.query(`select qr_token from guests where id=$1`, [comp])).rows[0].qr_token
-ok(/^AAFE-[0-9A-F]{32}$/.test(qr), 'comp QR is 128-bit random')
-ok((await as('authenticated', vol, `select staff_check_in_qr($1) r`, [qr.toLowerCase()]))[0].r.first_name === 'Rep', 'QR check-in')
+// QR e-tickets (hard rule 6): minted only when the email sends, stored as a hash on the seat.
+ok((await db.query(`select qr_token from guests where id=$1`, [comp])).rows[0].qr_token === null, 'no QR code stored on a new comp guest')
+ok((await db.query(`select count(*)::int n from guests where qr_token is not null`)).rows[0].n === 0, 'seed QR codes moved off guests')
+ok((await db.query(`select count(*)::int n from seats where qr_token_hash ~ '^[0-9a-f]{64}$'`)).rows[0].n === 8, 'seed QR codes kept only as hashes on seats')
+// Stands in for send-emails: mint a code, email it, hand back its hash.
+const newCode = () => 'AAFE-' + randomBytes(16).toString('hex').toUpperCase()
+async function sendQr(guestId) {
+  const id = (await as('authenticated', RM, `select staff_send_qr_invite($1) id`, [guestId]))[0].id
+  const code = newCode()
+  await as('service_role', null, `select email_mark_sent($1, hash_token($2))`, [id, code])
+  return code
+}
+const checkInQr = (code) => as('authenticated', vol, `select staff_check_in_qr($1) r`, [code])
+const q1 = await sendQr(comp), q2 = await sendQr(comp)
+ok((await err('authenticated', vol, `select staff_check_in_qr($1)`, [q1]))?.startsWith('not_found'), 'resending replaces the old code')
+ok((await db.query(`select (s.qr_token_expires_at = qr_expiry(o.event_id)) ok from seats s join orders o on o.id = s.order_id where s.guest_id=$1`, [comp])).rows[0].ok, 'code expires the morning after gala night')
+ok((await checkInQr(q2.toLowerCase()))[0].r.first_name === 'Rep', 'QR check-in (any case)')
+ok((await checkInQr(q2))[0].r.already_checked_in === true, 'second scan reports already checked in')
+const ada = (await as('authenticated', ADMIN, `select staff_add_comp_guest($1) id`, [{ first_name: 'Ada', last_name: 'Lin', email: 'ada@x.example.org' }]))[0].id
+const qa = await sendQr(ada)
+await db.query(`update seats set qr_token_expires_at = now() - interval '1 minute' where guest_id=$1`, [ada])
+ok((await err('authenticated', vol, `select staff_check_in_qr($1)`, [qa]))?.startsWith('expired'), 'expired code rejected')
+const bo = (await as('authenticated', ADMIN, `select staff_add_comp_guest($1) id`, [{ first_name: 'Bo', last_name: 'Park', email: 'bo@x.example.org' }]))[0].id
+const qb = await sendQr(bo)
+await as('authenticated', RM, `select staff_update_guest($1, $2)`, [bo, { first_name: 'Bea' }])
+ok((await err('authenticated', vol, `select staff_check_in_qr($1)`, [qb]))?.startsWith('not_found'), 'renaming the guest voids the code')
+const qb2 = await sendQr(bo)
+const boSeat = (await db.query(`select id from seats where guest_id=$1`, [bo])).rows[0].id
+await db.query(`update seats set guest_id = null, status = 'unnamed' where id=$1`, [boSeat])
+ok((await err('authenticated', vol, `select staff_check_in_qr($1)`, [qb2]))?.startsWith('not_found'), 'freeing the seat voids the code')
+ok((await err('authenticated', vol, `select staff_check_in_qr($1)`, [newCode()]))?.startsWith('not_found'), 'unknown code rejected')
 const inv = (await as('authenticated', RM, `select staff_send_qr_invite($1) id`, [comp]))[0].id
 ok((await db.query(`select approved_by from email_log where id=$1`, [inv])).rows[0].approved_by === 'Daniel Seo', 'RM sending own QR invite counts as approval')
 await as('authenticated', RM, `select staff_cancel_email($1)`, [inv])

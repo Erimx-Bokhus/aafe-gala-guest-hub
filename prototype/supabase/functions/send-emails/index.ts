@@ -3,8 +3,9 @@
 // Runs every minute from pg_cron (database/cron.sql). Staff can also call it
 // right after an action so the email goes out immediately.
 //
-// Portal links: a fresh token is minted for every portal_link email. Only its
-// SHA-256 hash is stored (email_mark_sent), so earlier links for that order stop working.
+// Portal links and QR e-tickets: a fresh token is minted for every portal_link or
+// qr_invitation email. Only its SHA-256 hash is stored (email_mark_sent), so earlier
+// links for that order, or codes for that seat, stop working.
 //
 // Secrets: RESEND_API_KEY, EMAIL_FROM (e.g. "AAFE Gala <gala@aafe.org>", domain verified in Resend),
 //          GUEST_PORTAL_URL (e.g. https://gala.aafe.org/), CRON_SECRET.
@@ -35,7 +36,7 @@ Deno.serve(async (req) => {
         body: JSON.stringify({ from, to: [redirect || m.to_email], subject: redirect ? `[demo → ${m.to_email}] ${subject}` : subject, html, attachments }),
       })
       if (!res.ok) throw new Error(`Resend HTTP ${res.status}: ${(await res.text()).slice(0, 300)}`)
-      const { error: e2 } = await db.rpc('email_mark_sent', { p_email_id: m.id, p_portal_token_hash: tokenHash })
+      const { error: e2 } = await db.rpc('email_mark_sent', { p_email_id: m.id, p_token_hash: tokenHash })
       if (e2) throw new Error(e2.message)
       sent++
     } catch (e) {
@@ -73,18 +74,22 @@ async function build(db: any, m: any, portalUrl: string) {
   }
 
   if (m.template === 'qr_invitation') {
-    const { data: g } = await db.from('guests').select('first_name, qr_token').eq('id', m.guest_id).single()
-    if (!g?.qr_token) throw new Error('Guest has no QR code')
-    const png: Uint8Array = await QRCode.toBuffer(g.qr_token, { width: 360, margin: 2 })
+    // A fresh code for the guest's seat, minted here and never stored: only its hash is saved
+    // (email_mark_sent), so earlier codes for that seat stop working.
+    const { data: g } = await db.from('guests').select('first_name').eq('id', m.guest_id).single()
+    if (!g) throw new Error('Guest not found')
+    const code = qrToken()
+    const png: Uint8Array = await QRCode.toBuffer(code, { width: 360, margin: 2 })
     return {
       subject: `Your invitation to ${ev?.name ?? 'the AAFE Gala'}`,
-      tokenHash: null,
+      tokenHash: await sha256(code),
       attachments: [{ filename: 'aafe-gala-entry-qr.png', content: b64(png) }],
       html: layout(`<p>Dear ${esc(g.first_name)},</p>
         <p>AAFE is delighted to welcome you as our guest at ${esc(ev?.name ?? 'the AAFE Gala')}.</p>
         <p>${esc(when)}<br>${esc(ev?.venue_name ?? '')}<br>${esc(ev?.venue_address ?? '')}</p>
         <p>Your entry QR code is attached. Show it at check-in, on your phone or printed.</p>
-        <p style="color:#555">Entry code: <code>${esc(g.qr_token)}</code></p>`),
+        <p style="color:#555">Entry code: <code>${code}</code></p>
+        <p style="color:#555">This code is for you only and works until the morning after the gala.</p>`),
     }
   }
   throw new Error(`No template for "${m.template}" yet`)
@@ -96,6 +101,10 @@ const b64 = (u: Uint8Array) => btoa(String.fromCharCode(...u))
 function randomToken() {
   const b = crypto.getRandomValues(new Uint8Array(24)) // 192 bits
   return btoa(String.fromCharCode(...b)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+}
+/** QR e-ticket code: 'AAFE-' + 32 uppercase hex characters (128 bits). Check-in hashes it upper-cased. */
+function qrToken() {
+  return 'AAFE-' + [...crypto.getRandomValues(new Uint8Array(16))].map((x) => x.toString(16).padStart(2, '0')).join('').toUpperCase()
 }
 async function sha256(s: string) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s))

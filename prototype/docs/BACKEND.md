@@ -126,7 +126,7 @@ Writes: only through these functions, and each one writes `audit_log`. `audit_lo
 | `recordOfflinePayment` | `staff_record_payment(p_order_id, p_method, p_amount, p_received, p_check_number)` | admin, RM |
 | `addPledge` | `staff_add_pledge(p_org, p_contact, p_email, p_tier_id, p_source)` | admin, RM |
 | `addCompGuest` | `staff_add_comp_guest(p_guest)` | admin, RM |
-| `sendQrInvite` | `staff_send_qr_invite(p_guest_id)`; approved by the sender | admin, RM |
+| `sendQrInvite` | `staff_send_qr_invite(p_guest_id)`; approved by the sender. The guest needs a seat and an email; the code is minted when it sends | admin, RM |
 | `resendPortalLink` | `staff_resend_portal_link(p_order_id)`; approved by the sender; the old link stops working | admin, RM |
 | `checkIn` | `staff_check_in(p_guest_id, 'search')` or `staff_check_in_qr(p_code)` | all |
 | `checkInException` | `staff_check_in_exception(p_name, p_order_id, p_type, p_note)` | all |
@@ -151,7 +151,7 @@ Errors come back as the Postgres message: `forbidden`, `not_found`, `invalid_lin
 - **Staff App still uses in-memory data.** To connect it:
   - Swap `staff-app/src/store.ts` and `Login.tsx` to the calls above.
   - Sponsors → "copy portal link" becomes "send new link", because tokens are stored hashed.
-- **Team-rule gaps.** QR codes are per guest and stored in plain text, so staff can display them. Hard rule 6 wants them per seat, hashed, and expiring after gala night. The seed's demo sponsor links are short (8 characters), fine for the demo but below rule 6's 128 bits; real links are minted at 128 bits by `send-emails`.
+- **QR e-tickets (hard rule 6).** A code is minted only when an approved `qr_invitation` email sends; the database keeps its SHA-256 hash on the guest's seat (`seats.qr_token_hash`), valid until 6 a.m. New York time the morning after gala night. Resending replaces the code; a different guest on the seat, a name or email change, or a cancelled seat voids it. Staff can't display a code, only resend it. The seed's QR codes are moved onto seats as hashes when `backend.sql` runs. The seed's demo sponsor links are short (8 characters), fine for the demo but below rule 6's 128 bits; real links are minted at 128 bits by `send-emails`.
 - **Email.** Only `portal_link` and `qr_invitation` templates are built, in English (the portal page itself has 中文 and Español). Scheduled deadline reminders and payment receipts aren't built.
 - **Salesforce.** Not built (out of scope in the project scope doc).
 - **Edge functions** haven't been run yet. Deno wasn't available when they were written, so test them after the first deploy. The SQL and the Give Lively mapping are tested.
