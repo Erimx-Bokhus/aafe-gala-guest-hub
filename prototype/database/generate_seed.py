@@ -70,7 +70,15 @@ tiers = [
 TIER = {t['id']: t for t in tiers}
 
 # ---------------- sponsors ----------------
-S = lambda i, org, contact, email, owner, sf=None: dict(id=i, organization_name=org, primary_contact_name=contact, primary_contact_email=email, phone=f'(212) 555-{random.randint(1000, 9999)}', relationship_owner_id=owner, salesforce_account_id=sf, created_at='2024-01-15T15:00:00Z')
+PHONES = iter(range(100, 200))
+QR = random.Random(2027)  # separate source, so QR codes don't shift the main random sequence
+def qr_token():
+    # 128 random bits like backend.sql's new_qr_token(); sequential codes would let one guest guess another's (hard rule 6)
+    return 'AAFE-' + f'{QR.getrandbits(128):032X}'
+def phone():
+    random.randint(1000, 9999)  # still drawn, so every other generated value stays the same
+    return f'(212) 555-{next(PHONES):04d}'  # fictional range 555-0100 to 555-0199
+S = lambda i, org, contact, email, owner, sf=None: dict(id=i, organization_name=org, primary_contact_name=contact, primary_contact_email=email, phone=phone(), relationship_owner_id=owner, salesforce_account_id=sf, created_at='2024-01-15T15:00:00Z')
 sponsors = [
     S('sp-harborline', 'Harborline Community Bank', 'Evelyn Park', 'evelyn.park@harborline.example.org', 'st-mei', '001DEMO0000HARB'),
     S('sp-meridian', 'Meridian Family Foundation', 'Arthur Wong', 'awong@meridianfdn.example.org', 'st-daniel', '001DEMO0000MERI'),
@@ -103,7 +111,7 @@ def order(oid, sp, tier, source, status, token, logo='not_required', ad='not_req
 
 order('ord-harborline', 'sp-harborline', 'platinum', 'ach_direct', 'paid', 'hb-7f3k9q2m', 'approved', 'pending', 'Lead sponsor. CEO may bring board members; confirm two weeks out.', '2026-08-01T14:00:00Z', link_sent='2026-08-14T16:05:00Z')
 order('ord-meridian', 'sp-meridian', 'gold', 'wire', 'partially_paid', 'mf-2p8x4r1d', 'received', 'received', 'Pledge by email; second installment expected Q1 2027.', '2026-08-20T14:00:00Z', link_sent='2026-09-02T15:10:00Z')
-order('ord-acme', 'sp-acme', 'silver', 'check', 'pledged', 'acme-community-partners', 'pending', 'received', 'Check expected after their October board meeting. Jordan prefers email.', '2026-09-05T14:00:00Z', link_sent='2026-09-05T14:20:00Z')
+order('ord-acme', 'sp-acme', 'silver', 'check', 'pledged', 'ac-6w9k3p5d', 'pending', 'received', 'Check expected after their October board meeting. Jordan prefers email.', '2026-09-05T14:00:00Z', link_sent='2026-09-05T14:20:00Z')
 order('ord-northgate', 'sp-northgate', 'bronze', 'givelively', 'paid', 'ng-5t1w8e3z', 'pending', 'pending', 'Bought on Give Lively; only purchaser name came through.', '2026-09-18T19:42:00Z', link_sent='2026-09-18T20:30:00Z')
 order('ord-lotus', 'sp-lotus', 'champion', 'givelively', 'paid', 'll-9c2v6b4n', 'approved', 'not_required', 'Complete. Designing party-favor packaging in-kind.', '2026-07-30T13:15:00Z', link_sent='2026-07-30T13:30:00Z')
 order('ord-pacific', 'sp-pacific', 'silver', 'givelively', 'paid', 'pr-3m7h1k5j', 'received', 'pending', 'Paid by bank transfer on Give Lively (0.8% fee, capped at $5).', '2026-09-22T17:00:00Z', link_sent='2026-09-22T17:30:00Z')
@@ -245,7 +253,7 @@ rel = [('Leah', 'Goldberg', 'Chief of Staff', 'District 1 Council Office (synthe
        ('Mabel', 'Fong', 'Retired Teacher', 'Senior Center Volunteer (synthetic)', 'Older-adult program volunteer', None, None),
        ('Thomas', 'Reid', 'Program Director', 'Partner Foundation (synthetic)', 'Funder relationship', 1, 6)]
 for i, (f, l, t, org, note, tb, st) in enumerate(rel, 1):
-    add_guest('ord-rel', i, f, l, t, org, 'badge_ready' if tb else 'reviewed', tb, st, gtype='comp_relationship', qr=f'AAFE27-REL-{1000 + i * 37}', rel_note=note, updated='2026-09-01T12:00:00Z')
+    add_guest('ord-rel', i, f, l, t, org, 'badge_ready' if tb else 'reviewed', tb, st, gtype='comp_relationship', qr=qr_token(), rel_note=note, updated='2026-09-01T12:00:00Z')
 
 # Event-day demo check-ins (as if a rehearsal)
 check_ins = [
