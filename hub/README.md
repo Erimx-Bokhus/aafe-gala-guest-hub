@@ -51,6 +51,14 @@ Date and time (New York), the kind (`new`, `updated`, `modified`, `removed`, `im
 
 On the published hub, each reader is identified by their claude.ai account; nobody types or picks a name. Their read state is saved in the artifact's shared storage under that account (each person can write only their own), and everyone sees who has read each change. The hub's owner (Aisling) links each account to a team name once, under "Link accounts to team names" on What's new; the storage rules let only the owner change those links. Locally, or signed out, read state stays in that browser. The page is team-only, so client view never shows it.
 
+## Rebuild History before publishing
+
+The History page reads `docs/history.json`, which is built from git: every line changed in `hub/docs/` (removed text kept) and every merged pull request. Rebuild it from the repo root, commit it, then publish:
+
+    node hub/scripts/build-history.mjs
+
+Changes that only add or move change markers don't count as edits, and a page's first version shows as one "Page created" entry.
+
 ## Custom blocks
 
 Write these as fenced code blocks with the name after the backticks.
