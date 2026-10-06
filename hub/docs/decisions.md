@@ -1,10 +1,11 @@
 # Decisions
-<!-- updated Oct 5 -->
+<!-- updated Oct 5 (pairs) -->
 
 Every decision with its reason and what would reopen it, newest first. Nothing here is reopened without new information.
 
 | Date | Decision | Why | Revisit if | Owner |
 | --- | --- | --- | --- | --- |
+| Oct 5 | Build work split into two pairs: Frontend (Natalie + Antonin) and Backend (Aisling + Cornell); Natalie stays product lead | Natalie is carrying most of the build; pairs keep two people on every area | A pair can't keep pace | Aisling, Natalie |
 | Oct 5 | Stack: React + TypeScript (Vite, Tailwind) on Supabase (Postgres, sign-in, server functions) | Matches Natalie's working prototype; mainstream tools a future partner can pick up | A partner needs a different host | Aisling, team |
 | Oct 5 | Supabase free plan for the prototype and the demo | Covers invented data; a free project pauses after a week idle, so wake it before demos | The demo needs more than the free plan | Aisling |
 | Oct 5 | GitHub Team plan; `main` protected: pull request, 1 approval, passing secret scan, no force-push | A professional repo with a stable `main` | — | Aisling |
