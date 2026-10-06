@@ -2,6 +2,49 @@
 
 Rough sketches of the three screens AAFE asked for, to agree on what each one shows. Layout and visual design belong to the frontend lead; these get replaced by real designs once the clickable prototype starts. All names are invented.
 
+## The build so far
+<!-- new 2026-10-06 05:45 Aisling -->
+
+Screens from Natalie's staff app and sponsor portal in `prototype/`, running on invented demo data, captured October 6. AAFE's logo and event photos are swapped for grey placeholders until AAFE approves them for public use in writing (hard rule 8).
+
+<video controls muted playsinline preload="metadata" poster="img/portal-welcome.jpg" src="img/build-walkthrough.mp4" aria-label="25-second walkthrough: the sponsor portal, the staff app, and check-in"></video>
+
+*A 25-second walkthrough: a sponsor names a guest, staff see it, badges fill in, and the guest checks in.*
+
+### Sponsor portal
+
+A sponsor opens the private link from their email. No account needed.
+
+![Sponsor portal welcome page for an invented sponsor, Acme Community Partners, showing its Silver sponsorship and the gala date](img/portal-welcome.jpg)
+
+Naming a guest for an open seat. The change is saved with the date and time, and staff see it right away.
+
+![Animation: the sponsor opens seat 6, fills in an invented guest's name, title, and organization, saves, and the seat and activity log update](img/portal-add-guest.gif)
+
+### Staff app
+
+The dashboard answers the intake form's questions: what's committed and received, how many seats are named, and who needs follow-up.
+
+![Staff dashboard with totals for commitments, payments, named seats, staff review, and a follow-up list by sponsor](img/staff-dashboard.jpg)
+
+One sponsorship: its seats, payment balance, logo and program-ad status, and giving history.
+
+![Sponsorship detail for Acme Community Partners with seats, statuses, payments, and sponsor materials](img/staff-sponsor-order.jpg)
+
+The guest list, editable like a spreadsheet, with every change timestamped.
+
+![Guest list table with sponsor, name, title, organization, and email columns](img/staff-guest-list.jpg)
+
+Badges fill in from the guest list, with table and seat.
+
+![Badge previews for invented guests, each with title, organization, table and seat, and sponsor line](img/staff-badges.jpg)
+
+### Check-in
+
+Search a name or sponsor at the door and mark the guest arrived.
+
+![Animation: staff search "Acme" on the check-in screen and mark an invented guest, Jordan Lee, as arrived at table 5](img/check-in.gif)
+
 ## Staff dashboard
 <!-- modified 2026-10-05 16:51 Aisling -->
 
