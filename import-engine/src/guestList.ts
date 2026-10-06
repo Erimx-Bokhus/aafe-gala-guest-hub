@@ -48,7 +48,7 @@ function splitEntries(text: string): string[] {
     .filter(Boolean)
 }
 
-/** "Jane Doe jane@x.org, Sam Lee sam@x.org" → one entry per address, each ending at its address. */
+/** "Jane Doe jane@example.org, Sam Lee sam@example.org" → one entry per address, each ending at its address. */
 function splitAroundEmails(line: string): string[] {
   const matches = [...line.matchAll(EMAIL)]
   if (matches.length < 2) return [line]
