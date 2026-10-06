@@ -85,7 +85,7 @@ A custom tool is justified only if it keeps Give Lively, costs AAFE less per yea
 
 ## Where earlier research was superseded
 <!-- team -->
-<!-- updated Oct 5 -->
+<!-- updated 2026-10-05 16:51 Aisling -->
 
 Natalie's research predates the October 1 call. Where it differs, discovery and the decision log win:
 

@@ -44,7 +44,7 @@ What AAFE told us on the October 1 call, in their words where it matters. AAFE's
 - AAFE's project contact is finalizing an AI acceptable-use policy (no personal information into AI tools) and wants to be kept close on data decisions.
 
 ## Required inputs before build
-<!-- updated Oct 5 -->
+<!-- updated 2026-10-05 16:51 Aisling -->
 
 What we need from AAFE, in one list: the materials promised on the call (expected about a week after it) plus the approvals Natalie's prototype review surfaced. Until each arrives, we build against invented data and placeholders.
 
@@ -65,7 +65,7 @@ What we need from AAFE, in one list: the materials promised on the call (expecte
 Real logo and photos may be used inside the private repo and in reviews with the team and AAFE; anything public, including Demo Day, uses placeholders until AAFE approves in writing.
 
 ## What AAFE sent on October 5
-<!-- new Oct 5 -->
+<!-- new 2026-10-05 16:51 Aisling -->
 
 AAFE's project contact sent the guest-list notes, the 2026 sponsorship flyer, a Give Lively ticket export, and a redacted sponsor email thread. The files stay out of the repo because they hold real names; their structure is in `docs/aafe-materials-2026-10-05.md`.
 

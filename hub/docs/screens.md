@@ -3,7 +3,7 @@
 Rough sketches of the three screens AAFE asked for, to agree on what each one shows. Layout and visual design belong to the frontend lead; these get replaced by real designs once the clickable prototype starts. All names are invented.
 
 ## Staff dashboard
-<!-- modified Oct 5 -->
+<!-- modified 2026-10-05 16:51 Aisling -->
 
 Answers the intake form's three questions: who is coming and what's missing, who owns each guest, and how we're tracking to goal.
 
@@ -15,7 +15,7 @@ Every number on this screen comes from one query: open seats grouped by relation
 ```
 
 ## Sponsor guest form
-<!-- modified Oct 5 -->
+<!-- modified 2026-10-05 16:51 Aisling -->
 
 Opened from a private link on a phone or laptop. Shows exactly as many slots as the package includes, and stays editable until AAFE's deadline.
 

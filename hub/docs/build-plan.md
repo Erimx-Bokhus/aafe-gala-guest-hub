@@ -1,5 +1,5 @@
 # Build plan
-<!-- updated Oct 6 (component status) -->
+<!-- updated 2026-10-05 22:58 Aisling component status -->
 
 Core features land by October 30, leaving the last ten days for testing and handoff. We deliver a working prototype with invented data; production hosting is not part of the plan. Build work is split between two pairs (decided Oct 5): **Frontend pair: Natalie + Antonin** (staff app, sponsor portal, check-in, branding) and **Backend pair: Aisling + Cornell** (Supabase backend, import, sign-in and roles, secure links, exports, emails). Natalie also stays product lead and client contact.
 
@@ -48,13 +48,13 @@ Read it left to right: setup and data the first week, the import and the sponsor
 | C12 | Demo deploy and handoff | Demo preview, setup docs, handoff package, production-readiness notes, rehearsal | P0 | Everyone |
 
 ## Where each component stands
-<!-- new Oct 6 -->
+<!-- new 2026-10-05 22:58 Aisling -->
 
 As of October 6. Natalie's backend and guest portal are now in `main` (PRs #25 and #26), so the backend pair builds on her work instead of starting over.
 
 | # | Component | Status | Done | Next |
 | --- | --- | --- | --- | --- |
-| C0 | Setup and guardrails | Mostly done | Secret scan and real-data guard required on every PR; import engine, backend, and frontend build checks; demo-data drift check; `main` protected | Demo preview host |
+| C0 | Setup and guardrails | Mostly done | Secret scan and real-data guard required on every PR; import engine, backend, and frontend build checks; demo-data drift check; `main` protected | Demo preview host <!-- modified 2026-10-06 03:06 Aisling --> |
 | C1 | Data model and test data | In progress | Natalie's Supabase schema and seed in `main`; import tables added; demo data fixed for rule 6 (random links and QR codes, fictional phones) | Messier test data (~550 guests) for the import tests |
 | C2 | Sign-in and roles | In progress | Emailed one-time sign-in link, role from the staff list (Cornell, PR #27, in review) | Roles checked on the server for every staff page (issue #9, Cornell) |
 | C3 | Commitments and seats | Built in the backend | Pledges, payments, comps, seats, and seat statuses in Natalie's backend | Connect the staff app pages to it (with #9) |
@@ -69,16 +69,16 @@ As of October 6. Natalie's backend and guest portal are now in `main` (PRs #25 a
 | C12 | Demo deploy and handoff | Not started | | Pick the demo host |
 
 ## Testing: what to add
-<!-- new Oct 6 -->
+<!-- new 2026-10-05 22:58 Aisling -->
 <!-- team -->
 
 What the automated checks don't cover yet, most important first.
 
 | # | Add | Why |
 | --- | --- | --- |
-| 1 | ~~Frontend build check in CI~~ Done (PR #28) | Nothing checked that the staff app and portal still build |
-| 2 | ~~Demo-data drift check~~ Done (PR #28) | Regenerate the seed and fail if it differs from what's committed |
-| 3 | ~~Real-data guard~~ Done (PR #28), required on `main` | Fail on any email outside `example.org` or phone outside 555-0100–0199 (hard rule 1) |
+| 1 | ~~Frontend build check in CI~~ Done (PR #28) | Nothing checked that the staff app and portal still build <!-- modified 2026-10-06 03:06 Aisling --> |
+| 2 | ~~Demo-data drift check~~ Done (PR #28) | Regenerate the seed and fail if it differs from what's committed <!-- modified 2026-10-06 03:06 Aisling --> |
+| 3 | ~~Real-data guard~~ Done (PR #28), required on `main` | Fail on any email outside `example.org` or phone outside 555-0100–0199 (hard rule 1) <!-- modified 2026-10-06 03:06 Aisling --> |
 | 4 | Email and sync function tests | `send-emails` and `givelively-sync` have none: prove an unapproved email never sends and codes are stored only as hashes |
 | 5 | Access rules for every table and role | Only a few are covered |
 | 6 | Sponsor link limits | Expires after the deadline; can't see another order, payments, or staff notes |
