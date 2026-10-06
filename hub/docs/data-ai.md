@@ -1,4 +1,5 @@
 # Data and AI
+<!-- reviewed 2026-10-06 Aisling -->
 
 The prototype uses invented data only. This page sets out what a production version would store and how it would treat AI, so AAFE can review it with its AI policy; the policies themselves are AAFE's decisions.
 

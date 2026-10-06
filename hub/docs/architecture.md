@@ -1,4 +1,5 @@
 # Architecture
+<!-- reviewed 2026-10-06 Aisling -->
 
 One standard web app and one database. A small import-and-matching module sits between Give Lively and the database, and every screen reads from the same tables. The stack was decided October 5: React and TypeScript on Supabase. <!-- modified 2026-10-05 16:51 Aisling -->
 

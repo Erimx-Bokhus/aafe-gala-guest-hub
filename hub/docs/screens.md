@@ -1,4 +1,5 @@
 # Screens
+<!-- reviewed 2026-10-06 Aisling -->
 
 Rough sketches of the three screens AAFE asked for, to agree on what each one shows. Layout and visual design belong to the frontend pair; Natalie's staff app and portal in `prototype/` are now the real designs (see The build so far below), and these sketches are kept for the questions at the end. All names are invented. <!-- modified 2026-10-06 05:50 Aisling -->
 

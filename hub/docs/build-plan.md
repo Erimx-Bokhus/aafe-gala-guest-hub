@@ -1,5 +1,6 @@
 # Build plan
 <!-- updated 2026-10-05 22:58 Aisling component status -->
+<!-- reviewed 2026-10-06 Aisling -->
 
 Core features land by October 30, leaving the last ten days for testing and handoff. We deliver a working prototype with invented data; production hosting is not part of the plan. Build work is split between two pairs (decided Oct 5): **Frontend pair: Natalie + Antonin** (staff app, sponsor portal, check-in, branding) and **Backend pair: Aisling + Cornell** (Supabase backend, import, sign-in and roles, secure links, exports, emails). Natalie also stays product lead and client contact. <!-- modified 2026-10-05 20:37 Aisling -->
 
