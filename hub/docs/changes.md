@@ -1,9 +1,9 @@
 # What's new
 
-Every change to this hub, newest first. Pick your name once; after that the list shows what you haven't read yet, and the team can see who's caught up. Opening a change or clicking its section's New/Updated tag counts as reading it.
+Every change to this hub, newest first. Open it while signed in to claude.ai and it shows what you haven't read yet, and the team can see who's caught up. You're identified by your claude.ai account; Aisling links each account to a team name once, and nobody else can change that. Opening a change or clicking its section's New/Updated tag counts as reading it.
 
 ```changes
-2026-10-06 | Aisling | changes | New page: What's new, with "unread by me", "made by me", and who on the team has read each change
+2026-10-06 | Aisling | changes | New page: What's new, with "unread by me", "made by me", and who on the team has read each change, tied to each person's claude.ai account
 2026-10-06 | Aisling | requirements.working-prd-until-the-final-prds-arrive | Working PRD: what stands in for the PRD until Natalie's and Pursuit's are final, and why it's set up this way
 2026-10-06 | Aisling | tasks.added-october-6 | Supabase backend loaded and its security warnings cleared (PR #30); real-data guard now required before merging
 2026-10-06 | Aisling | build-plan.where-each-component-stands | Setup and guardrails: frontend build check, demo-data drift check, and real-data guard done (PR #28)
