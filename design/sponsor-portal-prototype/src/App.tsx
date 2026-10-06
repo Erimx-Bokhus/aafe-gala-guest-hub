@@ -3,6 +3,7 @@ import aafeMarkOrange from "./assets/aafe-mark-orange.svg"
 import AafeLogo, { AafeMark } from "./AafeLogo"
 
 type Screen =
+  | "email"
   | "home"
   | "choose"
   | "paste"
@@ -13,6 +14,7 @@ type Screen =
 type Language = "EN" | "中文" | "ES" | "한국어"
 type TextScale = 1 | 1.125 | 1.25
 type GuestStatus = "confirmed" | "waiting" | "empty"
+type AdSize = "full" | "half" | null
 
 interface LanguageOption {
   code: Language
@@ -26,22 +28,28 @@ interface LogoProps {
 
 type Guest = {
   seat: number
-  first: string
-  last: string
-  title: string
+  name: string
   organization: string
   email: string
   status: GuestStatus
+  checkedIn?: boolean
   dietary?: string
   accessibility?: string
   updatedAt?: string
 }
 
-type GuestField = "first" | "last" | "title" | "organization" | "email" | "dietary" | "accessibility"
+type UploadedAd = {
+  url: string
+  width: number
+  height: number
+  name: string
+}
+
+type GuestField = "name" | "organization" | "email" | "dietary" | "accessibility"
 
 type PaymentStatus = "paid" | "partial" | "pledged" | "comp"
 
-type ActivityKind = "orderRecorded" | "payment" | "linkSent" | "added" | "bulkAdded" | "updated" | "replaced" | "removed" | "confirmed" | "logoUploaded"
+type ActivityKind = "orderRecorded" | "payment" | "linkSent" | "added" | "bulkAdded" | "updated" | "replaced" | "removed" | "confirmed" | "logoUploaded" | "adUploaded" | "arrived"
 
 type Activity = {
   id: number
@@ -54,7 +62,17 @@ type Activity = {
   seats?: [number, number]
   count?: number
   amount?: number
+  time?: string
   fields?: GuestField[]
+}
+
+type NotificationState = "off" | "on" | "blocked"
+type GuestListFilter = "all" | "arrived" | "notYet"
+
+type ArrivalNotice = {
+  seat: number
+  name: string
+  time: string
 }
 
 type IconProps = {
@@ -62,40 +80,27 @@ type IconProps = {
   size?: number
 }
 
-type SeatRowProps = {
-  guest: Guest
-  onClick: () => void
-  t: Dict
-  language: Language
-  galaNight: boolean
-}
-
 const initialGuests: Guest[] = [
   {
     seat: 1,
-    first: "Evelyn",
-    last: "Park",
-    title: "Chief Executive Officer",
+    name: "Evelyn Park",
     organization: "Harborline Community Bank",
     email: "evelyn.park@harborline.com",
     status: "confirmed",
+    checkedIn: true,
     accessibility: "Step-free entrance",
     updatedAt: "2026-09-12T16:20:00",
   },
   {
     seat: 2,
-    first: "Marcus",
-    last: "Bell",
-    title: "Chief Financial Officer",
+    name: "Marcus Bell",
     organization: "Harborline Community Bank",
     email: "marcus.bell@harborline.com",
     status: "confirmed",
   },
   {
     seat: 3,
-    first: "Sofia",
-    last: "Reyes",
-    title: "VP, Community Lending",
+    name: "Sofia Reyes",
     organization: "Harborline Community Bank",
     email: "sofia.reyes@harborline.com",
     status: "confirmed",
@@ -104,94 +109,67 @@ const initialGuests: Guest[] = [
   },
   {
     seat: 4,
-    first: "Hao",
-    last: "Zhang",
-    title: "Branch Manager, Flushing",
+    name: "Hao Zhang",
     organization: "Harborline Community Bank",
     email: "hao.zhang@harborline.com",
     status: "confirmed",
   },
   {
     seat: 5,
-    first: "Amara",
-    last: "Okoye",
-    title: "Director of Philanthropy",
+    name: "Amara Okoye",
     organization: "Harborline Community Bank",
     email: "amara.okoye@harborline.com",
     status: "confirmed",
   },
   {
     seat: 6,
-    first: "Liam",
-    last: "Nguyen",
-    title: "Board Member",
+    name: "Liam Nguyen",
     organization: "Harborline Community Bank",
     email: "liam.nguyen@harborline.com",
     status: "confirmed",
   },
   {
     seat: 7,
-    first: "Rachel",
-    last: "Kim",
-    title: "SVP, Operations",
+    name: "Rachel Kim",
     organization: "Harborline Community Bank",
     email: "rachel.kim@harborline.com",
     status: "confirmed",
   },
   {
     seat: 8,
-    first: "Nina",
-    last: "Patel",
-    title: "General Counsel",
+    name: "Nina Patel",
     organization: "Harborline Community Bank",
     email: "nina.patel@harborline.com",
     status: "confirmed",
   },
   {
     seat: 9,
-    first: "Daniel",
-    last: "Wu",
-    title: "Community Relations Manager",
+    name: "Daniel Wu",
     organization: "Harborline Community Bank",
     email: "daniel.wu@harborline.com",
     status: "confirmed",
   },
   {
     seat: 10,
-    first: "Grace",
-    last: "Lee",
-    title: "Regional President",
+    name: "Grace Lee",
     organization: "Harborline Community Bank",
     email: "grace.lee@harborline.com",
     status: "confirmed",
   },
   {
     seat: 11,
-    first: "Mateo",
-    last: "Santos",
-    title: "Senior Vice President",
+    name: "",
     organization: "Harborline Community Bank",
-    email: "mateo.santos@harborline.com",
-    status: "waiting",
+    email: "",
+    status: "empty",
   },
   {
     seat: 12,
-    first: "Ji-woo",
-    last: "Han",
-    title: "Director, Small Business",
-    organization: "Harborline Community Bank",
-    email: "jiwoo.han@harborline.com",
-    status: "waiting",
-  },
-  ...Array.from({ length: 8 }, (_, i) => ({
-    seat: i + 13,
-    first: "",
-    last: "",
-    title: "",
+    name: "",
     organization: "Harborline Community Bank",
     email: "",
-    status: "empty" as const,
-  })),
+    status: "empty",
+  },
 ]
 
 // ---- Sponsor-facing data (synthetic demo values). In the real app these come
@@ -211,7 +189,134 @@ const EVENT = {
   address: "2 Desbrosses St, New York, NY 10013",
 }
 
-const GALA_ARRIVAL_TIMES: Record<number, string> = {
+const TIERS = [
+  {
+    id: "platinum",
+    name: "Platinum",
+    price: 50000,
+    seats: 12,
+    logo: true,
+    ad: "full" as AdSize,
+  },
+  {
+    id: "gold",
+    name: "Gold",
+    price: 30000,
+    seats: 10,
+    logo: true,
+    ad: "full" as AdSize,
+  },
+  {
+    id: "silver",
+    name: "Silver",
+    price: 25000,
+    seats: 10,
+    logo: true,
+    ad: "full" as AdSize,
+  },
+  {
+    id: "bronze",
+    name: "Bronze",
+    price: 15000,
+    seats: 8,
+    logo: true,
+    ad: "half" as AdSize,
+  },
+  {
+    id: "champion",
+    name: "Champion",
+    price: 7500,
+    seats: 6,
+    logo: true,
+    ad: "half" as AdSize,
+  },
+  {
+    id: "friend",
+    name: "Friend",
+    price: 2500,
+    seats: 2,
+    logo: true,
+    ad: null,
+  },
+  {
+    id: "supporter",
+    name: "Supporter",
+    price: 1000,
+    seats: 1,
+    logo: true,
+    ad: null,
+  },
+  {
+    id: "fullPageAd",
+    name: "Full-page ad",
+    price: 1000,
+    seats: 0,
+    logo: false,
+    ad: "full" as AdSize,
+  },
+  {
+    id: "halfPageAd",
+    name: "Half-page ad",
+    price: 500,
+    seats: 0,
+    logo: false,
+    ad: "half" as AdSize,
+  },
+] as const
+
+type Tier = (typeof TIERS)[number]
+type TierId = Tier["id"]
+
+const tierById = (tierId: TierId) =>
+  TIERS.find((tier) => tier.id === tierId) || TIERS[0]
+
+type SponsorId = "harborline" | "linBakery" | "chenPark"
+type PaymentMethod = "giveLively" | "check"
+
+type DemoSponsor = {
+  id: SponsorId
+  organization: string
+  tierId: TierId
+  payments: { date: string; amount: number; method: PaymentMethod }[]
+}
+
+const DEMO_SPONSORS: DemoSponsor[] = [
+  {
+    id: "harborline",
+    organization: "Harborline Community Bank",
+    tierId: "platinum",
+    payments: [
+      {
+        date: "2026-09-30T12:00:00",
+        amount: 5000,
+        method: "giveLively",
+      },
+    ],
+  },
+  {
+    id: "linBakery",
+    organization: "Lin Family Bakery",
+    tierId: "friend",
+    payments: [
+      {
+        date: "2026-09-18T12:00:00",
+        amount: 2500,
+        method: "check",
+      },
+    ],
+  },
+  {
+    id: "chenPark",
+    organization: "Chen & Park Law",
+    tierId: "halfPageAd",
+    payments: [],
+  },
+]
+
+const sponsorById = (sponsorId: SponsorId) =>
+  DEMO_SPONSORS.find((sponsor) => sponsor.id === sponsorId) || DEMO_SPONSORS[0]
+
+const INITIAL_GALA_ARRIVAL_TIMES: Record<number, string> = {
   1: "2027-05-20T18:31:00",
   2: "2027-05-20T18:35:00",
   3: "2027-05-20T18:39:00",
@@ -219,16 +324,35 @@ const GALA_ARRIVAL_TIMES: Record<number, string> = {
   5: "2027-05-20T18:47:00",
 }
 
-const CONTRIBUTION = {
-  commitment: 25000,
-  comp: false,
-  payments: [
-    { date: "2026-08-28T12:00:00", amount: 10000 },
-    { date: "2026-09-30T12:00:00", amount: 5000 },
-  ],
+const SIMULATED_GALA_ARRIVAL_TIMES: Record<number, string> = {
+  6: "2027-05-20T18:50:00",
+  7: "2027-05-20T18:53:00",
+  8: "2027-05-20T18:56:00",
+  9: "2027-05-20T18:59:00",
+  10: "2027-05-20T19:02:00",
 }
 
-function contributionSummary(c: typeof CONTRIBUTION) {
+type Contribution = {
+  commitment: number
+  comp: boolean
+  payments: { date: string; amount: number; method: PaymentMethod }[]
+}
+
+function contributionForSponsor(
+  sponsor: DemoSponsor,
+  tier: Tier,
+): Contribution {
+  return {
+    commitment: tier.price,
+    comp: false,
+    payments: sponsor.payments.map((payment) => ({
+      ...payment,
+      amount: Math.min(payment.amount, tier.price),
+    })),
+  }
+}
+
+function contributionSummary(c: Contribution) {
   const paid = c.payments.reduce((sum, p) => sum + p.amount, 0)
   const balance = Math.max(0, c.commitment - paid)
   const status: PaymentStatus = c.comp
@@ -248,7 +372,7 @@ const initialActivity: Activity[] = [
     at: "2026-08-28T14:05:00",
     kind: "payment",
     actor: "aafe",
-    amount: 10000,
+    amount: 5000,
   },
   { id: 3, at: "2026-09-02T09:30:00", kind: "linkSent", actor: "aafe" },
   {
@@ -256,8 +380,8 @@ const initialActivity: Activity[] = [
     at: "2026-09-12T16:20:00",
     kind: "bulkAdded",
     actor: "you",
-    count: 12,
-    seats: [1, 12],
+    count: 10,
+    seats: [1, 10],
   },
   {
     id: 5,
@@ -266,7 +390,7 @@ const initialActivity: Activity[] = [
     actor: "you",
     name: "Marcus Bell",
     seat: 2,
-    fields: ["title"],
+    fields: ["organization"],
   },
   {
     id: 6,
@@ -294,9 +418,7 @@ const initialActivity: Activity[] = [
 ]
 
 const GUEST_FIELDS: GuestField[] = [
-  "first",
-  "last",
-  "title",
+  "name",
   "organization",
   "email",
   "dietary",
@@ -335,14 +457,53 @@ const fmtDate = (
 const translations = {
   EN: {
     welcome: "Welcome, Harborline Community Bank",
+    welcomeSponsor: (organization: string) => `Welcome, ${organization}`,
+    emailOption: "Email",
+    landing: {
+      eyebrow: "Sponsor portal",
+      title: "Open the private link from your email",
+      from: "From",
+      to: "To",
+      subject: "Subject",
+      sender: "AAFE Gala Team <gala@aafe-demo.example.org>",
+      subjectLine: "Your AAFE Gala sponsorship: next steps",
+      intro: "Thank you for supporting the AAFE Gala. Use your private link to complete the items included with your sponsorship.",
+      guests: "Please add each guest’s full name and email by May 11.",
+      logo: "Please upload your logo by April 30.",
+      ad: "Please upload your ad by April 30.",
+      logoAd: "Please upload your logo and ad by April 30.",
+      open: "Open private sponsor portal",
+      demoNote: "Demo only — these sponsors, emails, and payments are made up.",
+      sponsors: "Demo sponsors",
+    },
     subtitle: "Platinum Sponsor · AAFE Gala · May 20, 2027",
+    tierSubtitle: (tier: string) => `${tier} · AAFE Gala · May 20, 2027`,
+    tierNames: {
+      platinum: "Platinum",
+      gold: "Gold",
+      silver: "Silver",
+      bronze: "Bronze",
+      champion: "Champion",
+      friend: "Friend",
+      supporter: "Supporter",
+      fullPageAd: "Full-page ad",
+      halfPageAd: "Half-page ad",
+    },
+    deadlines: {
+      logoAd: "Logo & ad due April 30",
+      logo: "Logo due April 30",
+      ad: "Ad due April 30",
+      guests: "Guest names due May 11",
+    },
     yourGuests: "Your guests",
     needNames: (count: number) => `${count} guests still need names`,
-    allNamed: "All 20 guests named ✓",
+    allNamed: (count: number) => `All ${count} guests named ✓`,
     named: "named",
-    due: "Please add names by April 23, 2027",
+    due: "Please add names by May 11, 2027",
     addGuests: "Add guests",
     seeSeats: "See your 20 seats",
+    seeTierSeats: (count: number) => `See your ${count} seats`,
+    yourTierSeats: (count: number) => `Your ${count} seats`,
     emptySeatNeedsGuest: "This seat needs a guest",
     nameThisGuest: "Name this guest",
     galaNightOption: "Gala night",
@@ -351,6 +512,27 @@ const translations = {
       `${arrived} of ${total} guests arrived`,
     arrivedAt: (time: string) => `✓ Arrived ${time}`,
     notArrived: "Not arrived yet",
+    arrivalNotifications: {
+      title: "Get notified when your guests arrive",
+      description:
+        "We'll send a notification to this device the moment AAFE checks a guest in.",
+      turnOn: "Turn on notifications",
+      on: "✓ Notifications on for this device",
+      turnOff: "Turn off",
+      blocked:
+        "Notifications are blocked — you'll still see arrivals here",
+      iphoneHint: "On iPhone, add this page to your Home Screen first.",
+      notificationTitle: (name: string) => `${name} has arrived`,
+      notificationBody: (time: string) => `${time} · AAFE Annual Gala`,
+      cardArrived: (time: string) => `✓✓ Arrived · ${time}`,
+      closeToast: "Dismiss arrival notification",
+    },
+    arrivalsCard: {
+      title: "Arrivals",
+      summary: (arrived: number, total: number) =>
+        `${arrived} of ${total} guests have arrived`,
+      seeWho: "See who's here →",
+    },
     questions: "Questions or changes?",
     textSize: {
       group: "Text size",
@@ -362,7 +544,7 @@ const translations = {
       uploadAria: "Upload your logo",
       changeAria: "Change your logo",
       addLabel: "Add your logo",
-      needed: "Needed for event signs · by Apr 23",
+      needed: "Needed for event signs · by Apr 30",
       received: "Logo received",
       change: "Change",
       title: "Upload your logo",
@@ -370,15 +552,31 @@ const translations = {
       requirements:
         "PNG or SVG, transparent background, at least 1000px wide.",
       signTitle: "Thank you to our sponsors",
-      wallJoined: "✓ Harborline is on the sponsor wall",
+      wallJoined: (organization: string) =>
+        `✓ ${organization} is on the sponsor wall`,
       use: "Use this logo",
       chooseAnother: "Choose another",
       done: "Done",
     },
+    ad: {
+      title: "Your ad",
+      needed: "Needed for the gala program · by Apr 30",
+      fullSpec: "Full page · PNG · Size from AAFE — contact gala team",
+      halfSpec: "Half page · 960 × 1080 px · PNG · 8:9",
+      upload: "Upload PNG",
+      replace: "Replace",
+      received: "Received ✓",
+      preview: "Ad preview",
+      pngOnly: "Choose a PNG file.",
+      halfSize: "Half-page ads must be exactly 960 × 1080 px.",
+    },
+    adOnlyNote: "This sponsorship does not include a ticket to the event.",
     privateLink:
       "This is your private link — please don't forward it. No password needed.",
     privacyDetails:
       "Guest information is used only to prepare for the AAFE Gala (badges, seating, check-in) and handled according to AAFE's data practices. This prototype uses made-up demo data.",
+    adOnlyPrivacy:
+      "Ad information is used only to prepare for the AAFE Gala. This prototype uses made-up demo data.",
     expiredOption: "Expired link",
     expiredTitle: "This link isn't valid or has expired",
     expiredBody: "Please contact the AAFE Gala Team for a new link.",
@@ -397,9 +595,17 @@ const translations = {
     paidOf: (paid: string, total: string) => `${paid} paid of ${total}`,
     balance: "Balance",
     howToPay: "How to pay",
-    payOnline: "Pay online",
+    payOnline: "Pay online (Give Lively)",
     mailCheck:
-      "Or mail a check to AAFE, 111 Division St, New York, NY 10002 (demo)",
+      "Check payable to Asian Americans for Equality, 108 Norfolk St., Ground Fl, New York, NY 10002",
+    downloadInvoice: "Download invoice",
+    paymentMethod: "Payment method",
+    giveLively: "Give Lively",
+    paymentMethods: {
+      giveLively: "Give Lively",
+      check: "Check",
+    },
+    received: (date: string) => `Received ${date}`,
     seePayments: "See payments",
     paymentsTitle: "Payments received",
     paymentStatus: {
@@ -422,6 +628,7 @@ const translations = {
     actOrder: "Sponsorship recorded",
     actLink: "Private guest-list link emailed",
     actLogo: "Logo uploaded for signage",
+    actAd: "Ad uploaded for the gala program",
     actPayment: (amount: string) => `Payment received: ${amount}`,
     actAdded: (name: string, seat: number) => `${name} added to seat ${seat}`,
     actBulk: (count: number, from: number, to: number) =>
@@ -433,10 +640,9 @@ const translations = {
     actRemoved: (name: string, seat: number) =>
       `${name} removed from seat ${seat}`,
     actConfirmed: (count: number) => `AAFE confirmed ${count} names for badges`,
+    actArrived: (name: string, time: string) => `${name} arrived at ${time}`,
     fieldNames: {
-      first: "first name",
-      last: "last name",
-      title: "title",
+      name: "full name",
       organization: "organization",
       email: "email",
       dietary: "dietary needs",
@@ -446,6 +652,65 @@ const translations = {
     dietaryLabel: "Dietary needs",
     accessLabel: "Accessibility needs",
     lastUpdated: "Last updated",
+    guestForm: {
+      fullName: "Full name",
+      email: "Email",
+      emailCaption: "We’ll send their QR ticket here.",
+      dietary: "Dietary needs (optional)",
+      edit: "Edit guest",
+      add: "Add one by one",
+      seat: (seat: number) => `Seat ${seat}`,
+      cancel: "Cancel",
+      save: "Save guest",
+      found: (count: number) => `We found ${count} guests.`,
+      ready: (count: number) => `${count} guests ready`,
+      addCount: (count: number) => `Add ${count} guests`,
+    },
+    guestsPage: {
+      eyebrow: "Guest list",
+      title: (count: number) => `Your ${count} seats`,
+      paste: "Paste a list",
+      seat: (seat: number) => `Seat ${seat}`,
+      add: "Add guest",
+      edit: "Edit",
+      remove: "Remove",
+      checkedIn: "✓ Checked in",
+      confirmed: "✓ Confirmed by AAFE",
+      checkedInNote: "Checked in — contact AAFE to change",
+      filters: {
+        all: (count: number) => `All ${count}`,
+        arrived: (count: number) => `Arrived ${count}`,
+        notYet: (count: number) => `Not yet ${count}`,
+      },
+      waiting: "Waiting review",
+      saved: "Saved",
+      addTitle: "Add guest",
+      editTitle: "Edit guest",
+      fullName: "Full name",
+      badgeName: "As it should appear on the badge",
+      organization: "Organization",
+      email: "Email",
+      optionalDetails: "Dietary / Accessibility (optional)",
+      dietary: "Dietary needs",
+      accessibility: "Accessibility needs",
+      badgePreview: "Live badge preview",
+      showPreview: "Show badge preview",
+      hidePreview: "Hide badge preview",
+      cancel: "Cancel",
+      save: "Save guest",
+      pasteTitle: "Paste a guest list",
+      pasteHelp: "Use one guest per line: Full name, email",
+      pastePlaceholder: "Jamie Rivera, jamie@example.org",
+      pasteEmpty: "Add at least one valid “Full name, email” line.",
+      addParsed: (count: number) => `Add ${count} guests`,
+      noOpenSeats: "All seats already have guests.",
+      galaName: "AAFE Annual Gala 2027",
+      guestPlaceholder: "Guest name",
+      organizationPlaceholder: "Organization",
+      tableAssigned: "Table: assigned by AAFE",
+      tableLabel: "TABLE",
+      badgeHelp: "This is how the name badge will print.",
+    },
     validation: {
       required: "Required",
       invalidEmail: "Enter a valid email",
@@ -453,14 +718,53 @@ const translations = {
   },
   中文: {
     welcome: "歡迎，Harborline Community Bank",
+    welcomeSponsor: (organization: string) => `歡迎，${organization}`,
+    emailOption: "電子郵件",
+    landing: {
+      eyebrow: "贊助商入口",
+      title: "從電子郵件開啟專屬連結",
+      from: "寄件者",
+      to: "收件者",
+      subject: "主旨",
+      sender: "AAFE 晚宴團隊 <gala@aafe-demo.example.org>",
+      subjectLine: "您的 AAFE 晚宴贊助：後續步驟",
+      intro: "感謝您支持 AAFE 晚宴。請使用專屬連結完成贊助方案所包含的項目。",
+      guests: "請在 5月11日前新增每位賓客的姓名及電子郵件。",
+      logo: "請在 4月30日前上傳標誌。",
+      ad: "請在 4月30日前上傳廣告。",
+      logoAd: "請在 4月30日前上傳標誌及廣告。",
+      open: "開啟專屬贊助商入口",
+      demoNote: "僅供示範 — 贊助商、電子郵件及付款資料均為虛構。",
+      sponsors: "示範贊助商",
+    },
     subtitle: "白金贊助商 · AAFE 晚宴 · 2027年5月20日",
+    tierSubtitle: (tier: string) => `${tier} · AAFE 晚宴 · 2027年5月20日`,
+    tierNames: {
+      platinum: "白金贊助",
+      gold: "金級贊助",
+      silver: "銀級贊助",
+      bronze: "銅級贊助",
+      champion: "Champion 贊助",
+      friend: "Friend 贊助",
+      supporter: "Supporter 贊助",
+      fullPageAd: "全頁廣告",
+      halfPageAd: "半頁廣告",
+    },
+    deadlines: {
+      logoAd: "標誌及廣告截止日期：4月30日",
+      logo: "標誌截止日期：4月30日",
+      ad: "廣告截止日期：4月30日",
+      guests: "賓客姓名截止日期：5月11日",
+    },
     yourGuests: "您的賓客",
     needNames: (count: number) => `還有 ${count} 位賓客需要填寫姓名`,
-    allNamed: "20 位賓客已全部填寫 ✓",
+    allNamed: (count: number) => `${count} 位賓客已全部填寫 ✓`,
     named: "已填寫",
-    due: "請在 2027年4月23日前新增姓名",
+    due: "請在 2027年5月11日前新增姓名",
     addGuests: "新增賓客",
     seeSeats: "查看您的 20 個座位",
+    seeTierSeats: (count: number) => `查看您的 ${count} 個座位`,
+    yourTierSeats: (count: number) => `您的 ${count} 個座位`,
     emptySeatNeedsGuest: "此座位需要一位賓客",
     nameThisGuest: "為此賓客填寫姓名",
     galaNightOption: "晚宴當晚",
@@ -469,6 +773,25 @@ const translations = {
       `${arrived} / ${total} 位賓客已到場`,
     arrivedAt: (time: string) => `✓ 已於 ${time} 到場`,
     notArrived: "尚未到場",
+    arrivalNotifications: {
+      title: "賓客到場時接收通知",
+      description: "AAFE 為賓客報到時，我們會立即傳送通知到此裝置。",
+      turnOn: "開啟通知",
+      on: "✓ 此裝置已開啟通知",
+      turnOff: "關閉",
+      blocked: "通知已被封鎖 — 您仍可在此查看到場狀態",
+      iphoneHint: "在 iPhone 上，請先將此頁面加入主畫面。",
+      notificationTitle: (name: string) => `${name} 已到場`,
+      notificationBody: (time: string) => `${time} · AAFE 年度晚宴`,
+      cardArrived: (time: string) => `✓✓ 已到場 · ${time}`,
+      closeToast: "關閉到場通知",
+    },
+    arrivalsCard: {
+      title: "到場狀態",
+      summary: (arrived: number, total: number) =>
+        `${total} 位賓客中已有 ${arrived} 位到場`,
+      seeWho: "查看已到場賓客 →",
+    },
     questions: "有問題或需要更改？",
     textSize: {
       group: "文字大小",
@@ -480,21 +803,37 @@ const translations = {
       uploadAria: "上傳您的標誌",
       changeAria: "更換您的標誌",
       addLabel: "新增您的標誌",
-      needed: "活動標誌需要 · 4月23日前",
+      needed: "活動標誌需要 · 4月30日前",
       received: "已收到標誌",
       change: "更換",
       title: "上傳您的標誌",
       drop: "將標誌拖曳至此處或選擇檔案",
       requirements: "PNG 或 SVG、透明背景、寬度至少 1000 像素。",
       signTitle: "感謝我們的贊助商",
-      wallJoined: "✓ Harborline 已加入贊助商展示牆",
+      wallJoined: (organization: string) =>
+        `✓ ${organization} 已加入贊助商展示牆`,
       use: "使用此標誌",
       chooseAnother: "選擇其他檔案",
       done: "完成",
     },
+    ad: {
+      title: "您的廣告",
+      needed: "晚宴場刊需要 · 4月30日前",
+      fullSpec: "全頁 · PNG · 尺寸由 AAFE 提供 — 請聯絡晚宴團隊",
+      halfSpec: "半頁 · 960 × 1080 像素 · PNG · 8:9",
+      upload: "上傳 PNG",
+      replace: "替換",
+      received: "已收到 ✓",
+      preview: "廣告預覽",
+      pngOnly: "請選擇 PNG 檔案。",
+      halfSize: "半頁廣告必須為 960 × 1080 像素。",
+    },
+    adOnlyNote: "此贊助方案不包含活動門票。",
     privateLink: "這是您的專屬連結 — 請勿轉寄。無需密碼。",
     privacyDetails:
       "賓客資料僅用於籌備 AAFE 晚宴（名牌、座位安排、報到），並依照 AAFE 的資料處理規範處理。此原型使用虛構的示範資料。",
+    adOnlyPrivacy:
+      "廣告資料僅用於籌備 AAFE 晚宴。此原型使用虛構的示範資料。",
     expiredOption: "過期連結",
     expiredTitle: "此連結無效或已過期",
     expiredBody: "請聯絡 AAFE 晚宴團隊以取得新連結。",
@@ -511,9 +850,17 @@ const translations = {
     paidOf: (paid: string, total: string) => `已付 ${paid}，共 ${total}`,
     balance: "餘額",
     howToPay: "付款方式",
-    payOnline: "網上付款",
+    payOnline: "網上付款（Give Lively）",
     mailCheck:
-      "或將支票郵寄至 AAFE，111 Division St, New York, NY 10002（示範）",
+      "支票抬頭請寫 Asian Americans for Equality，寄至 108 Norfolk St., Ground Fl, New York, NY 10002",
+    downloadInvoice: "下載發票",
+    paymentMethod: "付款方式",
+    giveLively: "Give Lively",
+    paymentMethods: {
+      giveLively: "Give Lively",
+      check: "支票",
+    },
+    received: (date: string) => `收款日期：${date}`,
     seePayments: "查看付款紀錄",
     paymentsTitle: "已收款項",
     paymentStatus: {
@@ -536,6 +883,7 @@ const translations = {
     actOrder: "贊助已登記",
     actLink: "專屬賓客名單連結已傳送",
     actLogo: "活動標誌用標誌已上傳",
+    actAd: "晚宴場刊廣告已上傳",
     actPayment: (amount: string) => `已收到款項：${amount}`,
     actAdded: (name: string, seat: number) => `${name} 已加入座位 ${seat}`,
     actBulk: (count: number, from: number, to: number) =>
@@ -546,10 +894,9 @@ const translations = {
       `座位 ${seat}：${oldName} 已替換為 ${newName}`,
     actRemoved: (name: string, seat: number) => `${name} 已從座位 ${seat} 移除`,
     actConfirmed: (count: number) => `AAFE 已確認 ${count} 位賓客的名牌姓名`,
+    actArrived: (name: string, time: string) => `${name} 於 ${time} 到場`,
     fieldNames: {
-      first: "名字",
-      last: "姓氏",
-      title: "職稱",
+      name: "姓名",
       organization: "機構",
       email: "電子郵件",
       dietary: "飲食需求",
@@ -559,6 +906,65 @@ const translations = {
     dietaryLabel: "飲食需求",
     accessLabel: "無障礙需求",
     lastUpdated: "最後更新",
+    guestForm: {
+      fullName: "姓名",
+      email: "電子郵件",
+      emailCaption: "我們會將 QR 電子票寄到此信箱。",
+      dietary: "飲食需求（選填）",
+      edit: "編輯賓客",
+      add: "逐一新增",
+      seat: (seat: number) => `座位 ${seat}`,
+      cancel: "取消",
+      save: "儲存賓客",
+      found: (count: number) => `找到 ${count} 位賓客。`,
+      ready: (count: number) => `${count} 位賓客已準備好`,
+      addCount: (count: number) => `新增 ${count} 位賓客`,
+    },
+    guestsPage: {
+      eyebrow: "賓客名單",
+      title: (count: number) => `您的 ${count} 個座位`,
+      paste: "貼上名單",
+      seat: (seat: number) => `座位 ${seat}`,
+      add: "新增賓客",
+      edit: "編輯",
+      remove: "移除",
+      checkedIn: "✓ 已報到",
+      confirmed: "✓ AAFE 已確認",
+      checkedInNote: "已報到 — 如需更改，請聯絡 AAFE",
+      filters: {
+        all: (count: number) => `全部 ${count}`,
+        arrived: (count: number) => `已到場 ${count}`,
+        notYet: (count: number) => `尚未到場 ${count}`,
+      },
+      waiting: "等待審核",
+      saved: "已儲存",
+      addTitle: "新增賓客",
+      editTitle: "編輯賓客",
+      fullName: "姓名",
+      badgeName: "請輸入名牌上要顯示的姓名",
+      organization: "機構",
+      email: "電子郵件",
+      optionalDetails: "飲食／無障礙需求（選填）",
+      dietary: "飲食需求",
+      accessibility: "無障礙需求",
+      badgePreview: "即時名牌預覽",
+      showPreview: "顯示名牌預覽",
+      hidePreview: "隱藏名牌預覽",
+      cancel: "取消",
+      save: "儲存賓客",
+      pasteTitle: "貼上賓客名單",
+      pasteHelp: "每行一位賓客：姓名, 電子郵件",
+      pastePlaceholder: "Jamie Rivera, jamie@example.org",
+      pasteEmpty: "請至少新增一行有效的「姓名, 電子郵件」。",
+      addParsed: (count: number) => `新增 ${count} 位賓客`,
+      noOpenSeats: "所有座位都已有賓客。",
+      galaName: "AAFE 2027 年度晚宴",
+      guestPlaceholder: "賓客姓名",
+      organizationPlaceholder: "機構",
+      tableAssigned: "桌號：由 AAFE 安排",
+      tableLabel: "桌號",
+      badgeHelp: "這是姓名名牌的列印預覽。",
+    },
     validation: {
       required: "必填",
       invalidEmail: "請輸入有效的電子郵件地址",
@@ -566,14 +972,53 @@ const translations = {
   },
   ES: {
     welcome: "Bienvenido, Harborline Community Bank",
+    welcomeSponsor: (organization: string) => `Bienvenido, ${organization}`,
+    emailOption: "Correo",
+    landing: {
+      eyebrow: "Portal del patrocinador",
+      title: "Abra el enlace privado de su correo",
+      from: "De",
+      to: "Para",
+      subject: "Asunto",
+      sender: "Equipo de la Gala AAFE <gala@aafe-demo.example.org>",
+      subjectLine: "Su patrocinio de la Gala AAFE: próximos pasos",
+      intro: "Gracias por apoyar la Gala AAFE. Use su enlace privado para completar lo incluido en su patrocinio.",
+      guests: "Añada el nombre completo y correo de cada invitado antes del 11 de mayo.",
+      logo: "Suba su logotipo antes del 30 de abril.",
+      ad: "Suba su anuncio antes del 30 de abril.",
+      logoAd: "Suba su logotipo y anuncio antes del 30 de abril.",
+      open: "Abrir portal privado del patrocinador",
+      demoNote: "Solo demostración: los patrocinadores, correos y pagos son ficticios.",
+      sponsors: "Patrocinadores de demostración",
+    },
     subtitle: "Patrocinador Platino · Gala AAFE · 20 de mayo de 2027",
+    tierSubtitle: (tier: string) => `${tier} · Gala AAFE · 20 de mayo de 2027`,
+    tierNames: {
+      platinum: "Patrocinio Platino",
+      gold: "Patrocinio Oro",
+      silver: "Patrocinio Plata",
+      bronze: "Patrocinio Bronce",
+      champion: "Patrocinio Campeón",
+      friend: "Patrocinio Amigo",
+      supporter: "Patrocinio Colaborador",
+      fullPageAd: "Anuncio de página completa",
+      halfPageAd: "Anuncio de media página",
+    },
+    deadlines: {
+      logoAd: "Logotipo y anuncio antes del 30 de abril",
+      logo: "Logotipo antes del 30 de abril",
+      ad: "Anuncio antes del 30 de abril",
+      guests: "Nombres de invitados antes del 11 de mayo",
+    },
     yourGuests: "Sus invitados",
     needNames: (count: number) => `Aún faltan ${count} nombres`,
-    allNamed: "Los 20 invitados tienen nombre ✓",
+    allNamed: (count: number) => `Los ${count} invitados tienen nombre ✓`,
     named: "con nombre",
-    due: "Añada los nombres antes del 23 de abril de 2027",
+    due: "Añada los nombres antes del 11 de mayo de 2027",
     addGuests: "Añadir invitados",
     seeSeats: "Ver sus 20 asientos",
+    seeTierSeats: (count: number) => `Ver sus ${count} asientos`,
+    yourTierSeats: (count: number) => `Sus ${count} asientos`,
     emptySeatNeedsGuest: "Este asiento necesita un invitado",
     nameThisGuest: "Asignar nombre al invitado",
     galaNightOption: "Noche de gala",
@@ -582,6 +1027,27 @@ const translations = {
       `${arrived} de ${total} invitados han llegado`,
     arrivedAt: (time: string) => `✓ Llegó a las ${time}`,
     notArrived: "Aún no ha llegado",
+    arrivalNotifications: {
+      title: "Reciba avisos cuando lleguen sus invitados",
+      description:
+        "Enviaremos una notificación a este dispositivo cuando AAFE registre a un invitado.",
+      turnOn: "Activar notificaciones",
+      on: "✓ Notificaciones activadas en este dispositivo",
+      turnOff: "Desactivar",
+      blocked:
+        "Las notificaciones están bloqueadas — aún verá las llegadas aquí",
+      iphoneHint: "En iPhone, primero añada esta página a la pantalla de inicio.",
+      notificationTitle: (name: string) => `${name} ha llegado`,
+      notificationBody: (time: string) => `${time} · Gala Anual de AAFE`,
+      cardArrived: (time: string) => `✓✓ Llegó · ${time}`,
+      closeToast: "Cerrar aviso de llegada",
+    },
+    arrivalsCard: {
+      title: "Llegadas",
+      summary: (arrived: number, total: number) =>
+        `Han llegado ${arrived} de ${total} invitados`,
+      seeWho: "Ver quién está aquí →",
+    },
     questions: "¿Preguntas o cambios?",
     textSize: {
       group: "Tamaño del texto",
@@ -593,7 +1059,7 @@ const translations = {
       uploadAria: "Subir su logotipo",
       changeAria: "Cambiar su logotipo",
       addLabel: "Añada su logotipo",
-      needed: "Necesario para letreros · antes del 23 de abril",
+      needed: "Necesario para letreros · antes del 30 de abril",
       received: "Logotipo recibido",
       change: "Cambiar",
       title: "Subir su logotipo",
@@ -601,15 +1067,31 @@ const translations = {
       requirements:
         "PNG o SVG, fondo transparente, al menos 1000 px de ancho.",
       signTitle: "Gracias a nuestros patrocinadores",
-      wallJoined: "✓ Harborline está en el muro de patrocinadores",
+      wallJoined: (organization: string) =>
+        `✓ ${organization} está en el muro de patrocinadores`,
       use: "Usar este logotipo",
       chooseAnother: "Elegir otro",
       done: "Listo",
     },
+    ad: {
+      title: "Su anuncio",
+      needed: "Necesario para el programa de la gala · antes del 30 de abril",
+      fullSpec: "Página completa · PNG · Tamaño de AAFE — contacte al equipo de la gala",
+      halfSpec: "Media página · 960 × 1080 px · PNG · 8:9",
+      upload: "Subir PNG",
+      replace: "Reemplazar",
+      received: "Recibido ✓",
+      preview: "Vista previa del anuncio",
+      pngOnly: "Elija un archivo PNG.",
+      halfSize: "Los anuncios de media página deben medir exactamente 960 × 1080 px.",
+    },
+    adOnlyNote: "Este patrocinio no incluye una entrada al evento.",
     privateLink:
       "Este es su enlace privado — no lo reenvíe. No necesita contraseña.",
     privacyDetails:
       "La información de los invitados se usa únicamente para preparar la Gala AAFE (credenciales, asientos y registro) y se maneja de acuerdo con las prácticas de datos de AAFE. Este prototipo usa datos de demostración ficticios.",
+    adOnlyPrivacy:
+      "La información del anuncio se usa únicamente para preparar la Gala AAFE. Este prototipo usa datos ficticios.",
     expiredOption: "Enlace vencido",
     expiredTitle: "Este enlace no es válido o ha vencido",
     expiredBody:
@@ -629,9 +1111,17 @@ const translations = {
     paidOf: (paid: string, total: string) => `${paid} pagado de ${total}`,
     balance: "Saldo pendiente",
     howToPay: "Cómo pagar",
-    payOnline: "Pagar en línea",
+    payOnline: "Pagar en línea (Give Lively)",
     mailCheck:
-      "O envíe un cheque a AAFE, 111 Division St, New York, NY 10002 (demostración)",
+      "Cheque pagadero a Asian Americans for Equality, 108 Norfolk St., Ground Fl, New York, NY 10002",
+    downloadInvoice: "Descargar factura",
+    paymentMethod: "Método de pago",
+    giveLively: "Give Lively",
+    paymentMethods: {
+      giveLively: "Give Lively",
+      check: "Cheque",
+    },
+    received: (date: string) => `Recibido el ${date}`,
     seePayments: "Ver pagos",
     paymentsTitle: "Pagos recibidos",
     paymentStatus: {
@@ -655,6 +1145,7 @@ const translations = {
     actOrder: "Patrocinio registrado",
     actLink: "Enlace privado enviado por correo",
     actLogo: "Logotipo para letreros subido",
+    actAd: "Anuncio subido para el programa de la gala",
     actPayment: (amount: string) => `Pago recibido: ${amount}`,
     actAdded: (name: string, seat: number) =>
       `${name} añadido/a al asiento ${seat}`,
@@ -668,10 +1159,9 @@ const translations = {
       `${name} quitado/a del asiento ${seat}`,
     actConfirmed: (count: number) =>
       `AAFE confirmó ${count} nombres para las credenciales`,
+    actArrived: (name: string, time: string) => `${name} llegó a las ${time}`,
     fieldNames: {
-      first: "nombre",
-      last: "apellido",
-      title: "cargo",
+      name: "nombre completo",
       organization: "organización",
       email: "correo electrónico",
       dietary: "necesidades alimentarias",
@@ -681,6 +1171,65 @@ const translations = {
     dietaryLabel: "Necesidades alimentarias",
     accessLabel: "Necesidades de accesibilidad",
     lastUpdated: "Última actualización",
+    guestForm: {
+      fullName: "Nombre completo",
+      email: "Correo electrónico",
+      emailCaption: "Enviaremos su entrada QR a este correo.",
+      dietary: "Necesidades alimentarias (opcional)",
+      edit: "Editar invitado",
+      add: "Añadir uno por uno",
+      seat: (seat: number) => `Asiento ${seat}`,
+      cancel: "Cancelar",
+      save: "Guardar invitado",
+      found: (count: number) => `Encontramos ${count} invitados.`,
+      ready: (count: number) => `${count} invitados listos`,
+      addCount: (count: number) => `Añadir ${count} invitados`,
+    },
+    guestsPage: {
+      eyebrow: "Lista de invitados",
+      title: (count: number) => `Sus ${count} asientos`,
+      paste: "Pegar una lista",
+      seat: (seat: number) => `Asiento ${seat}`,
+      add: "Añadir invitado",
+      edit: "Editar",
+      remove: "Quitar",
+      checkedIn: "✓ Registrado",
+      confirmed: "✓ Confirmado por AAFE",
+      checkedInNote: "Ya se registró — contacte a AAFE para hacer cambios",
+      filters: {
+        all: (count: number) => `Todos ${count}`,
+        arrived: (count: number) => `Llegaron ${count}`,
+        notYet: (count: number) => `Aún no ${count}`,
+      },
+      waiting: "En revisión",
+      saved: "Guardado",
+      addTitle: "Añadir invitado",
+      editTitle: "Editar invitado",
+      fullName: "Nombre completo",
+      badgeName: "Tal como debe aparecer en la credencial",
+      organization: "Organización",
+      email: "Correo electrónico",
+      optionalDetails: "Alimentación / Accesibilidad (opcional)",
+      dietary: "Necesidades alimentarias",
+      accessibility: "Necesidades de accesibilidad",
+      badgePreview: "Vista previa de la credencial",
+      showPreview: "Mostrar vista previa",
+      hidePreview: "Ocultar vista previa",
+      cancel: "Cancelar",
+      save: "Guardar invitado",
+      pasteTitle: "Pegar lista de invitados",
+      pasteHelp: "Un invitado por línea: Nombre completo, correo",
+      pastePlaceholder: "Jamie Rivera, jamie@example.org",
+      pasteEmpty: "Añada al menos una línea válida de “Nombre completo, correo”.",
+      addParsed: (count: number) => `Añadir ${count} invitados`,
+      noOpenSeats: "Todos los asientos ya tienen invitados.",
+      galaName: "Gala Anual AAFE 2027",
+      guestPlaceholder: "Nombre del invitado",
+      organizationPlaceholder: "Organización",
+      tableAssigned: "Mesa: asignada por AAFE",
+      tableLabel: "MESA",
+      badgeHelp: "Así se imprimirá la credencial.",
+    },
     validation: {
       required: "Obligatorio",
       invalidEmail: "Ingrese un correo electrónico válido",
@@ -688,14 +1237,53 @@ const translations = {
   },
   한국어: {
     welcome: "환영합니다, Harborline Community Bank",
+    welcomeSponsor: (organization: string) => `${organization}님, 환영합니다`,
+    emailOption: "이메일",
+    landing: {
+      eyebrow: "스폰서 포털",
+      title: "이메일의 전용 링크를 여세요",
+      from: "보낸 사람",
+      to: "받는 사람",
+      subject: "제목",
+      sender: "AAFE 갈라 팀 <gala@aafe-demo.example.org>",
+      subjectLine: "AAFE 갈라 후원: 다음 단계",
+      intro: "AAFE 갈라를 후원해 주셔서 감사합니다. 전용 링크에서 후원 혜택에 포함된 항목을 완료해 주세요.",
+      guests: "5월 11일까지 각 게스트의 성명과 이메일을 추가해 주세요.",
+      logo: "4월 30일까지 로고를 업로드해 주세요.",
+      ad: "4월 30일까지 광고를 업로드해 주세요.",
+      logoAd: "4월 30일까지 로고와 광고를 업로드해 주세요.",
+      open: "전용 후원사 포털 열기",
+      demoNote: "데모 전용 — 후원사, 이메일 및 결제 정보는 모두 가상입니다.",
+      sponsors: "데모 후원사",
+    },
     subtitle: "플래티넘 후원사 · AAFE 갈라 · 2027년 5월 20일",
+    tierSubtitle: (tier: string) => `${tier} · AAFE 갈라 · 2027년 5월 20일`,
+    tierNames: {
+      platinum: "플래티넘 후원",
+      gold: "골드 후원",
+      silver: "실버 후원",
+      bronze: "브론즈 후원",
+      champion: "챔피언 후원",
+      friend: "프렌드 후원",
+      supporter: "서포터 후원",
+      fullPageAd: "전면 광고",
+      halfPageAd: "반 페이지 광고",
+    },
+    deadlines: {
+      logoAd: "로고 및 광고 마감: 4월 30일",
+      logo: "로고 마감: 4월 30일",
+      ad: "광고 마감: 4월 30일",
+      guests: "게스트 이름 마감: 5월 11일",
+    },
     yourGuests: "게스트",
     needNames: (count: number) => `아직 ${count}명의 이름이 필요합니다`,
-    allNamed: "20명의 이름이 모두 입력되었습니다 ✓",
+    allNamed: (count: number) => `${count}명의 이름이 모두 입력되었습니다 ✓`,
     named: "이름 입력",
-    due: "2027년 4월 23일까지 이름을 추가해 주세요",
+    due: "2027년 5월 11일까지 이름을 추가해 주세요",
     addGuests: "게스트 추가",
     seeSeats: "20개 좌석 보기",
+    seeTierSeats: (count: number) => `${count}개 좌석 보기`,
+    yourTierSeats: (count: number) => `${count}개 좌석`,
     emptySeatNeedsGuest: "이 좌석에 게스트가 필요합니다",
     nameThisGuest: "게스트 이름 입력",
     galaNightOption: "갈라 당일",
@@ -704,6 +1292,26 @@ const translations = {
       `게스트 ${total}명 중 ${arrived}명 도착`,
     arrivedAt: (time: string) => `✓ ${time} 도착`,
     notArrived: "아직 도착하지 않음",
+    arrivalNotifications: {
+      title: "게스트 도착 알림 받기",
+      description:
+        "AAFE가 게스트를 체크인하는 즉시 이 기기로 알림을 보내드립니다.",
+      turnOn: "알림 켜기",
+      on: "✓ 이 기기에서 알림이 켜졌습니다",
+      turnOff: "끄기",
+      blocked: "알림이 차단되었습니다 — 도착 현황은 여기에서 계속 확인할 수 있습니다",
+      iphoneHint: "iPhone에서는 먼저 이 페이지를 홈 화면에 추가하세요.",
+      notificationTitle: (name: string) => `${name} 님이 도착했습니다`,
+      notificationBody: (time: string) => `${time} · AAFE 연례 갈라`,
+      cardArrived: (time: string) => `✓✓ 도착 · ${time}`,
+      closeToast: "도착 알림 닫기",
+    },
+    arrivalsCard: {
+      title: "도착 현황",
+      summary: (arrived: number, total: number) =>
+        `게스트 ${total}명 중 ${arrived}명이 도착했습니다`,
+      seeWho: "도착한 게스트 보기 →",
+    },
     questions: "문의 또는 변경 사항이 있나요?",
     textSize: {
       group: "텍스트 크기",
@@ -715,22 +1323,38 @@ const translations = {
       uploadAria: "로고 업로드",
       changeAria: "로고 변경",
       addLabel: "로고 추가",
-      needed: "행사 표지판에 필요 · 4월 23일까지",
+      needed: "행사 표지판에 필요 · 4월 30일까지",
       received: "로고 접수 완료",
       change: "변경",
       title: "로고 업로드",
       drop: "로고를 여기로 드래그하거나 파일을 선택하세요",
       requirements: "PNG 또는 SVG, 투명 배경, 너비 최소 1000px.",
       signTitle: "후원사 여러분께 감사드립니다",
-      wallJoined: "✓ Harborline이 후원사 월에 추가되었습니다",
+      wallJoined: (organization: string) =>
+        `✓ ${organization}이(가) 후원사 월에 추가되었습니다`,
       use: "이 로고 사용",
       chooseAnother: "다른 파일 선택",
       done: "완료",
     },
+    ad: {
+      title: "광고",
+      needed: "갈라 프로그램에 필요 · 4월 30일까지",
+      fullSpec: "전면 · PNG · AAFE 제공 크기 — 갈라 팀에 문의",
+      halfSpec: "반 페이지 · 960 × 1080px · PNG · 8:9",
+      upload: "PNG 업로드",
+      replace: "교체",
+      received: "접수 완료 ✓",
+      preview: "광고 미리보기",
+      pngOnly: "PNG 파일을 선택해 주세요.",
+      halfSize: "반 페이지 광고는 정확히 960 × 1080px여야 합니다.",
+    },
+    adOnlyNote: "이 후원에는 행사 입장권이 포함되지 않습니다.",
     privateLink:
       "이 링크는 전용 링크입니다 — 전달하지 마세요. 비밀번호는 필요하지 않습니다.",
     privacyDetails:
       "게스트 정보는 AAFE 갈라 준비(명찰, 좌석 배치, 체크인)에만 사용되며 AAFE의 데이터 처리 방침에 따라 관리됩니다. 이 프로토타입은 가상의 데모 데이터를 사용합니다.",
+    adOnlyPrivacy:
+      "광고 정보는 AAFE 갈라 준비에만 사용됩니다. 이 프로토타입은 가상의 데모 데이터를 사용합니다.",
     expiredOption: "만료된 링크",
     expiredTitle: "이 링크가 유효하지 않거나 만료되었습니다",
     expiredBody: "새 링크를 받으려면 AAFE 갈라 팀에 문의해 주세요.",
@@ -749,9 +1373,17 @@ const translations = {
     paidOf: (paid: string, total: string) => `${total} 중 ${paid} 납부`,
     balance: "잔액",
     howToPay: "납부 방법",
-    payOnline: "온라인 납부",
+    payOnline: "온라인 납부(Give Lively)",
     mailCheck:
-      "또는 AAFE, 111 Division St, New York, NY 10002로 수표를 우편 발송하세요(데모)",
+      "수표 수취인: Asian Americans for Equality, 108 Norfolk St., Ground Fl, New York, NY 10002",
+    downloadInvoice: "청구서 다운로드",
+    paymentMethod: "결제 방법",
+    giveLively: "Give Lively",
+    paymentMethods: {
+      giveLively: "Give Lively",
+      check: "수표",
+    },
+    received: (date: string) => `${date} 수령`,
     seePayments: "납부 내역 보기",
     paymentsTitle: "납부 내역",
     paymentStatus: {
@@ -775,6 +1407,7 @@ const translations = {
     actOrder: "후원 등록됨",
     actLink: "전용 게스트 명단 링크 발송됨",
     actLogo: "행사 표지판용 로고 업로드됨",
+    actAd: "갈라 프로그램 광고 업로드됨",
     actPayment: (amount: string) => `납부 확인: ${amount}`,
     actAdded: (name: string, seat: number) =>
       `${name} 님이 ${seat}번 좌석에 추가됨`,
@@ -787,10 +1420,9 @@ const translations = {
     actRemoved: (name: string, seat: number) =>
       `${name} 님이 ${seat}번 좌석에서 삭제됨`,
     actConfirmed: (count: number) => `AAFE가 명찰용 이름 ${count}개를 확인함`,
+    actArrived: (name: string, time: string) => `${name} 님이 ${time}에 도착함`,
     fieldNames: {
-      first: "이름",
-      last: "성",
-      title: "직함",
+      name: "성명",
       organization: "소속",
       email: "이메일",
       dietary: "식이 요구사항",
@@ -800,6 +1432,65 @@ const translations = {
     dietaryLabel: "식이 요구사항",
     accessLabel: "접근성 요구사항",
     lastUpdated: "마지막 수정",
+    guestForm: {
+      fullName: "성명",
+      email: "이메일",
+      emailCaption: "QR 티켓을 이 이메일로 보내드립니다.",
+      dietary: "식이 요구사항(선택)",
+      edit: "게스트 수정",
+      add: "한 명씩 추가",
+      seat: (seat: number) => `${seat}번 좌석`,
+      cancel: "취소",
+      save: "게스트 저장",
+      found: (count: number) => `게스트 ${count}명을 찾았습니다.`,
+      ready: (count: number) => `게스트 ${count}명 준비 완료`,
+      addCount: (count: number) => `게스트 ${count}명 추가`,
+    },
+    guestsPage: {
+      eyebrow: "게스트 명단",
+      title: (count: number) => `${count}개 좌석`,
+      paste: "명단 붙여넣기",
+      seat: (seat: number) => `${seat}번 좌석`,
+      add: "게스트 추가",
+      edit: "수정",
+      remove: "삭제",
+      checkedIn: "✓ 체크인 완료",
+      confirmed: "✓ AAFE 확인 완료",
+      checkedInNote: "체크인 완료 — 변경하려면 AAFE에 문의하세요",
+      filters: {
+        all: (count: number) => `전체 ${count}`,
+        arrived: (count: number) => `도착 ${count}`,
+        notYet: (count: number) => `미도착 ${count}`,
+      },
+      waiting: "검토 대기",
+      saved: "저장됨",
+      addTitle: "게스트 추가",
+      editTitle: "게스트 수정",
+      fullName: "성명",
+      badgeName: "명찰에 표시할 이름",
+      organization: "소속",
+      email: "이메일",
+      optionalDetails: "식이 / 접근성 요구사항(선택)",
+      dietary: "식이 요구사항",
+      accessibility: "접근성 요구사항",
+      badgePreview: "실시간 명찰 미리보기",
+      showPreview: "명찰 미리보기 표시",
+      hidePreview: "명찰 미리보기 숨기기",
+      cancel: "취소",
+      save: "게스트 저장",
+      pasteTitle: "게스트 명단 붙여넣기",
+      pasteHelp: "한 줄에 한 명: 성명, 이메일",
+      pastePlaceholder: "Jamie Rivera, jamie@example.org",
+      pasteEmpty: "유효한 ‘성명, 이메일’ 줄을 하나 이상 추가해 주세요.",
+      addParsed: (count: number) => `게스트 ${count}명 추가`,
+      noOpenSeats: "모든 좌석에 게스트가 등록되어 있습니다.",
+      galaName: "AAFE 2027 연례 갈라",
+      guestPlaceholder: "게스트 이름",
+      organizationPlaceholder: "소속",
+      tableAssigned: "테이블: AAFE 배정",
+      tableLabel: "테이블",
+      badgeHelp: "이 모습으로 이름표가 인쇄됩니다.",
+    },
     validation: {
       required: "필수 항목입니다",
       invalidEmail: "유효한 이메일 주소를 입력하세요",
@@ -849,6 +1540,12 @@ function Icon({ name, size = 24 }: IconProps) {
         <path d="m3 6 9 7 9-7" />
       </>
     ),
+    bell: (
+      <>
+        <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Z" />
+        <path d="M10 21h4" />
+      </>
+    ),
     close: (
       <>
         <path d="m6 6 12 12M18 6 6 18" />
@@ -864,6 +1561,19 @@ function Icon({ name, size = 24 }: IconProps) {
       <>
         <path d="M4 7h3l2-3h6l2 3h3a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Z" />
         <circle cx="12" cy="13" r="4" />
+      </>
+    ),
+    image: (
+      <>
+        <rect x="3" y="4" width="18" height="16" rx="3" />
+        <circle cx="9" cy="10" r="2" />
+        <path d="m5 18 5-5 3 3 2-2 4 4" />
+      </>
+    ),
+    info: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 11v6M12 7h.01" />
       </>
     ),
     pencil: (
@@ -1262,6 +1972,92 @@ function ContactBlock({ t }: { t: Dict }) {
   )
 }
 
+function EmailLanding({
+  t,
+  language,
+  sponsor,
+  tier,
+  onOpen,
+  onSelectSponsor,
+}: {
+  t: Dict
+  language: Language
+  sponsor: DemoSponsor
+  tier: Tier
+  onOpen: () => void
+  onSelectSponsor: (sponsorId: SponsorId) => void
+}) {
+  const assetLine = tier.logo && tier.ad
+    ? t.landing.logoAd
+    : tier.logo
+      ? t.landing.logo
+      : tier.ad
+        ? t.landing.ad
+        : ""
+
+  return (
+    <main className="page email-landing-page">
+      <section className="screen-heading email-landing-heading">
+        <p className="eyebrow">{t.landing.eyebrow}</p>
+        <h1>{t.landing.title}</h1>
+      </section>
+      <section className="glass-card sample-email-card">
+        <dl className="email-meta">
+          <div>
+            <dt>{t.landing.from}</dt>
+            <dd>{t.landing.sender}</dd>
+          </div>
+          <div>
+            <dt>{t.landing.to}</dt>
+            <dd>&lt;{sponsor.organization}&gt;</dd>
+          </div>
+          <div>
+            <dt>{t.landing.subject}</dt>
+            <dd>{t.landing.subjectLine}</dd>
+          </div>
+        </dl>
+        <div className="email-body-copy">
+          <p>{t.landing.intro}</p>
+          {tier.seats > 0 && <p>{t.landing.guests}</p>}
+          {assetLine && <p>{assetLine}</p>}
+        </div>
+        <Button onClick={onOpen}>{t.landing.open}</Button>
+        <small>{t.landing.demoNote}</small>
+      </section>
+      <section className="demo-sponsors-section">
+        <h2>{t.landing.sponsors}</h2>
+        <div className="demo-sponsor-grid">
+          {DEMO_SPONSORS.map((demoSponsor) => {
+            const demoTier = tierById(demoSponsor.tierId)
+            const demoStatus = contributionSummary(
+              contributionForSponsor(demoSponsor, demoTier),
+            ).status
+            return (
+              <button
+                key={demoSponsor.id}
+                className="glass-card demo-sponsor-card"
+                type="button"
+                onClick={() => onSelectSponsor(demoSponsor.id)}
+              >
+                <span>
+                  <strong>{demoSponsor.organization}</strong>
+                  <small>
+                    {t.tierNames[demoTier.id]} ·{" "}
+                    {fmtMoney(language, demoTier.price)}
+                  </small>
+                </span>
+                <span className={`pay-chip ${demoStatus}`}>
+                  {t.paymentStatus[demoStatus]}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      </section>
+    </main>
+  )
+}
+
 function activityText(t: Dict, language: Language, a: Activity) {
   const fields = (a.fields || [])
     .map((field) => t.fieldNames[field])
@@ -1273,6 +2069,8 @@ function activityText(t: Dict, language: Language, a: Activity) {
       return t.actLink
     case "logoUploaded":
       return t.actLogo
+    case "adUploaded":
+      return t.actAd
     case "payment":
       return t.actPayment(fmtMoney(language, a.amount || 0))
     case "added":
@@ -1287,6 +2085,11 @@ function activityText(t: Dict, language: Language, a: Activity) {
       return t.actRemoved(a.name || "", a.seat || 0)
     case "confirmed":
       return t.actConfirmed(a.count || 0)
+    case "arrived":
+      return t.actArrived(
+        a.name || "",
+        a.time ? fmtDate(language, a.time, "time") : "",
+      )
   }
 }
 
@@ -1295,26 +2098,34 @@ const activityMark: Record<ActivityKind, string> = {
   payment: "$",
   linkSent: "✉",
   logoUploaded: "✓",
+  adUploaded: "✓",
   added: "+",
   bulkAdded: "+",
   updated: "↻",
   replaced: "⇄",
   removed: "−",
   confirmed: "✓",
+  arrived: "✓✓",
 }
 
 function ContributionCard({
   t,
   language,
+  sponsor,
+  tier,
   onOpen,
 }: {
   t: Dict
   language: Language
+  sponsor: DemoSponsor
+  tier: Tier
   onOpen: () => void
 }) {
-  const { paid, balance, status } = contributionSummary(CONTRIBUTION)
-  const pct = CONTRIBUTION.commitment
-    ? Math.min(100, Math.round((paid / CONTRIBUTION.commitment) * 100))
+  const contribution = contributionForSponsor(sponsor, tier)
+  const { paid, balance, status } = contributionSummary(contribution)
+  const latestPayment = contribution.payments.at(-1)
+  const pct = contribution.commitment
+    ? Math.min(100, Math.round((paid / contribution.commitment) * 100))
     : 100
   return (
     <section
@@ -1332,7 +2143,7 @@ function ContributionCard({
           <p className="contribution-amount" data-testid="amount-paid">
             {t.paidOf(
               fmtMoney(language, paid),
-              fmtMoney(language, CONTRIBUTION.commitment),
+              fmtMoney(language, contribution.commitment),
             )}
           </p>
           <div
@@ -1358,17 +2169,36 @@ function ContributionCard({
           <Icon name="chevron" size={16} />
         </button>
       </div>
+      {latestPayment && (
+        <p className="contribution-received">
+          <Icon name="receipt" size={16} />
+          <span>
+            {t.paymentMethod}:{" "}
+            <strong>{t.paymentMethods[latestPayment.method]}</strong> ·{" "}
+            {t.received(fmtDate(language, latestPayment.date))}
+          </span>
+        </p>
+      )}
       {status !== "paid" && status !== "comp" && (
         <div className="contribution-payment-options">
           <h3>{t.howToPay}</h3>
-          <a
-            className="button primary contribution-pay-button"
-            href="https://www.aafe.org/donate/"
-            target="_blank"
-            rel="noreferrer"
-          >
-            {t.payOnline}
-          </a>
+          <div className="contribution-payment-actions">
+            <a
+              className="button primary contribution-pay-button"
+              href="https://www.aafe.org/donate/"
+              target="_blank"
+              rel="noreferrer"
+            >
+              {t.payOnline}
+            </a>
+            <button
+              className="button secondary contribution-pay-button"
+              type="button"
+            >
+              <Icon name="download" size={17} />
+              {t.downloadInvoice}
+            </button>
+          </div>
           <p>{t.mailCheck}</p>
         </div>
       )}
@@ -1376,24 +2206,290 @@ function ContributionCard({
   )
 }
 
+function AdCard({
+  t,
+  tier,
+  uploadedAd,
+  onSaved,
+}: {
+  t: Dict
+  tier: Tier
+  uploadedAd: UploadedAd | null
+  onSaved: (ad: UploadedAd, ownerWindow: Window) => void
+}) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const [error, setError] = useState("")
+
+  const chooseAd = (file: File | undefined, ownerWindow: Window | null) => {
+    if (!file || !ownerWindow) return
+    if (file.type !== "image/png" && !file.name.toLowerCase().endsWith(".png")) {
+      setError(t.ad.pngOnly)
+      return
+    }
+    const urlApi = (ownerWindow as Window & { URL: typeof URL }).URL
+    const imageApi = ownerWindow as Window & { Image: typeof Image }
+    const url = urlApi.createObjectURL(file)
+    const image = new imageApi.Image()
+    image.onload = () => {
+      if (tier.ad === "half" && (image.naturalWidth !== 960 || image.naturalHeight !== 1080)) {
+        urlApi.revokeObjectURL(url)
+        setError(t.ad.halfSize)
+        return
+      }
+      setError("")
+      onSaved(
+        {
+          url,
+          width: image.naturalWidth,
+          height: image.naturalHeight,
+          name: file.name,
+        },
+        ownerWindow,
+      )
+    }
+    image.onerror = () => {
+      urlApi.revokeObjectURL(url)
+      setError(t.ad.pngOnly)
+    }
+    image.src = url
+  }
+
+  return (
+    <section className="glass-card ad-card ad-upload-card">
+      <input
+        ref={inputRef}
+        className="logo-file-input"
+        type="file"
+        accept=".png,image/png"
+        onChange={(event) => {
+          chooseAd(
+            event.currentTarget.files?.[0],
+            event.currentTarget.ownerDocument.defaultView,
+          )
+          event.currentTarget.value = ""
+        }}
+      />
+      <span className="ad-card-icon" aria-hidden="true">
+        <Icon name="image" size={22} />
+      </span>
+      <div className="ad-upload-copy">
+        <div className="ad-upload-heading">
+          <h2>{t.ad.title}</h2>
+          {uploadedAd && <span className="ad-received">{t.ad.received}</span>}
+        </div>
+        <p>{tier.ad === "full" ? t.ad.fullSpec : t.ad.halfSpec}</p>
+        {uploadedAd && (
+          <div className="ad-preview" aria-label={t.ad.preview}>
+            <img src={uploadedAd.url} alt="" />
+          </div>
+        )}
+        {error && (
+          <p className="ad-upload-error" role="alert">
+            {error}
+          </p>
+        )}
+        <div className="ad-upload-footer">
+          {!uploadedAd && (
+            <span className="ad-needed">
+              <Icon name="warning" size={14} />
+              {t.ad.needed}
+            </span>
+          )}
+          <Button
+            variant={uploadedAd ? "secondary" : "primary"}
+            onClick={() => inputRef.current?.click()}
+          >
+            {uploadedAd ? t.ad.replace : t.ad.upload}
+          </Button>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function ArrivalNotificationCard({
+  t,
+  notificationState,
+  onTurnOn,
+  onTurnOff,
+}: {
+  t: Dict
+  notificationState: NotificationState
+  onTurnOn: (ownerWindow: Window | null) => void
+  onTurnOff: () => void
+}) {
+  const cardRef = useRef<HTMLDivElement>(null)
+  const [isIPhone, setIsIPhone] = useState(false)
+
+  useEffect(() => {
+    const ownerWindow = cardRef.current?.ownerDocument.defaultView
+    if (!ownerWindow) return
+    setIsIPhone(/iPhone|iPod/i.test(ownerWindow.navigator.userAgent))
+  }, [])
+
+  return (
+    <div
+      ref={cardRef}
+      className={`arrival-notification-card ${notificationState}`}
+    >
+      <span className="arrival-notification-icon" aria-hidden="true">
+        <Icon name="bell" size={21} />
+      </span>
+      <div className="arrival-notification-copy">
+        <h3>{t.arrivalNotifications.title}</h3>
+        {notificationState === "off" && (
+          <p>{t.arrivalNotifications.description}</p>
+        )}
+        {notificationState === "on" && (
+          <p className="arrival-notification-status success">
+            {t.arrivalNotifications.on}
+          </p>
+        )}
+        {notificationState === "blocked" && (
+          <p className="arrival-notification-status blocked">
+            {t.arrivalNotifications.blocked}
+          </p>
+        )}
+        {isIPhone && (
+          <small>{t.arrivalNotifications.iphoneHint}</small>
+        )}
+      </div>
+      {notificationState === "on" ? (
+        <button
+          className="arrival-notification-toggle"
+          type="button"
+          onClick={onTurnOff}
+        >
+          {t.arrivalNotifications.turnOff}
+        </button>
+      ) : notificationState === "off" ? (
+        <button
+          className="arrival-notification-toggle primary"
+          type="button"
+          onClick={(event) =>
+            onTurnOn(event.currentTarget.ownerDocument.defaultView)
+          }
+        >
+          {t.arrivalNotifications.turnOn}
+        </button>
+      ) : null}
+    </div>
+  )
+}
+
+function ArrivalsSummaryCard({
+  t,
+  guests,
+  arrivalTimes,
+  onSeeWho,
+}: {
+  t: Dict
+  guests: Guest[]
+  arrivalTimes: Record<number, string>
+  onSeeWho: () => void
+}) {
+  const arrivedCount = guests.filter((guest) => arrivalTimes[guest.seat]).length
+  const summary = t.arrivalsCard.summary(arrivedCount, guests.length)
+  const visibleGuests = guests.slice(0, 12)
+  const extraGuests = Math.max(0, guests.length - visibleGuests.length)
+
+  return (
+    <section className="glass-card arrivals-summary-card">
+      <div className="arrivals-summary-heading">
+        <span className="arrivals-summary-icon" aria-hidden="true">
+          <Icon name="users" size={21} />
+        </span>
+        <div>
+          <p className="eyebrow">{t.arrivalsCard.title}</p>
+          <h2>{summary}</h2>
+        </div>
+      </div>
+      <div
+        className="arrivals-progress-bar"
+        role="progressbar"
+        aria-label={summary}
+        aria-valuemin={0}
+        aria-valuemax={guests.length}
+        aria-valuenow={arrivedCount}
+      >
+        <span
+          style={{
+            width: `${guests.length ? (arrivedCount / guests.length) * 100 : 0}%`,
+          }}
+        />
+      </div>
+      <div className="arrival-avatars">
+        {visibleGuests.map((guest) => {
+          const hasArrived = Boolean(arrivalTimes[guest.seat])
+          const initials = guest.name
+            ? guest.name
+                .split(/\s+/)
+                .slice(0, 2)
+                .map((part) => part[0])
+                .join("")
+            : "—"
+          const status = guest.name
+            ? hasArrived
+              ? t.arrived
+              : t.notArrived
+            : t.emptySeatNeedsGuest
+          return (
+            <span
+              key={guest.seat}
+              className={`arrival-avatar ${hasArrived ? "arrived" : "pending"}`}
+              aria-label={`${guest.name || t.guestsPage.seat(guest.seat)}: ${status}`}
+              title={`${guest.name || t.guestsPage.seat(guest.seat)}: ${status}`}
+            >
+              <span>{initials}</span>
+              {hasArrived && <b aria-hidden="true">✓</b>}
+            </span>
+          )
+        })}
+        {extraGuests > 0 && (
+          <span className="arrival-avatar more">+{extraGuests}</span>
+        )}
+      </div>
+      <button className="arrivals-see-link" type="button" onClick={onSeeWho}>
+        {t.arrivalsCard.seeWho}
+      </button>
+    </section>
+  )
+}
+
 function Home({
-  go,
+  onOpenGuestList,
   t,
   language,
   activity,
   guests,
+  sponsor,
+  tier,
   galaNight,
+  arrivalTimes,
+  notificationState,
   sponsorLogo,
+  uploadedAd,
   onLogoSaved,
+  onAdSaved,
+  onTurnOnNotifications,
+  onTurnOffNotifications,
 }: {
-  go: (screen: Screen) => void
+  onOpenGuestList: (filter: GuestListFilter) => void
   t: Dict
   language: Language
   activity: Activity[]
   guests: Guest[]
+  sponsor: DemoSponsor
+  tier: Tier
   galaNight: boolean
+  arrivalTimes: Record<number, string>
+  notificationState: NotificationState
   sponsorLogo: string
+  uploadedAd: UploadedAd | null
   onLogoSaved: (logoUrl: string) => void
+  onAdSaved: (ad: UploadedAd, ownerWindow: Window) => void
+  onTurnOnNotifications: (ownerWindow: Window | null) => void
+  onTurnOffNotifications: () => void
 }) {
   const [historyOpen, setHistoryOpen] = useState(false)
   const [paymentsOpen, setPaymentsOpen] = useState(false)
@@ -1411,9 +2507,10 @@ function Home({
   const wallSlotRef = useRef<HTMLDivElement>(null)
   const chooseLogoFile = (file: File | undefined, ownerWindow: Window | null) => {
     if (!file || !ownerWindow) return
-    const url = ownerWindow.URL.createObjectURL(file)
+    const urlApi = (ownerWindow as Window & { URL: typeof URL }).URL
+    const url = urlApi.createObjectURL(file)
     setLogoFile((current) => {
-      if (current) ownerWindow.URL.revokeObjectURL(current.url)
+      if (current) urlApi.revokeObjectURL(current.url)
       return { name: file.name, url }
     })
     setLogoOnWall(false)
@@ -1423,7 +2520,8 @@ function Home({
   const closeLogoUpload = (ownerWindow: Window | null) => {
     if (joiningWall) return
     if (logoFile && !wallJoined && ownerWindow) {
-      ownerWindow.URL.revokeObjectURL(logoFile.url)
+      const urlApi = (ownerWindow as Window & { URL: typeof URL }).URL
+      urlApi.revokeObjectURL(logoFile.url)
     }
     setLogoFile(null)
     setLogoOnWall(false)
@@ -1505,74 +2603,106 @@ function Home({
   }
   const totalGuests = guests.length
   const namedGuests = guests.filter(
-    (guest) =>
-      guest.status !== "empty" && Boolean(`${guest.first}${guest.last}`.trim()),
+    (guest) => guest.status !== "empty" && Boolean(guest.name.trim()),
   ).length
   const missingGuests = totalGuests - namedGuests
   const allNamed = missingGuests === 0
   const arrivedGuests = guests.filter(
     (guest) =>
-      guest.status === "confirmed" && Boolean(GALA_ARRIVAL_TIMES[guest.seat]),
+      guest.status === "confirmed" && Boolean(arrivalTimes[guest.seat]),
   ).length
+  const contribution = contributionForSponsor(sponsor, tier)
+  const deadlineParts = [
+    tier.logo && tier.ad
+      ? t.deadlines.logoAd
+      : tier.logo
+        ? t.deadlines.logo
+        : tier.ad
+          ? t.deadlines.ad
+          : "",
+    tier.seats > 0 ? t.deadlines.guests : "",
+  ].filter(Boolean)
   return (
     <>
       <main className="page home-page">
+        {galaNight && (
+          <ArrivalsSummaryCard
+            t={t}
+            guests={guests}
+            arrivalTimes={arrivalTimes}
+            onSeeWho={() => onOpenGuestList("arrived")}
+          />
+        )}
         <section className="intro">
-          <p className="eyebrow">Sponsor portal</p>
+          <p className="eyebrow">{t.landing.eyebrow}</p>
           <span className="signature-bar" aria-hidden="true" />
-          <div className="sponsor-identity">
-            <div className="sponsor-logo-area">
-              <button
-                className={`sponsor-logo-tile ${sponsorLogo ? "uploaded" : "missing"}`}
-                type="button"
-                aria-label={
-                  sponsorLogo ? t.logo.changeAria : t.logo.uploadAria
-                }
-                onClick={() => setUploadOpen(true)}
-              >
+          <div className={`sponsor-identity ${tier.logo ? "" : "no-logo"}`}>
+            {tier.logo && (
+              <div className="sponsor-logo-area">
+                <button
+                  className={`sponsor-logo-tile ${sponsorLogo ? "uploaded" : "missing"}`}
+                  type="button"
+                  aria-label={
+                    sponsorLogo ? t.logo.changeAria : t.logo.uploadAria
+                  }
+                  onClick={() => setUploadOpen(true)}
+                >
+                  {sponsorLogo ? (
+                    <img src={sponsorLogo} alt="" />
+                  ) : (
+                    <span className="sponsor-logo-empty">
+                      <Icon name="upload" size={23} />
+                      <span>{t.logo.addLabel}</span>
+                    </span>
+                  )}
+                </button>
                 {sponsorLogo ? (
-                  <img src={sponsorLogo} alt="" />
+                  <div className="sponsor-logo-status received">
+                    <span>✓ {t.logo.received}</span>
+                    <button type="button" onClick={() => setUploadOpen(true)}>
+                      {t.logo.change}
+                    </button>
+                  </div>
                 ) : (
-                  <span className="sponsor-logo-empty">
-                    <Icon name="upload" size={23} />
-                    <span>{t.logo.addLabel}</span>
-                  </span>
+                  <div className="sponsor-logo-status needed">
+                    <Icon name="warning" size={14} />
+                    <span>{t.logo.needed}</span>
+                  </div>
                 )}
-              </button>
-              {sponsorLogo ? (
-                <div className="sponsor-logo-status received">
-                  <span>✓ {t.logo.received}</span>
-                  <button type="button" onClick={() => setUploadOpen(true)}>
-                    {t.logo.change}
-                  </button>
-                </div>
-              ) : (
-                <div className="sponsor-logo-status needed">
-                  <Icon name="warning" size={14} />
-                  <span>{t.logo.needed}</span>
-                </div>
-              )}
-            </div>
+              </div>
+            )}
             <div className="sponsor-identity-copy">
-              <h1>{t.welcome}</h1>
-              <p className="subtitle">{t.subtitle}</p>
+              <h1>{t.welcomeSponsor(sponsor.organization)}</h1>
+              <p className="subtitle">
+                {t.tierSubtitle(t.tierNames[tier.id])}
+              </p>
+              <p className="tier-deadlines">{deadlineParts.join(" · ")}</p>
             </div>
           </div>
         </section>
-        <section className="glass-card guests-card">
+        {tier.seats > 0 && (
+          <section className="glass-card guests-card">
           <h2 className="guests-card-title">{t.yourGuests}</h2>
+          {galaNight && (
+            <ArrivalNotificationCard
+              t={t}
+              notificationState={notificationState}
+              onTurnOn={onTurnOnNotifications}
+              onTurnOff={onTurnOffNotifications}
+            />
+          )}
           <div className="guest-progress-area">
             <ProgressRing
               named={galaNight ? arrivedGuests : namedGuests}
-              total={galaNight ? namedGuests : totalGuests}
+              total={totalGuests}
               label={galaNight ? t.arrived : t.named}
             />
             <div className="progress-copy">
               <h3 className={allNamed ? "all-named" : ""}>
                 {galaNight
-                  ? t.arrivedSummary(arrivedGuests, namedGuests)
+                  ? t.arrivedSummary(arrivedGuests, totalGuests)
                   : allNamed
-                    ? t.allNamed
+                    ? t.allNamed(totalGuests)
                     : t.needNames(missingGuests)}
               </h3>
               {!galaNight && (
@@ -1584,21 +2714,27 @@ function Home({
             </div>
           </div>
           <div className="guest-card-actions">
-            <Button
-              variant={allNamed ? "secondary" : "primary"}
-              onClick={() => go("choose")}
-            >
-              {t.addGuests}
+            <Button onClick={() => onOpenGuestList("all")}>
+              {t.seeTierSeats(tier.seats)}
               <Icon name="chevron" size={20} />
             </Button>
-            <Button
-              variant={allNamed ? "primary" : "secondary"}
-              onClick={() => go("seats")}
-            >
-              {t.seeSeats}
-            </Button>
           </div>
-        </section>
+          </section>
+        )}
+        {tier.ad && (
+          <AdCard
+            t={t}
+            tier={tier}
+            uploadedAd={uploadedAd}
+            onSaved={onAdSaved}
+          />
+        )}
+        {tier.seats === 0 && (
+          <p className="ad-only-note">
+            <Icon name="info" size={17} />
+            {t.adOnlyNote}
+          </p>
+        )}
         <section className="glass-card event-details-card">
           <span className="event-detail-icon">
             <Icon name="calendar" size={20} />
@@ -1624,6 +2760,8 @@ function Home({
         <ContributionCard
           t={t}
           language={language}
+          sponsor={sponsor}
+          tier={tier}
           onOpen={() => setPaymentsOpen(true)}
         />
         <div className="home-trust">
@@ -1633,7 +2771,9 @@ function Home({
             {t.activityLink}
           </button>
         </div>
-        <p className="home-privacy-note">{t.privacyDetails}</p>
+        <p className="home-privacy-note">
+          {tier.seats > 0 ? t.privacyDetails : t.adOnlyPrivacy}
+        </p>
       </main>
       {historyOpen && (
         <div
@@ -1701,14 +2841,17 @@ function Home({
               <Icon name="close" size={20} />
             </button>
             <h2 id="payments-title">{t.paymentsTitle}</h2>
-            {CONTRIBUTION.payments.length ? (
+            {contribution.payments.length ? (
               <ul className="payments-list">
-                {CONTRIBUTION.payments.map((p) => (
+                {contribution.payments.map((p) => (
                   <li key={p.date}>
                     <span className="history-mark payment" aria-hidden="true">
                       <Icon name="receipt" size={16} />
                     </span>
-                    <time dateTime={p.date}>{fmtDate(language, p.date)}</time>
+                    <span>
+                      <time dateTime={p.date}>{fmtDate(language, p.date)}</time>
+                      <small>{t.paymentMethods[p.method]}</small>
+                    </span>
                     <strong>{fmtMoney(language, p.amount)}</strong>
                   </li>
                 ))}
@@ -1723,7 +2866,7 @@ function Home({
           </section>
         </div>
       )}
-      {uploadOpen && (
+      {uploadOpen && tier.logo && (
         <div
           className="sheet-scrim"
           onMouseDown={(event) => {
@@ -1821,7 +2964,7 @@ function Home({
                 {wallJoined && (
                   <>
                     <p className="sponsor-wall-success" role="status">
-                      {t.logo.wallJoined}
+                      {t.logo.wallJoined(sponsor.organization)}
                     </p>
                     <Button
                       onClick={() =>
@@ -1922,44 +3065,32 @@ function Choose({
 
 const parsedGuests = [
   {
-    first: "Mei",
-    last: "Chen",
-    title: "VP, Commercial Banking",
+    name: "Mei Chen",
     email: "mchen@harborline.com",
     check: false,
   },
   {
-    first: "Jordan",
-    last: "Williams",
-    title: "Community Board Chair",
+    name: "Jordan Williams",
     email: "jordan.w@harborline.com",
     check: false,
   },
   {
-    first: "Ana",
-    last: "Torres",
-    title: "Director, Client Services",
+    name: "Ana Torres",
     email: "ana.torres@harborline.com",
     check: false,
   },
   {
-    first: "Sam",
-    last: "Cho",
-    title: "Senior Manager",
+    name: "Sam Cho",
     email: "sam.cho@harborline.com",
     check: true,
   },
   {
-    first: "Priya",
-    last: "Shah",
-    title: "Community Partner",
+    name: "Priya Shah",
     email: "priya.shah@harborline.com",
     check: false,
   },
   {
-    first: "David",
-    last: "Lin",
-    title: "Guest",
+    name: "David Lin",
     email: "dlin@harborline.com",
     check: true,
   },
@@ -1967,13 +3098,18 @@ const parsedGuests = [
 
 function PasteList({
   go,
+  t,
+  seatNumbers,
   onAdd,
 }: {
   go: (screen: Screen) => void
+  t: Dict
+  seatNumbers: number[]
   onAdd: () => void
 }) {
   const [sorted, setSorted] = useState(false)
   const [pasteText, setPasteText] = useState("")
+  const readyGuests = parsedGuests.slice(0, seatNumbers.length)
   return (
     <>
       <main className={`page ${sorted ? "has-sticky-action" : ""}`}>
@@ -2004,38 +3140,39 @@ function PasteList({
             <div className="results-note">
               <Icon name="sparkle" size={20} />
               <span>
-                <strong>We found 6 guests.</strong> Check them before saving.
+                <strong>{t.guestForm.found(readyGuests.length)}</strong> Check
+                them before saving.
               </span>
             </div>
             <div className="parsed-list">
-              {parsedGuests.map((guest, index) => (
+              {readyGuests.map((guest, index) => (
                 <div
                   className={`glass-card parsed-row ${
                     guest.check ? "needs-check" : ""
                   }`}
                   key={guest.email}
                 >
-                  <div className="seat-number">{index + 13}</div>
+                  <div className="seat-number">{seatNumbers[index]}</div>
                   <div className="parsed-fields">
                     <label className="parsed-field">
-                      <span>Name</span>
+                      <span>{t.guestForm.fullName}</span>
                       <input
                         aria-label={`Guest ${index + 1} name`}
-                        defaultValue={`${guest.first} ${guest.last}`}
+                        defaultValue={guest.name}
                       />
                     </label>
                     <label className="parsed-field">
-                      <span>Title</span>
-                      <input
-                        aria-label={`Guest ${index + 1} title`}
-                        defaultValue={guest.title}
-                      />
-                    </label>
-                    <label className="parsed-field">
-                      <span>Email</span>
+                      <span>{t.guestForm.email}</span>
                       <input
                         aria-label={`Guest ${index + 1} email`}
                         defaultValue={guest.email}
+                      />
+                    </label>
+                    <label className="parsed-field">
+                      <span>{t.guestForm.dietary}</span>
+                      <input
+                        aria-label={`Guest ${index + 1} dietary needs`}
+                        defaultValue=""
                       />
                     </label>
                     {guest.check && (
@@ -2051,9 +3188,9 @@ function PasteList({
       {sorted && (
         <div className="sticky-action">
           <div className="results-sticky-inner">
-            <span>6 guests ready</span>
+            <span>{t.guestForm.ready(readyGuests.length)}</span>
             <Button onClick={onAdd}>
-              Add 6 guests
+              {t.guestForm.addCount(readyGuests.length)}
               <Icon name="chevron" size={20} />
             </Button>
           </div>
@@ -2110,98 +3247,83 @@ function BadgePreview({
   guest,
   seat,
   assigned,
+  t,
 }: {
   guest: Omit<Guest, "seat" | "status">
   seat: number
   assigned: boolean
+  t: Dict
 }) {
   return (
     <div className="badge-wrap">
       <div className="badge-preview">
         <div className="badge-top">
           <Logo compact />
-          <span>AAFE Annual Gala 2027</span>
+          <span>{t.guestsPage.galaName}</span>
         </div>
         <div className="badge-name">
-          <strong>{guest.first || "First name"}</strong>
-          <span>{guest.last || "Last name"}</span>
+          <strong>{guest.name || t.guestsPage.guestPlaceholder}</strong>
         </div>
         <div className="badge-details">
-          <span>{guest.title || "Title"}</span>
-          <span>{guest.organization || "Organization"}</span>
+          <span>{guest.organization || t.guestsPage.organizationPlaceholder}</span>
         </div>
         <div className="badge-table">
           {assigned ? (
-            <span>Table: assigned by AAFE</span>
+            <span>{t.guestsPage.tableAssigned}</span>
           ) : (
             <>
-              <small>TABLE</small>
+              <small>{t.guestsPage.tableLabel}</small>
               <strong>{seat <= 20 ? "12" : "TBD"}</strong>
             </>
           )}
         </div>
       </div>
-      <p>This is how the name badge will print.</p>
+      <p>{t.guestsPage.badgeHelp}</p>
     </div>
   )
 }
 
 function SingleGuest({
   go,
+  t,
   seat,
   editing,
   onSave,
-  validationMessages,
 }: {
   go: (screen: Screen) => void
+  t: Dict
   seat: number
   editing?: Guest
   onSave: (guest: Omit<Guest, "seat" | "status">) => void
-  validationMessages: typeof translations.EN.validation
 }) {
-  const [guest, setGuest] = useState({
-    first: editing?.first || "",
-    last: editing?.last || "",
-    title: editing?.title || "",
-    organization: editing?.organization || "Harborline Community Bank",
-    email: editing?.email || "",
-  })
+  const [fullName, setFullName] = useState(editing?.name || "")
+  const [email, setEmail] = useState(editing?.email || "")
   const [dietary, setDietary] = useState(editing?.dietary || "")
-  const [accessibility, setAccessibility] = useState(
-    editing?.accessibility || "",
-  )
-  const [extrasOpen, setExtrasOpen] = useState(
-    Boolean(editing?.dietary || editing?.accessibility),
-  )
   const [errors, setErrors] = useState<
-    Partial<Record<"first" | "last" | "email", string>>
+    Partial<Record<"fullName" | "email", string>>
   >({})
-  const firstRef = useRef<HTMLInputElement>(null)
-  const lastRef = useRef<HTMLInputElement>(null)
+  const fullNameRef = useRef<HTMLInputElement>(null)
   const emailRef = useRef<HTMLInputElement>(null)
+  const previewGuest: Omit<Guest, "seat" | "status"> = {
+    name: fullName,
+    organization: editing?.organization || "Harborline Community Bank",
+    email,
+    dietary,
+    accessibility: editing?.accessibility || "",
+  }
   const submit = () => {
-    const trimmedGuest = {
-      first: guest.first.trim(),
-      last: guest.last.trim(),
-      title: guest.title.trim(),
-      organization: guest.organization.trim(),
-      email: guest.email.trim(),
-    }
+    const trimmedName = fullName.trim()
+    const trimmedEmail = email.trim()
     const nextErrors: typeof errors = {}
-    if (!trimmedGuest.first) nextErrors.first = validationMessages.required
-    if (!trimmedGuest.last) nextErrors.last = validationMessages.required
-    if (!trimmedGuest.email) {
-      nextErrors.email = validationMessages.required
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedGuest.email)) {
-      nextErrors.email = validationMessages.invalidEmail
+    if (!trimmedName) nextErrors.fullName = t.validation.required
+    if (!trimmedEmail) {
+      nextErrors.email = t.validation.required
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      nextErrors.email = t.validation.invalidEmail
     }
     setErrors(nextErrors)
-    if (nextErrors.first) {
-      firstRef.current?.focus()
-      return
-    }
-    if (nextErrors.last) {
-      lastRef.current?.focus()
+    if (nextErrors.fullName) {
+      fullNameRef.current?.focus()
       return
     }
     if (nextErrors.email) {
@@ -2209,27 +3331,30 @@ function SingleGuest({
       return
     }
     onSave({
-      ...trimmedGuest,
+      name: trimmedName,
+      organization: editing?.organization || "Harborline Community Bank",
+      email: trimmedEmail,
       dietary: dietary.trim(),
-      accessibility: accessibility.trim(),
+      accessibility: editing?.accessibility || "",
     })
-  }
-  const update = (key: keyof typeof guest) => (value: string) => {
-    setGuest((current) => ({ ...current, [key]: value }))
-    if (key === "first" || key === "last" || key === "email") {
-      setErrors((current) => ({ ...current, [key]: undefined }))
-    }
   }
   return (
     <>
       <main className="page has-sticky-action">
         <BackButton onClick={() => go(editing ? "seats" : "choose")} />
         <section className="screen-heading compact">
-          <p className="eyebrow">{editing ? "Edit guest" : "Add one by one"}</p>
-          <h1>Seat {seat}</h1>
+          <p className="eyebrow">
+            {editing ? t.guestForm.edit : t.guestForm.add}
+          </p>
+          <h1>{t.guestForm.seat(seat)}</h1>
         </section>
         <div className="single-layout">
-          <BadgePreview guest={guest} seat={seat} assigned={!editing} />
+          <BadgePreview
+            guest={previewGuest}
+            seat={seat}
+            assigned={!editing}
+            t={t}
+          />
           <form
             className="glass-card guest-form"
             noValidate
@@ -2238,67 +3363,35 @@ function SingleGuest({
               submit()
             }}
           >
-            <div className="two-fields">
-              <Field
-                label="First name"
-                required
-                value={guest.first}
-                onChange={update("first")}
-                error={errors.first}
-                inputRef={firstRef}
-              />
-              <Field
-                label="Last name"
-                required
-                value={guest.last}
-                onChange={update("last")}
-                error={errors.last}
-                inputRef={lastRef}
-              />
-            </div>
             <Field
-              label="Title (as on badge)"
-              value={guest.title}
-              onChange={update("title")}
+              label={t.guestForm.fullName}
+              required
+              value={fullName}
+              onChange={(value) => {
+                setFullName(value)
+                setErrors((current) => ({ ...current, fullName: undefined }))
+              }}
+              error={errors.fullName}
+              inputRef={fullNameRef}
             />
             <Field
-              label="Organization"
-              value={guest.organization}
-              onChange={update("organization")}
-            />
-            <Field
-              label="Email"
+              label={t.guestForm.email}
               type="email"
               required
-              value={guest.email}
-              onChange={update("email")}
-              caption="We’ll send their QR ticket here."
+              value={email}
+              onChange={(value) => {
+                setEmail(value)
+                setErrors((current) => ({ ...current, email: undefined }))
+              }}
+              caption={t.guestForm.emailCaption}
               error={errors.email}
               inputRef={emailRef}
             />
-            <button
-              type="button"
-              className="extras-toggle"
-              onClick={() => setExtrasOpen(!extrasOpen)}
-              aria-expanded={extrasOpen}
-            >
-              <span>{extrasOpen ? "−" : "+"}</span> Add dietary or accessibility
-              needs
-            </button>
-            {extrasOpen && (
-              <div className="extras-fields">
-                <Field
-                  label="Dietary needs"
-                  value={dietary}
-                  onChange={setDietary}
-                />
-                <Field
-                  label="Accessibility needs"
-                  value={accessibility}
-                  onChange={setAccessibility}
-                />
-              </div>
-            )}
+            <Field
+              label={t.guestForm.dietary}
+              value={dietary}
+              onChange={setDietary}
+            />
           </form>
         </div>
       </main>
@@ -2308,54 +3401,284 @@ function SingleGuest({
             variant="secondary"
             onClick={() => go(editing ? "seats" : "choose")}
           >
-            Cancel
+            {t.guestForm.cancel}
           </Button>
-          <Button onClick={submit}>Save guest</Button>
+          <Button onClick={submit}>{t.guestForm.save}</Button>
         </div>
       </div>
     </>
   )
 }
 
-function SeatRow({ guest, onClick, t, language, galaNight }: SeatRowProps) {
-  if (guest.status === "empty") {
-    return (
-      <article className="seat-row empty-seat-card">
-        <span className="seat-number">{guest.seat}</span>
-        <span className="empty-seat-message">
-          <Icon name="warning" size={17} />
-          <strong>{t.emptySeatNeedsGuest}</strong>
-        </span>
-        <Button onClick={onClick}>{t.nameThisGuest}</Button>
-      </article>
-    )
+function GuestEditorSheet({
+  guest,
+  t,
+  sponsorOrganization,
+  onClose,
+  onSave,
+}: {
+  guest: Guest
+  t: Dict
+  sponsorOrganization: string
+  onClose: () => void
+  onSave: (guest: Guest) => void
+}) {
+  const [name, setName] = useState(guest.name)
+  const [email, setEmail] = useState(guest.email)
+  const [organization, setOrganization] = useState(
+    guest.organization || sponsorOrganization,
+  )
+  const [dietary, setDietary] = useState(guest.dietary || "")
+  const [accessibility, setAccessibility] = useState(guest.accessibility || "")
+  const [extrasOpen, setExtrasOpen] = useState(
+    Boolean(guest.dietary || guest.accessibility),
+  )
+  const [previewOpen, setPreviewOpen] = useState(false)
+  const [errors, setErrors] = useState<
+    Partial<Record<"name" | "email", string>>
+  >({})
+  const nameRef = useRef<HTMLInputElement>(null)
+  const emailRef = useRef<HTMLInputElement>(null)
+  const previewGuest: Omit<Guest, "seat" | "status"> = {
+    name,
+    organization,
+    email,
+    dietary,
+    accessibility,
+    checkedIn: guest.checkedIn,
   }
 
-  const arrivalTime = GALA_ARRIVAL_TIMES[guest.seat]
+  const submit = () => {
+    const trimmedName = name.trim()
+    const trimmedEmail = email.trim()
+    const nextErrors: typeof errors = {}
+    if (!trimmedName) nextErrors.name = t.validation.required
+    if (!trimmedEmail) {
+      nextErrors.email = t.validation.required
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      nextErrors.email = t.validation.invalidEmail
+    }
+    setErrors(nextErrors)
+    if (nextErrors.name) {
+      nameRef.current?.focus()
+      return
+    }
+    if (nextErrors.email) {
+      emailRef.current?.focus()
+      return
+    }
+    onSave({
+      ...guest,
+      name: trimmedName,
+      email: trimmedEmail,
+      organization: organization.trim() || sponsorOrganization,
+      dietary: dietary.trim(),
+      accessibility: accessibility.trim(),
+      status: guest.status === "empty" ? "waiting" : guest.status,
+    })
+  }
+
   return (
-    <button
-      className={`seat-row ${galaNight ? "gala-night" : ""}`}
-      onClick={onClick}
+    <div
+      className="sheet-scrim"
+      onMouseDown={(event) => event.target === event.currentTarget && onClose()}
     >
-      <span className="seat-number">{guest.seat}</span>
-      <span className="seat-person">
-        <strong>{`${guest.first} ${guest.last}`}</strong>
-        <small>
-          {guest.title} · {guest.organization}
-        </small>
-        {galaNight && guest.status === "confirmed" && (
-          <span className={`arrival-chip ${arrivalTime ? "arrived" : "pending"}`}>
-            {arrivalTime
-              ? t.arrivedAt(fmtDate(language, arrivalTime, "time"))
-              : t.notArrived}
-          </span>
+      <section
+        className="bottom-sheet guest-editor-sheet"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="guest-editor-title"
+      >
+        <div className="sheet-handle" />
+        <button className="sheet-close" onClick={onClose} aria-label="Close">
+          <Icon name="close" size={20} />
+        </button>
+        <h2 id="guest-editor-title">
+          {guest.status === "empty"
+            ? t.guestsPage.addTitle
+            : t.guestsPage.editTitle}
+        </h2>
+        <p className="sheet-description">{t.guestsPage.seat(guest.seat)}</p>
+        <button
+          className="badge-preview-toggle"
+          type="button"
+          onClick={() => setPreviewOpen((current) => !current)}
+          aria-expanded={previewOpen}
+        >
+          {previewOpen
+            ? t.guestsPage.hidePreview
+            : t.guestsPage.showPreview}
+        </button>
+        <div className={`guest-editor-layout ${previewOpen ? "preview-open" : ""}`}>
+          <form
+            className="guest-editor-form"
+            noValidate
+            onSubmit={(event) => {
+              event.preventDefault()
+              submit()
+            }}
+          >
+            <Field
+              label={t.guestsPage.fullName}
+              required
+              value={name}
+              onChange={(value) => {
+                setName(value)
+                setErrors((current) => ({ ...current, name: undefined }))
+              }}
+              caption={t.guestsPage.badgeName}
+              error={errors.name}
+              inputRef={nameRef}
+            />
+            <Field
+              label={t.guestsPage.email}
+              required
+              type="email"
+              value={email}
+              onChange={(value) => {
+                setEmail(value)
+                setErrors((current) => ({ ...current, email: undefined }))
+              }}
+              error={errors.email}
+              inputRef={emailRef}
+            />
+            <Field
+              label={t.guestsPage.organization}
+              value={organization}
+              onChange={setOrganization}
+            />
+            <button
+              type="button"
+              className="extras-toggle"
+              onClick={() => setExtrasOpen((current) => !current)}
+              aria-expanded={extrasOpen}
+            >
+              <span>{extrasOpen ? "−" : "+"}</span>
+              {t.guestsPage.optionalDetails}
+            </button>
+            {extrasOpen && (
+              <div className="extras-fields">
+                <Field
+                  label={t.guestsPage.dietary}
+                  value={dietary}
+                  onChange={setDietary}
+                />
+                <Field
+                  label={t.guestsPage.accessibility}
+                  value={accessibility}
+                  onChange={setAccessibility}
+                />
+              </div>
+            )}
+          </form>
+          <div className="guest-editor-preview">
+            <h3>{t.guestsPage.badgePreview}</h3>
+            <BadgePreview
+              guest={previewGuest}
+              seat={guest.seat}
+              assigned
+              t={t}
+            />
+          </div>
+        </div>
+        <div className="sheet-actions compact-actions">
+          <Button variant="secondary" onClick={onClose}>
+            {t.guestsPage.cancel}
+          </Button>
+          <Button onClick={submit}>{t.guestsPage.save}</Button>
+        </div>
+      </section>
+    </div>
+  )
+}
+
+function PasteGuestsSheet({
+  t,
+  openSeatCount,
+  onClose,
+  onSave,
+}: {
+  t: Dict
+  openSeatCount: number
+  onClose: () => void
+  onSave: (guests: { name: string; email: string }[]) => void
+}) {
+  const [value, setValue] = useState("")
+  const [error, setError] = useState("")
+  const parse = () => {
+    const parsed = value
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => {
+        const comma = line.lastIndexOf(",")
+        return comma < 0
+          ? null
+          : {
+              name: line.slice(0, comma).trim(),
+              email: line.slice(comma + 1).trim(),
+            }
+      })
+      .filter(
+        (guest): guest is { name: string; email: string } =>
+          Boolean(
+            guest?.name &&
+              /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guest.email),
+          ),
+      )
+      .slice(0, openSeatCount)
+    if (!parsed.length) {
+      setError(t.guestsPage.pasteEmpty)
+      return
+    }
+    onSave(parsed)
+  }
+  const parsedCount = value
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean).length
+  return (
+    <div
+      className="sheet-scrim"
+      onMouseDown={(event) => event.target === event.currentTarget && onClose()}
+    >
+      <section
+        className="bottom-sheet portal-mini-sheet"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="paste-guests-title"
+      >
+        <div className="sheet-handle" />
+        <button className="sheet-close" onClick={onClose} aria-label="Close">
+          <Icon name="close" size={20} />
+        </button>
+        <h2 id="paste-guests-title">{t.guestsPage.pasteTitle}</h2>
+        <p className="sheet-description">{t.guestsPage.pasteHelp}</p>
+        {openSeatCount ? (
+          <>
+            <textarea
+              className="paste-guests-input"
+              value={value}
+              onChange={(event) => {
+                setValue(event.target.value)
+                setError("")
+              }}
+              placeholder={t.guestsPage.pastePlaceholder}
+            />
+            {error && (
+              <p className="field-error sheet-error" role="alert">
+                {error}
+              </p>
+            )}
+            <Button onClick={parse}>
+              {t.guestsPage.addParsed(Math.min(parsedCount, openSeatCount))}
+            </Button>
+          </>
+        ) : (
+          <p className="sheet-description">{t.guestsPage.noOpenSeats}</p>
         )}
-      </span>
-      {(!galaNight || guest.status !== "confirmed") && (
-        <StatusChip status={guest.status} />
-      )}
-      <Icon name="chevron" size={20} />
-    </button>
+      </section>
+    </div>
   )
 }
 
@@ -2365,64 +3688,206 @@ function YourSeats({
   language,
   guests,
   galaNight,
-  onSelect,
+  arrivalTimes,
+  initialFilter,
+  sponsorOrganization,
+  onSaveGuest,
+  onRemoveGuest,
+  onPasteGuests,
 }: {
   go: (screen: Screen) => void
   t: Dict
   language: Language
   guests: Guest[]
   galaNight: boolean
-  onSelect: (guest: Guest) => void
+  arrivalTimes: Record<number, string>
+  initialFilter: GuestListFilter
+  sponsorOrganization: string
+  onSaveGuest: (guest: Guest) => void
+  onRemoveGuest: (guest: Guest) => void
+  onPasteGuests: (guests: { name: string; email: string }[]) => void
 }) {
-  const [filter, setFilter] = useState<"all" | "empty" | "named">("all")
-  const confirmed = guests.filter(
-    (guest) => guest.status === "confirmed",
-  ).length
-  const waiting = guests.filter((guest) => guest.status === "waiting").length
-  const empty = guests.filter((guest) => guest.status === "empty").length
-  const visible = guests.filter(
-    (guest) =>
-      filter === "all" ||
-      (filter === "empty"
-        ? guest.status === "empty"
-        : guest.status !== "empty"),
+  const [editingGuest, setEditingGuest] = useState<Guest | null>(null)
+  const [pasteOpen, setPasteOpen] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [filter, setFilter] = useState<GuestListFilter>(initialFilter)
+  const toastRef = useRef<HTMLDivElement>(null)
+  const openSeats = guests.filter((guest) => guest.status === "empty")
+  const arrivedCount = guests.filter((guest) => arrivalTimes[guest.seat]).length
+  const notYetCount = guests.length - arrivedCount
+  const sortedGuests = [...guests].sort((a, b) => {
+    if (!galaNight) return a.seat - b.seat
+    const aTime = arrivalTimes[a.seat]
+    const bTime = arrivalTimes[b.seat]
+    if (aTime && bTime) return Date.parse(bTime) - Date.parse(aTime)
+    if (aTime) return -1
+    if (bTime) return 1
+    return a.seat - b.seat
+  })
+  const visibleGuests = sortedGuests.filter((guest) =>
+    filter === "arrived"
+      ? Boolean(arrivalTimes[guest.seat])
+      : filter === "notYet"
+        ? !arrivalTimes[guest.seat]
+        : true,
   )
+  useEffect(() => {
+    if (!saved) return
+    const ownerWindow = toastRef.current?.ownerDocument.defaultView
+    if (!ownerWindow) return
+    const timeout = ownerWindow.setTimeout(() => setSaved(false), 2400)
+    return () => ownerWindow.clearTimeout(timeout)
+  }, [saved])
+  const showSaved = () => setSaved(true)
   return (
-    <main className="page seats-page">
-      <BackButton onClick={() => go("home")} />
-      <section className="screen-heading compact">
-        <p className="eyebrow">Guest list</p>
-        <h1>Your 20 seats</h1>
-      </section>
-      <div className="summary-chips" aria-label="Seat summary">
-        <span className="confirmed">✓ {confirmed} confirmed</span>
-        <span className="waiting">! {waiting} waiting</span>
-        <span className="empty">— {empty} empty</span>
-      </div>
-      <div className="filters" role="group" aria-label="Filter seats">
-        {(["all", "empty", "named"] as const).map((item) => (
-          <button
-            key={item}
-            className={filter === item ? "active" : ""}
-            onClick={() => setFilter(item)}
+    <>
+      <main className="page seats-page guest-grid-page">
+        <BackButton onClick={() => go("home")} />
+        <section className="screen-heading compact guest-grid-heading">
+          <div>
+            <p className="eyebrow">{t.guestsPage.eyebrow}</p>
+            <h1>{t.guestsPage.title(guests.length)}</h1>
+          </div>
+          <Button variant="secondary" onClick={() => setPasteOpen(true)}>
+            {t.guestsPage.paste}
+          </Button>
+        </section>
+        {galaNight && (
+          <div
+            className="guest-arrival-filters"
+            role="group"
+            aria-label={t.arrivalsCard.title}
           >
-            {item[0].toUpperCase() + item.slice(1)}
-          </button>
-        ))}
-      </div>
-      <section className="glass-card seats-list">
-        {visible.map((guest) => (
-          <SeatRow
-            key={guest.seat}
-            guest={guest}
-            t={t}
-            language={language}
-            galaNight={galaNight}
-            onClick={() => onSelect(guest)}
-          />
-        ))}
-      </section>
-    </main>
+            {(
+              [
+                ["all", t.guestsPage.filters.all(guests.length)],
+                ["arrived", t.guestsPage.filters.arrived(arrivedCount)],
+                ["notYet", t.guestsPage.filters.notYet(notYetCount)],
+              ] as [GuestListFilter, string][]
+            ).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                className={filter === value ? "active" : ""}
+                aria-pressed={filter === value}
+                onClick={() => setFilter(value)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+        <section className="guest-seat-grid">
+          {visibleGuests.map((guest) => {
+            const arrivalTime = arrivalTimes[guest.seat]
+            const isArrived = galaNight && Boolean(arrivalTime)
+            const isCheckedIn = Boolean(
+              guest.checkedIn || (galaNight && arrivalTime),
+            )
+            const statusText = isArrived
+              ? t.arrivalNotifications.cardArrived(
+                  fmtDate(language, arrivalTime, "time"),
+                )
+              : guest.checkedIn
+                ? t.guestsPage.checkedIn
+                : guest.status === "confirmed"
+                  ? t.guestsPage.confirmed
+                  : t.guestsPage.waiting
+            if (guest.status === "empty") {
+              return (
+                <article key={guest.seat} className="guest-seat-card empty">
+                  <span className="guest-seat-label">
+                    {t.guestsPage.seat(guest.seat)}
+                  </span>
+                  <div className="guest-seat-empty-copy">
+                    <Icon name="warning" size={18} />
+                    <strong>{t.emptySeatNeedsGuest}</strong>
+                  </div>
+                  <Button onClick={() => setEditingGuest(guest)}>
+                    {t.guestsPage.add}
+                  </Button>
+                </article>
+              )
+            }
+            return (
+              <article
+                key={guest.seat}
+                className={`glass-card guest-seat-card ${isArrived ? "arrived" : ""}`}
+                data-guest-seat={guest.seat}
+                tabIndex={-1}
+              >
+                <span className="guest-seat-label">
+                  {t.guestsPage.seat(guest.seat)}
+                </span>
+                <h2>{guest.name}</h2>
+                <a href={`mailto:${guest.email}`}>{guest.email}</a>
+                <span
+                  className={`guest-seat-status ${isArrived ? "arrived" : guest.status}`}
+                >
+                  {statusText}
+                </span>
+                {isCheckedIn ? (
+                  <p className="guest-seat-lock-note">
+                    <Icon name="lock" size={14} />
+                    {t.guestsPage.checkedInNote}
+                  </p>
+                ) : (
+                  <div className="guest-seat-actions">
+                    <button
+                      type="button"
+                      onClick={() => setEditingGuest(guest)}
+                    >
+                      {t.guestsPage.edit}
+                    </button>
+                    <button
+                      type="button"
+                      className="remove"
+                      onClick={() => {
+                        onRemoveGuest(guest)
+                        showSaved()
+                      }}
+                    >
+                      {t.guestsPage.remove}
+                    </button>
+                  </div>
+                )}
+              </article>
+            )
+          })}
+        </section>
+      </main>
+      {editingGuest && (
+        <GuestEditorSheet
+          guest={editingGuest}
+          t={t}
+          sponsorOrganization={sponsorOrganization}
+          onClose={() => setEditingGuest(null)}
+          onSave={(updatedGuest) => {
+            onSaveGuest(updatedGuest)
+            setEditingGuest(null)
+            showSaved()
+          }}
+        />
+      )}
+      {pasteOpen && (
+        <PasteGuestsSheet
+          t={t}
+          openSeatCount={openSeats.length}
+          onClose={() => setPasteOpen(false)}
+          onSave={(parsedGuests) => {
+            onPasteGuests(parsedGuests)
+            setPasteOpen(false)
+            showSaved()
+          }}
+        />
+      )}
+      {saved && (
+        <div ref={toastRef} className="saved-toast" role="status">
+          <Icon name="check" size={18} />
+          {t.guestsPage.saved}
+        </div>
+      )}
+    </>
   )
 }
 
@@ -2460,40 +3925,29 @@ function GuestSheet({
         </button>
         <div className="sheet-person">
           <span className="avatar">
-            {guest.first[0]}
-            {guest.last[0]}
+            {guest.name
+              .split(/\s+/)
+              .slice(0, 2)
+              .map((part) => part[0])
+              .join("")}
           </span>
           <div>
             <p>Seat {guest.seat}</p>
             <h2 id="guest-sheet-title">
-              {guest.first} {guest.last}
+              {guest.name}
             </h2>
             <StatusChip status={guest.status} />
           </div>
         </div>
         <dl className="details-list">
           <div>
-            <dt>Title</dt>
-            <dd>{guest.title}</dd>
-          </div>
-          <div>
-            <dt>Organization</dt>
-            <dd>{guest.organization}</dd>
-          </div>
-          <div>
-            <dt>Email</dt>
+            <dt>{t.guestForm.email}</dt>
             <dd>{guest.email}</dd>
           </div>
           {guest.dietary && (
             <div>
               <dt>{t.dietaryLabel}</dt>
               <dd>{guest.dietary}</dd>
-            </div>
-          )}
-          {guest.accessibility && (
-            <div>
-              <dt>{t.accessLabel}</dt>
-              <dd>{guest.accessibility}</dd>
             </div>
           )}
           {guest.updatedAt && (
@@ -2516,7 +3970,7 @@ function GuestSheet({
         ) : (
           <div className="confirm-box">
             <strong>
-              Remove {guest.first} from seat {guest.seat}?
+              Remove {guest.name} from seat {guest.seat}?
             </strong>
             <p>The seat will become empty. You can add someone else later.</p>
             <div>
@@ -4517,34 +5971,45 @@ function SeatingApp({ onHome }: { onHome: () => void }) {
 type ProductSection = "portal" | "checkin" | "seating"
 
 interface ProductOption {
-  id: ProductSection | "expired" | "gala"
+  id: string
   label: string
 }
 
 function PrototypeSwitcher({
   section,
   screen,
+  tierId,
+  tierLabels,
   galaNight,
+  emailLabel,
   expiredLabel,
   galaNightLabel,
   onChange,
-  onHome,
+  onTier,
+  onEmail,
   onExpired,
   onGalaNight,
 }: {
   section: ProductSection
   screen: Screen
+  tierId: TierId
+  tierLabels: Record<TierId, string>
   galaNight: boolean
+  emailLabel: string
   expiredLabel: string
   galaNightLabel: string
   onChange: (section: ProductSection, ownerWindow: Window | null) => void
-  onHome: (ownerWindow?: Window | null) => void
+  onTier: (tierId: TierId, ownerWindow: Window | null) => void
+  onEmail: (ownerWindow: Window | null) => void
   onExpired: (ownerWindow: Window | null) => void
   onGalaNight: (ownerWindow: Window | null) => void
 }) {
   const [open, setOpen] = useState(false)
   const options: ProductOption[] = [
-    { id: "portal", label: "Sponsor portal" },
+    { id: "email", label: emailLabel },
+    { id: "tier-platinum", label: tierLabels.platinum },
+    { id: "tier-champion", label: tierLabels.champion },
+    { id: "tier-halfPageAd", label: tierLabels.halfPageAd },
     { id: "gala", label: galaNightLabel },
     { id: "expired", label: expiredLabel },
     { id: "checkin", label: "Check-in" },
@@ -4553,9 +6018,11 @@ function PrototypeSwitcher({
   const currentId = section === "portal"
     ? screen === "expired"
       ? "expired"
+      : screen === "email"
+        ? "email"
       : galaNight
         ? "gala"
-        : "portal"
+        : `tier-${tierId}`
     : section
   const current = options.find((option) => option.id === currentId)
   return (
@@ -4568,14 +6035,19 @@ function PrototypeSwitcher({
               className={option.id === currentId ? "active" : ""}
               onClick={(event) => {
                 const ownerWindow = event.currentTarget.ownerDocument.defaultView
-                if (option.id === "portal") {
-                  onHome(ownerWindow)
+                const previewTier = (
+                  ["platinum", "champion", "halfPageAd"] as TierId[]
+                ).find((id) => option.id === `tier-${id}`)
+                if (previewTier) {
+                  onTier(previewTier, ownerWindow)
+                } else if (option.id === "email") {
+                  onEmail(ownerWindow)
                 } else if (option.id === "gala") {
                   onGalaNight(ownerWindow)
                 } else if (option.id === "expired") {
                   onExpired(ownerWindow)
                 } else {
-                  onChange(option.id, ownerWindow)
+                  onChange(option.id as ProductSection, ownerWindow)
                 }
                 setOpen(false)
               }}
@@ -4603,17 +6075,52 @@ function PrototypeSwitcher({
 
 export default function App() {
   const [section, setSection] = useState<ProductSection>("portal")
-  const [screen, setScreen] = useState<Screen>("home")
+  const [screen, setScreen] = useState<Screen>("email")
+  const [sponsorId, setSponsorId] = useState<SponsorId>("harborline")
+  const [tierId, setTierId] = useState<TierId>("platinum")
   const [galaNight, setGalaNight] = useState(false)
+  const [guestListFilter, setGuestListFilter] =
+    useState<GuestListFilter>("all")
   const [language, setLanguage] = useState<Language>("EN")
   const [textScale, setTextScale] = useState<TextScale>(1.125)
-  const [guests, setGuests] = useState(initialGuests)
-  const [selected, setSelected] = useState<Guest | null>(null)
-  const [editing, setEditing] = useState<Guest | undefined>()
+  const [guestLists, setGuestLists] = useState<Record<SponsorId, Guest[]>>({
+    harborline: initialGuests,
+    linBakery: Array.from({ length: 2 }, (_, index) => ({
+      seat: index + 1,
+      name: "",
+      organization: "Lin Family Bakery",
+      email: "",
+      status: "empty" as GuestStatus,
+    })),
+    chenPark: [],
+  })
   const [activity, setActivity] = useState<Activity[]>(initialActivity)
-  const [sponsorLogo, setSponsorLogo] = useState("")
+  const [sponsorLogos, setSponsorLogos] = useState<
+    Partial<Record<SponsorId, string>>
+  >({})
+  const [sponsorAds, setSponsorAds] = useState<
+    Partial<Record<SponsorId, UploadedAd>>
+  >({})
+  const [notificationState, setNotificationState] =
+    useState<NotificationState>("off")
+  const [arrivalTimes, setArrivalTimes] = useState<
+    Record<SponsorId, Record<number, string>>
+  >({
+    harborline: INITIAL_GALA_ARRIVAL_TIMES,
+    linBakery: {},
+    chenPark: {},
+  })
+  const [arrivalToast, setArrivalToast] = useState<ArrivalNotice | null>(null)
   const portalRootRef = useRef<HTMLDivElement>(null)
   const t = translations[language]
+  const sponsor = sponsorById(sponsorId)
+  const tier = tierById(tierId)
+  const guests = guestLists[sponsorId]
+  const sponsorArrivalTimes = arrivalTimes[sponsorId]
+  const tierGuests = useMemo(
+    () => guests.slice(0, tier.seats),
+    [guests, tier.seats],
+  )
 
   useEffect(() => {
     if (section !== "portal") return
@@ -4651,13 +6158,159 @@ export default function App() {
       },
     ])
 
+  const requestArrivalNotifications = async (
+    ownerWindow: Window | null,
+  ) => {
+    const notificationApi = (
+      ownerWindow as (Window & { Notification?: typeof Notification }) | null
+    )?.Notification
+    if (!notificationApi) {
+      setNotificationState("blocked")
+      return
+    }
+    if (notificationApi.permission === "granted") {
+      setNotificationState("on")
+      return
+    }
+    if (notificationApi.permission === "denied") {
+      setNotificationState("blocked")
+      return
+    }
+    try {
+      const permission = await notificationApi.requestPermission()
+      setNotificationState(permission === "granted" ? "on" : "blocked")
+    } catch {
+      setNotificationState("blocked")
+    }
+  }
+
+  useEffect(() => {
+    if (!arrivalToast) return
+    const ownerWindow = portalRootRef.current?.ownerDocument.defaultView
+    if (!ownerWindow) return
+    const timeout = ownerWindow.setTimeout(() => setArrivalToast(null), 6000)
+    return () => ownerWindow.clearTimeout(timeout)
+  }, [arrivalToast])
+
+  useEffect(() => {
+    if (
+      !galaNight ||
+      section !== "portal" ||
+      (screen !== "home" && screen !== "seats")
+    ) {
+      return
+    }
+    const ownerWindow = portalRootRef.current?.ownerDocument.defaultView
+    if (!ownerWindow) return
+    const nextGuest = guestLists[sponsorId].find(
+      (guest) =>
+        guest.status === "confirmed" &&
+        Boolean(guest.name) &&
+        !arrivalTimes[sponsorId][guest.seat],
+    )
+    if (!nextGuest) return
+    const timeout = ownerWindow.setTimeout(() => {
+      const time =
+        SIMULATED_GALA_ARRIVAL_TIMES[nextGuest.seat] ||
+        new Date().toISOString()
+      setArrivalTimes((current) => ({
+        ...current,
+        [sponsorId]: {
+          ...current[sponsorId],
+          [nextGuest.seat]: time,
+        },
+      }))
+      setGuestLists((current) => ({
+        ...current,
+        [sponsorId]: current[sponsorId].map((guest) =>
+          guest.seat === nextGuest.seat
+            ? { ...guest, checkedIn: true, updatedAt: time }
+            : guest,
+        ),
+      }))
+      setArrivalToast({ seat: nextGuest.seat, name: nextGuest.name, time })
+      setActivity((current) => [
+        ...current,
+        {
+          id: current.length + 1,
+          at: new Date().toISOString(),
+          actor: "aafe",
+          kind: "arrived",
+          name: nextGuest.name,
+          seat: nextGuest.seat,
+          time,
+        },
+      ])
+
+      // Production: the backend sends Web Push when staff check a guest in;
+      // arrival notifications are not sent by email or SMS.
+      const notificationApi = (
+        ownerWindow as Window & { Notification?: typeof Notification }
+      ).Notification
+      if (
+        notificationState === "on" &&
+        notificationApi?.permission === "granted"
+      ) {
+        const notification = new notificationApi(
+          t.arrivalNotifications.notificationTitle(nextGuest.name),
+          {
+            body: t.arrivalNotifications.notificationBody(
+              fmtDate(language, time, "time"),
+            ),
+            icon: aafeMarkOrange,
+            tag: `aafe-arrival-${sponsorId}-${nextGuest.seat}`,
+          },
+        )
+        notification.onclick = () => {
+          notification.close()
+          ownerWindow.focus()
+          setGuestListFilter("arrived")
+          setScreen("seats")
+          ownerWindow.requestAnimationFrame(() =>
+            ownerWindow.requestAnimationFrame(() => {
+              const card = portalRootRef.current?.querySelector<HTMLElement>(
+                `[data-guest-seat="${nextGuest.seat}"]`,
+              )
+              card?.scrollIntoView({ behavior: "smooth", block: "center" })
+              card?.focus({ preventScroll: true })
+            }),
+          )
+        }
+      }
+    }, 8000)
+    return () => ownerWindow.clearTimeout(timeout)
+  }, [
+    arrivalTimes,
+    galaNight,
+    guestLists,
+    language,
+    notificationState,
+    screen,
+    section,
+    sponsorId,
+    t,
+  ])
+
   const saveSponsorLogo = (logoUrl: string) => {
     const ownerWindow = portalRootRef.current?.ownerDocument.defaultView
-    setSponsorLogo((current) => {
-      if (current && ownerWindow) ownerWindow.URL.revokeObjectURL(current)
-      return logoUrl
+    setSponsorLogos((current) => {
+      const previous = current[sponsorId]
+      if (previous && ownerWindow) ownerWindow.URL.revokeObjectURL(previous)
+      return { ...current, [sponsorId]: logoUrl }
     })
     log({ kind: "logoUploaded" })
+  }
+
+  const saveSponsorAd = (ad: UploadedAd, ownerWindow: Window) => {
+    setSponsorAds((current) => {
+      const previous = current[sponsorId]
+      if (previous) {
+        const urlApi = (ownerWindow as Window & { URL: typeof URL }).URL
+        urlApi.revokeObjectURL(previous.url)
+      }
+      return { ...current, [sponsorId]: ad }
+    })
+    log({ kind: "adUploaded" })
   }
 
   const clearExpiredHash = (ownerWindow?: Window | null) => {
@@ -4676,14 +6329,40 @@ export default function App() {
     clearExpiredHash(ownerWindow)
     setSection("portal")
     setScreen("home")
+    setTierId(sponsorById(sponsorId).tierId)
     setGalaNight(false)
-    window.scrollTo({ top: 0, behavior: "smooth" })
+    const targetWindow =
+      ownerWindow || portalRootRef.current?.ownerDocument.defaultView
+    targetWindow?.scrollTo({ top: 0, behavior: "smooth" })
+  }
+
+  const showEmail = (ownerWindow: Window | null) => {
+    clearExpiredHash(ownerWindow)
+    setSection("portal")
+    setScreen("email")
+    setGalaNight(false)
+    ownerWindow?.scrollTo({ top: 0, behavior: "smooth" })
+  }
+
+  const openSponsor = (nextSponsorId: SponsorId) => {
+    const nextSponsor = sponsorById(nextSponsorId)
+    setSponsorId(nextSponsorId)
+    setTierId(nextSponsor.tierId)
+    setSection("portal")
+    setScreen("home")
+    setGalaNight(false)
+    portalRootRef.current?.ownerDocument.defaultView?.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    })
   }
 
   const showGalaNight = (ownerWindow: Window | null) => {
     clearExpiredHash(ownerWindow)
     setSection("portal")
     setScreen("home")
+    setSponsorId("harborline")
+    setTierId("platinum")
     setGalaNight(true)
     ownerWindow?.scrollTo({ top: 0, behavior: "smooth" })
   }
@@ -4695,6 +6374,16 @@ export default function App() {
     if (ownerWindow && ownerWindow.location.hash !== "#/expired") {
       ownerWindow.location.hash = "/expired"
     }
+  }
+
+  const showTier = (nextTierId: TierId, ownerWindow: Window | null) => {
+    clearExpiredHash(ownerWindow)
+    setSection("portal")
+    setScreen("home")
+    setSponsorId(nextTierId === "halfPageAd" ? "chenPark" : "harborline")
+    setTierId(nextTierId)
+    setGalaNight(false)
+    ownerWindow?.scrollTo({ top: 0, behavior: "smooth" })
   }
 
   const changeSection = (
@@ -4720,25 +6409,16 @@ export default function App() {
   }
 
   const go = (next: Screen) => {
-    setSelected(null)
-    if (next !== "single") setEditing(undefined)
     setScreen(next)
-    window.scrollTo({ top: 0, behavior: "smooth" })
+    portalRootRef.current?.ownerDocument.defaultView?.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    })
   }
 
-  const selectedSeat = useMemo(
-    () => editing?.seat || selected?.seat || 13,
-    [editing, selected],
-  )
-  const selectGuest = (guest: Guest) => {
-    if (guest.status === "empty") {
-      setEditing(undefined)
-      setSelected(guest)
-      setScreen("single")
-      window.scrollTo({ top: 0, behavior: "smooth" })
-    } else {
-      setSelected(guest)
-    }
+  const openGuestList = (filter: GuestListFilter) => {
+    setGuestListFilter(filter)
+    go("seats")
   }
 
   return (
@@ -4746,7 +6426,10 @@ export default function App() {
       {section === "checkin" && <CheckInApp onHome={goHome} />}
       {section === "seating" && <SeatingApp onHome={goHome} />}
       {section === "portal" && (
-        <div className="app-shell" ref={portalRootRef}>
+        <div
+          className={`app-shell ${screen === "seats" ? "guest-list-shell" : ""}`}
+          ref={portalRootRef}
+        >
           <div className="ambient ambient-one" />
           <div className="ambient ambient-two" />
           <TopBar
@@ -4765,97 +6448,34 @@ export default function App() {
                   : "text-scale-default"
             }`}
           >
+            {screen === "email" && (
+              <EmailLanding
+                t={t}
+                language={language}
+                sponsor={sponsor}
+                tier={tier}
+                onOpen={() => openSponsor(sponsorId)}
+                onSelectSponsor={openSponsor}
+              />
+            )}
             {screen === "home" && (
               <Home
-                go={go}
+                onOpenGuestList={openGuestList}
                 t={t}
                 language={language}
                 activity={activity}
-                guests={guests}
+                guests={tierGuests}
+                sponsor={sponsor}
+                tier={tier}
                 galaNight={galaNight}
-                sponsorLogo={sponsorLogo}
+                arrivalTimes={sponsorArrivalTimes}
+                notificationState={notificationState}
+                sponsorLogo={sponsorLogos[sponsorId] || ""}
+                uploadedAd={sponsorAds[sponsorId] || null}
                 onLogoSaved={saveSponsorLogo}
-              />
-            )}
-            {screen === "choose" && <Choose go={go} t={t} />}
-            {screen === "paste" && (
-              <PasteList
-                go={go}
-                onAdd={() => {
-                const now = new Date().toISOString()
-                const filled = guests
-                  .filter((guest) => parsedGuests[guest.seat - 13])
-                  .map((guest) => guest.seat)
-                if (filled.length)
-                  log({
-                    kind: "bulkAdded",
-                    count: filled.length,
-                    seats: [Math.min(...filled), Math.max(...filled)],
-                  })
-                setGuests((current) =>
-                  current.map((guest) => {
-                    const added = parsedGuests[guest.seat - 13]
-                    return added
-                      ? {
-                          ...guest,
-                          first: added.first,
-                          last: added.last,
-                          title: added.title,
-                          email: added.email,
-                          dietary: "",
-                          accessibility: "",
-                          status: "waiting",
-                          updatedAt: now,
-                        }
-                      : guest
-                  }),
-                )
-                  go("saved")
-                }}
-              />
-            )}
-            {screen === "single" && (
-              <SingleGuest
-              go={go}
-              seat={selectedSeat}
-              editing={editing}
-              validationMessages={t.validation}
-              onSave={(guestDetails) => {
-                const before = guests.find((g) => g.seat === selectedSeat)
-                const name = `${guestDetails.first} ${guestDetails.last}`.trim()
-                if (before) {
-                  const previousName = `${before.first} ${before.last}`.trim()
-                  const fields = changedFields(before, guestDetails)
-                  if (before.status === "empty") {
-                    log({ kind: "added", name, seat: selectedSeat })
-                  } else if (
-                    fields.includes("first") &&
-                    fields.includes("last")
-                  ) {
-                    log({
-                      kind: "replaced",
-                      name,
-                      previousName,
-                      seat: selectedSeat,
-                    })
-                  } else if (fields.length) {
-                    log({ kind: "updated", name, seat: selectedSeat, fields })
-                  }
-                }
-                setGuests((current) =>
-                  current.map((guest) =>
-                    guest.seat === selectedSeat
-                      ? {
-                          ...guest,
-                          ...guestDetails,
-                          status: "waiting",
-                          updatedAt: new Date().toISOString(),
-                        }
-                      : guest,
-                  ),
-                )
-                go("saved")
-              }}
+                onAdSaved={saveSponsorAd}
+                onTurnOnNotifications={requestArrivalNotifications}
+                onTurnOffNotifications={() => setNotificationState("off")}
               />
             )}
             {screen === "seats" && (
@@ -4863,62 +6483,150 @@ export default function App() {
                 go={go}
                 t={t}
                 language={language}
-                guests={guests}
+                guests={tierGuests}
                 galaNight={galaNight}
-                onSelect={selectGuest}
+                arrivalTimes={sponsorArrivalTimes}
+                initialFilter={guestListFilter}
+                sponsorOrganization={sponsor.organization}
+                onSaveGuest={(updatedGuest) => {
+                  const before = guests.find(
+                    (guest) => guest.seat === updatedGuest.seat,
+                  )
+                  if (before) {
+                    const fields = changedFields(before, updatedGuest)
+                    if (before.status === "empty") {
+                      log({
+                        kind: "added",
+                        name: updatedGuest.name,
+                        seat: updatedGuest.seat,
+                      })
+                    } else if (before.name !== updatedGuest.name) {
+                      log({
+                        kind: "replaced",
+                        name: updatedGuest.name,
+                        previousName: before.name,
+                        seat: updatedGuest.seat,
+                      })
+                    } else if (fields.length) {
+                      log({
+                        kind: "updated",
+                        name: updatedGuest.name,
+                        seat: updatedGuest.seat,
+                        fields,
+                      })
+                    }
+                  }
+                  setGuestLists((current) => ({
+                    ...current,
+                    [sponsorId]: current[sponsorId].map((guest) =>
+                      guest.seat === updatedGuest.seat
+                        ? {
+                            ...updatedGuest,
+                            updatedAt: new Date().toISOString(),
+                          }
+                        : guest,
+                    ),
+                  }))
+                }}
+                onRemoveGuest={(removedGuest) => {
+                  log({
+                    kind: "removed",
+                    name: removedGuest.name,
+                    seat: removedGuest.seat,
+                  })
+                  setGuestLists((current) => ({
+                    ...current,
+                    [sponsorId]: current[sponsorId].map((guest) =>
+                      guest.seat === removedGuest.seat
+                        ? {
+                            ...guest,
+                            name: "",
+                            email: "",
+                            dietary: "",
+                            accessibility: "",
+                            checkedIn: false,
+                            status: "empty",
+                            updatedAt: new Date().toISOString(),
+                          }
+                        : guest,
+                    ),
+                  }))
+                }}
+                onPasteGuests={(pastedGuests) => {
+                  const openSeats = guests.filter(
+                    (guest) => guest.status === "empty",
+                  )
+                  const usedSeats = openSeats
+                    .slice(0, pastedGuests.length)
+                    .map((guest) => guest.seat)
+                  if (usedSeats.length) {
+                    log({
+                      kind: "bulkAdded",
+                      count: usedSeats.length,
+                      seats: [Math.min(...usedSeats), Math.max(...usedSeats)],
+                    })
+                  }
+                  setGuestLists((current) => ({
+                    ...current,
+                    [sponsorId]: current[sponsorId].map((guest) => {
+                      const openIndex = openSeats.findIndex(
+                        (openSeat) => openSeat.seat === guest.seat,
+                      )
+                      const pastedGuest = pastedGuests[openIndex]
+                      return pastedGuest
+                        ? {
+                            ...guest,
+                            ...pastedGuest,
+                            organization: sponsor.organization,
+                            status: "waiting",
+                            updatedAt: new Date().toISOString(),
+                          }
+                        : guest
+                    }),
+                  }))
+                }}
               />
             )}
-            {screen === "saved" && <Saved go={go} t={t} />}
             {screen === "expired" && <ExpiredLink t={t} />}
-            {selected && selected.status !== "empty" && screen === "seats" && (
-              <GuestSheet
-              guest={selected}
-              t={t}
-              language={language}
-              onClose={() => setSelected(null)}
-              onEdit={() => {
-                setEditing(selected)
-                setSelected(null)
-                setScreen("single")
-              }}
-              onRemove={() => {
-                log({
-                  kind: "removed",
-                  name: `${selected.first} ${selected.last}`.trim(),
-                  seat: selected.seat,
-                })
-                setGuests((current) =>
-                  current.map((guest) =>
-                    guest.seat === selected.seat
-                      ? {
-                          ...guest,
-                          first: "",
-                          last: "",
-                          title: "",
-                          email: "",
-                          dietary: "",
-                          accessibility: "",
-                          status: "empty",
-                          updatedAt: new Date().toISOString(),
-                        }
-                      : guest,
-                  ),
-                )
-                setSelected(null)
-              }}
-              />
-            )}
           </div>
+          {arrivalToast && (
+            <div className="arrival-toast" role="status">
+              <span className="arrival-toast-icon" aria-hidden="true">
+                <Icon name="bell" size={19} />
+              </span>
+              <div>
+                <strong>
+                  {t.arrivalNotifications.notificationTitle(arrivalToast.name)}
+                </strong>
+                <span>
+                  {t.arrivalNotifications.notificationBody(
+                    fmtDate(language, arrivalToast.time, "time"),
+                  )}
+                </span>
+              </div>
+              <button
+                type="button"
+                aria-label={t.arrivalNotifications.closeToast}
+                onClick={() => setArrivalToast(null)}
+              >
+                <Icon name="close" size={17} />
+              </button>
+            </div>
+          )}
         </div>
       )}
       <PrototypeSwitcher
         section={section}
         screen={screen}
+        tierId={tierId}
+        tierLabels={t.tierNames}
         galaNight={galaNight}
+        emailLabel={t.emailOption}
         expiredLabel={t.expiredOption}
         galaNightLabel={t.galaNightOption}
         onChange={changeSection}
-        onHome={goHome}
+        onTier={showTier}
+        onEmail={showEmail}
         onExpired={showExpired}
         onGalaNight={showGalaNight}
       />
