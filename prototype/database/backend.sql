@@ -94,6 +94,14 @@ update seats s
  where s.guest_id = g.id and g.qr_token is not null;
 update guests set qr_token = null where qr_token is not null;
 
+-- Offline check-in (decided Oct 6): the iPad keeps checking guests in without internet and syncs later.
+-- client_id is the iPad's id for each check-in, so syncing the same one twice records it once.
+-- One check-in per guest: the first arrival stands (staff_sync_check_ins).
+alter table check_ins add column if not exists client_id text;
+alter table check_ins add column if not exists device    text;   -- e.g. "Door 2"
+create unique index if not exists check_ins_client_id_uq on check_ins (client_id) where client_id is not null;
+create unique index if not exists check_ins_one_per_guest on check_ins (event_id, guest_id) where guest_id is not null;
+
 -- Give Lively import (docs/import-matching-spec.md, section 9).
 alter table payments    add column if not exists purchase_key text;   -- SHA-256(email | UTC purchase time); see purchase_key()
 create unique index if not exists payments_purchase_key_uq on payments (purchase_key) where purchase_key is not null;
@@ -663,10 +671,10 @@ begin
   return v_guest;
 end $$;
 
--- sendQrInvite
+-- sendQrInvite. The staff member sending it is its approver (hard rule 4); the send is logged.
 create or replace function staff_send_qr_invite(p_guest_id text) returns text
 language plpgsql security definer set search_path = public as $$
-declare me staff_users := require_staff(array['gala_admin','relationship_manager']); g guests;
+declare me staff_users := require_staff(array['gala_admin','relationship_manager']); g guests; v_id text;
 begin
   select * into g from guests where id = p_guest_id;
   if g.id is null then raise exception 'not_found'; end if;
@@ -674,17 +682,23 @@ begin
     raise exception 'invalid_input: guest has no seat';
   end if;
   if g.email is null then raise exception 'invalid_input: guest has no email'; end if;
-  return enqueue_email('qr_invitation', g.email, g.first_name || ' ' || g.last_name, g.order_id, g.id, 'staff_manual', me.name);
+  v_id := enqueue_email('qr_invitation', g.email, g.first_name || ' ' || g.last_name, g.order_id, g.id, 'staff_manual', me.name);
+  perform write_audit('staff', me.name, 'email', v_id, g.order_id, 'email.approved', null, 'approved', false,
+    format('QR invitation to %s %s sent by staff.', g.first_name, g.last_name));
+  return v_id;
 end $$;
 
--- resendPortalLink. Sending mints a NEW link; the old link stops working.
+-- resendPortalLink. Sending mints a NEW link; the old link stops working. Logged like sendQrInvite.
 create or replace function staff_resend_portal_link(p_order_id text) returns text
 language plpgsql security definer set search_path = public as $$
-declare me staff_users := require_staff(array['gala_admin','relationship_manager']); sp sponsors;
+declare me staff_users := require_staff(array['gala_admin','relationship_manager']); sp sponsors; v_id text;
 begin
   select s.* into sp from orders o join sponsors s on s.id = o.sponsor_id where o.id = p_order_id;
   if sp.id is null then raise exception 'not_found'; end if;
-  return enqueue_email('portal_link', sp.primary_contact_email, sp.primary_contact_name, p_order_id, null, 'staff_manual', me.name);
+  v_id := enqueue_email('portal_link', sp.primary_contact_email, sp.primary_contact_name, p_order_id, null, 'staff_manual', me.name);
+  perform write_audit('staff', me.name, 'email', v_id, p_order_id, 'email.approved', null, 'approved', false,
+    format('Guest-list link resent to %s by staff; the old link stops working when it sends.', sp.primary_contact_name));
+  return v_id;
 end $$;
 
 -- Check-in screen data for all roles (volunteers cannot read tables directly).
@@ -745,6 +759,140 @@ begin
   perform write_audit('staff', me.name, 'check_in', v_id, p_order_id, 'checkin.exception', null, 'checked_in', false,
     format('%s checked in as exception: %s.', trim(p_name), p_type));
   return v_id;
+end $$;
+
+-- Offline check-in (decided Oct 6): if the venue's internet drops, the iPad keeps checking guests in
+-- from a list it saved earlier and syncs when it is back online.
+
+-- The list the iPad saves: every guest of the current gala with what the desk needs, each seat's QR
+-- code hash (so a scanned code is checked on the iPad), and who has arrived. No email, phone, payment,
+-- dietary needs or staff notes. A hash can't be turned back into a working code. Like checkin_list(),
+-- it is a read, so it isn't logged (the iPad refreshes it often).
+create or replace function staff_checkin_snapshot() returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+declare v jsonb;
+begin
+  perform require_staff(array['gala_admin','relationship_manager','check_in_volunteer']);
+  select jsonb_build_object(
+    'event_id', e.id, 'event_name', e.name, 'generated_at', now(),
+    'guests', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'id', g.id, 'order_id', g.order_id, 'first_name', g.first_name, 'last_name', g.last_name, 'title', g.title,
+        'organization', g.organization, 'sponsor', sp.organization_name, 'guest_type', g.guest_type,
+        'table_number', t.number, 'seat_number', g.seat_number, 'accessibility_needs', g.accessibility_needs,
+        'qr_hash', case when s.qr_token_expires_at > now() then s.qr_token_hash end,
+        'qr_expires_at', case when s.qr_token_expires_at > now() then s.qr_token_expires_at end,
+        'arrived', g.attendance_status = 'checked_in' or ci.id is not null,
+        'checked_in_at', ci.checked_in_at, 'checked_in_by', ci.checked_in_by, 'device', ci.device)
+        order by g.last_name, g.first_name)
+      from guests g join orders o on o.id = g.order_id join sponsors sp on sp.id = o.sponsor_id
+      left join event_tables t on t.id = g.table_id
+      left join seats s on s.guest_id = g.id and s.status <> 'cancelled'
+      left join check_ins ci on ci.guest_id = g.id and ci.event_id = e.id
+      where o.event_id = e.id and o.status <> 'cancelled'), '[]'),
+    -- Unnamed sponsor seats, so the desk knows which sponsors may bring a walk-in.
+    'unnamed_seats', coalesce((
+      select jsonb_agg(jsonb_build_object('order_id', o.id, 'sponsor', sp.organization_name, 'count', u.n) order by sp.organization_name)
+      from (select order_id, count(*)::int n from seats where guest_id is null and status <> 'cancelled' group by order_id) u
+      join orders o on o.id = u.order_id join sponsors sp on sp.id = o.sponsor_id
+      where o.event_id = e.id and o.status <> 'cancelled'), '[]'))
+  into v from gala_events e where e.id = current_event_id();
+  return v;
+end $$;
+
+-- Check-ins the iPad made offline, sent when it is back online, oldest first.
+-- p_items: [{ client_id, kind: 'guest' | 'exception', at, device,
+--             guest_id, method: 'qr' | 'search'            (kind 'guest')
+--             name, order_id, type, note }]                (kind 'exception': walk-ins and the like)
+-- First arrival wins: a guest checked in twice (two doors, or one online and one offline) keeps the
+-- earliest check-in; the other is written to the change log as a conflict, and the result says who was
+-- first. Each item stands alone (one bad item doesn't stop the rest), and sending one again is safe.
+-- Returns one result per item: { client_id, status: 'checked_in' | 'conflict' | 'already_synced' | 'error',
+--   first_at, first_by, first_device (for a conflict), error }.
+create or replace function staff_sync_check_ins(p_items jsonb) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare
+  me staff_users := require_staff(array['gala_admin','relationship_manager','check_in_volunteer']);
+  it jsonb; v_cid text; v_at timestamptz; v_dev text; v_method text; v_by text; g guests; c check_ins;
+  v_res jsonb; v_out jsonb := '[]';
+begin
+  if jsonb_typeof(p_items) is distinct from 'array' then raise exception 'invalid_input: items must be a list'; end if;
+  if jsonb_array_length(p_items) > 1000 then raise exception 'invalid_input: at most 1000 check-ins per sync'; end if;
+  for it in select value from jsonb_array_elements(p_items) loop
+    v_cid := nullif(btrim(coalesce(it ->> 'client_id', '')), '');
+    begin
+      if v_cid is null or length(v_cid) > 100 then raise exception 'invalid_input: client_id is required'; end if;
+      v_dev := nullif(left(btrim(coalesce(it ->> 'device', '')), 40), '');
+      v_by := me.name || coalesce(' (' || v_dev || ')', '');
+      v_at := least(coalesce(nullif(it ->> 'at', '')::timestamptz, now()), now());   -- the iPad's clock, never in the future
+      c := null;
+
+      if exists (select 1 from check_ins where client_id = v_cid) then
+        v_res := jsonb_build_object('client_id', v_cid, 'status', 'already_synced');
+
+      elsif exists (select 1 from audit_log where action = 'checkin.conflict' and entity_id = v_cid) then
+        -- A conflict already recorded; say again who was first.
+        select * into c from check_ins where guest_id = it ->> 'guest_id' and event_id = current_event_id();
+        v_res := jsonb_build_object('client_id', v_cid, 'status', 'conflict',
+                                    'first_at', c.checked_in_at, 'first_by', c.checked_in_by, 'first_device', c.device);
+
+      elsif coalesce(it ->> 'kind', 'guest') = 'exception' then
+        if coalesce(btrim(it ->> 'name'), '') = '' or coalesce(btrim(it ->> 'type'), '') = '' then
+          raise exception 'invalid_input: name and type are required';
+        end if;
+        insert into check_ins (id, event_id, order_id, arrival_name, method, type, checked_in_by, note, checked_in_at, client_id, device)
+        values (new_id('ci'), current_event_id(), nullif(it ->> 'order_id', ''), btrim(it ->> 'name'), 'exception', btrim(it ->> 'type'),
+                me.name, coalesce(it ->> 'note', ''), v_at, v_cid, v_dev);
+        perform write_audit('staff', me.name, 'check_in', v_cid, nullif(it ->> 'order_id', ''), 'checkin.exception', null, 'checked_in', false,
+          format('%s checked in as exception: %s (offline, %s).', btrim(it ->> 'name'), btrim(it ->> 'type'), v_by));
+        v_res := jsonb_build_object('client_id', v_cid, 'status', 'checked_in');
+
+      else
+        v_method := coalesce(it ->> 'method', 'search');
+        if v_method not in ('qr', 'search') then raise exception 'invalid_input: method must be qr or search'; end if;
+        select gg.* into g from guests gg join orders o on o.id = gg.order_id
+         where gg.id = it ->> 'guest_id' and o.event_id = current_event_id() and o.status <> 'cancelled' for update of gg;
+        if g.id is null then raise exception 'not_found: guest is not on this gala''s list'; end if;
+        select * into c from check_ins where guest_id = g.id and event_id = current_event_id();
+
+        if c.id is null then
+          insert into check_ins (id, event_id, guest_id, order_id, method, type, checked_in_by, note, checked_in_at, client_id, device)
+          values (new_id('ci'), current_event_id(), g.id, g.order_id, v_method, 'standard', me.name, '', v_at, v_cid, v_dev);
+          update guests set attendance_status = 'checked_in' where id = g.id;
+          update seats set status = 'checked_in', updated_at = now() where guest_id = g.id;
+          perform write_audit('staff', me.name, 'check_in', v_cid, g.order_id, 'checkin.arrived', 'expected', 'checked_in', false,
+            format('%s %s checked in (%s, offline, %s at %s).', g.first_name, g.last_name, v_method, v_by,
+                   to_char(v_at at time zone 'America/New_York', 'FMHH12:MI AM')));
+          v_res := jsonb_build_object('client_id', v_cid, 'status', 'checked_in');
+
+        elsif c.checked_in_at <= v_at then
+          -- Someone checked this guest in first; that check-in stands.
+          perform write_audit('staff', me.name, 'check_in', v_cid, g.order_id, 'checkin.conflict', null, null, false,
+            format('%s %s was already checked in at %s by %s; a second check-in at %s by %s was not counted.',
+                   g.first_name, g.last_name, to_char(c.checked_in_at at time zone 'America/New_York', 'FMHH12:MI AM'),
+                   c.checked_in_by || coalesce(' (' || c.device || ')', ''),
+                   to_char(v_at at time zone 'America/New_York', 'FMHH12:MI AM'), v_by));
+          v_res := jsonb_build_object('client_id', v_cid, 'status', 'conflict',
+                                      'first_at', c.checked_in_at, 'first_by', c.checked_in_by, 'first_device', c.device);
+
+        else
+          -- This offline check-in came first: it becomes the check-in, and the one recorded earlier is the conflict.
+          perform write_audit('staff', me.name, 'check_in', coalesce(c.client_id, c.id), g.order_id, 'checkin.conflict', null, null, false,
+            format('%s %s was checked in at %s by %s (synced later); the check-in at %s by %s was the second and is not counted.',
+                   g.first_name, g.last_name, to_char(v_at at time zone 'America/New_York', 'FMHH12:MI AM'), v_by,
+                   to_char(c.checked_in_at at time zone 'America/New_York', 'FMHH12:MI AM'),
+                   c.checked_in_by || coalesce(' (' || c.device || ')', '')));
+          update check_ins set checked_in_at = v_at, checked_in_by = me.name, device = v_dev, method = v_method, client_id = v_cid
+           where id = c.id;
+          v_res := jsonb_build_object('client_id', v_cid, 'status', 'checked_in');
+        end if;
+      end if;
+    exception when others then
+      v_res := jsonb_build_object('client_id', v_cid, 'status', 'error', 'error', sqlerrm);
+    end;
+    v_out := v_out || jsonb_build_array(v_res);
+  end loop;
+  return v_out;
 end $$;
 
 -- ---------------------------------------------------------------------
@@ -1305,7 +1453,7 @@ begin
               'purchase_key','name_key','add_import_review','import_fill_guests','staff_set_tier_mapping','staff_set_gala_page',
               'staff_resolve_import_review','seats_void_qr','guests_void_qr',
               'staff_export_badges','staff_export_checkin','staff_export_salesforce',
-              'staff_queue_guest_list_reminders','staff_email_queue')
+              'staff_queue_guest_list_reminders','staff_email_queue','staff_checkin_snapshot','staff_sync_check_ins')
   loop
     execute format('revoke all on function %s from public, anon, authenticated', f);
   end loop;
@@ -1325,6 +1473,7 @@ grant execute on function
   staff_record_payment(text, text, numeric, date, text), staff_add_pledge(text, text, text, text, text),
   staff_add_comp_guest(jsonb), staff_send_qr_invite(text), staff_resend_portal_link(text), staff_approve_email(text), staff_cancel_email(text),
   checkin_list(), staff_check_in(text, text), staff_check_in_qr(text), staff_check_in_exception(text, text, text, text),
+  staff_checkin_snapshot(), staff_sync_check_ins(jsonb),
   staff_import_givelively(jsonb, jsonb), staff_set_tier_mapping(text, text), staff_set_gala_page(text),
   staff_resolve_import_review(text, text),
   staff_export_badges(boolean), staff_export_checkin(), staff_export_salesforce(),
