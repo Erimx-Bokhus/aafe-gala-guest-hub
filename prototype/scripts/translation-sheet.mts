@@ -1,8 +1,9 @@
 // The guest portal's translations side by side (English | 中文 | 한국어 | Español), for AAFE staff to review
-// (decided Oct 6: AAFE approves every translation before it goes live). Writes docs/translations/:
-//   guest-portal-review.html  to read or print, one row per phrase
-//   guest-portal-review.csv   to open in Excel or Google Sheets and fill in the review columns
-// Run `npm run translations` after changing guest-portal/src/i18n.ts; the tests fail if these files are stale.
+// (decided Oct 6: AAFE approves every translation before it goes live). Writes
+// docs/translations/guest-portal-review.html: one row per phrase, to read or print, with a "Download as a
+// spreadsheet" link carrying the same rows as a CSV (with review columns) for Excel or Google Sheets. The
+// CSV lives inside the page because the repo never holds .csv files outside seed/ and fixtures/ (hard rule 1).
+// Run `npm run translations` after changing guest-portal/src/i18n.ts; the tests fail if the page is stale.
 // A language the portal doesn't have yet (Korean, until it is added) shows as an empty column.
 import { writeFileSync, mkdirSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -52,7 +53,7 @@ export function buildSheet(): { csv: string; html: string } {
     ...keys().map((k) => [k, ...REVIEW_LANGS.map((l) => render(l.id, k) ?? ''), SAMPLES[k] ? SAMPLES[k]!.join(', ') : '', '', '']),
   ]
   // Byte-order mark: Excel then reads Chinese and Korean correctly.
-  const csv = '﻿' + csvRows.map((r) => r.map(cell).join(',')).join('\r\n') + '\r\n'
+  const csv = '\uFEFF' + csvRows.map((r) => r.map(cell).join(',')).join('\r\n') + '\r\n'
 
   const rows = keys().map((k) => {
     const en = render('en', k)!
@@ -90,7 +91,7 @@ export function buildSheet(): { csv: string; html: string } {
 </head>
 <body>
 <h1>Guest portal translations: for AAFE review</h1>
-<p>These are draft translations of every phrase in the sponsor guest-list portal. Before the portal goes live, an AAFE reviewer who reads each language checks each row and writes any correction in the last column (or in the matching spreadsheet, <code>guest-portal-review.csv</code>).</p>
+<p>These are draft translations of every phrase in the sponsor guest-list portal. Before the portal goes live, an AAFE reviewer who reads each language checks each row and writes any correction in the last column, or in the spreadsheet: <a download="guest-portal-review.csv" href="data:text/csv;charset=utf-8,${encodeURIComponent(csv)}">Download as a spreadsheet</a> (opens in Excel or Google Sheets, with “Approved?” and “Corrections” columns).</p>
 <p><span class="key">Highlighted</span> cells are the same as the English, which is right only for names like “Asian Americans for Equality”. Phrases with an example show it filled in as sponsors will see it.${missing.length ? ` Not in the portal yet: ${missing.map((l) => `<span lang="${l.lang}">${esc(l.label)}</span>`).join(', ')} (empty column).` : ''}</p>
 <p>${keys().length} phrases · ${present.map((l) => `<span lang="${l.lang}">${esc(l.label)}</span>`).join(', ')}. Generated from <code>guest-portal/src/i18n.ts</code>; regenerate with <code>npm run translations</code>.</p>
 <table>
@@ -105,19 +106,18 @@ ${rows}
   return { csv, html }
 }
 
-export const FILES = { html: 'guest-portal-review.html', csv: 'guest-portal-review.csv' } as const
+export const PAGE = 'guest-portal-review.html'
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const { csv, html } = buildSheet()
+  const { html } = buildSheet()
   if (process.argv.includes('--check')) {
-    const stale = (Object.entries(FILES) as [keyof typeof FILES, string][])
-      .filter(([kind, f]) => { try { return readFileSync(OUT + f, 'utf8') !== { csv, html }[kind] } catch { return true } })
-    if (stale.length) { console.error(`Out of date: ${stale.map(([, f]) => f).join(', ')}. Run: npm run translations`); process.exit(1) }
+    let current = ''
+    try { current = readFileSync(OUT + PAGE, 'utf8') } catch { /* missing counts as stale */ }
+    if (current !== html) { console.error(`Out of date: docs/translations/${PAGE}. Run: npm run translations`); process.exit(1) }
     console.log('translation sheet up to date')
   } else {
     mkdirSync(OUT, { recursive: true })
-    writeFileSync(OUT + FILES.html, html)
-    writeFileSync(OUT + FILES.csv, csv)
-    console.log(`Wrote docs/translations/${FILES.html} and ${FILES.csv} (${keys().length} phrases)`)
+    writeFileSync(OUT + PAGE, html)
+    console.log(`Wrote docs/translations/${PAGE} (${keys().length} phrases)`)
   }
 }

@@ -3,7 +3,7 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { DICT, LANGS, LOCALE } from '../guest-portal/src/i18n'
-import { buildSheet, FILES, keys, OUT, render, REVIEW_LANGS, SAMPLES } from './translation-sheet.mts'
+import { buildSheet, keys, OUT, PAGE, render, REVIEW_LANGS, SAMPLES } from './translation-sheet.mts'
 
 /** Phrases that are rightly the same in another language: proper names. */
 const SAME_AS_ENGLISH_OK: Record<string, string[]> = { es: ['orgName'] }
@@ -37,9 +37,7 @@ describe('guest portal translations', () => {
   })
 
   it('the review sheet is up to date (run: npm run translations)', () => {
-    const { csv, html } = buildSheet()
-    expect(readFileSync(OUT + FILES.csv, 'utf8')).toBe(csv)
-    expect(readFileSync(OUT + FILES.html, 'utf8')).toBe(html)
+    expect(readFileSync(OUT + PAGE, 'utf8')).toBe(buildSheet().html)
   })
 
   it('the sheet has a row per phrase and English | 中文 | 한국어 | Español columns', () => {
@@ -47,8 +45,11 @@ describe('guest portal translations', () => {
     const lines = csv.trim().split('\r\n')
     expect(lines).toHaveLength(keys().length + 1)
     expect(lines[0]).toContain('"English","中文 (Traditional)","한국어","Español"')
-    expect(csv.startsWith('﻿')).toBe(true)
+    expect(csv.startsWith('\uFEFF')).toBe(true)
     expect(html).toContain('lang="zh-Hant"')
     expect(html.match(/<tr><th scope="row">/g)).toHaveLength(keys().length)
+    // The spreadsheet travels inside the page: the repo holds no .csv outside seed/ and fixtures/.
+    const link = /<a download="guest-portal-review\.csv" href="data:text\/csv;charset=utf-8,([^"]+)">/.exec(html)
+    expect(link && decodeURIComponent(link[1]!)).toBe(csv)
   })
 })
