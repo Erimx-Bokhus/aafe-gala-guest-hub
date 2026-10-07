@@ -1,34 +1,11 @@
 // Backend tests: loads schema.sql + seed.sql + backend.sql into in-memory Postgres (PGlite)
 // with stand-ins for Supabase roles and auth.jwt(), then runs both apps' flows.  npm run test:backend
-import { PGlite } from '@electric-sql/pglite'
 import { randomBytes } from 'node:crypto'
 import { readFileSync } from 'node:fs'
-import { fileURLToPath } from 'node:url'
-const D = fileURLToPath(new URL('../database/', import.meta.url))
-const db = new PGlite()
-// Minimal Supabase stand-ins: API roles and auth.jwt() reading the request claims, as Supabase does.
-await db.exec(`
-create role anon nologin; create role authenticated nologin; create role service_role nologin bypassrls;
-create schema auth; grant usage on schema auth to anon, authenticated, service_role;
-create function auth.jwt() returns jsonb language sql stable as $$ select coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb $$;
-grant usage on schema public to anon, authenticated, service_role;
-alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
-alter default privileges in schema public grant all on sequences to anon, authenticated, service_role;
-`)
-await db.exec(readFileSync(D + 'schema.sql', 'utf8'))
-await db.exec(readFileSync(D + 'seed.sql', 'utf8'))
-await db.exec(readFileSync(D + 'backend.sql', 'utf8'))
-await db.exec(readFileSync(D + 'backend.sql', 'utf8')) // re-run must be safe
+import { D, openTestDb } from './test-db.mjs'
+const { db, as, err } = await openTestDb()
 let pass = 0, fail = 0
 const ok = (c, m) => { if (c) pass++; else { fail++; console.log('FAIL:', m) } }
-async function as(role, email, sql, params = []) {
-  await db.exec(`reset role; select set_config('request.jwt.claims', '${email ? JSON.stringify({ email }) : ''}', false)`)
-  await db.exec(`set role ${role}`)
-  try { return (await db.query(sql, params)).rows } finally { await db.exec('reset role') }
-}
-async function err(role, email, sql, params = []) {
-  try { await as(role, email, sql, params); return null } catch (e) { return e.message }
-}
 const ADMIN = 'mei.ortiz@aafe-demo.example.org', RM = 'daniel.seo@aafe-demo.example.org'
 const vol = (await db.query(`select email from staff_users where role='check_in_volunteer'`)).rows[0].email
 
@@ -359,3 +336,5 @@ const logged = (await db.query(`select action, count(*)::int n from audit_log wh
 ok(['export.badges', 'export.checkin', 'export.salesforce'].every(a => logged.some(l => l.action === a)), 'every export is written to the activity log')
 
 console.log(`${pass} passed, ${fail} failed`)
+
+if (fail) process.exitCode = 1
