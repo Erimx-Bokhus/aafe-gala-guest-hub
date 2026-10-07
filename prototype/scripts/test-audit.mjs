@@ -44,12 +44,16 @@ const ACTIONS = [
   ['staff_check_in_qr', VOL, `select staff_check_in_qr('aafe-00000000000000000000000000test')`, 'checkin.arrived'],
   ['staff_check_in_exception', VOL, `select staff_check_in_exception('Walk-in Guest', 'ord-acme', 'walk_in', 'Took an unnamed seat')`, 'checkin.exception'],
   ['staff_sync_check_ins', VOL, `select staff_sync_check_ins('[{"client_id":"ipad1-0001","guest_id":"g-021","method":"search","device":"Door 2"}]')`, 'checkin.arrived'],
+  ['staff_save_prospect', RM, `select staff_save_prospect('{"organization":"Audit Prospect Co","contact_name":"Sam Rivera","ask_amount":5000}')`, 'prospect.created'],
+  ['staff_set_prospect_stage', RM, `select staff_set_prospect_stage((select p.id from sponsor_prospects p join sponsors s on s.id = p.sponsor_id
+     where s.organization_name = 'Audit Prospect Co'), 'reached_out')`, 'prospect.stage'],
+  ['staff_set_sponsorship_goal', ADMIN, `select staff_set_sponsorship_goal(250000)`, 'gala.goal_set'],
   ['staff_export_badges', RM, `select * from staff_export_badges(true)`, 'export.badges'],
   ['staff_export_checkin', VOL, `select * from staff_export_checkin()`, 'export.checkin'],
   ['staff_export_salesforce', ADMIN, `select * from staff_export_salesforce()`, 'export.salesforce'],
 ]
 // Only read, so nothing to log.
-const READS = ['staff_me', 'staff_role', 'staff_email_queue', 'checkin_list', 'staff_checkin_snapshot']
+const READS = ['staff_me', 'staff_role', 'staff_email_queue', 'checkin_list', 'staff_checkin_snapshot', 'staff_pipeline']
 
 // Some staff reminders only draft when a sponsor's deadline is ahead; keep them ahead of today.
 await db.exec(`update orders set guest_list_deadline = (now() + interval '30 days')::date where event_id = current_event_id()`)
