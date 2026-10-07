@@ -63,8 +63,8 @@ The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus),
 
 - [x] Exports built and loaded into the team Supabase project (PR #34) — Aisling <!-- updated 2026-10-06 20:41 Aisling -->
 - [x] Antonin's sponsor portal prototype reviewed — Natalie, Aisling <!-- updated 2026-10-06 20:41 Aisling -->
-- [ ] Merge PR #36: keys kept out of the browser and the repo, app unit tests in CI — Aisling <!-- updated 2026-10-06 20:41 Aisling -->
-- [ ] Add the 20 staff sign-in tests to #35 after #36 merges — Aisling <!-- updated 2026-10-06 20:41 Aisling -->
+- [x] Merge PR #36: keys kept out of the browser and the repo, app unit tests in CI — Aisling <!-- modified 2026-10-06 20:56 Aisling -->
+- [x] Add the 20 staff sign-in tests to #35 — Aisling <!-- modified 2026-10-06 20:56 Aisling -->
 - [ ] Merge #35 into `cornell-staff-auth`, then run the live sign-in test against the team project — Cornell <!-- updated 2026-10-06 20:41 Aisling -->
 - [ ] Port tier layout, the "still need names" line, Korean, and gala-night arrivals into `guest-portal` as small PRs, screenshots first — Antonin (Natalie approves) <!-- updated 2026-10-06 20:41 Aisling -->
 - [ ] Switch the prototype's demo emails to `@example.org`; confirm the Figma Make site isn't published — Antonin <!-- updated 2026-10-06 20:41 Aisling -->
