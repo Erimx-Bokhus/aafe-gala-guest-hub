@@ -8,7 +8,7 @@ The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus),
 
 - [x] Correct the GreyBox Creative note in the docs (not posted to Slack, to keep the channel quiet) — Aisling <!-- modified 2026-10-07 02:18 Aisling -->
 - [ ] Team review of the data and AI handling note — Team
-- [ ] Fold the hosting critique into the production-readiness notes — Aisling
+- [x] Fold the hosting critique into the production-readiness notes (Hosting page, Oct 7) — Aisling <!-- modified 2026-10-07 13:45 Aisling -->
 - [ ] Send AAFE the recap, including the no-payment-data correction — Natalie
 - [x] Propose component owners (pairs, Oct 5) — Aisling <!-- modified 2026-10-06 05:50 Aisling -->
 - [ ] Ask AAFE for goals per category (sample export received Oct 5) — Natalie <!-- modified 2026-10-06 05:50 Aisling -->
@@ -18,14 +18,14 @@ The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus),
 <!-- updated 2026-10-05 16:51 Aisling -->
 
 - [x] Record the stack decision: React + Supabase — Aisling <!-- modified 2026-10-05 22:58 Aisling -->
-- [ ] Pick the demo preview host — Team <!-- modified 2026-10-05 16:51 Aisling -->
+- [x] Pick the demo preview host: Vercel's free plan (Oct 6) — Team <!-- modified 2026-10-07 13:45 Aisling -->
 - [x] Commit the handoff package to the team repo (Erimx-Bokhus) — Aisling <!-- modified 2026-10-03 11:56 Aisling -->
 - [x] CI with secret scanning (gitleaks on every PR and on `main`), .gitignore, .env.example — Aisling <!-- modified 2026-10-06 05:50 Aisling -->
 - [x] Import and matching spec with 22 test cases (now 38, PRs #20, #22) — Aisling <!-- modified 2026-10-06 05:50 Aisling -->
 - [x] Seed data requirements for the import tests — Aisling <!-- modified 2026-10-03 11:56 Aisling -->
 - [ ] Web app preview deploy (database is live in the team Supabase project) — Backend pair <!-- modified 2026-10-06 06:12 Aisling -->
 - [x] Database schema and migrations (Natalie's backend, merged Oct 5) — Backend pair <!-- modified 2026-10-06 06:12 Aisling -->
-- [ ] Synthetic data generator (~550 guests, messy cases) — Backend pair <!-- modified 2026-10-05 20:37 Aisling -->
+- [x] Synthetic data generator: 553 invented guests, messy cases, for the import tests (PR #50) — Aisling <!-- modified 2026-10-07 13:45 Aisling -->
 - [ ] Supabase sign-in (#8, PR #27 in review) and server-side staff roles (#9) — Cornell <!-- modified 2026-10-05 22:58 Aisling -->
 - [x] Get AAFE's materials (received Oct 5) — Natalie <!-- modified 2026-10-05 22:58 Aisling -->
 - [x] Check AAFE's sample export against the import spec — Aisling <!-- modified 2026-10-05 22:58 Aisling -->
@@ -73,6 +73,23 @@ The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus),
 - [ ] AAFE privacy review of sponsor-facing gala-night arrivals — Natalie <!-- updated 2026-10-06 20:41 Aisling -->
 - [ ] Decide whether guest email is required or optional — Team <!-- updated 2026-10-06 20:41 Aisling -->
 
+## Added October 7
+<!-- new 2026-10-07 13:45 Aisling -->
+
+- [x] Every staff action logged; tests for daylight-saving days, a 2,000-row file, Internal Name only, and the Give Lively sync (PR #46) — Aisling <!-- new 2026-10-07 13:45 Aisling -->
+- [x] Offline check-in: the iPad's saved list, sync later, first arrival wins (PR #46) — Aisling <!-- new 2026-10-07 13:45 Aisling -->
+- [x] Sponsor pipeline in the backend (PR #48) — Aisling <!-- new 2026-10-07 13:45 Aisling -->
+- [x] Sponsor-facing arrivals, switched off until AAFE approves (PR #49) — Aisling <!-- new 2026-10-07 13:45 Aisling -->
+- [x] Translation review sheet for AAFE, and no silent English fallback (PR #50) — Aisling <!-- new 2026-10-07 13:45 Aisling -->
+- [x] Full-size invented test gala, 553 guests, through the import into the database (PR #50) — Aisling <!-- new 2026-10-07 13:45 Aisling -->
+- [ ] Load PRs #42–#50 into the team Supabase project: `npm run db:backend`, then `npm run db:advisors` — Aisling <!-- new 2026-10-07 13:45 Aisling -->
+- [ ] Set up the Vercel demo: two projects (staff app, guest portal); the Supabase URL and public key in Vercel's settings only — Aisling <!-- new 2026-10-07 13:45 Aisling -->
+- [ ] Check-in screen: wire in the offline module (`CheckInDesk`) and the "Offline · N check-ins waiting" banner — Frontend pair <!-- new 2026-10-07 13:45 Aisling -->
+- [ ] Pipeline board and prospect form in the staff app — Frontend pair <!-- new 2026-10-07 13:45 Aisling -->
+- [ ] Portal: show arrivals when a gala admin switches them on — Antonin <!-- new 2026-10-07 13:45 Aisling -->
+- [ ] AAFE reviews the translations on the review sheet (`prototype/docs/translations/`) — Natalie <!-- new 2026-10-07 13:45 Aisling -->
+- [ ] Decide whether a name written in Chinese or Korean script without a space (陳美玲) counts as a full name in the import; today it's left for the sponsor — Team <!-- new 2026-10-07 13:45 Aisling -->
+
 ## Week of October 12
 
 - [ ] Connect staff app pages to the backend's pledges, payments, comps, and seats (with #9) — Backend pair <!-- modified 2026-10-06 06:12 Aisling -->
@@ -89,7 +106,7 @@ The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus),
 ## Week of October 26
 
 - [ ] Exports: database side done and loaded into the team project (badge file with table numbers, check-in list, Salesforce file; PR #34); staff app buttons next, with the frontend pair — Backend pair <!-- modified 2026-10-06 20:41 Aisling -->
-- [ ] Approval screen, plus reminder and receipt templates (draft queue and approval built in the backend) — Backend pair <!-- modified 2026-10-06 06:12 Aisling -->
+- [ ] Approval screen in the staff app (reminder and payment-confirmation templates and the queue are built, PR #44) — Frontend pair <!-- modified 2026-10-07 13:45 Aisling -->
 - [ ] Check-in app: search, arrivals, walk-ins, blank sponsor seats — Frontend pair <!-- modified 2026-10-05 20:37 Aisling -->
 - [ ] Show AAFE the full path for feedback — Natalie
 

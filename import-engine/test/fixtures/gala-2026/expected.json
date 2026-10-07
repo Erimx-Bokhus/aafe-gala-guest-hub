@@ -1,0 +1,1601 @@
+{
+ "note": "Invented data. What the import should make of each Give Lively row, in file order (row 2 is the first data row).",
+ "totals": {
+  "sponsorSeats": 234,
+  "ticketSeats": 107,
+  "staffAdded": 212,
+  "byStaffCategory": {
+   "comped": 109,
+   "government_or_vip": 53,
+   "aafe_staff": 45,
+   "event_volunteer": 3,
+   "event_staff": 2
+  }
+ },
+ "sponsors": [
+  {
+   "id": "sp-shared-inbox",
+   "organizationName": "Shared Inbox Example Co",
+   "primaryContactName": "Pat Morgan",
+   "primaryContactEmail": "events@sharedinbox.example.org"
+  }
+ ],
+ "rows": [
+  {
+   "rowNumber": 2,
+   "email": "NADIA31@HOME.EXAMPLE.ORG",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "none",
+    "named": 0,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 3,
+   "email": "ROSA68@MAIL.EXAMPLE.ORG",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "none",
+    "named": 0,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 4,
+   "email": "mateo40@inbox.example.org",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "names",
+    "named": 1,
+    "unread": 0,
+    "buyerIsGuest": true
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 5,
+   "email": "GRACE19@HOME.EXAMPLE.ORG",
+   "category": "ticket",
+   "seats": 2,
+   "tier": "supporter",
+   "guests": {
+    "kind": "names",
+    "named": 2,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 6,
+   "email": "OLIVIA80@INBOX.EXAMPLE.ORG",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "names",
+    "named": 1,
+    "unread": 0,
+    "buyerIsGuest": true
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 7,
+   "email": "kwame70@home.example.org",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "names",
+    "named": 1,
+    "unread": 0,
+    "buyerIsGuest": true
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 8,
+   "email": "GRACE63@INBOX.EXAMPLE.ORG",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "none",
+    "named": 0,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 9,
+   "email": "priya37@mail.example.org",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "names",
+    "named": 1,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 10,
+   "email": "carlos.nguyen@donor.example.org",
+   "category": "refunded",
+   "seats": 2,
+   "tier": "supporter",
+   "guests": {
+    "kind": "names",
+    "named": 1,
+    "unread": 0,
+    "buyerIsGuest": true
+   },
+   "review": [
+    "refund"
+   ]
+  },
+  {
+   "rowNumber": 11,
+   "email": "olivia62@home.example.org",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "names",
+    "named": 1,
+    "unread": 0,
+    "buyerIsGuest": true
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 12,
+   "email": "min.jun4@mail.example.org",
+   "category": "ticket",
+   "seats": 2,
+   "tier": "supporter",
+   "guests": {
+    "kind": "none",
+    "named": 0,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 13,
+   "email": "kwame.ramos@mulberryexamplebank.example.org",
+   "category": "sponsor",
+   "seats": 6,
+   "tier": "champion",
+   "guests": {
+    "kind": "names",
+    "named": 3,
+    "unread": 0,
+    "buyerIsGuest": true
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 14,
+   "email": "kwame.rodriguez@lanternexamplemedia.example.org",
+   "category": "sponsor",
+   "seats": 2,
+   "tier": "friend",
+   "guests": {
+    "kind": "names",
+    "named": 1,
+    "unread": 1
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 15,
+   "email": "fatima60@home.example.org",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "none",
+    "named": 0,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 16,
+   "email": "grace33@inbox.example.org",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "none",
+    "named": 0,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 17,
+   "email": "mei.ortiz@jadeexamplehealth.example.org",
+   "category": "sponsor",
+   "seats": 6,
+   "tier": "champion",
+   "guests": {
+    "kind": "names",
+    "named": 4,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 18,
+   "email": "samuel.ang@pellexamplebank.example.org",
+   "category": "sponsor",
+   "seats": 8,
+   "tier": "bronze",
+   "guests": {
+    "kind": "names",
+    "named": 4,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 19,
+   "email": "ANA22@INBOX.EXAMPLE.ORG",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "names",
+    "named": 1,
+    "unread": 0,
+    "buyerIsGuest": true
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 20,
+   "email": "nadia.nguyen@henryexamplebuilders.example.org",
+   "category": "sponsor",
+   "seats": 8,
+   "tier": "bronze",
+   "guests": {
+    "kind": "names",
+    "named": 5,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 21,
+   "email": "sofia.ahmed@baxterexamplecreditunion.example.org",
+   "category": "sponsor",
+   "seats": 8,
+   "tier": "bronze",
+   "guests": {
+    "kind": "unclear",
+    "named": 0,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 22,
+   "email": "hana29@mail.example.org",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "names",
+    "named": 1,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 23,
+   "email": "haruto44@home.example.org",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "none",
+    "named": 0,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 24,
+   "email": "LEILA36@HOME.EXAMPLE.ORG",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "none",
+    "named": 0,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 25,
+   "email": "daniel.ahmed@donor.example.org",
+   "category": "other_campaign",
+   "seats": 0,
+   "tier": null,
+   "guests": null,
+   "review": []
+  },
+  {
+   "rowNumber": 26,
+   "email": "kwame72@inbox.example.org",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "names",
+    "named": 1,
+    "unread": 0,
+    "buyerIsGuest": true
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 27,
+   "email": "diego27@inbox.example.org",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "names",
+    "named": 1,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 28,
+   "email": "renee17@home.example.org",
+   "category": "ticket",
+   "seats": 2,
+   "tier": "supporter",
+   "guests": {
+    "kind": "none",
+    "named": 0,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 29,
+   "email": "ARJUN43@INBOX.EXAMPLE.ORG",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "names",
+    "named": 1,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 30,
+   "email": "renee.singh81@home.example.org",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "none",
+    "named": 0,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 31,
+   "email": "kenji.singh83@home.example.org",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "names",
+    "named": 1,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 32,
+   "email": "HANA21@HOME.EXAMPLE.ORG",
+   "category": "ticket",
+   "seats": 2,
+   "tier": "supporter",
+   "guests": {
+    "kind": "names",
+    "named": 2,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 33,
+   "email": "PRIYA.YAMADA20@MAIL.EXAMPLE.ORG",
+   "category": "ticket",
+   "seats": 2,
+   "tier": "supporter",
+   "guests": {
+    "kind": "none",
+    "named": 0,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 34,
+   "email": "olivia.kaur@worthexamplemedia.example.org",
+   "category": "sponsor",
+   "seats": 2,
+   "tier": "friend",
+   "guests": {
+    "kind": "names",
+    "named": 1,
+    "unread": 1
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 35,
+   "email": "chloe8@inbox.example.org",
+   "category": "ticket",
+   "seats": 2,
+   "tier": "supporter",
+   "guests": {
+    "kind": "names",
+    "named": 2,
+    "unread": 0,
+    "buyerIsGuest": true
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 36,
+   "email": "ethan82@home.example.org",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "names",
+    "named": 1,
+    "unread": 0,
+    "buyerIsGuest": true
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 37,
+   "email": "OMAR59@MAIL.EXAMPLE.ORG",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "names",
+    "named": 1,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 38,
+   "email": "OMAR38@MAIL.EXAMPLE.ORG",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "names",
+    "named": 1,
+    "unread": 0,
+    "buyerIsGuest": true
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 39,
+   "email": "mei.lopez@mulberryexamplelawgroup.example.org",
+   "category": "sponsor",
+   "seats": 6,
+   "tier": "champion",
+   "guests": {
+    "kind": "none",
+    "named": 0,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 40,
+   "email": "leila.rodriguez24@home.example.org",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "names",
+    "named": 1,
+    "unread": 0,
+    "buyerIsGuest": true
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 41,
+   "email": "ravi.kim@eldridgeexamplelawgroup.example.org",
+   "category": "sponsor",
+   "seats": 10,
+   "tier": "silver",
+   "guests": {
+    "kind": "none",
+    "named": 0,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 42,
+   "email": "seo.yeon66@home.example.org",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "names",
+    "named": 1,
+    "unread": 0,
+    "buyerIsGuest": true
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 43,
+   "email": "renee35@inbox.example.org",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "names",
+    "named": 1,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 44,
+   "email": "noah.lin18@home.example.org",
+   "category": "ticket",
+   "seats": 2,
+   "tier": "supporter",
+   "guests": {
+    "kind": "names",
+    "named": 2,
+    "unread": 0,
+    "buyerIsGuest": true
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 45,
+   "email": "leila15@mail.example.org",
+   "category": "ticket",
+   "seats": 2,
+   "tier": "supporter",
+   "guests": {
+    "kind": "none",
+    "named": 0,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 46,
+   "email": "camila.tanaka39@home.example.org",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "none",
+    "named": 0,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 47,
+   "email": "DIEGO58@MAIL.EXAMPLE.ORG",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "names",
+    "named": 1,
+    "unread": 0,
+    "buyerIsGuest": true
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 48,
+   "email": "minh49@home.example.org",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "none",
+    "named": 0,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 49,
+   "email": "camila.lin54@inbox.example.org",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "names",
+    "named": 1,
+    "unread": 0,
+    "buyerIsGuest": true
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 50,
+   "email": "arjun52@home.example.org",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "none",
+    "named": 0,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 51,
+   "email": "haruto.garcia@chrystieexamplecreditunion.example.org",
+   "category": "sponsor",
+   "seats": 10,
+   "tier": "gold",
+   "guests": {
+    "kind": "names",
+    "named": 9,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 52,
+   "email": "seo.yeon79@home.example.org",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "none",
+    "named": 0,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 53,
+   "email": "fatima.lee@bayardexamplebuilders.example.org",
+   "category": "sponsor",
+   "seats": 10,
+   "tier": "gold",
+   "guests": {
+    "kind": "names",
+    "named": 4,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 54,
+   "email": "WEI30@HOME.EXAMPLE.ORG",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "names",
+    "named": 1,
+    "unread": 0,
+    "buyerIsGuest": true
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 55,
+   "email": "kenji75@mail.example.org",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "names",
+    "named": 1,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 56,
+   "email": "aisha61@mail.example.org",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "names",
+    "named": 1,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 57,
+   "email": "diego69@home.example.org",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "names",
+    "named": 1,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 58,
+   "email": "carlos45@inbox.example.org",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "names",
+    "named": 1,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 59,
+   "email": "jun73@mail.example.org",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "none",
+    "named": 0,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 60,
+   "email": "hana.choi@boweryexamplelawgroup.example.org",
+   "category": "sponsor",
+   "seats": 10,
+   "tier": "gold",
+   "guests": {
+    "kind": "names",
+    "named": 9,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 61,
+   "email": "diego51@inbox.example.org",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "names",
+    "named": 1,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 62,
+   "email": "mateo13@home.example.org",
+   "category": "ticket",
+   "seats": 2,
+   "tier": "supporter",
+   "guests": {
+    "kind": "names",
+    "named": 2,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 63,
+   "email": "linh14@mail.example.org",
+   "category": "ticket",
+   "seats": 2,
+   "tier": "supporter",
+   "guests": {
+    "kind": "names",
+    "named": 2,
+    "unread": 0,
+    "buyerIsGuest": true
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 64,
+   "email": "rosa.chen55@inbox.example.org",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "none",
+    "named": 0,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 65,
+   "email": "ravi1@inbox.example.org",
+   "category": "ticket",
+   "seats": 2,
+   "tier": "supporter",
+   "guests": {
+    "kind": "none",
+    "named": 0,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 66,
+   "email": "aisha.ramos26@mail.example.org",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "names",
+    "named": 1,
+    "unread": 0,
+    "buyerIsGuest": true
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 67,
+   "email": "ISABEL46@HOME.EXAMPLE.ORG",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "names",
+    "named": 1,
+    "unread": 0,
+    "buyerIsGuest": true
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 68,
+   "email": "sofia.rodriguez9@inbox.example.org",
+   "category": "ticket",
+   "seats": 2,
+   "tier": "supporter",
+   "guests": {
+    "kind": "none",
+    "named": 0,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 69,
+   "email": "ethan78@inbox.example.org",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "names",
+    "named": 1,
+    "unread": 0,
+    "buyerIsGuest": true
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 70,
+   "email": "sofia.haddad@delanceyexamplerealty.example.org",
+   "category": "sponsor",
+   "seats": 6,
+   "tier": "champion",
+   "guests": {
+    "kind": "names",
+    "named": 5,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 71,
+   "email": "linh76@home.example.org",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "none",
+    "named": 0,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 72,
+   "email": "WEI12@HOME.EXAMPLE.ORG",
+   "category": "ticket",
+   "seats": 2,
+   "tier": "supporter",
+   "guests": {
+    "kind": "none",
+    "named": 0,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 73,
+   "email": "min.jun.kowalski@jadeexamplebuilders.example.org",
+   "category": "sponsor",
+   "seats": 10,
+   "tier": "silver",
+   "guests": {
+    "kind": "none",
+    "named": 0,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 74,
+   "email": "ethan.zhang@pikeexamplerealty.example.org",
+   "category": "sponsor",
+   "seats": 6,
+   "tier": "champion",
+   "guests": {
+    "kind": "names",
+    "named": 4,
+    "unread": 1
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 75,
+   "email": "KENJI42@INBOX.EXAMPLE.ORG",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "names",
+    "named": 1,
+    "unread": 0,
+    "buyerIsGuest": true
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 76,
+   "email": "luis0@inbox.example.org",
+   "category": "ticket",
+   "seats": 2,
+   "tier": "supporter",
+   "guests": {
+    "kind": "names",
+    "named": 2,
+    "unread": 0,
+    "buyerIsGuest": true
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 77,
+   "email": "rosa64@mail.example.org",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "names",
+    "named": 1,
+    "unread": 0,
+    "buyerIsGuest": true
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 78,
+   "email": "yuki41@inbox.example.org",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "none",
+    "named": 0,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 79,
+   "email": "grace.zhang@henryexamplelawgroup.example.org",
+   "category": "sponsor",
+   "seats": 10,
+   "tier": "gold",
+   "guests": {
+    "kind": "names",
+    "named": 8,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 80,
+   "email": "renee.jung@catherineexamplecreditunion.example.org",
+   "category": "sponsor",
+   "seats": 6,
+   "tier": "champion",
+   "guests": {
+    "kind": "names",
+    "named": 4,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 81,
+   "email": "chloe.nguyen@doyersexamplemedia.example.org",
+   "category": "sponsor",
+   "seats": 10,
+   "tier": "silver",
+   "guests": {
+    "kind": "names",
+    "named": 6,
+    "unread": 1
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 82,
+   "email": "chloe.ang@donor.example.org",
+   "category": "other_campaign",
+   "seats": 0,
+   "tier": null,
+   "guests": null,
+   "review": []
+  },
+  {
+   "rowNumber": 83,
+   "email": "leila.zhang@delanceyexamplemedia.example.org",
+   "category": "sponsor",
+   "seats": 8,
+   "tier": "bronze",
+   "guests": {
+    "kind": "names",
+    "named": 6,
+    "unread": 1
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 84,
+   "email": "NADIA23@INBOX.EXAMPLE.ORG",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "none",
+    "named": 0,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 85,
+   "email": "sofia48@home.example.org",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "names",
+    "named": 1,
+    "unread": 0,
+    "buyerIsGuest": true
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 86,
+   "email": "grace7@mail.example.org",
+   "category": "ticket",
+   "seats": 2,
+   "tier": "supporter",
+   "guests": {
+    "kind": "none",
+    "named": 0,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 87,
+   "email": "arjun57@inbox.example.org",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "none",
+    "named": 0,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 88,
+   "email": "isabel.kaur@lanternexamplehealth.example.org",
+   "category": "sponsor",
+   "seats": 8,
+   "tier": "bronze",
+   "guests": {
+    "kind": "names",
+    "named": 5,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 89,
+   "email": "tomas56@mail.example.org",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "names",
+    "named": 1,
+    "unread": 0,
+    "buyerIsGuest": true
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 90,
+   "email": "isabel.moreau@mulberryexamplefoundation.example.org",
+   "category": "sponsor",
+   "seats": 10,
+   "tier": "silver",
+   "guests": {
+    "kind": "names",
+    "named": 8,
+    "unread": 0,
+    "buyerIsGuest": true
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 91,
+   "email": "mei.haddad71@home.example.org",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "none",
+    "named": 0,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 92,
+   "email": "ji.woo.patel@orchardexamplepartners.example.org",
+   "category": "sponsor",
+   "seats": 8,
+   "tier": "bronze",
+   "guests": {
+    "kind": "names",
+    "named": 3,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 93,
+   "email": "diego84@home.example.org",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "none",
+    "named": 0,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 94,
+   "email": "linh28@home.example.org",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "none",
+    "named": 0,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 95,
+   "email": "min.jun.sato@baxterexamplepartners.example.org",
+   "category": "sponsor",
+   "seats": 10,
+   "tier": "gold",
+   "guests": {
+    "kind": "names",
+    "named": 5,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 96,
+   "email": "luis.lopez32@mail.example.org",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "names",
+    "named": 1,
+    "unread": 0,
+    "buyerIsGuest": true
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 97,
+   "email": "events@sharedinbox.example.org",
+   "category": "sponsor",
+   "seats": 10,
+   "tier": "silver",
+   "guests": {
+    "kind": "names",
+    "named": 9,
+    "unread": 0,
+    "buyerIsGuest": true
+   },
+   "review": [
+    "email_name_conflict"
+   ]
+  },
+  {
+   "rowNumber": 98,
+   "email": "DIEGO65@MAIL.EXAMPLE.ORG",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "none",
+    "named": 0,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 99,
+   "email": "WEI50@MAIL.EXAMPLE.ORG",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "names",
+    "named": 1,
+    "unread": 0,
+    "buyerIsGuest": true
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 100,
+   "email": "linh.liu@eldridgeexamplerealty.example.org",
+   "category": "sponsor",
+   "seats": 12,
+   "tier": "platinum",
+   "guests": {
+    "kind": "names",
+    "named": 10,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 101,
+   "email": "mei34@mail.example.org",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "names",
+    "named": 1,
+    "unread": 0,
+    "buyerIsGuest": true
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 102,
+   "email": "OMAR67@INBOX.EXAMPLE.ORG",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "names",
+    "named": 1,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 103,
+   "email": "nadia2@inbox.example.org",
+   "category": "ticket",
+   "seats": 2,
+   "tier": "supporter",
+   "guests": {
+    "kind": "names",
+    "named": 2,
+    "unread": 0,
+    "buyerIsGuest": true
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 104,
+   "email": "carlos25@inbox.example.org",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "none",
+    "named": 0,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 105,
+   "email": "ana5@mail.example.org",
+   "category": "ticket",
+   "seats": 2,
+   "tier": "supporter",
+   "guests": {
+    "kind": "names",
+    "named": 2,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 106,
+   "email": "aisha.kowalski@baxterexampletrust.example.org",
+   "category": "sponsor",
+   "seats": 10,
+   "tier": "silver",
+   "guests": {
+    "kind": "names",
+    "named": 5,
+    "unread": 1
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 107,
+   "email": "JI.WOO.ORTIZ10@HOME.EXAMPLE.ORG",
+   "category": "ticket",
+   "seats": 2,
+   "tier": "supporter",
+   "guests": {
+    "kind": "names",
+    "named": 2,
+    "unread": 0,
+    "buyerIsGuest": true
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 108,
+   "email": "fatima.nunez@donor.example.org",
+   "category": "unknown_tier",
+   "seats": 10,
+   "tier": null,
+   "guests": null,
+   "review": [
+    "unknown_tier"
+   ]
+  },
+  {
+   "rowNumber": 109,
+   "email": "bao53@inbox.example.org",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "names",
+    "named": 1,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 110,
+   "email": "mateo.lopez@divisionexamplefoundation.example.org",
+   "category": "sponsor",
+   "seats": 6,
+   "tier": "champion",
+   "guests": {
+    "kind": "names",
+    "named": 4,
+    "unread": 0,
+    "buyerIsGuest": true
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 111,
+   "email": "noah.kim@divisionexamplerealty.example.org",
+   "category": "sponsor",
+   "seats": 6,
+   "tier": "champion",
+   "guests": {
+    "kind": "none",
+    "named": 0,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 112,
+   "email": "isabel16@inbox.example.org",
+   "category": "ticket",
+   "seats": 2,
+   "tier": "supporter",
+   "guests": {
+    "kind": "names",
+    "named": 2,
+    "unread": 0,
+    "buyerIsGuest": true
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 113,
+   "email": "camila77@home.example.org",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "names",
+    "named": 1,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 114,
+   "email": "AISHA.TRAN74@HOME.EXAMPLE.ORG",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "names",
+    "named": 1,
+    "unread": 0,
+    "buyerIsGuest": true
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 115,
+   "email": "yuki.lee@harborexamplecreditunion.example.org",
+   "category": "sponsor",
+   "seats": 12,
+   "tier": "platinum",
+   "guests": {
+    "kind": "names",
+    "named": 10,
+    "unread": 0
+   },
+   "review": [
+    "double_booked"
+   ]
+  },
+  {
+   "rowNumber": 116,
+   "email": "olivia11@mail.example.org",
+   "category": "ticket",
+   "seats": 2,
+   "tier": "supporter",
+   "guests": {
+    "kind": "names",
+    "named": 2,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 117,
+   "email": "not an email",
+   "category": "rejected",
+   "seats": 0,
+   "tier": null,
+   "guests": null,
+   "review": []
+  },
+  {
+   "rowNumber": 118,
+   "email": "carlos3@home.example.org",
+   "category": "ticket",
+   "seats": 2,
+   "tier": "supporter",
+   "guests": {
+    "kind": "names",
+    "named": 2,
+    "unread": 0
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 119,
+   "email": "YUKI6@MAIL.EXAMPLE.ORG",
+   "category": "ticket",
+   "seats": 2,
+   "tier": "supporter",
+   "guests": {
+    "kind": "names",
+    "named": 2,
+    "unread": 0,
+    "buyerIsGuest": true
+   },
+   "review": []
+  },
+  {
+   "rowNumber": 120,
+   "email": "mateo47@inbox.example.org",
+   "category": "ticket",
+   "seats": 1,
+   "tier": "supporter",
+   "guests": {
+    "kind": "none",
+    "named": 0,
+    "unread": 0
+   },
+   "review": []
+  }
+ ]
+}
