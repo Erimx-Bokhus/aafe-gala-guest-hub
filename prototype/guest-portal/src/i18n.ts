@@ -1,16 +1,17 @@
-// Guest-portal copy. English / 中文 (Traditional, as used on aafe.org) / Español.
+// Guest-portal copy. English / 中文 (Traditional, as used on aafe.org) / Español / 한국어.
 // DRAFT TRANSLATIONS — AAFE must review and approve before production. AAFE staff review them side by side
 // in docs/translations/ (npm run translations rebuilds it after any change here).
 // Every language spells out every phrase: there is no fallback to English, so a missing phrase fails the
 // build instead of quietly showing English. A phrase that stays the same in every language (a proper
 // name) is written out anyway.
-export type Lang = 'en' | 'zh' | 'es'
+export type Lang = 'en' | 'zh' | 'es' | 'ko'
 export const LANGS: { id: Lang; label: string }[] = [
   { id: 'en', label: 'English' },
   { id: 'zh', label: '中文' },
   { id: 'es', label: 'Español' },
+  { id: 'ko', label: '한국어' },
 ]
-export const LOCALE: Record<Lang, string> = { en: 'en-US', zh: 'zh-Hant', es: 'es-US' }
+export const LOCALE: Record<Lang, string> = { en: 'en-US', zh: 'zh-Hant', es: 'es-US', ko: 'ko-KR' }
 
 const en = {
   langLabel: 'Language', smaller: 'Smaller text', larger: 'Larger text', toDark: 'Switch to dark mode', toLight: 'Switch to light mode',
@@ -168,4 +169,57 @@ const es: Dict = {
   emailNote: 'Demostración: haga clic en el botón para abrir la lista de este patrocinador y completar los asistentes.',
   emailSign: '— Equipo de planificación de la Gala de AAFE',
 }
-export const DICT: Record<Lang, Dict> = { en, zh, es }
+const ko: Dict = {
+  langLabel: '언어', smaller: '글자 작게', larger: '글자 크게', toDark: '다크 모드로 전환', toLight: '라이트 모드로 전환',
+  orgName: '아주인 평등회',
+  eyebrow: 'AAFE 연례 갈라 · 게스트 명단',
+  heroTitle: '갈라 게스트 명단 관리',
+  heroBody: '아주인 평등회(AAFE)를 후원해 주셔서 감사합니다. 이 전용 링크에서 후원 또는 티켓으로 참석하시는 게스트를 추가하거나 수정하실 수 있습니다.',
+  openList: '게스트 명단 열기',
+  pause: '슬라이드쇼 일시정지', play: '슬라이드쇼 재생', slide: '사진 보기',
+  welcome: '환영합니다',
+  package: '후원 등급', seats: '포함된 좌석', submitted: '제출된 이름', deadline: '게스트 이름 제출 마감일',
+  progress: (a, b) => `${b}명 중 ${a}명의 참석자 이름 제출 완료`,
+  contribution: '후원 내역', amountPaid: '납부 금액', commitment: '약정 금액', balance: '잔액', paidOn: '납부일',
+  paymentsTitle: '납부 내역',
+  stPaid: '전액 납부 완료 — 감사합니다', stPartial: '일부 납부', stPledged: '약정됨 — 아직 납부 전', stComp: '무료 초대',
+  noPayments: '아직 납부된 금액이 없습니다. 문의사항은 갈라 준비팀에 연락해 주세요.',
+  payNote: '보안을 위해 결제 정보는 여기에 표시되지 않습니다.',
+  seatsTitle: '참석자 좌석',
+  seatsHelp: '빈 좌석에 게스트를 추가하거나, 일정이 바뀌면 정보를 수정하세요. AAFE 갈라 준비팀이 명찰과 좌석 배치를 위해 각 이름을 확인합니다.',
+  seat: '좌석', open: '게스트 정보 필요', received: '접수됨 — AAFE 확인 중', confirmed: 'AAFE 확인 완료',
+  add: '참석자 추가', update: '참석자 정보 수정', remove: '좌석에서 삭제',
+  formAddTitle: '이 후원에 참석자 추가', formEditTitle: '참석자 정보 수정',
+  firstName: '이름', lastName: '성', title: '직함', organization: '소속', email: '이메일',
+  dietary: '식이 요구사항 (선택)', access: '접근성 요구사항 (선택)', dietaryShort: '식이', accessShort: '접근성',
+  titleHint: '명찰에 표시될 형태로 입력하세요',
+  save: '게스트 명단 저장', cancel: '취소', required: '필수 항목', invalidEmail: '올바른 이메일 주소를 입력하세요',
+  saved: '변경 사항이 저장되었습니다.', lastUpdated: '마지막 수정',
+  activityTitle: '활동 기록', activityHelp: '모든 변경 사항은 날짜와 시간과 함께 기록됩니다.',
+  actAdded: (n, s) => `${n} 님이 ${s}번 좌석에 추가됨`, actUpdated: (n, s) => `${n} 님 정보 수정 (${s}번 좌석)`,
+  actRemoved: (n, s) => `${n} 님이 ${s}번 좌석에서 삭제됨`, actConfirmed: (n) => `${n} 님 AAFE 확인 완료`,
+  actPayment: (a) => `납부 확인: ${a}`, actOrder: '후원 등록됨', actLink: '전용 게스트 명단 링크 발송됨',
+  thanksTitle: 'AAFE와 함께해 주셔서 감사합니다',
+  thanksBody: '여러분의 후원은 AAFE가 저렴한 주택, 소상공인 지원, 지역사회 서비스를 통해 뉴욕 시민을 위한 인종적·사회적·경제적 정의를 실현하는 데 큰 힘이 됩니다. 함께 축하할 날을 기대합니다.',
+  help: '문의 또는 변경 사항이 있으신가요?', contact: 'AAFE 갈라 준비팀에 연락하기',
+  privacy: '이 프로토타입은 가상의 데모 데이터만 사용합니다. 실제 서비스에서는 게스트 정보가 AAFE 갈라 준비 목적으로만 사용되며, AAFE가 승인한 데이터 처리 방침에 따라 관리됩니다.',
+  confirmRemove: '이 게스트를 삭제하시겠습니까? 좌석이 다시 빈 좌석이 됩니다.',
+  notFound: '이 게스트 명단 링크는 유효하지 않거나 만료되었습니다.', notFoundHelp: '새 링크가 필요하시면 AAFE 갈라 준비팀에 연락해 주세요.', saveFailed: '저장하지 못했습니다. 인터넷 연결을 확인한 후 다시 시도해 주세요.',
+  photoCredit: '사진: AAFE 갈라 및 지역사회 프로그램. 최종 이미지는 AAFE 승인 대기 중입니다.',
+  mission: 'AAFE는 1974년부터 주택, 소상공인 지원, 지역사회 서비스를 통해 인종적·사회적·경제적 정의를 실현해 왔습니다.',
+  eventWhen: '갈라 날짜', eventWhere: '장소',
+  landingTitle: '이메일로 받은 전용 링크를 열어 주세요',
+  landingBody: '구매 또는 약정이 등록되면 AAFE가 게스트를 관리할 수 있는 전용 링크를 이메일로 보내드립니다. 비밀번호는 필요 없으며, 이 링크는 본인만을 위한 것입니다.',
+  demoLinks: '데모 링크 (가상의 후원사)',
+  emailSample: '이메일 예시 (후원사가 받는 내용)',
+  emailFrom: '보낸 사람',
+  emailTo: '받는 사람',
+  emailSubject: '제목',
+  emailSubjectText: 'AAFE 연례 갈라에 참석할 게스트를 추가해 주세요',
+  emailHi: '안녕하세요,',
+  emailBody: '후원해 주셔서 감사합니다. 후원 패키지에는 갈라 지정 좌석이 포함되어 있습니다. 명찰과 좌석 준비를 위해 마감일까지 전용 링크에서 각 게스트의 이름, 직함, 소속을 입력해 주세요.',
+  emailCta: '게스트 추가하기',
+  emailNote: '데모: 버튼을 클릭하면 이 후원사의 게스트 명단이 열리고 참석자를 입력할 수 있습니다.',
+  emailSign: '— AAFE 갈라 준비팀',
+}
+export const DICT: Record<Lang, Dict> = { en, zh, es, ko }
