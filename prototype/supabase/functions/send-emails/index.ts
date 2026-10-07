@@ -11,6 +11,7 @@
 //          GUEST_PORTAL_URL (e.g. https://gala.aafe.org/), CRON_SECRET.
 // Demo: EMAIL_REDIRECT_TO=<team inbox> sends every email there instead of the (fake) recipient.
 import QRCode from 'npm:qrcode@1.5.4'
+import { guestListReminderEmail, paymentReceiptEmail, portalLinkEmail, qrInvitationEmail } from '../_shared/emails.ts'
 import { admin, caller, cors, env, json } from '../_shared/supabase.ts'
 
 const MAX_ATTEMPTS = 5
@@ -47,29 +48,43 @@ Deno.serve(async (req) => {
   return json({ sent, failed })
 })
 
+// Gathers what each template needs; the wording lives in _shared/emails.ts.
 // deno-lint-ignore no-explicit-any
 async function build(db: any, m: any, portalUrl: string) {
   const { data: o } = m.order_id
-    ? await db.from('orders').select('guest_list_deadline, sponsorship_tiers(name), gala_events(name, event_date, doors_time, venue_name, venue_address)').eq('id', m.order_id).single()
+    ? await db.from('orders').select('commitment_amount, guest_list_deadline, sponsorship_tiers(name), gala_events(name, event_date, doors_time, venue_name, venue_address, guest_list_deadline)').eq('id', m.order_id).single()
     : { data: null }
-  const ev = o?.gala_events
-  const when = ev ? `${new Date(ev.event_date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}, doors ${ev.doors_time}` : ''
-  const name = esc(m.to_name ?? '')
+  const event = o?.gala_events ?? null
+  const deadline = o?.guest_list_deadline ?? event?.guest_list_deadline ?? null
+  const toName = m.to_name ?? ''
+  const newLink = () => { const token = randomToken(); return { token, link: `${portalUrl.replace(/#.*$/, '')}#/s/${token}` } }
 
   if (m.template === 'portal_link') {
-    const token = randomToken()
-    const link = `${portalUrl.replace(/#.*$/, '')}#/s/${token}`
-    const deadline = o?.guest_list_deadline ? new Date(o.guest_list_deadline + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric' }) : null
+    const { token, link } = newLink()
+    return { ...portalLinkEmail({ toName, tierName: o?.sponsorship_tiers?.name ?? null, event, deadline, link }), tokenHash: await sha256(token), attachments: undefined }
+  }
+
+  if (m.template === 'guest_list_reminder') {
+    const { data: seats } = await db.from('seats').select('status').eq('order_id', m.order_id).neq('status', 'cancelled')
+    const unnamed = (seats ?? []).filter((x: { status: string }) => x.status === 'unnamed').length
+    // Everyone named since the draft was approved: nothing to remind about, so don't send it.
+    if (unnamed === 0) throw new Error('No unnamed seats left; discard this reminder')
+    const { token, link } = newLink()
     return {
-      subject: `Add your guests for ${ev?.name ?? 'the AAFE Gala'}`,
-      tokenHash: await sha256(token),
-      attachments: undefined,
-      html: layout(`<p>Dear ${name},</p>
-        <p>Thank you for your ${esc(o?.sponsorship_tiers?.name ?? 'support')} for ${esc(ev?.name ?? 'the AAFE Gala')}. Please tell us who will be sitting at your seats${deadline ? ` by <strong>${deadline}</strong>` : ''}.</p>
-        <p style="margin:28px 0"><a href="${link}" style="background:#C64C28;color:#fff;padding:12px 22px;border-radius:8px;text-decoration:none;font-weight:600">Add or update guest names</a></p>
-        <p>You can return to this link at any time to make changes. It is private to your organization, so please don't forward it outside your team.</p>
-        <p style="color:#555">English · 中文 · Español — choose your language on the page.</p>
-        <p>${esc(when)}<br>${esc(ev?.venue_name ?? '')}</p>`),
+      ...guestListReminderEmail({ toName, tierName: o?.sponsorship_tiers?.name ?? null, event, deadline, link, unnamed, total: seats.length }),
+      tokenHash: await sha256(token), attachments: undefined,
+    }
+  }
+
+  if (m.template === 'payment_receipt') {
+    const { data: p } = await db.from('payments').select('gross_amount, method, received_at, check_number').eq('id', m.payment_id).single()
+    if (!p) throw new Error('Payment not found')
+    const { data: all } = await db.from('payments').select('original_amount, refunded_amount').eq('order_id', m.order_id)
+    const paidToDate = (all ?? []).reduce((t: number, x: { original_amount: number; refunded_amount: number }) => t + Number(x.original_amount) - Number(x.refunded_amount), 0)
+    return {
+      ...paymentReceiptEmail({ toName, event, amount: Number(p.gross_amount), method: p.method, receivedAt: p.received_at, checkNumber: p.check_number,
+        commitment: Number(o?.commitment_amount ?? 0), paidToDate }),
+      tokenHash: null, attachments: undefined,
     }
   }
 
@@ -81,22 +96,13 @@ async function build(db: any, m: any, portalUrl: string) {
     const code = qrToken()
     const png: Uint8Array = await QRCode.toBuffer(code, { width: 360, margin: 2 })
     return {
-      subject: `Your invitation to ${ev?.name ?? 'the AAFE Gala'}`,
-      tokenHash: await sha256(code),
-      attachments: [{ filename: 'aafe-gala-entry-qr.png', content: b64(png) }],
-      html: layout(`<p>Dear ${esc(g.first_name)},</p>
-        <p>AAFE is delighted to welcome you as our guest at ${esc(ev?.name ?? 'the AAFE Gala')}.</p>
-        <p>${esc(when)}<br>${esc(ev?.venue_name ?? '')}<br>${esc(ev?.venue_address ?? '')}</p>
-        <p>Your entry QR code is attached. Show it at check-in, on your phone or printed.</p>
-        <p style="color:#555">Entry code: <code>${code}</code></p>
-        <p style="color:#555">This code is for you only and works until the morning after the gala.</p>`),
+      ...qrInvitationEmail({ firstName: g.first_name, event, code }),
+      tokenHash: await sha256(code), attachments: [{ filename: 'aafe-gala-entry-qr.png', content: b64(png) }],
     }
   }
   throw new Error(`No template for "${m.template}" yet`)
 }
 
-const layout = (body: string) => `<div style="font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.5;color:#1f2937;max-width:560px">${body}<p style="margin-top:32px;color:#6b7280;font-size:13px">Asian Americans for Equality (AAFE)</p></div>`
-const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!)
 const b64 = (u: Uint8Array) => btoa(String.fromCharCode(...u))
 function randomToken() {
   const b = crypto.getRandomValues(new Uint8Array(24)) // 192 bits
