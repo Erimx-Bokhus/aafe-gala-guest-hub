@@ -49,7 +49,7 @@ The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus),
 - [ ] Natalie's review of the three import choices (Slack) — Natalie <!-- modified 2026-10-05 22:58 Aisling -->
 - [ ] Share the Pursuit PRD and the team PRD with the backend pair — whoever has them <!-- modified 2026-10-05 22:58 Aisling -->
 - [ ] Trello access for Cornell — Natalie <!-- modified 2026-10-06 06:12 Aisling -->
-- [ ] Supabase project URL and public (anon) key to Cornell, never the service_role key; open until he confirms — Aisling <!-- updated 2026-10-06 06:12 Aisling -->
+- [ ] Supabase project URL and public (anon) key to Cornell, in person: invite his email and a non-staff test email in Supabase, add his staff_users row and the app's redirect URL, then set up his `.env.local` together (never the service_role key) — Aisling <!-- modified 2026-10-06 21:12 Aisling -->
 - [ ] Upload screen: import engine, report, page picker, tier-mapping picker — Frontend pair <!-- modified 2026-10-05 22:58 Aisling -->
 - [ ] Staff app: show "sent" and "resend" for QR codes instead of the code itself — Frontend pair <!-- modified 2026-10-05 22:58 Aisling -->
 - [ ] Portal: "From your purchase: please confirm" labels; Korean — Frontend pair <!-- modified 2026-10-05 22:58 Aisling -->
@@ -65,7 +65,7 @@ The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus),
 - [x] Antonin's sponsor portal prototype reviewed — Natalie, Aisling <!-- updated 2026-10-06 20:41 Aisling -->
 - [x] Merge PR #36: keys kept out of the browser and the repo, app unit tests in CI — Aisling <!-- modified 2026-10-06 20:56 Aisling -->
 - [x] Add the 20 staff sign-in tests to #35 — Aisling <!-- modified 2026-10-06 20:56 Aisling -->
-- [ ] Merge #35 into `cornell-staff-auth`, then run the live sign-in test against the team project — Cornell <!-- updated 2026-10-06 20:41 Aisling -->
+- [ ] Merge #35 into `cornell-staff-auth`, then run the live sign-in test against the team project, in person with Aisling — Cornell <!-- modified 2026-10-06 21:12 Aisling -->
 - [ ] Port tier layout, the "still need names" line, Korean, and gala-night arrivals into `guest-portal` as small PRs, screenshots first — Antonin (Natalie approves) <!-- updated 2026-10-06 20:41 Aisling -->
 - [ ] Switch the prototype's demo emails to `@example.org`; confirm the Figma Make site isn't published — Antonin <!-- updated 2026-10-06 20:41 Aisling -->
 - [ ] Team PRD draft (started Oct 6) — Natalie <!-- updated 2026-10-06 20:41 Aisling -->
