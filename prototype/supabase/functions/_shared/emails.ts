@@ -23,7 +23,7 @@ export function portalLinkEmail(d: { toName: string; tierName: string | null; ev
         <p>Thank you for your ${esc(d.tierName ?? 'support')} for ${esc(ev?.name ?? GALA)}. Please tell us who will be sitting at your seats${d.deadline ? ` by <strong>${longDay(d.deadline)}</strong>` : ''}.</p>
         ${button(d.link, 'Add or update guest names')}
         <p>You can return to this link at any time to make changes. It is private to your organization, so please don't forward it outside your team.</p>
-        <p style="color:#555">English · 中文 · Español — choose your language on the page.</p>
+        <p style="color:#555">English · 中文 · 한국어 · Español — choose your language on the page.</p>
         <p>${esc(when(ev))}<br>${esc(ev?.venue_name ?? '')}</p>`),
   }
 }

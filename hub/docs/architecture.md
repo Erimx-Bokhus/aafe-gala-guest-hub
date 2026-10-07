@@ -23,8 +23,8 @@ As of October 6, in the team repo. The build follows Natalie's Supabase schema; 
 | Server jobs | `prototype/supabase/functions/` | Give Lively sync (this gala's page only) and the email sender (staff-approved only) <!-- new 2026-10-05 22:58 Aisling --> |
 | Exports | `prototype/database/backend.sql` | Badge file, printed check-in list, and Salesforce attendee file: role-checked, logged, and returned as rows for the staff app's CSV download (PR #34) <!-- updated 2026-10-06 20:41 Aisling --> |
 | Key protection | `prototype/shared/vite/`, `prototype/scripts/make_open_files.py`, `.gitleaks.toml` | A build stops if a secret key would reach the browser; demo files can't carry the project address; the secret scan knows Supabase's keys. Where every key lives: `docs/keys-and-secrets.md` (PR #36) <!-- updated 2026-10-06 20:56 Aisling --> |
-| Staff app | `prototype/staff-app/` | Natalie's staff workspace; real sign-in in review (PR #27); still on demo data <!-- new 2026-10-05 22:58 Aisling --> |
-| Sponsor portal | `prototype/guest-portal/` | Natalie's guest-name form on a private link; English, 中文, Español. Antonin's design prototype (his branch) is the reference for tier layout, Korean, and gala-night arrivals <!-- modified 2026-10-06 20:41 Aisling --> |
+| Staff app | `prototype/staff-app/` | Natalie's staff workspace; real sign-in merged (Cornell, PR #27): an emailed link when Supabase keys are set, demo accounts otherwise; pages still on demo data <!-- modified 2026-10-07 19:15 Aisling --> |
+| Sponsor portal | `prototype/guest-portal/` | Natalie's guest-name form on a private link; English, 中文, 한국어 (Antonin, PR #51), Español. Antonin's design prototype (his branch) is the reference for tier layout and gala-night arrivals <!-- modified 2026-10-07 19:15 Aisling --> |
 | Checks on pull requests | `.github/workflows/` | All six run on every PR and are required on `main`: secret scan, real-data guard, backend tests, import engine tests, app tests and build, and server function type-check (PR #40). Tests: import engine 94, backend 119 (in-memory Postgres), app 8 <!-- modified 2026-10-06 21:33 Aisling --> |
 
 **Secrets are stored as hashes.** Sponsor links and QR e-tickets are random, shown only in the email that carries them, and stored only as hashes. A QR code belongs to one seat and stops working the morning after the gala, or as soon as the seat gets a different guest. <!-- new 2026-10-05 22:58 Aisling -->
@@ -37,7 +37,7 @@ As of October 6, in the team repo. The build follows Natalie's Supabase schema; 
 | App | React + TypeScript, built with Vite and styled with Tailwind | Matches Natalie's working prototype; any web developer can maintain it <!-- modified 2026-10-05 16:51 Aisling --> |
 | Backend | Supabase: Postgres, sign-in, and server functions (Give Lively sync, email sending) | One managed service; free plan for the demo <!-- modified 2026-10-05 16:51 Aisling --> |
 | Database | Postgres, hosted by Supabase | Standard, portable, and fits the record structure <!-- modified 2026-10-05 16:51 Aisling --> |
-| Sign-in | Supabase Auth with staff roles: an emailed sign-in link (PR #27, in review); demo accounts until then | AAFE's Google accounts can plug in if the tool is adopted <!-- modified 2026-10-06 06:12 Aisling --> |
+| Sign-in | Supabase Auth with staff roles: an emailed sign-in link (PR #27, merged Oct 7); demo accounts when no Supabase keys are set | AAFE's Google accounts can plug in if the tool is adopted <!-- modified 2026-10-07 19:15 Aisling --> |
 | Demo preview | A free or low-cost tier on a team account | Production hosting is AAFE's decision after Demo Day; see [Hosting](#hosting) |
 | Repo | Team GitHub organization on GitHub Team, with `main` protected | Handed to AAFE, or the partner it chooses, at handoff <!-- modified 2026-10-05 16:51 Aisling --> |
 

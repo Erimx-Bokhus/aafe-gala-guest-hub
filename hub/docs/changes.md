@@ -5,6 +5,10 @@ Every change to this hub, newest first. Open it while signed in to claude.ai and
 Each change has a kind, shown the same way on every page next to the exact line that changed: **✦ New** (didn't exist before), **+ Updated** (rows, tasks, or terms added), **✎ Modified** (wording, numbers, or a rule changed), **− Removed** (taken out), and **! Important** (everyone should act on it). Hover an icon for the date, time (New York), and who made the change; click it to mark it read.
 
 ```changes
+2026-10-07 19:15 | modified | Aisling | tasks | Cornell's staff sign-in (PR #27) and Antonin's Korean (PR #51) merged: tasks ticked off; Cornell's live sign-in test waits on which Supabase project the demo uses
+2026-10-07 19:15 | modified | Aisling | build-plan.where-each-component-stands | Sign-in merged (PR #27); the portal now has all four languages (PR #51); about 1,110 automated checks
+2026-10-07 19:15 | modified | Aisling | architecture | Staff app has real sign-in (demo accounts when no keys are set); the portal adds 한국어
+2026-10-07 19:15 | modified | Aisling | overview | Status as of Oct 7 evening: sign-in merged, Korean in the portal, and the backend work from PRs #42–#50
 2026-10-07 13:45 | new | Aisling | tasks.added-october-7 | Oct 7: what was built tonight, and what's next for each pair (Vercel setup, check-in screen, pipeline board, arrivals in the portal, AAFE's translation review)
 2026-10-07 13:45 | updated | Aisling | decisions | Six decisions: Vercel for the demo, offline check-in, first arrival wins, the sponsor pipeline, AAFE-gated features built switched off, and the test gala for tests only; a new open question on names in Chinese or Korean script
 2026-10-07 13:45 | updated | Aisling | build-plan.where-each-component-stands | Component status, Oct 7: emails, offline check-in, the sponsor pipeline, sponsor arrivals (off), translations, and a 553-guest test gala built (PRs #42–#50); about 1,090 automated checks

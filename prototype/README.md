@@ -4,7 +4,7 @@ Two front-end apps and one shared database, built by ERIMX BOKHUS for Asian Amer
 
 ```
 aafe-gala-apps/
-  guest-portal/        Sponsors & ticket buyers (private emailed link)  — EN / 中文 / Español
+  guest-portal/        Sponsors & ticket buyers (private emailed link)  — EN / 中文 / 한국어 / Español
   staff-app/           AAFE staff "client app" (login + roles)
   shared/
     src/               types, seed.json, theme (light/dark), UI, text-size controls
