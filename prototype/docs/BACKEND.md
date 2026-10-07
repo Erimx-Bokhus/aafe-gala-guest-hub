@@ -126,6 +126,7 @@ Never returned: payment method, fees, check numbers, internal notes, relationshi
 
 Reads: `gala_admin` and `relationship_manager` can `select` every table directly (RLS). `check_in_volunteer` can't read tables. Volunteers use `checkin_list()`.
 Writes: only through these functions, and each one writes `audit_log`. `audit_log` can't be updated or deleted.
+Guest edits (`staff_update_guest`, and a sponsor editing a named guest through `portal_save_guest`) also record the old and new value of each changed field in `audit_log.changes`, e.g. `{"title": {"from": "Manager", "to": "Director"}}`. It's for staff: the portal's activity list shows only the summary. Status changes, seating, and payment amounts keep using `from_state` and `to_state`.
 
 | Prototype (`staff-app/src/store.ts`) | Backend call | Roles |
 |---|---|---|
