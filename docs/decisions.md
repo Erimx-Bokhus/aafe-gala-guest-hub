@@ -34,11 +34,16 @@ Format: date · decision · reason · decided by. Reopen only with new informati
 | 2026-10-06 | Automatic Give Lively sync stays out of the Demo Day path; the demo uses the file upload | No live Give Lively key needed on stage | Aisling |
 | 2026-10-06 | Staff sign in with an emailed link (Supabase Auth) for the prototype; AAFE's Google accounts later | Works with any email; Google needs AAFE's workspace | Cornell, Aisling |
 | 2026-10-06 | Supabase CLI pinned to exactly 2.119.0; `prototype/` runs as ES modules (PR #31) | Same CLI for everyone running `db:backend`; stops a Node warning on every test run | Aisling |
-| 2026-10-06 | The Supabase advisor's 28 remaining warnings are accepted by design (PR #30): staff functions check the caller's role inside; sponsor portal functions take the link token as the credential | The 12 real ones were fixed; the rest describe how the design works | Aisling |
+| 2026-10-06 | The Supabase advisor's remaining warnings are accepted by design (PR #30; 28, then 31 with the export functions, which carry the same warning): staff functions check the caller's role inside; sponsor portal functions take the link token as the credential | The 12 real ones were fixed; the rest describe how the design works | Aisling |
+| 2026-10-06 | One sponsor portal: `prototype/guest-portal`. Antonin's Figma prototype stays on his branch as a design reference; ideas come in as small PRs with screenshots first; Natalie approves portal changes, and Aisling reviews and merges | Two portals would confuse the team, AAFE, and a future partner | Natalie |
+| 2026-10-06 | Sponsors see their own guests' gala-night arrivals in the portal; AAFE reviews the privacy side before it goes live | The team wants it; the backend already tracks check-in per seat | Natalie, team |
+| 2026-10-06 | Exports return rows and the staff app writes the CSV; columns stay provisional until AAFE sends its badge and check-in templates (PR #34) | One CSV writer, with spreadsheet-formula protection; role checks and logging stay in the database | Aisling |
+| 2026-10-06 | The informal client demo on Oct 7 is replaced by the prototype demonstration on Oct 19 | No client meeting was set for Oct 7 | Natalie |
 | _pending_ | Demo preview host | Decide when the demo is deployable | Team |
 | _pending_ | AI on/off, retention window, dietary data | See `data-handling.md` | AAFE |
 | _pending_ | Code and IP ownership after Nov 10, and the repo license | Open question for AAFE and Pursuit | AAFE + team |
 | _pending_ | Public use of AAFE logo and event photos (Demo Day) | Needs written approval | AAFE |
 | _pending_ | Whether AI features are required for Demo Day | Team, Pursuit; this week | Team |
 | _pending_ | Whether to adopt the tool, and with which technical partner | After Demo Day | AAFE |
+| _pending_ | Whether guest email is required or optional | Before the portal is connected; QR e-tickets need an email | Team |
 | 2026-10-06 | MVP vs later is set by the Working PRD (hub, Requirements): must-have is the Demo Day path | Natalie's concept (Oct 2) went beyond agreed scope; the Working PRD maps every part | Team |

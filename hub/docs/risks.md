@@ -12,16 +12,18 @@ The same guest arrives from several sources | 3 | 2 | Rule-based matching, a rev
 Sponsors don't use the form, as with the earlier Google Form | 2 | 3 | One link per sponsor showing their seat count; staff can enter names for them; staff-approved reminders | Antonin, Cornell
 Scope grows toward a full event platform | 2 | 3 | Finish the must-haves end to end before anything else; log every scope change | Team
 Weak internet at the venue during check-in | 2 | 3 | Check-in keeps working offline; a printed list is exported the day before | Antonin
-Give Lively's exports differ from the samples | 2 | 2 | Column mapping on import; every row that fails is listed with a reason; tier mapping and gala-page filter; ask AAFE for more redacted rows and whether sponsorships share the export | Aisling <!-- modified 2026-10-06 05:50 Aisling -->
+Give Lively's exports differ from the samples | 2 | 2 | Column mapping on import; every row that fails is listed with a reason; tier mapping and gala-page filter; ask AAFE for more redacted rows and whether sponsorships share the export | Aisling
 Wrong titles or affiliations on badges | 2 | 2 | The relationship owner reviews each badge before printing | Antonin
-Real guest data gets into the prototype | 1 | 3 | Invented data only; imports tested with synthetic files; no real exports shared with the team; secrets kept out of the code; real-data guard required on every PR (PR #28) | Everyone <!-- modified 2026-10-06 05:50 Aisling -->
+Real guest data gets into the prototype | 1 | 3 | Invented data only; imports tested with synthetic files; no real exports shared with the team; secrets kept out of the code; real-data guard required on every PR (PR #28) | Everyone
 Translations read awkwardly | 2 | 1 | AAFE staff review every translated string before launch | Natalie
 AAFE's AI policy rules out AI features | 2 | 1 | Matching works without AI; AI features ship switched off | Aisling
 The demo preview's free tier lapses before Demo Day | 2 | 2 | Use a paid starter tier for the demo month, or rebuild the database from seed data | Aisling
+Two sponsor portals drift apart | 2 | 2 | One portal (`prototype/guest-portal`); ideas from Antonin's prototype come in as small PRs that Natalie approves | Natalie, Antonin
+A secret key reaches the browser or the repo | 1 | 3 | Keys that bypass the access rules live only in Supabase's secret store; secret scan on every PR; rotate every key at handoff | Aisling
 ```
 
 ```notes
-The top risks are about real-world data: messy guest-list text and the same guest arriving from several sources. The handoff risk is the one we fully control: a partner we've never met should be able to run the prototype from the README. <!-- modified 2026-10-06 05:50 Aisling -->
+The top risks are about real-world data: messy guest-list text and the same guest arriving from several sources. The handoff risk is the one we fully control: a partner we've never met should be able to run the prototype from the README.
 ```
 
 ## What would change the plan
