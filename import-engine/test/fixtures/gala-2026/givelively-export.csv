@@ -1,0 +1,232 @@
+First Name,Last Name,Email,Tier Purchased,Tier Category,Tickets Purchased,Total Seats,Amount Spent,Amount Refunded,Transaction Fee Covered,Date/Time of Purchase,Referrer URL,Payment Method,Status,UTM Source,Page Name,Internal Name,Client Application Name,Double the Donation,Company/Organization Name,Phone Number,"Please list the name(s) and email address(es) of all guests. To revise, email gala@aafe.org.",Address 1,City,State,Zip
+Nadia,Kowalski,NADIA31@HOME.EXAMPLE.ORG,Ticket,Ticket,1,1,"$1,000.00 ",$0.00,$0.00,2026-01-05 11:37:26 AM EST,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0160,,,,,
+Rosa,Rivera,ROSA68@MAIL.EXAMPLE.ORG,Ticket,Ticket,1,1,"$1,000.00",$0.00,$0.00,2026-01-05 10:15:25 PM EST,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0197,TBA.,,,,
+Mateo,Yamada,mateo40@inbox.example.org,Ticket,Ticket,1,1,"$1,000.00",$0.00,$0.00,2026-01-10 01:44:43 AM EST,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0169,me,,,,
+Grace,Tanaka,GRACE19@HOME.EXAMPLE.ORG,Ticket,Ticket,2,2,"$2,000.00",$0.00,$0.00,2026-01-10 12:02:47 PM EST,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0148,"Kwame Huang
+Olivia Rivera",,,,
+Olivia,Đặng,OLIVIA80@INBOX.EXAMPLE.ORG,Ticket,Ticket,1,1,"$1,000.00",$0.00,$0.00,2026-01-12 01:39:54 AM EST,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0109,me,,,,
+Kwame,Moreau,kwame70@home.example.org,Ticket,Ticket,1,1,"$1,000.00",$0.00,$0.00,2026-01-13 04:09:51 AM EST,,Apple Pay,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0199,me,,,,
+Grace,Chen,GRACE63@INBOX.EXAMPLE.ORG,Ticket,Ticket,1,1,"$1,000.00",$0.00,$0.00,2026-01-13 05:02:30 PM EST,,ACH,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0192,,,,,
+Priya,Garcia,priya37@mail.example.org,Ticket,Ticket,1,1,"$1,000.00",$0.00,$0.00,2026-01-15 01:35:42 PM EST,,Apple Pay,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0166,Haruto Wong - haruto.wong.32@guest.example.org,,,,
+Carlos,Nguyen,carlos.nguyen@donor.example.org,Ticket,Ticket,2,2,"$2,000.00","$2,000.00",$0.00,2026-01-15 02:12:49 PM EST,,Stripe Card,refunded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0116,me,,,,
+Olivia,Haddad,olivia62@home.example.org,Ticket,Ticket,1,1,"$1,000.00",$0.00,$0.00,2026-01-15 02:34:25 PM EST,,Apple Pay,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0191,me,,,,
+Min-jun,Liu,min.jun4@mail.example.org,Ticket,Ticket,2,2,"$2,000.00 ",$0.00,$0.00,2026-01-16 04:46:29 AM EST,,Apple Pay,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0133,To follow,,,,
+Kwame,Ramos,kwame.ramos@mulberryexamplebank.example.org,Champion Sponsor,Sponsorship,1,6,"$7,000.00",$0.00,$0.00,2026-01-17 12:59:09 PM EST,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,Mulberry Example Bank,(212) 555-0123,"Kwame Ramos
+Bao Rivera
+Mateo Moreau",,,,
+Kwame,Rodriguez,kwame.rodriguez@lanternexamplemedia.example.org,Friend Sponsor,Sponsorship,1,2,"$2,500.00 ",$0.00,$0.00,2026-01-20 06:09:31 AM EST,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,Lantern Example Media,(212) 555-0128,"王建國
+Sofia Nguyen",,,,
+Fatima,Haddad,fatima60@home.example.org,Ticket,Ticket,1,1,"$1,000.00",$0.00,$0.00,2026-01-23 08:11:52 AM EST,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0189,To follow,,,,
+Grace,Tran,grace33@inbox.example.org,Ticket,Ticket,1,1,"$1,000.00 ",$0.00,$0.00,2026-01-24 05:01:29 AM EST,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0162,,,,,
+Mei,Ortiz,mei.ortiz@jadeexamplehealth.example.org,Champion Sponsor,Sponsorship,1,6,"$7,000.00",$0.00,$0.00,2026-01-25 08:54:33 PM EST,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,Jade Example Health,(212) 555-0121,"   RAVI MENSAH   
+
+   SAMUEL TANAKA   
+
+   GRACE PATEL   
+
+   CARLOS RIVERA   ",,,,
+Samuel,Đặng,samuel.ang@pellexamplebank.example.org,Bronze Sponsor,Sponsorship,1,8,"$10,000.00 ",$0.00,$0.00,2026-01-26 09:18:43 AM EST,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,Pell Example Bank,(212) 555-0116,"Min-jun Núñez - min.jun.nunez.16@guest.example.org
+Jun Martinez - jun.martinez.17@guest.example.org
+Ravi Martinez - ravi.martinez.18@guest.example.org
+Mei Jung - mei.jung.19@guest.example.org",,,,
+Ana,Garcia,ANA22@INBOX.EXAMPLE.ORG,Ticket,Ticket,1,1,"$1,000.00",$0.00,$0.00,2026-01-27 01:43:19 AM EST,,Apple Pay,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0151,me,,,,
+Nadia,Nguyen,nadia.nguyen@henryexamplebuilders.example.org,Bronze Sponsor,Sponsorship,1,8,"$10,000.00",$0.00,$0.00,2026-01-29 03:29:00 AM EST,,ACH,succeeded,,AAFE's 52nd Annual Gala,,,,"  HENRY EXAMPLE BUILDERS ",(212) 555-0117,Haruto Singh <HARUTO.SINGH.20@GUEST.EXAMPLE.ORG>; Ji-woo Singh <JI.WOO.SINGH.21@GUEST.EXAMPLE.ORG>; Carlos Mensah <CARLOS.MENSAH.22@GUEST.EXAMPLE.ORG>; Jun Ortiz <JUN.ORTIZ.23@GUEST.EXAMPLE.ORG>; Renée Kowalski <RENEE.KOWALSKI.24@GUEST.EXAMPLE.ORG>,,,,
+Sofia,Ahmed,sofia.ahmed@baxterexamplecreditunion.example.org,Bronze Sponsor,Sponsorship,1,8,"$10,000.00",$0.00,$0.00,2026-01-29 08:47:37 AM EST,,ACH,succeeded,,AAFE's 52nd Annual Gala,,,,Baxter Example Credit Union,(212) 555-0114,"Diego Sato
+Wei Kowalski
+Renée Sato
+Min-jun Mensah
+Chloe Okafor
+Seo-yeon Moreau
+Daniel Chen
+Hana Fernández
+Jun Lee
+Ethan Singh",,,,
+Hana,Kowalski,hana29@mail.example.org,Ticket,Ticket,1,1,"$1,000.00",$0.00,$0.00,2026-01-30 01:46:44 AM EST,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0158,Samuel Zhang - samuel.zhang.31@guest.example.org,,,,
+Haruto,Lee,haruto44@home.example.org,Ticket,Ticket,1,1,"$1,000.00",$0.00,$0.00,2026-02-01 08:19:12 AM EST,,Apple Pay,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0173,TBA.,,,,
+Leila,Nguyen,LEILA36@HOME.EXAMPLE.ORG,Ticket,Ticket,1,1,"$1,000.00",$0.00,$0.00,2026-02-01 06:30:10 PM EST,,ACH,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0165,TBD,,,,
+Daniel,Ahmed,daniel.ahmed@donor.example.org,Donation,Ticket,1,,$250.00,$0.00,$0.00,2026-02-01 10:52:45 PM EST,,Stripe Card,succeeded,,Year-End Appeal 2025,,,,,(212) 555-0114,,,,,
+Kwame,Garcia,kwame72@inbox.example.org,Ticket,Ticket,1,1,"$1,000.00",$0.00,$0.00,2026-02-05 03:50:27 PM EST,,Apple Pay,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0101,me,,,,
+Diego,Haddad,diego27@inbox.example.org,Ticket,Ticket,1,1,"$1,000.00",$0.00,$0.00,2026-02-06 09:07:20 PM EST,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0156,Linh Zhang,,,,
+Renée,Wong,renee17@home.example.org,Ticket,Ticket,2,2,"$2,000.00",$0.00,$0.00,2026-02-07 03:44:25 AM EST,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0146,,,,,
+Arjun,Nguyen,ARJUN43@INBOX.EXAMPLE.ORG,Ticket,Ticket,1,1,"$1,000.00",$0.00,$0.00,2026-02-08 05:22:56 AM EST,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0172,Ethan Rodriguez,,,,
+Renée,Singh,renee.singh81@home.example.org,Ticket,Ticket,1,1,"$1,000.00",$0.00,$0.00,2026-02-08 07:10:08 PM EST,,Apple Pay,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0110,,,,,
+Kenji,Singh,kenji.singh83@home.example.org,Ticket,Ticket,1,1,"$1,000.00",$0.00,$0.00,2026-02-09 02:15:21 PM EST,,Apple Pay,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0112,Aisha Tanaka,,,,
+Hana,Tanaka,HANA21@HOME.EXAMPLE.ORG,Ticket,Ticket,2,2,"$2,000.00",$0.00,$0.00,2026-02-10 03:17:32 AM EST,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0150,"Grace Rodriguez - grace.rodriguez.29@guest.example.org
+Hana Rodriguez - hana.rodriguez.30@guest.example.org",,,,
+Priya,Yamada,PRIYA.YAMADA20@MAIL.EXAMPLE.ORG,Ticket,Ticket,2,2,"$2,000.00 ",$0.00,$0.00,2026-02-10 05:07:43 AM EST,,ACH,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0149,To follow,,,,
+Olivia,Kaur,olivia.kaur@worthexamplemedia.example.org,Friend Sponsor,Sponsorship,1,2,"$2,500.00",$0.00,$0.00,2026-02-12 12:19:35 PM EST,,Apple Pay,succeeded,,AAFE's 52nd Annual Gala,,,,Worth Example Media,(212) 555-0127,"Sofia
+Mei Huang",,,,
+Chloe,Zhang,chloe8@inbox.example.org,Ticket,Ticket,2,2,"$2,000.00",$0.00,$0.00,2026-02-12 02:18:41 PM EST,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0137,"me
+Kwame Okafor",,,,
+Ethan,Đặng,ethan82@home.example.org,Ticket,Ticket,1,1,"$1,000.00 ",$0.00,$0.00,2026-02-13 06:58:27 AM EST,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0111,Ethan Đặng,,,,
+Omar,Kaur,OMAR59@MAIL.EXAMPLE.ORG,Ticket,Ticket,1,1,"$1,000.00 ",$0.00,$0.00,2026-02-13 02:53:11 PM EST,,ACH,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0188,Renée Yamada,,,,
+Omar,Choi,OMAR38@MAIL.EXAMPLE.ORG,Ticket,Ticket,1,1,"$1,000.00",$0.00,$0.00,2026-02-16 06:16:33 AM EST,,ACH,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0167,me,,,,
+Mei,Lopez,mei.lopez@mulberryexamplelawgroup.example.org,Champion Sponsor,Sponsorship,1,6,"$7,000.00",$0.00,$0.00,2026-02-16 06:56:02 PM EST,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,"  MULBERRY EXAMPLE LAW GROUP ",(212) 555-0125,,,,,
+Leila,Rodriguez,leila.rodriguez24@home.example.org,Ticket,Ticket,1,1,"$1,000.00",$0.00,$0.00,2026-02-18 11:29:16 AM EST,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0153,me,,,,
+Ravi,Kim,ravi.kim@eldridgeexamplelawgroup.example.org,Silver Sponsor,Sponsorship,1,10,"$15,000.00 ",$0.00,$0.00,2026-02-18 11:46:33 AM EST,,ACH,succeeded,,AAFE's 52nd Annual Gala,,,,Eldridge Example Law Group,(212) 555-0110,,,,,
+Seo-yeon,Núñez,seo.yeon66@home.example.org,Ticket,Ticket,1,1,"$1,000.00 ",$0.00,$0.00,2026-02-19 11:46:19 AM EST,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0195,Seo-yeon Núñez,,,,
+Renée,Rivera,renee35@inbox.example.org,Ticket,Ticket,1,1,"$1,000.00 ",$0.00,$0.00,2026-02-20 10:44:56 AM EST,,Apple Pay,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0164,Nadia Đặng,,,,
+Noah,Lin,noah.lin18@home.example.org,Ticket,Ticket,2,2,"$2,000.00",$0.00,$0.00,2026-02-20 02:07:06 PM EST,,Apple Pay,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0147,"Noah Lin
+Isabel Jung",,,,
+Leila,Garcia,leila15@mail.example.org,Ticket,Ticket,2,2,"$2,000.00 ",$0.00,$0.00,2026-02-20 09:28:16 PM EST,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0144,,,,,
+Camila,Tanaka,camila.tanaka39@home.example.org,Ticket,Ticket,1,1,"$1,000.00",$0.00,$0.00,2026-02-21 06:13:51 PM EST,,Apple Pay,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0168,,,,,
+Diego,Zhang,DIEGO58@MAIL.EXAMPLE.ORG,Ticket,Ticket,1,1,"$1,000.00",$0.00,$0.00,2026-02-24 11:25:00 PM EST,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0187,Diego Zhang,,,,
+Minh,Choi,minh49@home.example.org,Ticket,Ticket,1,1,"$1,000.00",$0.00,$0.00,2026-02-26 06:50:26 PM EST,,ACH,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0178,,,,,
+Camila,Lin,camila.lin54@inbox.example.org,Ticket,Ticket,1,1,"$1,000.00",$0.00,$0.00,2026-02-26 11:32:54 PM EST,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0183,me,,,,
+Arjun,Lopez,arjun52@home.example.org,Ticket,Ticket,1,1,"$1,000.00",$0.00,$0.00,2026-02-26 11:41:06 PM EST,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0181,N/A,,,,
+Haruto,Garcia,haruto.garcia@chrystieexamplecreditunion.example.org,Gold Sponsor,Sponsorship,1,10,"$25,000.00",$0.00,$0.00,2026-03-01 01:48:36 AM EST,,Apple Pay,succeeded,,AAFE's 52nd Annual Gala,,,,Chrystie Example Credit Union,(212) 555-0103,1. Wei Singh 2. Sofia Sato 3. Yuki Moreau 4. Ravi Chen 5. Linh Choi 6. Ravi Lopez 7. Mateo Nguyen 8. Olivia Jung 9. Ethan Liu,,,,
+Seo-yeon,Ramos,seo.yeon79@home.example.org,Ticket,Ticket,1,1,"$1,000.00",$0.00,$0.00,2026-03-01 12:25:51 PM EST,,ACH,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0108,,,,,
+Fatima,Lee,fatima.lee@bayardexamplebuilders.example.org,Gold Sponsor,Sponsorship,1,10,"$25,000.00 ",$0.00,$0.00,2026-03-01 09:24:23 PM EST,,Apple Pay,succeeded,,AAFE's 52nd Annual Gala,,,,Bayard Example Builders,(212) 555-0106,"   ETHAN CHOI   
+
+   ETHAN ORTIZ   
+
+   DANIEL ĐẶNG   
+
+   ISABEL YAMADA   ",,,,
+Wei,Choi,WEI30@HOME.EXAMPLE.ORG,Ticket,Ticket,1,1,"$1,000.00",$0.00,$0.00,2026-03-02 04:32:50 PM EST,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0159,me,,,,
+Kenji,Mensah,kenji75@mail.example.org,Ticket,Ticket,1,1,"$1,000.00",$0.00,$0.00,2026-03-02 05:59:06 PM EST,,ACH,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0104,Ana Nguyen,,,,
+Aisha,Park,aisha61@mail.example.org,Ticket,Ticket,1,1,"$1,000.00",$0.00,$0.00,2026-03-03 10:51:14 AM EST,,Apple Pay,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0190,Fatima Park - fatima.park.35@guest.example.org,,,,
+Diego,Yamada,diego69@home.example.org,Ticket,Ticket,1,1,"$1,000.00",$0.00,$0.00,2026-03-07 03:12:42 PM EST,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0198,Renée Nguyen - renee.nguyen.36@guest.example.org,,,,
+Carlos,Sato,carlos45@inbox.example.org,Ticket,Ticket,1,1,"$1,000.00",$0.00,$0.00,2026-03-09 11:00:17 AM EDT,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0174,Olivia Lopez - olivia.lopez.33@guest.example.org,,,,
+Jun,Lopez,jun73@mail.example.org,Ticket,Ticket,1,1,"$1,000.00",$0.00,$0.00,2026-03-10 07:36:57 AM EDT,,ACH,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0102,,,,,
+Hana,Choi,hana.choi@boweryexamplelawgroup.example.org,Gold Sponsor,Sponsorship,1,10,"$25,000.00",$0.00,$0.00,2026-03-11 09:54:58 PM EDT,,Apple Pay,succeeded,,AAFE's 52nd Annual Gala,,,,Bowery Example Law Group,(212) 555-0105,"Omar Singh, Isabel Wong, Camila Okafor, Grace Park, Min-jun Singh, Mateo Kim, Linh Tanaka, Carlos Tanaka, Yuki Jung",,,,
+Diego,Ramos,diego51@inbox.example.org,Ticket,Ticket,1,1,"$1,000.00",$0.00,$0.00,2026-03-11 11:06:10 PM EDT,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0180,Arjun Liu,,,,
+Mateo,Lin,mateo13@home.example.org,Ticket,Ticket,2,2,"$2,000.00",$0.00,$0.00,2026-03-12 01:43:50 AM EDT,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0142,"Mateo Fernández - mateo.fernandez.27@guest.example.org
+Kwame Jung - kwame.jung.28@guest.example.org",,,,
+Linh,Huang,linh14@mail.example.org,Ticket,Ticket,2,2,"$2,000.00",$0.00,$0.00,2026-03-13 03:32:34 PM EDT,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0143,"me
+Noah Chen",,,,
+Rosa,Chen,rosa.chen55@inbox.example.org,Ticket,Ticket,1,1,"$1,000.00 ",$0.00,$0.00,2026-03-13 11:16:33 PM EDT,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0184,,,,,
+Ravi,Haddad,ravi1@inbox.example.org,Ticket,Ticket,2,2,"$2,000.00",$0.00,$0.00,2026-03-16 01:38:49 AM EDT,,Apple Pay,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0130,,,,,
+Aisha,Ramos,aisha.ramos26@mail.example.org,Ticket,Ticket,1,1,"$1,000.00 ",$0.00,$0.00,2026-03-16 08:26:42 AM EDT,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0155,Aisha Ramos,,,,
+Isabel,Garcia,ISABEL46@HOME.EXAMPLE.ORG,Ticket,Ticket,1,1,"$1,000.00",$0.00,$0.00,2026-03-16 12:11:46 PM EDT,,ACH,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0175,me,,,,
+Sofia,Rodriguez,sofia.rodriguez9@inbox.example.org,Ticket,Ticket,2,2,"$2,000.00 ",$0.00,$0.00,2026-03-16 11:30:46 PM EDT,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0138,,,,,
+Ethan,Tran,ethan78@inbox.example.org,Ticket,Ticket,1,1,"$1,000.00 ",$0.00,$0.00,2026-03-18 05:00:09 AM EDT,,Apple Pay,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0107,me,,,,
+Sofia,Haddad,sofia.haddad@delanceyexamplerealty.example.org,Champion Sponsor,Sponsorship,1,6,"$7,000.00 ",$0.00,$0.00,2026-03-19 04:45:06 PM EDT,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,Delancey Example Realty,(212) 555-0119,"• Carlos Wong
+• Noah Patel
+• Omar Martinez
+• Haruto Huang
+• Minh Kim",,,,
+Linh,Rivera,linh76@home.example.org,Ticket,Ticket,1,1,"$1,000.00",$0.00,$0.00,2026-03-20 11:58:50 AM EDT,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0105,tbd,,,,
+Wei,Huang,WEI12@HOME.EXAMPLE.ORG,Ticket,Ticket,2,2,"$2,000.00 ",$0.00,$0.00,2026-03-20 01:32:25 PM EDT,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0141,TBD,,,,
+Min-jun,Kowalski,min.jun.kowalski@jadeexamplebuilders.example.org,Silver Sponsor,Sponsorship,1,10,"$15,000.00 ",$0.00,$0.00,2026-03-21 10:40:45 AM EDT,,Apple Pay,succeeded,,AAFE's 52nd Annual Gala,,,,Jade Example Builders,(212) 555-0109,TBA.,,,,
+Ethan,Zhang,ethan.zhang@pikeexamplerealty.example.org,Champion Sponsor,Sponsorship,1,6,"$7,000.00 ",$0.00,$0.00,2026-03-23 07:04:18 PM EDT,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,Pike Example Realty,(212) 555-0126,"Mr. and Mrs. Wong
+Leila Ortiz
+Daniel Zhang
+Ana Moreau
+Isabel Chen",,,,
+Kenji,Ahmed,KENJI42@INBOX.EXAMPLE.ORG,Ticket,Ticket,1,1,"$1,000.00",$0.00,$0.00,2026-03-28 09:10:47 AM EDT,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0171,Kenji Ahmed,,,,
+Luis,Tanaka,luis0@inbox.example.org,Ticket,Ticket,2,2,"$2,000.00",$0.00,$0.00,2026-03-29 11:43:00 AM EDT,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0129,"me
+Ji-woo Okafor",,,,
+Rosa,Rodriguez,rosa64@mail.example.org,Ticket,Ticket,1,1,"$1,000.00 ",$0.00,$0.00,2026-03-30 01:28:06 PM EDT,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0193,me,,,,
+Yuki,Rivera,yuki41@inbox.example.org,Ticket,Ticket,1,1,"$1,000.00",$0.00,$0.00,2026-03-31 03:04:05 AM EDT,,ACH,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0170,,,,,
+Grace,Zhang,grace.zhang@henryexamplelawgroup.example.org,Gold Sponsor,Sponsorship,1,10,"$25,000.00",$0.00,$0.00,2026-03-31 08:20:24 AM EDT,,Apple Pay,succeeded,,AAFE's 52nd Annual Gala,,,,Henry Example Law Group,(212) 555-0104,"• Carlos Liu
+• Camila Singh
+• Nadia Moreau
+• Diego Moreau
+• Linh Wong
+• Sofia Choi
+• Wei Ahmed
+• Luis Tran",,,,
+Renée,Jung,renee.jung@catherineexamplecreditunion.example.org,Champion Sponsor,Sponsorship,1,6,"$7,000.00",$0.00,$0.00,2026-03-31 01:24:22 PM EDT,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,"  CATHERINE EXAMPLE CREDIT UNION ",(212) 555-0120,"Grace Sato, Grace Ortiz, Leila Kaur, Sofia Okafor",,,,
+Chloe,Nguyen,chloe.nguyen@doyersexamplemedia.example.org,Silver Sponsor,Sponsorship,1,10,"$15,000.00",$0.00,$0.00,2026-03-31 02:32:40 PM EDT,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,Doyers Example Media,(212) 555-0111,"Mr. and Mrs. Liu
+Tomás Đặng
+Sofia Núñez
+Camila Martinez
+Aisha Mensah
+Minh Đặng
+Jun Cohen",,,,
+Chloe,Đặng,chloe.ang@donor.example.org,Donation,Ticket,1,,$100.00,$0.00,$0.00,2026-04-01 05:33:30 PM EDT,,Apple Pay,succeeded,,,Lunar New Year Appeal,,,,(212) 555-0115,,,,,
+Leila,Zhang,leila.zhang@delanceyexamplemedia.example.org,Bronze Sponsor,Sponsorship,1,8,"$10,000.00 ",$0.00,$0.00,2026-04-03 06:14:33 PM EDT,,Apple Pay,succeeded,,AAFE's 52nd Annual Gala,,,,"  DELANCEY EXAMPLE MEDIA ",(212) 555-0113,"이서연
+Camila Lee
+Tomás Tran
+Fatima Nguyen
+Hana Cohen
+Ji-woo Yamada
+Linh Moreau",,,,
+Nadia,Lin,NADIA23@INBOX.EXAMPLE.ORG,Ticket,Ticket,1,1,"$1,000.00 ",$0.00,$0.00,2026-04-03 11:28:00 PM EDT,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0152,,,,,
+Sofia,Kowalski,sofia48@home.example.org,Ticket,Ticket,1,1,"$1,000.00 ",$0.00,$0.00,2026-04-04 09:15:06 AM EDT,,Apple Pay,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0177,me,,,,
+Grace,Garcia,grace7@mail.example.org,Ticket,Ticket,2,2,"$2,000.00",$0.00,$0.00,2026-04-07 02:34:49 PM EDT,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0136,,,,,
+Arjun,Kaur,arjun57@inbox.example.org,Ticket,Ticket,1,1,"$1,000.00 ",$0.00,$0.00,2026-04-10 05:50:57 AM EDT,,ACH,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0186,,,,,
+Isabel,Kaur,isabel.kaur@lanternexamplehealth.example.org,Bronze Sponsor,Sponsorship,1,8,"$10,000.00",$0.00,$0.00,2026-04-12 12:25:02 AM EDT,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,Lantern Example Health,(212) 555-0118,1. Ana Ortiz 2. Yuki Ortiz 3. Aisha Okafor 4. Sofia Martinez 5. Minh Ramos,,,,
+Tomás,Choi,tomas56@mail.example.org,Ticket,Ticket,1,1,"$1,000.00 ",$0.00,$0.00,2026-04-13 06:02:18 AM EDT,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0185,me,,,,
+Isabel,Moreau,isabel.moreau@mulberryexamplefoundation.example.org,Silver Sponsor,Sponsorship,1,10,"$15,000.00",$0.00,$0.00,2026-04-13 03:49:32 PM EDT,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,Mulberry Example Foundation,(212) 555-0108,"Isabel Moreau
+Minh Lopez
+Olivia Sato
+Noah Ramos
+Arjun Lin
+Rosa Singh
+Mateo Rodriguez
+Noah Tran",,,,
+Mei,Haddad,mei.haddad71@home.example.org,Ticket,Ticket,1,1,"$1,000.00",$0.00,$0.00,2026-04-13 11:49:32 PM EDT,,Apple Pay,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0100,,,,,
+Ji-woo,Patel,ji.woo.patel@orchardexamplepartners.example.org,Bronze Sponsor,Sponsorship,1,8,"$10,000.00",$0.00,$0.00,2026-04-14 05:32:06 AM EDT,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,"  ORCHARD EXAMPLE PARTNERS ",(212) 555-0115,"Linh Mensah
+Aisha Lopez
+Chloe Lin",,,,
+Diego,Liu,diego84@home.example.org,Ticket,Ticket,1,1,"$1,000.00 ",$0.00,$0.00,2026-04-16 01:08:32 PM EDT,,Apple Pay,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0113,To follow,,,,
+Linh,Lee,linh28@home.example.org,Ticket,Ticket,1,1,"$1,000.00",$0.00,$0.00,2026-04-16 08:32:23 PM EDT,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0157,N/A,,,,
+Min-jun,Sato,min.jun.sato@baxterexamplepartners.example.org,Gold Sponsor,Sponsorship,1,10,"$25,000.00 ",$0.00,$0.00,2026-04-17 03:47:30 AM EDT,,ACH,succeeded,,AAFE's 52nd Annual Gala,,,,Baxter Example Partners,(212) 555-0102,Kenji Park <KENJI.PARK.11@GUEST.EXAMPLE.ORG>; Seo-yeon Martinez <SEO.YEON.MARTINEZ.12@GUEST.EXAMPLE.ORG>; Omar Huang <OMAR.HUANG.13@GUEST.EXAMPLE.ORG>; Wei Jung <WEI.JUNG.14@GUEST.EXAMPLE.ORG>; Samuel Okafor <SAMUEL.OKAFOR.15@GUEST.EXAMPLE.ORG>,,,,
+Luis,Lopez,luis.lopez32@mail.example.org,Ticket,Ticket,1,1,"$1,000.00 ",$0.00,$0.00,2026-04-18 02:59:32 AM EDT,,Apple Pay,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0161,me,,,,
+Linh,Park,events@sharedinbox.example.org,Silver Sponsor,Sponsorship,1,10,"$15,000.00",$0.00,$0.00,2026-04-18 06:19:32 AM EDT,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,"  CANAL EXAMPLE FOUNDATION ",(212) 555-0107,"me
+Yuki Mensah
+Chloe Liu
+Haruto Moreau
+Wei Park
+Rosa Moreau
+Mei Rivera
+Kenji Fernández
+Wei Lopez",,,,
+Diego,Kowalski,DIEGO65@MAIL.EXAMPLE.ORG,Ticket,Ticket,1,1,"$1,000.00",$0.00,$0.00,2026-04-18 11:44:22 PM EDT,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0194,,,,,
+Wei,Ramos,WEI50@MAIL.EXAMPLE.ORG,Ticket,Ticket,1,1,"$1,000.00",$0.00,$0.00,2026-04-19 06:26:47 PM EDT,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0179,Wei Ramos,,,,
+Linh,Liu,linh.liu@eldridgeexamplerealty.example.org,Platinum Sponsor,Sponsorship,1,12,"$50,000.00",$0.00,$0.00,2026-04-19 07:07:45 PM EDT,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,Eldridge Example Realty,(212) 555-0100,"Sofia Rivera
+Noah Park
+Minh Rodriguez
+Min-jun Jung
+Yuki Liu
+Mateo Martinez
+Hana Zhang
+Min-jun Ahmed
+Noah Núñez
+Ana Patel - ana.patel.1@guest.example.org",,,,
+Mei,Zhang,mei34@mail.example.org,Ticket,Ticket,1,1,"$1,000.00",$0.00,$0.00,2026-04-19 07:21:00 PM EDT,,ACH,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0163,Mei Zhang,,,,
+Omar,Lopez,OMAR67@INBOX.EXAMPLE.ORG,Ticket,Ticket,1,1,"$1,000.00",$0.00,$0.00,2026-04-19 11:58:39 PM EDT,,Apple Pay,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0196,Ji-woo Park,,,,
+Nadia,Zhang,nadia2@inbox.example.org,Ticket,Ticket,2,2,"$2,000.00 ",$0.00,$0.00,2026-04-20 05:35:41 AM EDT,,ACH,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0131,"Nadia Zhang
+Daniel Moreau",,,,
+Carlos,Fernández,carlos25@inbox.example.org,Ticket,Ticket,1,1,"$1,000.00 ",$0.00,$0.00,2026-04-20 05:07:08 PM EDT,,Apple Pay,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0154,,,,,
+Ana,Kowalski,ana5@mail.example.org,Ticket,Ticket,2,2,"$2,000.00",$0.00,$0.00,2026-04-21 02:48:08 PM EDT,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0134,"Chloe Yamada - chloe.yamada.25@guest.example.org
+Linh Singh - linh.singh.26@guest.example.org",,,,
+Aisha,Kowalski,aisha.kowalski@baxterexampletrust.example.org,Silver Sponsor,Sponsorship,1,10,"$15,000.00",$0.00,$0.00,2026-04-25 05:00:16 AM EDT,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,Baxter Example Trust,(212) 555-0112,"Mateo
+Daniel Patel
+Grace Cohen
+Jun Choi
+Omar Sato
+Diego Garcia",,,,
+Ji-woo,Ortiz,JI.WOO.ORTIZ10@HOME.EXAMPLE.ORG,Ticket,Ticket,2,2,"$2,000.00",$0.00,$0.00,2026-04-25 05:55:05 AM EDT,,ACH,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0139,"Ji-woo Ortiz
+Haruto Kaur",,,,
+Fatima,Núñez,fatima.nunez@donor.example.org,VIP Table 2026,Sponsorship,1,10,"$30,000.00",$0.00,$0.00,2026-04-25 12:43:50 PM EDT,,Apple Pay,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0117,TBD,,,,
+Bao,Lopez,bao53@inbox.example.org,Ticket,Ticket,1,1,"$1,000.00",$0.00,$0.00,2026-04-25 09:55:36 PM EDT,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0182,Ana Rodriguez - ana.rodriguez.34@guest.example.org,,,,
+Mateo,Lopez,mateo.lopez@divisionexamplefoundation.example.org,Champion Sponsor,Sponsorship,1,6,"$7,000.00",$0.00,$0.00,2026-04-26 06:23:38 PM EDT,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,Division Example Foundation,(212) 555-0122,"me
+Sofia Ramos
+Priya Choi
+Mateo Patel",,,,
+Noah,Kim,noah.kim@divisionexamplerealty.example.org,Champion Sponsor,Sponsorship,1,6,"$7,000.00",$0.00,$0.00,2026-04-30 04:03:49 AM EDT,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,Division Example Realty,(212) 555-0124,TBD,,,,
+Isabel,Đặng,isabel16@inbox.example.org,Ticket,Ticket,2,2,"$2,000.00",$0.00,$0.00,2026-04-30 06:47:13 AM EDT,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0145,"me
+Grace Huang",,,,
+Camila,Cohen,camila77@home.example.org,Ticket,Ticket,1,1,"$1,000.00",$0.00,$0.00,2026-05-01 02:19:28 AM EDT,,Apple Pay,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0106,Hana Ramos - hana.ramos.37@guest.example.org,,,,
+Aisha,Tran,AISHA.TRAN74@HOME.EXAMPLE.ORG,Ticket,Ticket,1,1,"$1,000.00",$0.00,$0.00,2026-05-05 01:56:27 PM EDT,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0103,Aisha Tran,,,,
+Yuki,Lee,yuki.lee@harborexamplecreditunion.example.org,Platinum Sponsor,Sponsorship,1,12,"$50,000.00",$0.00,$0.00,2026-05-07 03:48:53 PM EDT,,Apple Pay,succeeded,,AAFE's 52nd Annual Gala,,,,"  HARBOR EXAMPLE CREDIT UNION ",(212) 555-0101,"Ana Patel - ana.patel.1@guest.example.org
+Kenji Ramos - kenji.ramos.2@guest.example.org
+Jun Patel - jun.patel.3@guest.example.org
+Wei Núñez - wei.nunez.4@guest.example.org
+Kenji Huang - kenji.huang.5@guest.example.org
+Omar Nguyen - omar.nguyen.6@guest.example.org
+Kwame Tanaka - kwame.tanaka.7@guest.example.org
+Leila Park - leila.park.8@guest.example.org
+Mateo Huang - mateo.huang.9@guest.example.org
+Arjun Ortiz - arjun.ortiz.10@guest.example.org",,,,
+Olivia,Ortiz,olivia11@mail.example.org,Ticket,Ticket,2,2,"$2,000.00",$0.00,$0.00,2026-05-09 10:00:59 PM EDT,,Apple Pay,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0140,"Kwame Zhang
+Jun Chen",,,,
+Mei,Đặng,not an email,Ticket,Ticket,1,1,"$1,000.00",$0.00,$0.00,2026-05-10 06:08:59 PM EDT,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0118,,,,,
+Carlos,Ahmed,carlos3@home.example.org,Ticket,Ticket,2,2,"$2,000.00 ",$0.00,$0.00,2026-05-11 12:02:42 AM EDT,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0132,"Leila Lin
+Kenji Núñez",,,,
+Yuki,Kowalski,YUKI6@MAIL.EXAMPLE.ORG,Ticket,Ticket,2,2,"$2,000.00",$0.00,$0.00,2026-05-11 12:46:04 PM EDT,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0135,"me
+Ravi Lee",,,,
+Mateo,Mensah,mateo47@inbox.example.org,Ticket,Ticket,1,1,"$1,000.00",$0.00,$0.00,2026-05-13 07:50:17 AM EDT,,Stripe Card,succeeded,,AAFE's 52nd Annual Gala,,,,,(212) 555-0176,,,,,
