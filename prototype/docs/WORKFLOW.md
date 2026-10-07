@@ -83,7 +83,7 @@ Badge status runs separately: `needs_review → ready → printed → reprint_ne
 
 ## 3. What the BACKEND needs (Cornell, Aisling)
 
-Recommended stack: **Supabase**. It provides Postgres, Auth, Row-Level Security, Edge Functions, scheduled jobs (pg_cron) and Storage. Hosting is AAFE and GreyBox's decision after handoff; this is only a build recommendation.
+Recommended stack: **Supabase**. It provides Postgres, Auth, Row-Level Security, Edge Functions, scheduled jobs (pg_cron) and Storage. Hosting is AAFE's decision after handoff, with whichever technical partner it chooses; this is only a build recommendation.
 
 | # | Piece | Details |
 |---|---|---|

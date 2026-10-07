@@ -33,7 +33,7 @@ AAFE's gala lead ran the guest list for the 2026 gala (AAFE's project contact wa
 
 ## Constraints
 - Tech capacity "pretty low"; cannot maintain anything very custom.
-- Website run by a third-party developer (named "Graybox" on the call) that hosts on its own server. Research: aafe.org is WordPress on a single OVH VPS (CyberPanel/OpenLiteSpeed); no public link found to graybox.co. Confirm who manages it.
+- Website run by a third-party developer (named "Graybox" on the call) that hosts on its own server. Research (corrected Oct 7): the partner is most likely GreyBox Creative, a New York branding and web agency whose portfolio includes AAFE's rebrand and trilingual website (not graybox.co). Who hosts aafe.org and manages its domain and DNS is unconfirmed; an earlier note that it runs on an OVH server was a guess and has been removed. Confirm who manages it.
 - AAFE uses Google Workspace / Google Drive.
 - AAFE's project contact is finalizing an AI acceptable-use policy (no PII into AI tools) and wants to be kept in the loop on data decisions.
 
