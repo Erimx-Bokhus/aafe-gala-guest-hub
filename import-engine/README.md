@@ -43,4 +43,18 @@ The staff app's upload screen is the remaining piece (frontend pair): read the f
 tiers, then call `staff_import_givelively` with `toGlImport`'s result. The database tests in
 `prototype/scripts/test-backend.mjs` run that whole path on a sample CSV.
 
+## A full-size test gala
+
+`test/fixtures/gala-2026/` is an invented, messy gala shaped like AAFE's 2026 one: 553 guests. The Give
+Lively export (`givelively-export.csv`) has 234 sponsor-guest seats in 29 sponsorships and 107 ticket seats,
+plus rows to leave out or flag (another campaign, a refund, an unmapped tier, an unreadable email, a shared
+inbox, a guest on two sponsors' lists). `staff-added.json` holds the 212 guests staff add by hand (109
+comped, 53 government or VIP, 45 AAFE staff, 3 event volunteers, 2 event staff). Guest lists are typed every
+way buyers type them, and `expected.json` says what the import should make of each row.
+
+`generate.mts` writes all three from a fixed seed; run `node test/fixtures/gala-2026/generate.mts` after
+changing it (the tests fail if the files drift). `test/gala2026.test.ts` checks every row here;
+`prototype/scripts/test-gala-2026.mjs` runs the whole gala into the database. For tests only: the demo keeps
+its own seed data unless the team decides otherwise.
+
 It uses Web Crypto rather than Node's `crypto`, so the same code can run in a Supabase Edge Function (Deno) later.

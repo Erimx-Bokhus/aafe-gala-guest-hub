@@ -1,11 +1,17 @@
 # Decisions
 <!-- updated 2026-10-05 22:58 Aisling -->
-<!-- reviewed 2026-10-06 Aisling -->
+<!-- reviewed 2026-10-07 Aisling -->
 
 Every decision with its reason and what would reopen it, newest first. Nothing here is reopened without new information.
 
 | Date | Decision | Why | Revisit if | Owner |
 | --- | --- | --- | --- | --- |
+| Oct 7 | The full-size invented test gala (553 guests, shaped like 2026) is for the import tests only; whether it joins the demo is decided after it proves reliable (PR #50) | Realistic mess for the tests without changing what the demo shows | The team wants it in the demo | Aisling <!-- new 2026-10-07 13:45 Aisling --> |
+| Oct 6 | Features waiting on AAFE are built switched off: sponsor-facing arrivals behind a setting only a gala admin can turn on, with AAFE's approval noted, showing arrived or not, never a time (PR #49); translations reviewed by AAFE on a side-by-side sheet (PR #50) | Ready the day AAFE says yes; nothing reaches sponsors before then | AAFE's privacy review says no | Aisling <!-- new 2026-10-07 13:45 Aisling --> |
+| Oct 6 | Sponsor pipeline: AAFE's stages (not started 0%, reached out 10%, in conversation 50%, closed won 90%, payment received 100%, lost), the ask against the commitment, the last two galas' giving, and a board against the goal; recording a payment moves a sponsor to payment received (PR #48) | Matches AAFE's own prospect tracker | AAFE wants more of its tracker (add-ons, materials) | Aisling <!-- new 2026-10-07 13:45 Aisling --> |
+| Oct 6 | Two doors check in the same guest: the first arrival stands, even if it syncs later; the second is flagged ("already checked in at 7:04 by Door 2") and logged (PR #46) | One check-in per guest; nothing is lost or silently overwritten | — | Aisling <!-- new 2026-10-07 13:45 Aisling --> |
+| Oct 6 | Offline check-in: the iPad keeps checking guests in from a saved list (no emails, phones, or payments) and syncs later, with an "Offline · N check-ins waiting" banner; QR codes are checked offline against their hashes (PR #46) | Venue Wi-Fi may fail; the door can't stop | AAFE prefers the printed list alone | Aisling <!-- new 2026-10-07 13:45 Aisling --> |
+| Oct 6 | Demo preview host: Vercel's free plan, two projects (staff app, guest portal), with only the Supabase URL and public key in Vercel's settings | Free, mainstream, deploys from GitHub; Supabase stays the backend | The demo needs something the free plan lacks | Aisling <!-- new 2026-10-07 13:45 Aisling --> |
 | Oct 6 | Every check runs on every pull request and all six are required on `main` (secret scan, real-data guard, backend tests, import engine tests, app tests and build, and server function type-check); the live Supabase checks (`db:backend`, advisors) stay manual | A failing test should block a merge, not rely on someone noticing; running live checks in CI would mean storing a Supabase login in GitHub | — | Aisling <!-- updated 2026-10-06 21:33 Aisling --> |
 | Oct 6 | Keys that can bypass the access rules (service role, email, Give Lively, cron) live only in Supabase's Edge Function secrets; a build guard, a demo-file guard, and secret-scan rules enforce it (PR #36) | A browser app ships its settings to every visitor, so production apps keep real secrets in a server-side vault and stop builds from leaking them | A partner moves to a different secret store | Aisling <!-- updated 2026-10-06 20:56 Aisling --> |
 | Oct 6 | App unit tests use Vitest (the same tool as the import engine) and run in CI on every PR that touches the apps (PR #36) | One test tool across the repo; the sign-in tests for #27 run on it | — | Aisling <!-- updated 2026-10-06 20:56 Aisling --> |
@@ -53,7 +59,7 @@ Every decision with its reason and what would reopen it, newest first. Nothing h
 
 | Decision | Who decides | When |
 | --- | --- | --- |
-| Demo preview host | Team | When the demo is deployable <!-- modified 2026-10-05 16:51 Aisling --> |
+| Whether a name written in Chinese or Korean script without a space counts as a full name in the import (today it's left for the sponsor) | Team | Before AAFE's real lists <!-- new 2026-10-07 13:45 Aisling --> |
 | Whether AI features are required for Demo Day | Team, Pursuit | This week <!-- modified 2026-10-05 16:51 Aisling --> |
 | AI on or off, retention, dietary data | AAFE | After the data note is reviewed |
 | Code and IP ownership after Nov 10, and the repo license | AAFE, Pursuit, team | Before handoff (Nov 10) <!-- modified 2026-10-06 05:50 Aisling --> |
