@@ -19,7 +19,7 @@ Translations read awkwardly | 2 | 1 | AAFE staff review every translated string 
 AAFE's AI policy rules out AI features | 2 | 1 | Matching works without AI; AI features ship switched off | Aisling
 The demo preview's free tier lapses before Demo Day | 2 | 2 | Use a paid starter tier for the demo month, or rebuild the database from seed data | Aisling
 Two sponsor portals drift apart | 2 | 2 | One portal (`prototype/guest-portal`); ideas from Antonin's prototype come in as small PRs that Natalie approves | Natalie, Antonin
-A secret key reaches the browser or the repo | 1 | 3 | Keys that bypass the access rules live only in Supabase's secret store; secret scan on every PR; rotate every key at handoff | Aisling
+A secret key reaches the browser or the repo | 1 | 3 | Keys that bypass the access rules live only in Supabase's secret store; build and demo-file guards (PR #36); secret scan on every PR; rotate every key at handoff | Aisling
 ```
 
 ```notes
