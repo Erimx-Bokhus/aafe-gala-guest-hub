@@ -16,11 +16,12 @@ Until Natalie's team PRD and Pursuit's PRD are final, these pages together are t
 | Out of scope | This page, "Later or out of scope"; [Overview](#overview), "What we will not build" | Settled <!-- new 2026-10-06 04:16 Aisling --> |
 | Success measures | The three questions below; AAFE's feedback on the full path (Oct 30); Demo Day (Nov 10) | No numeric targets yet <!-- new 2026-10-06 04:16 Aisling --> |
 | Data and AI rules | [Data and AI](#data-ai) | Settled; AAFE still to approve <!-- new 2026-10-06 04:16 Aisling --> |
+| Security and keys | [`docs/keys-and-secrets.md`](https://github.com/Erimx-Bokhus/aafe-gala-guest-hub/blob/main/docs/keys-and-secrets.md): where every key lives and what enforces it | Set Oct 6 (PR #36) <!-- updated 2026-10-06 20:56 Aisling --> |
 | Import rules | [Import and matching](#import) | Settled Oct 5; three choices awaiting Natalie's review <!-- modified 2026-10-06 06:12 Aisling --> |
 | Owners and timeline | [Build plan](#build-plan): two pairs, components C0–C12; Natalie owns the sponsor portal and approves its PRs; prototype demonstration Oct 19 | Settled Oct 5; updated Oct 6 <!-- modified 2026-10-06 20:41 Aisling --> |
 | Decisions and open questions | [Decisions](#decisions), including "Pending" | Updated as we go <!-- new 2026-10-06 04:16 Aisling --> |
 | Risks | [Risks](#risks) | Updated as we go <!-- new 2026-10-06 04:16 Aisling --> |
-| Testing | [Build plan](#build-plan), "Testing: what to add" | 213 automated tests; app and sign-in tests in progress <!-- updated 2026-10-06 20:41 Aisling --> |
+| Testing | [Build plan](#build-plan), "Testing: what to add" | 221 automated tests on `main` (94 import engine, 119 backend, 8 app); 20 sign-in tests in #35 <!-- modified 2026-10-06 20:56 Aisling --> |
 
 When the final PRDs arrive, we compare them with this table and record every difference in [Decisions](#decisions). <!-- new 2026-10-06 04:16 Aisling -->
 
