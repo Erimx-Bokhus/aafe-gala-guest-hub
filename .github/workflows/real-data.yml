@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 jobs:
-  check:
+  real-data-guard:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
