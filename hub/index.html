@@ -1217,6 +1217,8 @@ function fenceNotes(src){ return `<details class="notes" data-notes><summary>Spe
 marked.use({ gfm:true, renderer:{
   code(code, info){
     const [lang, arg] = (info || '').trim().split(/\s+/);
+    // Change markers can't show inside these blocks, so drop any that slipped in (glossary handles its own).
+    if (lang !== 'glossary') code = code.replace(/\s*<!--\s*(new|updated|modified|removed|important)\b[\s\S]*?-->/g, '');
     switch (lang){
       case 'steps': return fenceSteps(code);
       case 'layers': return fenceLayers(code);

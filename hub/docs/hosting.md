@@ -42,6 +42,7 @@ Whoever runs a production version should be able to say yes to each of these, wh
 - **Gala night:** a support plan with a phone escalation contact, a downloaded check-in list and a printed alphabetical backup, and a tested procedure for weak connectivity.
 - **Data review:** a data-processing and acceptable-use review before any real personal information is entered.
 - **Two owners:** a business owner and a technical or vendor owner. One person may hold both roles, but the responsibilities differ.
+- **Keys:** rotate every key at handoff; move to Supabase's new publishable and secret keys so each can be revoked on its own; limit the server functions' allowed origins to the deployed apps instead of `*`; MFA on every Supabase and GitHub account. <!-- updated 2026-10-06 20:41 Aisling -->
 
 ## Demo preview: team notes
 <!-- team -->
