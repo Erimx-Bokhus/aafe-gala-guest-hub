@@ -23,14 +23,26 @@ Guest Portal ──anon key──▶ portal_* functions ──▶  Postgres (sch
 
 ## Setup
 
+Where every key lives, and what stops a secret from reaching the browser or the repo: [`docs/keys-and-secrets.md`](../../docs/keys-and-secrets.md). In short, only the project URL and the anon key ever go in an app's `.env.local`; the service_role key stays in Supabase.
+
 1. **Database.** Supabase dashboard → SQL editor: run `database/schema.sql`, then `seed.sql`, then `backend.sql`.
+   Or from the command line, with the Supabase CLI this folder installs (`npm ci`, then `npx supabase …`):
+   ```bash
+   npx supabase login                                   # opens the browser once
+   npx supabase link --project-ref <PROJECT-REF>        # press Enter at the database password prompt
+   npx supabase db query --linked -f database/schema.sql
+   npx supabase db query --linked -f database/seed.sql
+   npm run db:backend                                   # backend.sql; safe to re-run after every change to it
+   npm run db:advisors                                  # Supabase's security and performance checks
+   ```
+   `db query --linked` goes through your Supabase login, so no database password is needed or stored. `supabase link` keeps its state in `supabase/.temp/`, which git ignores.
 2. **Staff logins.** Authentication → Providers: turn **off** "Allow new users to sign up". Authentication → Users → **Invite** each staff member using the exact email in `staff_users`. Login is matched to the role by email. Demo seed emails are `@aafe-demo.example.org`, so change them to real team inboxes (`update staff_users set email = ...`) to test. Then copy `staff-app/.env.example` to `staff-app/.env.local` with the project URL and anon key: the Staff App's login page switches from demo accounts to an emailed one-time sign-in link, and an email not in `staff_users` is signed straight back out. Authentication → URL Configuration: add the Staff App's address (e.g. `http://localhost:5174/`) to the redirect URLs.
 3. **Edge functions.**
    ```bash
    npx supabase login
    npx supabase link --project-ref <PROJECT-REF>
    npx supabase secrets set \
-     GIVELIVELY_ORG_ID=... GIVELIVELY_API_KEY=... GIVELIVELY_CAMPAIGNS="AAFE Gala 2027" \
+     GIVELIVELY_ORG_ID=... GIVELIVELY_API_KEY=... \
      RESEND_API_KEY=... EMAIL_FROM="AAFE Gala <gala@your-verified-domain>" \
      GUEST_PORTAL_URL=https://<guest-portal-host>/ CRON_SECRET=<long random string>
    npx supabase functions deploy givelively-sync
@@ -57,7 +69,7 @@ AAFE's real Give Lively account isn't used. `givelively-mock` is a pretend Give 
    ```bash
    npx supabase functions deploy givelively-mock
    npx supabase secrets set GIVELIVELY_BASE_URL=https://<PROJECT-REF>.supabase.co/functions/v1/givelively-mock \
-     GIVELIVELY_ORG_ID=demo-aafe GIVELIVELY_API_KEY=<any made-up string> GIVELIVELY_CAMPAIGNS="AAFE Gala 2027" \
+     GIVELIVELY_ORG_ID=demo-aafe GIVELIVELY_API_KEY=<any made-up string> \
      EMAIL_REDIRECT_TO=<your own email> EMAIL_FROM="AAFE Gala Demo <onboarding@resend.dev>"
    ```
    With a free Resend account and no verified domain, `onboarding@resend.dev` can send only to your own Resend login email, so use that for `EMAIL_REDIRECT_TO`. Every email (sent to fake `@example.org` addresses) is redirected there, with the original recipient in the subject.
@@ -84,19 +96,19 @@ The flow is tested in `npm run test:backend` (fake feed → mapping → import �
 ## Give Lively
 
 - **Credentials.** An AAFE admin creates the Zapier API key in the Give Lively Nonprofit Admin Portal. The org ID and key go into the URL `secure.givelively.org/nonprofits/<ORG_ID>/json_dataclips/<API_KEY>.json`, so treat that URL as a password. The function never logs it.
-- **Only gala sales.** The endpoint returns *all* of AAFE's donations. Only donations whose campaign name contains one of `GIVELIVELY_CAMPAIGNS` are imported. Others are ignored.
+- **Only gala sales.** The endpoint returns *all* of AAFE's donations. Only donations from this gala's Give Lively page are imported: `gala_events.givelively_page_name` (e.g. "AAFE's 52nd Annual Gala"), matched exactly, set once a year by an admin (`staff_set_gala_page`). Not set: the sync does nothing and says so. `demo_givelively.sql` sets it to "AAFE Gala 2027" for the fake account.
 - **Field names are not documented by Give Lively.** The mapping in `_shared/givelively.ts` follows the "Line Items (All)" report names and tolerates snake_case, nesting and amounts in cents. **Before launch, run one poll against AAFE's account and check `select * from givelively_raw where import_status = 'unmapped';`.** Any row there means a field name needs adding to `FIELDS`.
 - **Rules.**
-  - No duplicates: a donation is matched on its Give Lively transaction ID.
+  - No duplicates: a purchase is matched on its purchase key (buyer email + UTC purchase time), or its Give Lively transaction ID when the sync has one.
   - Refunds update the existing payment and flag it for review.
   - Pending or failed bank payments are skipped until Give Lively reports them settled.
   - Give Lively's own fee is stored as reported and never recomputed.
 - **Flagged for review** (`payments.reconciliation_status = 'needs_review'`, reason in `orders.internal_notes`):
-  - the package name didn't match a tier (it is set to Community Ticket)
+  - (an unknown package no longer defaults to Community Ticket: nothing is created, and it goes to `import_review` as `unknown_tier`)
   - the payment method wasn't recognized
-  - the fee was missing
+  - the fee was missing (sync only; AAFE's ticket export has no fee column)
 - **Ticket quantity.** A ticket purchase gets one seat per ticket. The count comes from Give Lively's quantity field if present, otherwise from amount ÷ ticket price.
-- **Backup path.** CSV upload of "Line Items (All)" from the Integrations page calls `staff_import_givelively(rows)`. It uses the same rules and is admin only.
+- **CSV upload (the main path for AAFE's ticket export).** The staff app parses the file with `import-engine/` (`prepareUpload`, then `toGlImport`) and calls `staff_import_givelively(rows, run)`, admin only, one transaction. Purchases are matched on `payments.purchase_key` (email + UTC purchase time; `purchase_key()` computes the same key for sync rows). Unknown tiers go to `import_review` until an admin maps them (`staff_set_tier_mapping`); clear guest names are pre-filled as `submitted` only on orders nobody has named; a changed guest list later raises `guest_text_changed` instead of overwriting. Each upload is an `import_runs` row; staff close review items with `staff_resolve_import_review`. Spec: `docs/import-matching-spec.md`.
 
 ## Guest Portal API (anon key)
 
@@ -126,7 +138,7 @@ Writes: only through these functions, and each one writes `audit_log`. `audit_lo
 | `recordOfflinePayment` | `staff_record_payment(p_order_id, p_method, p_amount, p_received, p_check_number)` | admin, RM |
 | `addPledge` | `staff_add_pledge(p_org, p_contact, p_email, p_tier_id, p_source)` | admin, RM |
 | `addCompGuest` | `staff_add_comp_guest(p_guest)` | admin, RM |
-| `sendQrInvite` | `staff_send_qr_invite(p_guest_id)`; approved by the sender | admin, RM |
+| `sendQrInvite` | `staff_send_qr_invite(p_guest_id)`; approved by the sender. The guest needs a seat and an email; the code is minted when it sends | admin, RM |
 | `resendPortalLink` | `staff_resend_portal_link(p_order_id)`; approved by the sender; the old link stops working | admin, RM |
 | `checkIn` | `staff_check_in(p_guest_id, 'search')` or `staff_check_in_qr(p_code)` | all |
 | `checkInException` | `staff_check_in_exception(p_name, p_order_id, p_type, p_note)` | all |
@@ -134,6 +146,11 @@ Writes: only through these functions, and each one writes `audit_log`. `audit_lo
 | Integrations "Pull now" | `functions.invoke('givelively-sync')` | admin |
 | Approve / discard a draft email | `staff_approve_email(p_email_id)` / `staff_cancel_email(p_email_id)` | admin, RM |
 | Send approved email now | `functions.invoke('send-emails')` | admin, RM |
+| Badges → "CSV for printer" | `staff_export_badges(p_include_printed default false)`: ready and reprint badges, sorted by table and seat; badge fields only (no email, dietary, payment, or notes) | admin, RM |
+| Check-in → printed list (new) | `staff_export_checkin()`: every guest by last name plus one row per unnamed sponsor seat, with table, seat, and arrived; no email or dietary needs | all |
+| Integrations → Salesforce file (new) | `staff_export_salesforce()`: one row per arrival (walk-ins included) with email, Salesforce Account and Opportunity ids, and arrival time | admin |
+
+Each export writes `audit_log` (`export.badges`, `export.checkin`, `export.salesforce`) with the row count. They return rows; the staff app saves them with `downloadCsv` (`shared/src/ui.tsx`), which already blocks spreadsheet formulas and keeps Chinese and Korean names readable in Excel. The columns are a first proposal until AAFE sends its badge and check-in templates.
 
 Errors come back as the Postgres message: `forbidden`, `not_found`, `invalid_link`, `invalid_input: …`, `invalid_transition: …`, `seat_taken`, `seat_locked: …`.
 
@@ -151,7 +168,7 @@ Errors come back as the Postgres message: `forbidden`, `not_found`, `invalid_lin
 - **Staff App still uses in-memory data** after sign-in. Login is real when `staff-app/.env.local` is set (issue #8); the pages still read and write the synthetic data. To connect them (issue #9):
   - Swap `staff-app/src/store.ts` to the calls above.
   - Sponsors → "copy portal link" becomes "send new link", because tokens are stored hashed.
-- **Team-rule gaps.** QR codes are per guest and stored in plain text, so staff can display them. Hard rule 6 wants them per seat, hashed, and expiring after gala night. The seed's demo sponsor links are short (8 characters), fine for the demo but below rule 6's 128 bits; real links are minted at 128 bits by `send-emails`.
+- **QR e-tickets (hard rule 6).** A code is minted only when an approved `qr_invitation` email sends; the database keeps its SHA-256 hash on the guest's seat (`seats.qr_token_hash`), valid until 6 a.m. New York time the morning after gala night. Resending replaces the code; a different guest on the seat, a name or email change, or a cancelled seat voids it. Staff can't display a code, only resend it. The seed's QR codes are moved onto seats as hashes when `backend.sql` runs. The seed's demo sponsor links are short (8 characters), fine for the demo but below rule 6's 128 bits; real links are minted at 128 bits by `send-emails`.
 - **Email.** Only `portal_link` and `qr_invitation` templates are built, in English (the portal page itself has 中文 and Español). Scheduled deadline reminders and payment receipts aren't built.
-- **Salesforce.** Not built (out of scope in the project scope doc).
+- **Salesforce.** No direct sync (out of scope in the project scope doc). `staff_export_salesforce()` gives a file shaped for a Contact and Campaign Member import instead.
 - **Edge functions** haven't been run yet. Deno wasn't available when they were written, so test them after the first deploy. The SQL and the Give Lively mapping are tested.

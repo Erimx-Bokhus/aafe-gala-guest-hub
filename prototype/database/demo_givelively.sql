@@ -57,3 +57,7 @@ begin
       'General donation', 100, 'Credit Card', 1, false, 'Year-End Appeal');
   end if;
 end $$;
+
+-- The fake purchases use the page name "AAFE Gala 2027"; the sync imports only this gala's page.
+update gala_events set givelively_page_name = coalesce(givelively_page_name, 'AAFE Gala 2027')
+ where id = (select id from gala_events where status <> 'closed' order by year desc limit 1);

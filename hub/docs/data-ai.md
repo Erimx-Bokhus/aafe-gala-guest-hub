@@ -1,4 +1,5 @@
 # Data and AI
+<!-- reviewed 2026-10-06 Aisling -->
 
 The prototype uses invented data only. This page sets out what a production version would store and how it would treat AI, so AAFE can review it with its AI policy; the policies themselves are AAFE's decisions.
 
@@ -17,7 +18,7 @@ The prototype uses invented data only. This page sets out what a production vers
 | Payment method, date, and status | |
 | Relationship owner, logo and program-ad status | |
 | Table number, badge status, check-in time | |
-| Source of each record (Give Lively, staff entry, sponsor link, or check-in desk) and a history of every change | |
+| Source of each record (Give Lively, staff entry, sponsor link, or check-in desk) and a history of every change | <!-- modified 2026-10-03 11:56 Aisling --> |
 
 **Optional, if AAFE chooses:** dietary and accessibility needs, shown only to staff who need them and deleted after the event.
 
@@ -29,20 +30,22 @@ The prototype uses invented data only. This page sets out what a production vers
 - **Provider terms:** a paid service that doesn't train on submitted data, confirmed in writing before any real data is used.
 
 ## AI features for Demo Day
-<!-- new Oct 5 -->
+<!-- new 2026-10-05 16:51 Aisling -->
 
-Antonin flagged on Oct 3 that AI Native Demo Day may expect two or three real AI features; the team is confirming whether that is required. Candidates that fit the rules above (off by default, staff approve everything, no emails, phone numbers, or payment details sent to AI):
+Antonin flagged on Oct 3 that AI Native Demo Day may expect two or three real AI features; the team is confirming whether that is required. Candidates that fit the rules above (off by default, staff approve everything, no emails, phone numbers, or payment details sent to AI): <!-- new 2026-10-05 16:51 Aisling -->
 
-1. **Split the free-text guest list** from Give Lively into names; emails are removed before the text goes to AI, and staff confirm the result.
-2. **Flag likely badge errors**, such as a title or organization that differs from earlier records, for the relationship owner to review.
-3. **Explain why two records may be the same person** in the review queue.
-4. **Draft follow-up emails** for staff to edit and approve.
+1. **Split the free-text guest list** from Give Lively into names; emails are removed before the text goes to AI, and staff confirm the result. <!-- new 2026-10-05 16:51 Aisling -->
+2. **Flag likely badge errors**, such as a title or organization that differs from earlier records, for the relationship owner to review. <!-- new 2026-10-05 16:51 Aisling -->
+3. **Explain why two records may be the same person** in the review queue. <!-- new 2026-10-05 16:51 Aisling -->
+4. **Draft follow-up emails** for staff to edit and approve. <!-- new 2026-10-05 16:51 Aisling -->
 
 ## Access
 
-- The prototype uses demo accounts with three roles: admin, staff, and check-in volunteer. A production version would use AAFE's Google accounts with MFA.
-- Sponsor links open only that sponsor's purchase and expire at AAFE's deadline. QR e-tickets open only one seat and expire after gala night. Both are random, and only a scrambled (hashed) copy is stored, so a database leak doesn't reveal working links.
-- Every email is approved by staff before it sends. A relationship manager who reviews and sends their own comp ticket counts as the approver; every send is logged.
+- The prototype uses demo accounts with three roles: gala admin, relationship manager, and check-in volunteer. A production version would use AAFE's Google accounts with MFA. <!-- modified 2026-10-06 05:50 Aisling -->
+- Sponsors will see their own guests' gala-night arrival status (decided Oct 6). AAFE reviews the privacy side, including whether arrival times are shown, before it goes live. <!-- updated 2026-10-06 20:41 Aisling -->
+- Keys: only the project address and the public anon key ever go in an app. Keys that can bypass the access rules stay in Supabase's encrypted secret store; the build refuses to ship one to the browser. Details: `docs/keys-and-secrets.md`. <!-- updated 2026-10-06 20:56 Aisling -->
+- Sponsor links open only that sponsor's purchase and expire at AAFE's deadline. QR e-tickets open only one seat and expire after gala night. Both are random, and only a scrambled (hashed) copy is stored, so a database leak doesn't reveal working links. <!-- modified 2026-10-03 11:56 Aisling -->
+- Every email is approved by staff before it sends. A relationship manager who reviews and sends their own comp ticket counts as the approver; every send is logged. <!-- modified 2026-10-03 11:56 Aisling -->
 - Every edit records who made it and when.
 - Data is encrypted in transit and at rest; credentials live in the host's secrets store, never in the code.
 

@@ -81,13 +81,19 @@ export function normalize(raw: unknown): GLRow {
 
 export type Verdict = 'import' | 'not_gala' | 'not_settled' | 'unmapped'
 
+// The endpoint returns ALL of AAFE's donations, not just the gala; classify() keeps this gala's page only.
+
+/** Page names compare NFKC, case-folded, trimmed, inner spaces collapsed (same as name_key() in backend.sql). */
+const pageKey = (s: string) => s.normalize('NFKC').toLowerCase().replace(/\s+/g, ' ').trim()
+
 /**
- * The endpoint returns ALL of AAFE's donations, not just the gala.
- * Only rows whose campaign matches one of `campaigns` (case-insensitive substring) are imported.
+ * `pageNames`: this gala's Give Lively page name (gala_events.givelively_page_name). Matched exactly,
+ * not as a substring, so "AAFE's 52nd Annual Gala Auction" or another year's page isn't imported.
  */
-export function classify(row: GLRow, campaigns: string[]): Verdict {
+export function classify(row: GLRow, pageNames: string[]): Verdict {
   if (!row.txn || !row.email || !(row.gross ?? row.original)) return 'unmapped'
-  if (!campaigns.some((c) => row.campaign.toLowerCase().includes(c.toLowerCase()))) return 'not_gala'
+  const keys = pageNames.map(pageKey).filter(Boolean)
+  if (!keys.includes(pageKey(row.campaign))) return 'not_gala'
   // Bank (ACH) payments settle over days; Give Lively re-sends the donation when its status changes.
   if (/fail|declin|cancel|pending|processing|incomplete/i.test(row.status)) return 'not_settled'
   return 'import'
