@@ -45,7 +45,7 @@ The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus),
 - [x] Tier mapping and gala page filter from Natalie's review (spec PR #22; built in PRs #23–#26) — Aisling <!-- modified 2026-10-06 05:50 Aisling -->
 - [x] Three import choices decided and posted for Natalie's review (PR #24) — Aisling <!-- modified 2026-10-05 22:58 Aisling -->
 - [x] Backend tests run on PRs that touch `prototype/` or `import-engine/` (PR #26) — Aisling <!-- modified 2026-10-06 05:50 Aisling -->
-- [ ] Merge PR #27 after Cornell updates it from `main` (17 commits behind) — Aisling <!-- modified 2026-10-06 05:50 Aisling -->
+- [ ] Review and merge PR #27 once Cornell merges #35, which brings it up to date with `main` — Aisling <!-- modified 2026-10-06 20:41 Aisling -->
 - [ ] Natalie's review of the three import choices (Slack) — Natalie <!-- modified 2026-10-05 22:58 Aisling -->
 - [ ] Share the Pursuit PRD and the team PRD with the backend pair — whoever has them <!-- modified 2026-10-05 22:58 Aisling -->
 - [ ] Trello access for Cornell — Natalie <!-- modified 2026-10-06 06:12 Aisling -->
@@ -56,7 +56,22 @@ The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus),
 - [x] Frontend build check, demo-data drift check, real-data guard in CI — Backend pair <!-- modified 2026-10-06 01:13 Aisling -->
 - [x] Supabase project loaded (schema, seed, backend); access rules (RLS) on for all 18 tables; Supabase advisor warnings cut from 41 to 28, all by design (PR #30) — Aisling <!-- modified 2026-10-06 05:50 Aisling -->
 - [x] Real-data guard required before merging to `main`, alongside the secret scan — Aisling <!-- updated 2026-10-06 03:05 Aisling -->
-- [ ] Informal client demo, Wednesday Oct 7 — Natalie <!-- modified 2026-10-05 22:58 Aisling -->
+- [x] ~~Informal client demo, Wednesday Oct 7~~ Replaced by the prototype demonstration on Oct 19 — Natalie <!-- modified 2026-10-06 20:41 Aisling -->
+
+## Added October 6 (evening)
+<!-- new 2026-10-06 20:41 Aisling -->
+
+- [x] Exports built and loaded into the team Supabase project (PR #34) — Aisling <!-- updated 2026-10-06 20:41 Aisling -->
+- [x] Antonin's sponsor portal prototype reviewed — Natalie, Aisling <!-- updated 2026-10-06 20:41 Aisling -->
+- [ ] Merge PR #36: keys kept out of the browser and the repo, app unit tests in CI — Aisling <!-- updated 2026-10-06 20:41 Aisling -->
+- [ ] Add the 20 staff sign-in tests to #35 after #36 merges — Aisling <!-- updated 2026-10-06 20:41 Aisling -->
+- [ ] Merge #35 into `cornell-staff-auth`, then run the live sign-in test against the team project — Cornell <!-- updated 2026-10-06 20:41 Aisling -->
+- [ ] Port tier layout, the "still need names" line, Korean, and gala-night arrivals into `guest-portal` as small PRs, screenshots first — Antonin (Natalie approves) <!-- updated 2026-10-06 20:41 Aisling -->
+- [ ] Switch the prototype's demo emails to `@example.org`; confirm the Figma Make site isn't published — Antonin <!-- updated 2026-10-06 20:41 Aisling -->
+- [ ] Team PRD draft (started Oct 6) — Natalie <!-- updated 2026-10-06 20:41 Aisling -->
+- [ ] Confirm the Oct 19 prototype demonstration — Cornell <!-- updated 2026-10-06 20:41 Aisling -->
+- [ ] AAFE privacy review of sponsor-facing gala-night arrivals — Natalie <!-- updated 2026-10-06 20:41 Aisling -->
+- [ ] Decide whether guest email is required or optional — Team <!-- updated 2026-10-06 20:41 Aisling -->
 
 ## Week of October 12
 
@@ -73,7 +88,7 @@ The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus),
 
 ## Week of October 26
 
-- [ ] Exports: database side done (badge file with table numbers, check-in list, Salesforce file; PR #34); staff app buttons next, with the frontend pair — Backend pair <!-- modified 2026-10-06 06:30 Aisling -->
+- [ ] Exports: database side done and loaded into the team project (badge file with table numbers, check-in list, Salesforce file; PR #34); staff app buttons next, with the frontend pair — Backend pair <!-- modified 2026-10-06 20:41 Aisling -->
 - [ ] Approval screen, plus reminder and receipt templates (draft queue and approval built in the backend) — Backend pair <!-- modified 2026-10-06 06:12 Aisling -->
 - [ ] Check-in app: search, arrivals, walk-ins, blank sponsor seats — Frontend pair <!-- modified 2026-10-05 20:37 Aisling -->
 - [ ] Show AAFE the full path for feedback — Natalie
