@@ -19,7 +19,7 @@ Guest Portal ──anon key──▶ portal_* functions ──▶  Postgres (sch
 | `supabase/functions/send-emails` | Sends **staff-approved** emails (portal links, QR invitations) through Resend. Unapproved drafts never send (hard rule 4). |
 | `supabase/functions/givelively-mock` + `database/demo_givelively.sql` | **Demo only.** A fake Give Lively account with synthetic purchases. |
 | `supabase/functions/_shared/givelively.ts` | Maps a Give Lively donation to our row shape and filters out non-gala donations. |
-| `scripts/test-backend.mjs`, `scripts/test-givelively.mts` | `npm run test:backend`: 51 database and demo-flow checks + mapping checks, no Supabase account needed. |
+| `scripts/test-backend.mjs`, `scripts/test-access.mjs`, `scripts/test-givelively.mts` | `npm run test:backend`, no Supabase account needed: the database and demo flows; the access rules for every table, view and function against every kind of caller, plus the sponsor link's limits; and the Give Lively mapping. `scripts/test-db.mjs` is their shared in-memory database setup. Any failed check fails the run. |
 
 ## Setup
 
