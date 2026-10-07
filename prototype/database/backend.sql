@@ -663,10 +663,10 @@ begin
   return v_guest;
 end $$;
 
--- sendQrInvite
+-- sendQrInvite. The staff member sending it is its approver (hard rule 4); the send is logged.
 create or replace function staff_send_qr_invite(p_guest_id text) returns text
 language plpgsql security definer set search_path = public as $$
-declare me staff_users := require_staff(array['gala_admin','relationship_manager']); g guests;
+declare me staff_users := require_staff(array['gala_admin','relationship_manager']); g guests; v_id text;
 begin
   select * into g from guests where id = p_guest_id;
   if g.id is null then raise exception 'not_found'; end if;
@@ -674,17 +674,23 @@ begin
     raise exception 'invalid_input: guest has no seat';
   end if;
   if g.email is null then raise exception 'invalid_input: guest has no email'; end if;
-  return enqueue_email('qr_invitation', g.email, g.first_name || ' ' || g.last_name, g.order_id, g.id, 'staff_manual', me.name);
+  v_id := enqueue_email('qr_invitation', g.email, g.first_name || ' ' || g.last_name, g.order_id, g.id, 'staff_manual', me.name);
+  perform write_audit('staff', me.name, 'email', v_id, g.order_id, 'email.approved', null, 'approved', false,
+    format('QR invitation to %s %s sent by staff.', g.first_name, g.last_name));
+  return v_id;
 end $$;
 
--- resendPortalLink. Sending mints a NEW link; the old link stops working.
+-- resendPortalLink. Sending mints a NEW link; the old link stops working. Logged like sendQrInvite.
 create or replace function staff_resend_portal_link(p_order_id text) returns text
 language plpgsql security definer set search_path = public as $$
-declare me staff_users := require_staff(array['gala_admin','relationship_manager']); sp sponsors;
+declare me staff_users := require_staff(array['gala_admin','relationship_manager']); sp sponsors; v_id text;
 begin
   select s.* into sp from orders o join sponsors s on s.id = o.sponsor_id where o.id = p_order_id;
   if sp.id is null then raise exception 'not_found'; end if;
-  return enqueue_email('portal_link', sp.primary_contact_email, sp.primary_contact_name, p_order_id, null, 'staff_manual', me.name);
+  v_id := enqueue_email('portal_link', sp.primary_contact_email, sp.primary_contact_name, p_order_id, null, 'staff_manual', me.name);
+  perform write_audit('staff', me.name, 'email', v_id, p_order_id, 'email.approved', null, 'approved', false,
+    format('Guest-list link resent to %s by staff; the old link stops working when it sends.', sp.primary_contact_name));
+  return v_id;
 end $$;
 
 -- Check-in screen data for all roles (volunteers cannot read tables directly).
