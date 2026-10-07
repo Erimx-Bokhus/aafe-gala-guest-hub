@@ -33,4 +33,4 @@ The tools AAFE already uses, and what each means for the build.
 Give Lively already sends payments to AAFE's Stripe account. The prototype does not connect to it; these are options a future version could add:
 
 - **Read-only confirmation:** a restricted key confirms Give Lively payments and flags refunds or disputes, storing only the charge ID, amount, date, and status.
-- **Stripe invoices for emailed pledges (AAFE's decision):** sponsors could pay online by bank transfer at 0.8% capped at $5, plus 0.4% capped at $2 per invoice. Stripe invoices don't send tax receipts, so AAFE would acknowledge these gifts as it does checks.
+- **Stripe invoices for emailed pledges (AAFE's decision):** sponsors could pay online by bank transfer at 0.8% capped at $5, plus 0.4% capped at $2 per invoice. Stripe invoices don't send tax receipts. How AAFE acknowledges gifts paid outside Give Lively (checks, ACH) isn't confirmed: it wasn't discussed on the October 1 call, so it's on the Discovery page's questions. <!-- modified 2026-10-07 00:11 Aisling Was stated as fact; not confirmed by AAFE -->

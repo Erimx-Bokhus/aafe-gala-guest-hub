@@ -5,6 +5,8 @@ Every change to this hub, newest first. Open it while signed in to claude.ai and
 Each change has a kind, shown the same way on every page next to the exact line that changed: **✦ New** (didn't exist before), **+ Updated** (rows, tasks, or terms added), **✎ Modified** (wording, numbers, or a rule changed), **− Removed** (taken out), and **! Important** (everyone should act on it). Hover an icon for the date, time (New York), and who made the change; click it to mark it read.
 
 ```changes
+2026-10-07 00:11 | updated | Aisling | discovery.still-to-ask | Two questions for AAFE: who sends tax acknowledgments to check and ACH sponsors, and whether the tool's payment confirmation replaces the one accounting already emails
+2026-10-07 00:11 | modified | Aisling | systems.stripe | How AAFE acknowledges check and ACH gifts is now an open question, not a stated fact: the October 1 call didn't cover it
 2026-10-06 21:33 | updated | Aisling | decisions | All six checks now run on every pull request and are required on main, including a new server function type-check (PR #40); live Supabase checks stay manual
 2026-10-06 21:12 | modified | Aisling | tasks.added-october-6 | Cornell gets the Supabase keys in person with Aisling, who sets up his access and watches the live sign-in test
 2026-10-06 20:56 | updated | Aisling | decisions | Two decisions from PR #36: keys that bypass the access rules stay in Supabase's secret store, enforced by build and demo-file guards; app unit tests use Vitest in CI

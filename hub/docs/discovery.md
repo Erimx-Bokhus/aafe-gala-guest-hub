@@ -92,3 +92,5 @@ Janelle sent the guest-list notes, the 2026 sponsorship flyer, a Give Lively tic
 - Confirm Traditional Chinese (used on aafe.org and in the portal) with AAFE <!-- modified 2026-10-06 06:12 Aisling -->
 - Whether Give Lively also has an Attendee Data report (one row per ticket) for AAFE's gala page <!-- updated 2026-10-06 06:12 Aisling -->
 - What sponsors may see on gala night: arrival status only, or arrival times too (privacy review) <!-- updated 2026-10-06 20:41 Aisling -->
+- Who sends the tax acknowledgment when a sponsor pays by check or ACH, and when. Give Lively sends receipts only for online purchases, and the October 1 call didn't cover this <!-- new 2026-10-07 00:11 Aisling -->
+- AAFE's accounting already emails a payment confirmation for checks and ACH (October 5 email thread). Should the tool's confirmation draft replace it, or should the tool leave confirmations to accounting? <!-- new 2026-10-07 00:11 Aisling -->
