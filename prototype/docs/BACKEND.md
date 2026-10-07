@@ -20,7 +20,7 @@ Guest Portal ──anon key──▶ portal_* functions ──▶  Postgres (sch
 | `supabase/functions/_shared/emails.ts` | The wording of every email (subject and HTML), as plain functions. `send-emails` uses them to send; the staff app can use the same ones to preview a draft before approving it. |
 | `supabase/functions/givelively-mock` + `database/demo_givelively.sql` | **Demo only.** A fake Give Lively account with synthetic purchases. |
 | `supabase/functions/_shared/givelively.ts` | Maps a Give Lively donation to our row shape and filters out non-gala donations. |
-| `scripts/test-backend.mjs`, `scripts/test-access.mjs`, `scripts/test-emails.mjs`, `scripts/test-audit.mjs`, `scripts/test-offline-checkin.mjs`, `scripts/test-givelively.mts`, `scripts/test-givelively-sync.mts` | `npm run test:backend`, no Supabase account needed: the database and demo flows; the access rules for every table, view and function against every kind of caller, plus the sponsor link's limits; payment confirmations, reminders, the approval queue and the email wording; a change-log entry for every staff action (a new staff function fails until it is listed there); offline check-in end to end, with two iPads checking in the same guest; the Give Lively mapping; and what the Give Lively sync does with each donation, run against `gl_import()` (other campaigns, unsettled payments, unreadable rows, re-polls that must not double anything). `scripts/test-db.mjs` is their shared in-memory database setup. Any failed check fails the run. |
+| `scripts/test-backend.mjs`, `scripts/test-access.mjs`, `scripts/test-emails.mjs`, `scripts/test-audit.mjs`, `scripts/test-offline-checkin.mjs`, `scripts/test-pipeline.mjs`, `scripts/test-givelively.mts`, `scripts/test-givelively-sync.mts` | `npm run test:backend`, no Supabase account needed: the database and demo flows; the access rules for every table, view and function against every kind of caller, plus the sponsor link's limits; payment confirmations, reminders, the approval queue and the email wording; a change-log entry for every staff action (a new staff function fails until it is listed there); offline check-in end to end, with two iPads checking in the same guest; the sponsor pipeline from prospect to payment; the Give Lively mapping; and what the Give Lively sync does with each donation, run against `gl_import()` (other campaigns, unsettled payments, unreadable rows, re-polls that must not double anything). `scripts/test-db.mjs` is their shared in-memory database setup. Any failed check fails the run. |
 
 ## Setup
 
@@ -151,6 +151,10 @@ Guest edits (`staff_update_guest`, and a sponsor editing a named guest through `
 | `checkInException` | `staff_check_in_exception(p_name, p_order_id, p_type, p_note)` | all |
 | Check-in → save the list for offline use (new) | `staff_checkin_snapshot()`: every guest with table, seat, accessibility needs, arrival, and their QR code's hash; no email, phone, payment, dietary needs or notes. A read, not logged | all |
 | Check-in → sync offline check-ins (new) | `staff_sync_check_ins(p_items)`: see "Offline check-in" below | all |
+| Sponsors → pipeline board (new) | `staff_pipeline()`: totals per stage against the goal, and every prospect with its ask, commitment, money received, balance, and the last two galas' giving; no emails or phones. A read, not logged | admin, RM |
+| Sponsors → add or edit a prospect (new) | `staff_save_prospect(p)`: `{ id? , sponsor_id? or organization + contact_name, sector, ask_amount, ask_tier_id, follow_up_owner_id, notes, order_id? }` | admin, RM |
+| Sponsors → move a prospect (new) | `staff_set_prospect_stage(p_id, p_stage)` | admin, RM |
+| Sponsors → set the goal (new) | `staff_set_sponsorship_goal(p_amount)` | admin |
 | `importGiveLively` (CSV) | `staff_import_givelively(p_rows)` | admin |
 | Integrations "Pull now" | `functions.invoke('givelively-sync')` | admin |
 | Approve / discard a draft email | `staff_approve_email(p_email_id)` / `staff_cancel_email(p_email_id)` | admin, RM |
@@ -162,6 +166,17 @@ Guest edits (`staff_update_guest`, and a sponsor editing a named guest through `
 | Integrations → Salesforce file (new) | `staff_export_salesforce()`: one row per arrival (walk-ins included) with email, Salesforce Account and Opportunity ids, and arrival time | admin |
 
 Each export writes `audit_log` (`export.badges`, `export.checkin`, `export.salesforce`) with the row count. They return rows; the staff app saves them with `downloadCsv` (`shared/src/ui.tsx`), which already blocks spreadsheet formulas and keeps Chinese and Korean names readable in Excel. The columns are a first proposal until AAFE sends its badge and check-in templates.
+
+### Sponsor pipeline
+
+Decided Oct 6, from AAFE's prospect tracker. One row per sponsor prospect per gala (`sponsor_prospects`), at one of AAFE's stages: not started (0%), reached out (10%), in conversation (50%), closed won (90%), payment received (100%), lost (0%). Each has a sector, the ask (amount and tier), an AAFE follow-up contact besides the relationship manager, staff notes, and, once there is one, its order.
+
+- **Staff move the early stages** with `staff_set_prospect_stage`. Every move is logged with the old and new stage.
+- **Orders move it on by themselves:** a pledge or purchase links to the prospect (same sponsor, or the same organization name, since `staff_add_pledge` and the Give Lively import create a new sponsor record) and moves it to closed won; the first payment moves it to payment received. These moves are logged as the system. A sponsor who has paid can't be moved by hand.
+- **Give Lively sponsorships with no prospect** join the board on their own. Tickets count only when the buyer is already a prospect (an individual, say); ads and comps never.
+- **The board** (`staff_pipeline`) totals each stage's ask, commitment and money received, plus committed (closed won and paid), received, the open ask, and a weighted forecast (each commitment, or ask, times its stage's likelihood), against the goal a gala admin sets.
+- **If an order is refunded and cancelled**, the prospect stays where it was; staff move it by hand (allowed once nothing is left paid).
+- On first load, this gala's sponsorship orders join the pipeline at closed won or payment received.
 
 ### Offline check-in
 
@@ -183,6 +198,7 @@ Errors come back as the Postgres message: `forbidden`, `not_found`, `invalid_lin
 - New `email_log` columns: `attempts`, `last_error`, `approved_by` and `approved_at`. New status: `cancelled`.
 - New unique index on `payments.givelively_transaction_id`.
 - New `check_ins` columns `client_id` (unique) and `device`, and one check-in per guest per gala (unique index).
+- New table `sponsor_prospects` and `gala_events.sponsorship_goal`; a trigger on `orders` keeps the pipeline in step.
 - `orders.portal_token` now holds a hash. The seed's demo links (`ac-6w9k3p5d`, etc.) still work.
 - The `audit_log` and `salesforce_sync` id counters are moved past the seed's ids (fixes a duplicate-key error on the first new audit row).
 
