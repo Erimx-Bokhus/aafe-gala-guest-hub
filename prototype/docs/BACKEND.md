@@ -37,7 +37,7 @@ Where every key lives, and what stops a secret from reaching the browser or the 
    npm run db:advisors                                  # Supabase's security and performance checks
    ```
    `db query --linked` goes through your Supabase login, so no database password is needed or stored. `supabase link` keeps its state in `supabase/.temp/`, which git ignores.
-2. **Staff logins.** Authentication → Providers: turn **off** "Allow new users to sign up". Authentication → Users → **Invite** each staff member using the exact email in `staff_users`. Login is matched to the role by email. Demo seed emails are `@aafe-demo.example.org`, so change them to real team inboxes (`update staff_users set email = ...`) to test.
+2. **Staff logins.** Authentication → Providers: turn **off** "Allow new users to sign up". Authentication → Users → **Invite** each staff member using the exact email in `staff_users`. Login is matched to the role by email. Demo seed emails are `@aafe-demo.example.org`, so change them to real team inboxes (`update staff_users set email = ...`) to test. Then copy `staff-app/.env.example` to `staff-app/.env.local` with the project URL and anon key: the Staff App's login page switches from demo accounts to an emailed one-time sign-in link, and an email not in `staff_users` is signed straight back out. Authentication → URL Configuration: add the Staff App's address (e.g. `http://localhost:5174/`) to the redirect URLs.
 3. **Edge functions.**
    ```bash
    npx supabase login
@@ -217,8 +217,8 @@ Errors come back as the Postgres message: `forbidden`, `not_found`, `invalid_lin
 ## Not done yet
 
 - **Guest Portal is connected** when `guest-portal/.env.local` is set, and runs offline on the synthetic data when it isn't (the `OPEN-*.html` files). The landing page's demo cards still come from the built-in data. Their links work against the backend only if `seed.sql` was loaded.
-- **Staff App still uses in-memory data.** To connect it:
-  - Swap `staff-app/src/store.ts` and `Login.tsx` to the calls above.
+- **Staff App still uses in-memory data** after sign-in. Login is real when `staff-app/.env.local` is set (issue #8); the pages still read and write the synthetic data. To connect them (issue #9):
+  - Swap `staff-app/src/store.ts` to the calls above.
   - Sponsors → "copy portal link" becomes "send new link", because tokens are stored hashed.
 - **QR e-tickets (hard rule 6).** A code is minted only when an approved `qr_invitation` email sends; the database keeps its SHA-256 hash on the guest's seat (`seats.qr_token_hash`), valid until 6 a.m. New York time the morning after gala night. Resending replaces the code; a different guest on the seat, a name or email change, or a cancelled seat voids it. Staff can't display a code, only resend it. The seed's QR codes are moved onto seats as hashes when `backend.sql` runs. The seed's demo sponsor links are short (8 characters), fine for the demo but below rule 6's 128 bits; real links are minted at 128 bits by `send-emails`.
 - **Email.** Only `portal_link` and `qr_invitation` templates are built, in English (the portal page itself has 中文 and Español). Scheduled deadline reminders and payment receipts aren't built.
