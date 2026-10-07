@@ -21,7 +21,7 @@ Until Natalie's team PRD and Pursuit's PRD are final, these pages together are t
 | Owners and timeline | [Build plan](#build-plan): two pairs, components C0–C12; Natalie owns the sponsor portal and approves its PRs; prototype demonstration Oct 19 | Settled Oct 5; updated Oct 6 <!-- modified 2026-10-06 20:41 Aisling --> |
 | Decisions and open questions | [Decisions](#decisions), including "Pending" | Updated as we go <!-- new 2026-10-06 04:16 Aisling --> |
 | Risks | [Risks](#risks) | Updated as we go <!-- new 2026-10-06 04:16 Aisling --> |
-| Testing | [Build plan](#build-plan), "Testing: what to add" | 221 automated tests on `main` (94 import engine, 119 backend, 8 app); 20 sign-in tests in #35 <!-- modified 2026-10-06 20:56 Aisling --> |
+| Testing | [Build plan](#build-plan), "Testing: what to add" | About 1,110 automated checks on `main` (940 backend, 116 import engine, 56 app, including 20 sign-in tests) <!-- modified 2026-10-07 19:15 Aisling --> |
 
 When the final PRDs arrive, we compare them with this table and record every difference in [Decisions](#decisions). <!-- new 2026-10-06 04:16 Aisling -->
 

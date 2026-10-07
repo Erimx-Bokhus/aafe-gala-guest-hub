@@ -26,7 +26,7 @@ The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus),
 - [ ] Web app preview deploy (database is live in the team Supabase project) — Backend pair <!-- modified 2026-10-06 06:12 Aisling -->
 - [x] Database schema and migrations (Natalie's backend, merged Oct 5) — Backend pair <!-- modified 2026-10-06 06:12 Aisling -->
 - [x] Synthetic data generator: 553 invented guests, messy cases, for the import tests (PR #50) — Aisling <!-- modified 2026-10-07 13:45 Aisling -->
-- [ ] Supabase sign-in (#8, PR #27 in review) and server-side staff roles (#9) — Cornell <!-- modified 2026-10-05 22:58 Aisling -->
+- [ ] Supabase sign-in (#8, PR #27 merged Oct 7) and server-side staff roles (#9, still to do) — Cornell <!-- modified 2026-10-07 19:15 Aisling -->
 - [x] Get AAFE's materials (received Oct 5) — Natalie <!-- modified 2026-10-05 22:58 Aisling -->
 - [x] Check AAFE's sample export against the import spec — Aisling <!-- modified 2026-10-05 22:58 Aisling -->
 - [x] Revise the import spec for the real Give Lively export — Aisling <!-- modified 2026-10-05 22:58 Aisling -->
@@ -45,14 +45,14 @@ The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus),
 - [x] Tier mapping and gala page filter from Natalie's review (spec PR #22; built in PRs #23–#26) — Aisling <!-- modified 2026-10-06 05:50 Aisling -->
 - [x] Three import choices decided and posted for Natalie's review (PR #24) — Aisling <!-- modified 2026-10-05 22:58 Aisling -->
 - [x] Backend tests run on PRs that touch `prototype/` or `import-engine/` (PR #26) — Aisling <!-- modified 2026-10-06 05:50 Aisling -->
-- [ ] Review and merge PR #27 once Cornell merges #35, which brings it up to date with `main` — Aisling <!-- modified 2026-10-06 20:41 Aisling -->
+- [x] Review and merge PR #27 (after #35 brought it up to date with `main`), Oct 7 — Aisling <!-- modified 2026-10-07 19:15 Aisling -->
 - [ ] Natalie's review of the three import choices (Slack) — Natalie <!-- modified 2026-10-05 22:58 Aisling -->
 - [ ] Share the Pursuit PRD and the team PRD with the backend pair — whoever has them <!-- modified 2026-10-05 22:58 Aisling -->
 - [ ] Trello access for Cornell — Natalie <!-- modified 2026-10-06 06:12 Aisling -->
 - [ ] Supabase project URL and public (anon) key to Cornell, in person: invite his email and a non-staff test email in Supabase, add his staff_users row and the app's redirect URL, then set up his `.env.local` together (never the service_role key) — Aisling <!-- modified 2026-10-06 21:12 Aisling -->
 - [ ] Upload screen: import engine, report, page picker, tier-mapping picker — Frontend pair <!-- modified 2026-10-05 22:58 Aisling -->
 - [ ] Staff app: show "sent" and "resend" for QR codes instead of the code itself — Frontend pair <!-- modified 2026-10-05 22:58 Aisling -->
-- [ ] Portal: "From your purchase: please confirm" labels; Korean — Frontend pair <!-- modified 2026-10-05 22:58 Aisling -->
+- [ ] Portal: "From your purchase: please confirm" labels (Korean done, PR #51) — Frontend pair <!-- modified 2026-10-07 19:15 Aisling -->
 - [x] Frontend build check, demo-data drift check, real-data guard in CI — Backend pair <!-- modified 2026-10-06 01:13 Aisling -->
 - [x] Supabase project loaded (schema, seed, backend); access rules (RLS) on for all 18 tables; Supabase advisor warnings cut from 41 to 28, all by design (PR #30) — Aisling <!-- modified 2026-10-06 05:50 Aisling -->
 - [x] Real-data guard required before merging to `main`, alongside the secret scan — Aisling <!-- updated 2026-10-06 03:05 Aisling -->
@@ -65,8 +65,8 @@ The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus),
 - [x] Antonin's sponsor portal prototype reviewed — Natalie, Aisling <!-- updated 2026-10-06 20:41 Aisling -->
 - [x] Merge PR #36: keys kept out of the browser and the repo, app unit tests in CI — Aisling <!-- modified 2026-10-06 20:56 Aisling -->
 - [x] Add the 20 staff sign-in tests to #35 — Aisling <!-- modified 2026-10-06 20:56 Aisling -->
-- [ ] Merge #35 into `cornell-staff-auth`, then run the live sign-in test against the team project, in person with Aisling — Cornell <!-- modified 2026-10-06 21:12 Aisling -->
-- [ ] Port tier layout, the "still need names" line, Korean, and gala-night arrivals into `guest-portal` as small PRs, screenshots first — Antonin (Natalie approves) <!-- updated 2026-10-06 20:41 Aisling -->
+- [ ] Live sign-in test, in person with Aisling, once the team agrees which Supabase project the demo uses (#35 and #27 merged Oct 7) — Cornell <!-- modified 2026-10-07 19:15 Aisling -->
+- [ ] Port tier layout, the "still need names" line, and gala-night arrivals into `guest-portal` as small PRs, screenshots first (Korean done, PR #51) — Antonin (Natalie approves) <!-- modified 2026-10-07 19:15 Aisling -->
 - [ ] Switch the prototype's demo emails to `@example.org`; confirm the Figma Make site isn't published — Antonin <!-- updated 2026-10-06 20:41 Aisling -->
 - [ ] Team PRD draft (started Oct 6) — Natalie <!-- updated 2026-10-06 20:41 Aisling -->
 - [ ] Confirm the Oct 19 prototype demonstration — Cornell <!-- updated 2026-10-06 20:41 Aisling -->
