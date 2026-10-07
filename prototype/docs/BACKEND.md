@@ -15,12 +15,12 @@ Guest Portal ──anon key──▶ portal_* functions ──▶  Postgres (sch
 |---|---|
 | `database/backend.sql` | Security (RLS), Guest Portal API, Staff App API, Give Lively import, email queue. Run after `schema.sql` + `seed.sql`. Safe to re-run. |
 | `database/cron.sql` | Schedules the two edge functions (pg_cron + pg_net). |
-| `supabase/functions/givelively-sync` | Polls Give Lively's Zapier JSON endpoint and imports gala purchases. |
+| `supabase/functions/givelively-sync` | Polls Give Lively's Zapier JSON endpoint and imports gala purchases. What it does with each donation is in `_shared/givelively-sync.ts`, so Node can test it. |
 | `supabase/functions/send-emails` | Sends **staff-approved** emails (portal links, QR invitations) through Resend. Unapproved drafts never send (hard rule 4). |
 | `supabase/functions/_shared/emails.ts` | The wording of every email (subject and HTML), as plain functions. `send-emails` uses them to send; the staff app can use the same ones to preview a draft before approving it. |
 | `supabase/functions/givelively-mock` + `database/demo_givelively.sql` | **Demo only.** A fake Give Lively account with synthetic purchases. |
 | `supabase/functions/_shared/givelively.ts` | Maps a Give Lively donation to our row shape and filters out non-gala donations. |
-| `scripts/test-backend.mjs`, `scripts/test-access.mjs`, `scripts/test-emails.mjs`, `scripts/test-givelively.mts` | `npm run test:backend`, no Supabase account needed: the database and demo flows; the access rules for every table, view and function against every kind of caller, plus the sponsor link's limits; payment confirmations, reminders, the approval queue and the email wording; and the Give Lively mapping. `scripts/test-db.mjs` is their shared in-memory database setup. Any failed check fails the run. |
+| `scripts/test-backend.mjs`, `scripts/test-access.mjs`, `scripts/test-emails.mjs`, `scripts/test-audit.mjs`, `scripts/test-offline-checkin.mjs`, `scripts/test-givelively.mts`, `scripts/test-givelively-sync.mts` | `npm run test:backend`, no Supabase account needed: the database and demo flows; the access rules for every table, view and function against every kind of caller, plus the sponsor link's limits; payment confirmations, reminders, the approval queue and the email wording; a change-log entry for every staff action (a new staff function fails until it is listed there); offline check-in end to end, with two iPads checking in the same guest; the Give Lively mapping; and what the Give Lively sync does with each donation, run against `gl_import()` (other campaigns, unsettled payments, unreadable rows, re-polls that must not double anything). `scripts/test-db.mjs` is their shared in-memory database setup. Any failed check fails the run. |
 
 ## Setup
 
@@ -145,10 +145,12 @@ Guest edits (`staff_update_guest`, and a sponsor editing a named guest through `
 | `recordOfflinePayment` | `staff_record_payment(p_order_id, p_method, p_amount, p_received, p_check_number)` | admin, RM |
 | `addPledge` | `staff_add_pledge(p_org, p_contact, p_email, p_tier_id, p_source)` | admin, RM |
 | `addCompGuest` | `staff_add_comp_guest(p_guest)` | admin, RM |
-| `sendQrInvite` | `staff_send_qr_invite(p_guest_id)`; approved by the sender. The guest needs a seat and an email; the code is minted when it sends | admin, RM |
-| `resendPortalLink` | `staff_resend_portal_link(p_order_id)`; approved by the sender; the old link stops working | admin, RM |
+| `sendQrInvite` | `staff_send_qr_invite(p_guest_id)`; approved by the sender, and logged as `email.approved` in their name. The guest needs a seat and an email; the code is minted when it sends | admin, RM |
+| `resendPortalLink` | `staff_resend_portal_link(p_order_id)`; approved by the sender, and logged as `email.approved` in their name; the old link stops working | admin, RM |
 | `checkIn` | `staff_check_in(p_guest_id, 'search')` or `staff_check_in_qr(p_code)` | all |
 | `checkInException` | `staff_check_in_exception(p_name, p_order_id, p_type, p_note)` | all |
+| Check-in → save the list for offline use (new) | `staff_checkin_snapshot()`: every guest with table, seat, accessibility needs, arrival, and their QR code's hash; no email, phone, payment, dietary needs or notes. A read, not logged | all |
+| Check-in → sync offline check-ins (new) | `staff_sync_check_ins(p_items)`: see "Offline check-in" below | all |
 | `importGiveLively` (CSV) | `staff_import_givelively(p_rows)` | admin |
 | Integrations "Pull now" | `functions.invoke('givelively-sync')` | admin |
 | Approve / discard a draft email | `staff_approve_email(p_email_id)` / `staff_cancel_email(p_email_id)` | admin, RM |
@@ -161,6 +163,18 @@ Guest edits (`staff_update_guest`, and a sponsor editing a named guest through `
 
 Each export writes `audit_log` (`export.badges`, `export.checkin`, `export.salesforce`) with the row count. They return rows; the staff app saves them with `downloadCsv` (`shared/src/ui.tsx`), which already blocks spreadsheet formulas and keeps Chinese and Korean names readable in Excel. The columns are a first proposal until AAFE sends its badge and check-in templates.
 
+### Offline check-in
+
+Decided Oct 6: if the venue's internet drops, the iPad keeps checking guests in and syncs later. `shared/src/offlineCheckin.ts` (`CheckInDesk`) does the iPad side with no React or Supabase, so the check-in screen only wires it up:
+
+1. While online, save the list: `desk.saveSnapshot(await rpc('staff_checkin_snapshot'))`. Refresh it every few minutes.
+2. At the door, online or not: `desk.scan(code)`, `desk.checkIn(guestId)`, `desk.checkInException({ name, order_id, type, note })`. Every check-in is saved on the iPad first. A QR code is checked against the saved hashes, so scanning works offline.
+3. When online: `desk.sync((items) => rpc('staff_sync_check_ins', { p_items: items }))`.
+4. Banner: `desk.banner(navigator.onLine)` gives "Offline · 3 check-ins waiting". Conflicts and refused items are in `desk.notices()`.
+5. After gala night: `desk.clear()`.
+
+**First arrival wins.** One check-in per guest (enforced by a unique index). If two doors check in the same guest, the earliest check-in stands, even if it syncs later. The other is written to the change log as `checkin.conflict` ("already checked in at 7:04 PM by Kenji Abe (Door 2); a second check-in at 7:06 PM … was not counted"), and the iPad shows it as a notice. Each check-in carries the iPad's id for it (`client_id`), so sending the same batch twice records nothing twice. The iPad's time is kept (never later than the server's clock).
+
 Errors come back as the Postgres message: `forbidden`, `not_found`, `invalid_link`, `invalid_input: …`, `invalid_transition: …`, `seat_taken`, `seat_locked: …`.
 
 ## Changes to the schema (all in `backend.sql`)
@@ -168,6 +182,7 @@ Errors come back as the Postgres message: `forbidden`, `not_found`, `invalid_lin
 - New tables: `givelively_sync_state` (poll cursor and last result) and `givelively_raw` (every gala donation as Give Lively sent it).
 - New `email_log` columns: `attempts`, `last_error`, `approved_by` and `approved_at`. New status: `cancelled`.
 - New unique index on `payments.givelively_transaction_id`.
+- New `check_ins` columns `client_id` (unique) and `device`, and one check-in per guest per gala (unique index).
 - `orders.portal_token` now holds a hash. The seed's demo links (`ac-6w9k3p5d`, etc.) still work.
 - The `audit_log` and `salesforce_sync` id counters are moved past the seed's ids (fixes a duplicate-key error on the first new audit row).
 
