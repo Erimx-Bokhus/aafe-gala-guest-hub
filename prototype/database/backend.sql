@@ -126,6 +126,11 @@ create table if not exists sponsor_prospects (
 create unique index if not exists sponsor_prospects_order_uq on sponsor_prospects (order_id) where order_id is not null;
 alter table gala_events add column if not exists sponsorship_goal numeric(12,2);   -- the board's target for this gala
 
+-- Gala-night arrivals in the sponsor portal (decided Oct 6): off until AAFE's privacy review approves it.
+-- When on, a sponsor sees which of their own guests have arrived: yes or no, never a time.
+alter table gala_events add column if not exists sponsor_arrivals_visible boolean not null default false;
+alter table gala_events add column if not exists sponsor_arrivals_note text;   -- who approved it, and when
+
 -- Give Lively import (docs/import-matching-spec.md, section 9).
 alter table payments    add column if not exists purchase_key text;   -- SHA-256(email | UTC purchase time); see purchase_key()
 create unique index if not exists payments_purchase_key_uq on payments (purchase_key) where purchase_key is not null;
@@ -369,8 +374,11 @@ create or replace function portal_get_view(p_token text) returns jsonb
 language plpgsql stable security definer set search_path = public as $$
 declare
   o orders := portal_order(p_token);
-  v_applied numeric; v_paid numeric; v_balance numeric; v_n int; v_view jsonb;
+  v_applied numeric; v_paid numeric; v_balance numeric; v_n int; v_view jsonb; v_show boolean;
 begin
+  -- Arrivals stay hidden unless AAFE has switched them on: a checked-in seat then reads as badge ready.
+  select sponsor_arrivals_visible into v_show from gala_events where id = o.event_id;
+  v_show := coalesce(v_show, false);
   select coalesce(sum(original_amount - refunded_amount), 0), coalesce(sum(gross_amount - refunded_amount), 0), count(*)
     into v_applied, v_paid, v_n from payments where order_id = o.id;
   v_balance := greatest(0, o.commitment_amount - v_applied);
@@ -395,13 +403,22 @@ begin
                 'needsReview', count(*) filter (where s.status = 'submitted'),
                 'badgeReady', count(*) filter (where s.status in ('badge_ready','checked_in')))
               from seats s where s.order_id = o.id and s.status <> 'cancelled'),
+    -- Shown only when switched on: how many of this sponsor's guests (and walk-ins on their seats) arrived.
+    'arrivals', case when v_show then (select jsonb_build_object(
+                'arrived', count(*) filter (where s.status = 'checked_in'),
+                'expected', count(*) filter (where s.guest_id is not null),
+                'walkIns', (select count(*) from check_ins c where c.order_id = o.id and c.guest_id is null))
+              from seats s where s.order_id = o.id and s.status <> 'cancelled') end,
     'seats', coalesce((select jsonb_agg(jsonb_build_object(
-                'slot', s.slot_number, 'status', s.status,
+                'slot', s.slot_number,
+                'status', case when s.status = 'checked_in' and not v_show then 'badge_ready' else s.status end,
                 'guest', case when g.id is null then null else jsonb_build_object(
                   'first_name', g.first_name, 'last_name', g.last_name, 'title', coalesce(g.title, ''),
                   'organization', coalesce(g.organization, ''), 'email', coalesce(g.email, ''),
                   'dietary_needs', coalesce(g.dietary_needs, ''), 'accessibility_needs', coalesce(g.accessibility_needs, ''),
-                  'updated_at', g.updated_at) end) order by s.slot_number)
+                  'updated_at', g.updated_at) end)
+                || case when v_show and g.id is not null then jsonb_build_object('arrived', s.status = 'checked_in') else '{}'::jsonb end
+                order by s.slot_number)
               from seats s left join guests g on g.id = s.guest_id
               where s.order_id = o.id and s.status <> 'cancelled'), '[]'),
     'activity', coalesce((select jsonb_agg(jsonb_build_object('at', a.at, 'action', a.action, 'summary', a.summary) order by a.at desc, a.id desc)
@@ -428,7 +445,7 @@ begin
   if v_first = '' or v_last = '' then raise exception 'invalid_input: first and last name are required'; end if;
   select * into st from seats where order_id = o.id and slot_number = p_slot and status <> 'cancelled' for update;
   if st.id is null then raise exception 'invalid_input: no such seat'; end if;
-  if st.status = 'checked_in' then raise exception 'seat_locked: guest already checked in'; end if;
+  if st.status = 'checked_in' then raise exception 'seat_locked: this seat can no longer be changed online; please contact AAFE'; end if;
   select primary_contact_name into v_contact from sponsors where id = o.sponsor_id;
   v_from := st.status;
 
@@ -464,7 +481,7 @@ declare o orders := portal_order(p_token); st seats; g guests;
 begin
   select * into st from seats where order_id = o.id and slot_number = p_slot and status <> 'cancelled' for update;
   if st.id is null then raise exception 'invalid_input: no such seat'; end if;
-  if st.status = 'checked_in' then raise exception 'seat_locked: guest already checked in'; end if;
+  if st.status = 'checked_in' then raise exception 'seat_locked: this seat can no longer be changed online; please contact AAFE'; end if;
   select * into g from guests where id = st.guest_id;
   if g.id is null then return portal_get_view(p_token); end if;
 
@@ -1631,6 +1648,29 @@ begin
 end $$;
 
 -- ---------------------------------------------------------------------
+-- 7c. GALA SETTINGS
+-- ---------------------------------------------------------------------
+
+-- Sponsor-facing arrivals (gala admins). Switching on needs a note recording AAFE's privacy approval
+-- (who and when); switching off needs nothing. Both are logged.
+create or replace function staff_set_sponsor_arrivals(p_on boolean, p_note text default null) returns void
+language plpgsql security definer set search_path = public as $$
+declare me staff_users := require_staff(array['gala_admin']); e gala_events; v_note text := nullif(btrim(coalesce(p_note, '')), '');
+begin
+  if p_on is null then raise exception 'invalid_input: on or off'; end if;
+  if p_on and v_note is null then
+    raise exception 'invalid_input: record AAFE''s privacy approval (who and when) to switch arrivals on';
+  end if;
+  select * into e from gala_events where id = current_event_id() for update;
+  if e.sponsor_arrivals_visible = p_on then return; end if;
+  update gala_events set sponsor_arrivals_visible = p_on, sponsor_arrivals_note = case when p_on then v_note else sponsor_arrivals_note end
+   where id = e.id;
+  perform write_audit('staff', me.name, 'gala_event', e.id, null, 'gala.sponsor_arrivals', e.sponsor_arrivals_visible::text, p_on::text, false,
+    case when p_on then format('Sponsors can now see which of their guests have arrived (approval: %s).', v_note)
+         else 'Sponsors can no longer see which of their guests have arrived.' end);
+end $$;
+
+-- ---------------------------------------------------------------------
 -- 8. EXPORTS  (rows for the staff app to save as CSV; every export is logged)
 -- Columns are a first proposal until AAFE sends its badge and check-in templates.
 -- ---------------------------------------------------------------------
@@ -1731,7 +1771,7 @@ begin
               'staff_export_badges','staff_export_checkin','staff_export_salesforce',
               'staff_queue_guest_list_reminders','staff_email_queue','staff_checkin_snapshot','staff_sync_check_ins',
               'pipeline_stage_label','pipeline_apply_order','orders_pipeline','staff_pipeline','staff_save_prospect',
-              'staff_set_prospect_stage','staff_set_sponsorship_goal')
+              'staff_set_prospect_stage','staff_set_sponsorship_goal','staff_set_sponsor_arrivals')
   loop
     execute format('revoke all on function %s from public, anon, authenticated', f);
   end loop;
@@ -1753,6 +1793,7 @@ grant execute on function
   checkin_list(), staff_check_in(text, text), staff_check_in_qr(text), staff_check_in_exception(text, text, text, text),
   staff_checkin_snapshot(), staff_sync_check_ins(jsonb),
   staff_pipeline(), staff_save_prospect(jsonb), staff_set_prospect_stage(text, text), staff_set_sponsorship_goal(numeric),
+  staff_set_sponsor_arrivals(boolean, text),
   staff_import_givelively(jsonb, jsonb), staff_set_tier_mapping(text, text), staff_set_gala_page(text),
   staff_resolve_import_review(text, text),
   staff_export_badges(boolean), staff_export_checkin(), staff_export_salesforce(),
