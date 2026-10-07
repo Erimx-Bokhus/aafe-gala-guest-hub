@@ -23,6 +23,8 @@ Guest Portal ──anon key──▶ portal_* functions ──▶  Postgres (sch
 
 ## Setup
 
+Where every key lives, and what stops a secret from reaching the browser or the repo: [`docs/keys-and-secrets.md`](../../docs/keys-and-secrets.md). In short, only the project URL and the anon key ever go in an app's `.env.local`; the service_role key stays in Supabase.
+
 1. **Database.** Supabase dashboard → SQL editor: run `database/schema.sql`, then `seed.sql`, then `backend.sql`.
    Or from the command line, with the Supabase CLI this folder installs (`npm ci`, then `npx supabase …`):
    ```bash
