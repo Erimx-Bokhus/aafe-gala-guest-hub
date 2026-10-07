@@ -98,7 +98,8 @@ const STAFF_FUNCTIONS = {
   staff_update_guest: MANAGERS, staff_set_seat_status: MANAGERS, staff_mark_printed: MANAGERS, staff_assign_seat: MANAGERS,
   staff_seat_order_at_table: MANAGERS, staff_record_payment: MANAGERS, staff_add_pledge: MANAGERS, staff_add_comp_guest: MANAGERS,
   staff_send_qr_invite: MANAGERS, staff_resend_portal_link: MANAGERS, staff_resolve_import_review: MANAGERS,
-  staff_approve_email: MANAGERS, staff_cancel_email: MANAGERS, staff_export_badges: MANAGERS,
+  staff_approve_email: MANAGERS, staff_cancel_email: MANAGERS, staff_email_queue: MANAGERS,
+  staff_queue_guest_list_reminders: MANAGERS, staff_export_badges: MANAGERS,
   staff_import_givelively: ['gala_admin'], staff_set_tier_mapping: ['gala_admin'], staff_set_gala_page: ['gala_admin'],
   staff_export_salesforce: ['gala_admin'],
 }

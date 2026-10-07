@@ -43,7 +43,7 @@ await as('authenticated', RM, `select staff_record_payment($1,'check',10000,'202
 ok((await db.query(`select status from orders where id=$1`, [ord])).rows[0].status === 'partially_paid', 'partial payment status')
 
 // Email: drafts never send until staff approve (hard rule 4)
-const draft = (await db.query(`select id from email_log where order_id=$1 and status='queued'`, [ord])).rows[0].id
+const draft = (await db.query(`select id from email_log where order_id=$1 and status='queued' and template='portal_link'`, [ord])).rows[0].id
 await as('service_role', null, `select email_mark_sent($1, hash_token('new-link-abc'))`, [draft])
 ok((await db.query(`select status from email_log where id=$1`, [draft])).rows[0].status === 'queued', 'unapproved draft is not sent')
 ok((await err('authenticated', vol, `select staff_approve_email($1)`, [draft])) === 'forbidden', 'volunteer cannot approve email')
