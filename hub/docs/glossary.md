@@ -22,6 +22,7 @@ Supabase | The hosted service the prototype runs on: a Postgres database, staff 
 Anon key | The Supabase key that ships inside the apps. Public by design: it can only do what the access rules allow. <!-- new 2026-10-06 20:41 Aisling -->
 Service role key | The Supabase key that bypasses every access rule. It stays in Supabase's encrypted secret store and never goes in an app, a file, or a chat. <!-- new 2026-10-06 20:41 Aisling -->
 Edge Function secrets | Supabase's encrypted store for server-side keys (email, Give Lively, the service role key). Only the server functions can read them. <!-- new 2026-10-06 20:41 Aisling -->
+Build guard | A check in both apps' build settings that stops the build if a secret key would end up in the browser. <!-- new 2026-10-06 20:56 Aisling -->
 Guest category | What kind of guest someone is: sponsor guest, ticket holder, comp, AAFE staff, volunteer, event staff, or government/VIP. <!-- modified 2026-10-05 16:51 Aisling -->
 Seated | A guest with a guaranteed table, which comes with Champion-level sponsorship and above. Other guests are admitted without one. <!-- modified 2026-10-05 16:51 Aisling -->
 Pipeline stage | Where a sponsor prospect stands: not started, reached out, in conversation, closed won, payment received, or lost. <!-- modified 2026-10-05 16:51 Aisling -->
