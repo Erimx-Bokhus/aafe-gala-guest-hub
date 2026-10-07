@@ -42,6 +42,7 @@ Antonin flagged on Oct 3 that AI Native Demo Day may expect two or three real AI
 ## Access
 
 - The prototype uses demo accounts with three roles: gala admin, relationship manager, and check-in volunteer. A production version would use AAFE's Google accounts with MFA. <!-- modified 2026-10-06 05:50 Aisling -->
+- Sponsors will see their own guests' gala-night arrival status (decided Oct 6). AAFE reviews the privacy side, including whether arrival times are shown, before it goes live. <!-- updated 2026-10-06 20:41 Aisling -->
 - Sponsor links open only that sponsor's purchase and expire at AAFE's deadline. QR e-tickets open only one seat and expire after gala night. Both are random, and only a scrambled (hashed) copy is stored, so a database leak doesn't reveal working links. <!-- modified 2026-10-03 11:56 Aisling -->
 - Every email is approved by staff before it sends. A relationship manager who reviews and sends their own comp ticket counts as the approver; every send is logged. <!-- modified 2026-10-03 11:56 Aisling -->
 - Every edit records who made it and when.
