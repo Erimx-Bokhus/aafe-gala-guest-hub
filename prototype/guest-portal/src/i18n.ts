@@ -1,5 +1,9 @@
 // Guest-portal copy. English / 中文 (Traditional, as used on aafe.org) / Español.
-// DRAFT TRANSLATIONS — AAFE must review and approve before production.
+// DRAFT TRANSLATIONS — AAFE must review and approve before production. AAFE staff review them side by side
+// in docs/translations/ (npm run translations rebuilds it after any change here).
+// Every language spells out every phrase: there is no fallback to English, so a missing phrase fails the
+// build instead of quietly showing English. A phrase that stays the same in every language (a proper
+// name) is written out anyway.
 export type Lang = 'en' | 'zh' | 'es'
 export const LANGS: { id: Lang; label: string }[] = [
   { id: 'en', label: 'English' },
@@ -64,7 +68,6 @@ const en = {
 type Dict = typeof en
 
 const zh: Dict = {
-  ...en,
   langLabel: '語言', smaller: '縮小文字', larger: '放大文字', toDark: '切換至深色模式', toLight: '切換至淺色模式',
   orgName: '亞洲人平等會',
   eyebrow: '亞洲人平等會年度晚宴 · 您的賓客名單',
@@ -116,8 +119,8 @@ const zh: Dict = {
 }
 
 const es: Dict = {
-  ...en,
   langLabel: 'Idioma', smaller: 'Texto más pequeño', larger: 'Texto más grande', toDark: 'Cambiar a modo oscuro', toLight: 'Cambiar a modo claro',
+  orgName: 'Asian Americans for Equality',
   eyebrow: 'Gala anual de AAFE · Su lista de invitados',
   heroTitle: 'Administre su lista de invitados para la gala',
   heroBody: 'Gracias por apoyar a Asian Americans for Equality. Use este enlace privado para agregar o actualizar a los invitados que asistirán con su patrocinio o boletos.',
