@@ -42,7 +42,6 @@ Format: date · decision · reason · decided by. Reopen only with new informati
 | 2026-10-06 | Sponsors see their own guests' gala-night arrivals in the portal; AAFE reviews the privacy side before it goes live | The team wants it; the backend already tracks check-in per seat | Natalie, team |
 | 2026-10-06 | Exports return rows and the staff app writes the CSV; columns stay provisional until AAFE sends its badge and check-in templates (PR #34) | One CSV writer, with spreadsheet-formula protection; role checks and logging stay in the database | Aisling |
 | 2026-10-06 | The informal client demo on Oct 7 is replaced by the prototype demonstration on Oct 19 | No client meeting was set for Oct 7 | Natalie |
-| _pending_ | Demo preview host | Decide when the demo is deployable | Team |
 | _pending_ | AI on/off, retention window, dietary data | See `data-handling.md` | AAFE |
 | _pending_ | Code and IP ownership after Nov 10, and the repo license | Open question for AAFE and Pursuit | AAFE + team |
 | _pending_ | Public use of AAFE logo and event photos (Demo Day) | Needs written approval | AAFE |
@@ -50,3 +49,10 @@ Format: date · decision · reason · decided by. Reopen only with new informati
 | _pending_ | Whether to adopt the tool, and with which technical partner | After Demo Day | AAFE |
 | _pending_ | Whether guest email is required or optional | Before the portal is connected; QR e-tickets need an email | Team |
 | 2026-10-06 | MVP vs later is set by the Working PRD (hub, Requirements): must-have is the Demo Day path | Natalie's concept (Oct 2) went beyond agreed scope; the Working PRD maps every part | Team |
+| 2026-10-06 | Demo preview host: Vercel's free plan, two projects (staff app, guest portal), with only the Supabase URL and public key in Vercel's settings | Free, mainstream, deploys from GitHub; Supabase stays the backend | Aisling |
+| 2026-10-06 | Offline check-in: the iPad keeps checking guests in from a saved list (no emails, phones, or payments) and syncs later, with an "Offline · N check-ins waiting" banner; QR codes are checked offline against their hashes (PR #46) | Venue Wi-Fi may fail; the door can't stop | Aisling |
+| 2026-10-06 | Two doors check in the same guest: the first arrival stands, even if it syncs later; the second is flagged ("already checked in at 7:04 by Door 2") and logged (PR #46) | One check-in per guest; nothing is lost or silently overwritten | Aisling |
+| 2026-10-06 | Sponsor pipeline: AAFE's stages (not started 0%, reached out 10%, in conversation 50%, closed won 90%, payment received 100%, lost), the ask against the commitment, the last two galas' giving, and a board against the goal; recording a payment moves a sponsor to payment received (PR #48) | Matches AAFE's own prospect tracker | Aisling |
+| 2026-10-06 | Features waiting on AAFE are built switched off: sponsor-facing arrivals behind a setting only a gala admin can turn on, with AAFE's approval noted, showing arrived or not, never a time (PR #49); translations reviewed by AAFE on a side-by-side sheet (PR #50) | Ready the day AAFE says yes; nothing reaches sponsors before then | Aisling |
+| 2026-10-07 | The full-size invented test gala (553 guests, shaped like 2026) is for the import tests only; whether it joins the demo is decided after it proves reliable (PR #50) | Realistic mess for the tests without changing what the demo shows | Aisling |
+| _pending_ | Whether a name written in Chinese or Korean script without a space counts as a full name in the import (today it's left for the sponsor) | Found by the full-size test gala (PR #50) | Team |
