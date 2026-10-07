@@ -6,7 +6,7 @@ The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus),
 
 ## Groundwork (from the first week) <!-- modified 2026-10-06 05:50 Aisling -->
 
-- [ ] Post the GreyBox Creative correction in the team thread — Aisling
+- [x] Correct the GreyBox Creative note in the docs (not posted to Slack, to keep the channel quiet) — Aisling <!-- modified 2026-10-07 02:18 Aisling -->
 - [ ] Team review of the data and AI handling note — Team
 - [ ] Fold the hosting critique into the production-readiness notes — Aisling
 - [ ] Send AAFE the recap, including the no-payment-data correction — Natalie
