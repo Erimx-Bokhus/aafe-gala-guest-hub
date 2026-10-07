@@ -56,6 +56,7 @@ The starter files for the code repository: `CLAUDE.md` (project rules for Claude
 | `docs/import-matching-spec.md` | How Give Lively rows become orders, guests, and seats; matching; tier mapping; review queue; corrections; import report; 38 test cases. Summarized on [Import and matching](#import) <!-- modified 2026-10-05 22:58 Aisling --> |
 | `docs/seed-data-requirements.md` | The invented records and two Give Lively export files the tests need <!-- updated 2026-10-03 11:56 Aisling --> |
 | `docs/aafe-materials-2026-10-05.md` | Structure of AAFE's real spreadsheet, Give Lively export, tiers, and deadlines (the files stay out of the repo) <!-- updated 2026-10-05 16:51 Aisling --> |
+| `docs/keys-and-secrets.md` | Every key: what it can do, where it lives, who has it, what enforces it, and how to rotate it after a leak (PR #36) <!-- updated 2026-10-06 20:56 Aisling --> |
 | `docs/design.md` | Natalie's design system: AAFE orange and white, type, components (PR #14) <!-- updated 2026-10-05 16:51 Aisling --> |
 | `prototype/` | Natalie's staff app, guest portal, and Supabase backend (PRs #7, #25, #26; later #28–#31). `prototype/docs/BACKEND.md` covers setup and every server function <!-- modified 2026-10-06 05:50 Aisling --> |
 | `import-engine/` | The Give Lively import rules as a tested TypeScript module (PRs #23, #24); its README explains how it feeds the database <!-- modified 2026-10-05 22:58 Aisling --> |
