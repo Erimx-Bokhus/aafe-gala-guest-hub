@@ -17,9 +17,10 @@ Guest Portal ──anon key──▶ portal_* functions ──▶  Postgres (sch
 | `database/cron.sql` | Schedules the two edge functions (pg_cron + pg_net). |
 | `supabase/functions/givelively-sync` | Polls Give Lively's Zapier JSON endpoint and imports gala purchases. |
 | `supabase/functions/send-emails` | Sends **staff-approved** emails (portal links, QR invitations) through Resend. Unapproved drafts never send (hard rule 4). |
+| `supabase/functions/_shared/emails.ts` | The wording of every email (subject and HTML), as plain functions. `send-emails` uses them to send; the staff app can use the same ones to preview a draft before approving it. |
 | `supabase/functions/givelively-mock` + `database/demo_givelively.sql` | **Demo only.** A fake Give Lively account with synthetic purchases. |
 | `supabase/functions/_shared/givelively.ts` | Maps a Give Lively donation to our row shape and filters out non-gala donations. |
-| `scripts/test-backend.mjs`, `scripts/test-access.mjs`, `scripts/test-givelively.mts` | `npm run test:backend`, no Supabase account needed: the database and demo flows; the access rules for every table, view and function against every kind of caller, plus the sponsor link's limits; and the Give Lively mapping. `scripts/test-db.mjs` is their shared in-memory database setup. Any failed check fails the run. |
+| `scripts/test-backend.mjs`, `scripts/test-access.mjs`, `scripts/test-emails.mjs`, `scripts/test-givelively.mts` | `npm run test:backend`, no Supabase account needed: the database and demo flows; the access rules for every table, view and function against every kind of caller, plus the sponsor link's limits; payment confirmations, reminders, the approval queue and the email wording; and the Give Lively mapping. `scripts/test-db.mjs` is their shared in-memory database setup. Any failed check fails the run. |
 
 ## Setup
 
@@ -52,6 +53,11 @@ Where every key lives, and what stops a secret from reaching the browser or the 
 5. **Check.** `select * from givelively_sync_state;` shows the last poll. `select * from email_log where status = 'queued' and approved_at is null;` shows drafts waiting for staff approval.
 
 **Every email needs staff approval** (team hard rule 4). Give Lively purchases, pledges and recorded payments create a *draft* guest-list email, and staff approve it (`staff_approve_email`) or discard it (`staff_cancel_email`). A staff member sending their own email ("send new link", QR invite) counts as the approver, and both are logged. Sponsor links expire at the end of the order's guest-list deadline day (New York time).
+
+The approval screen calls `staff_email_queue()`: every unsent email, drafts first, each with its state (`draft`, `approved` and waiting for the sender, or `failed` after 5 attempts with the error), the sponsor and package, unnamed seats and deadline, and for a payment confirmation the payment it confirms.
+
+- **Payment confirmation** (`payment_receipt`): `staff_record_payment` drafts one for every check, ACH or wire payment staff record. It states the amount, date and balance, and says it is not a tax receipt (Give Lively sends its own receipts for online purchases).
+- **Guest-list reminder** (`guest_list_reminder`): `staff_queue_guest_list_reminders(p_min_days default 7)` drafts one for each sponsor of the current gala who still has unnamed seats, already got a link, and whose deadline hasn't passed. It skips sponsors with a link or reminder still waiting, or one sent in the last `p_min_days` days. A reminder carries a fresh private link, so the newest email always has the one that works. If every seat gets named before it goes out, the sender refuses it and it shows as failed for staff to discard.
 
 Until `RESEND_API_KEY` is set, approved emails wait in the queue and nothing is sent. Until the Give Lively secrets are set, the poller returns `not_configured`.
 
@@ -146,6 +152,8 @@ Guest edits (`staff_update_guest`, and a sponsor editing a named guest through `
 | `importGiveLively` (CSV) | `staff_import_givelively(p_rows)` | admin |
 | Integrations "Pull now" | `functions.invoke('givelively-sync')` | admin |
 | Approve / discard a draft email | `staff_approve_email(p_email_id)` / `staff_cancel_email(p_email_id)` | admin, RM |
+| List unsent emails for the approval screen | `staff_email_queue()` | admin, RM |
+| Draft guest-list reminders | `staff_queue_guest_list_reminders(p_min_days)` | admin, RM |
 | Send approved email now | `functions.invoke('send-emails')` | admin, RM |
 | Badges → "CSV for printer" | `staff_export_badges(p_include_printed default false)`: ready and reprint badges, sorted by table and seat; badge fields only (no email, dietary, payment, or notes) | admin, RM |
 | Check-in → printed list (new) | `staff_export_checkin()`: every guest by last name plus one row per unnamed sponsor seat, with table, seat, and arrived; no email or dietary needs | all |
