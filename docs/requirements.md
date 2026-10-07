@@ -2,6 +2,8 @@
 
 Priorities are the team's proposal until confirmed with AAFE. Source in brackets.
 
+Until the final PRDs (Natalie's and Pursuit's) arrive, this file plus the hub's Requirements page ("Working PRD") stand in for them; see `hub/docs/requirements.md`.
+
 ## Must have (Demo Day)
 - **Commitments and seats.** Each purchase or pledge has a package level and a seat entitlement; seats are named or open. [call]
 - **Manual entry** for check, ACH, and verbal pledges, with payment method, date, and status label. [call]

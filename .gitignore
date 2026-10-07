@@ -27,3 +27,7 @@ Thumbs.db
 
 # Vite dev-server cache
 .vite/
+
+# Supabase CLI: link state and local stack files (supabase link / supabase start)
+**/supabase/.temp/
+**/supabase/.branches/
