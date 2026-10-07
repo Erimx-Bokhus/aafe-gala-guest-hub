@@ -4,14 +4,15 @@ on:
   push:
     branches: [main]
     paths: ['import-engine/**', '.github/workflows/import-engine.yml']
+  # Runs on every pull request (no path filter) so it can be a required check on main;
+  # a path filter would leave PRs that don't touch these folders waiting forever.
   pull_request:
-    paths: ['import-engine/**', '.github/workflows/import-engine.yml']
 
 permissions:
   contents: read
 
 jobs:
-  test:
+  import-engine-tests:
     runs-on: ubuntu-latest
     defaults:
       run:
