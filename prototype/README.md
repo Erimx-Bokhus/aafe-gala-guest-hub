@@ -28,6 +28,7 @@ npm run dev:guest      # http://localhost:5173  -> open #/s/ac-6w9k3p5d
 npm run dev:staff      # http://localhost:5174  -> pick a demo account
 npm run build          # builds both into */dist
 npm run seed           # regenerate synthetic data
+npm run translations   # rebuild the translation review sheet (docs/translations/) after changing guest-portal/src/i18n.ts
 ```
 
 ## Load the seed into Supabase
