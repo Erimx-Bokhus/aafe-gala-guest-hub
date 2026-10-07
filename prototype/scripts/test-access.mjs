@@ -100,6 +100,7 @@ const STAFF_FUNCTIONS = {
   staff_send_qr_invite: MANAGERS, staff_resend_portal_link: MANAGERS, staff_resolve_import_review: MANAGERS,
   staff_approve_email: MANAGERS, staff_cancel_email: MANAGERS, staff_email_queue: MANAGERS,
   staff_queue_guest_list_reminders: MANAGERS, staff_export_badges: MANAGERS,
+  staff_pipeline: MANAGERS, staff_save_prospect: MANAGERS, staff_set_prospect_stage: MANAGERS, staff_set_sponsorship_goal: ['gala_admin'],
   staff_import_givelively: ['gala_admin'], staff_set_tier_mapping: ['gala_admin'], staff_set_gala_page: ['gala_admin'],
   staff_export_salesforce: ['gala_admin'],
 }
