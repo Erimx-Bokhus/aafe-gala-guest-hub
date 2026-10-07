@@ -46,7 +46,7 @@ This is the demo in miniature. Pause on step 4: the sponsor fixes their own list
 | Target event | AAFE's 2027 gala |
 | Discovery call | October 1, 2026 |
 | Demo Day | November 10, 2026 |
-| Status | Building. Import engine and its database side done and tested; Natalie's staff app, sponsor portal, and Supabase backend in `main`; team Supabase project loaded; staff sign-in in review (PR #27) <!-- modified 2026-10-06 05:50 Aisling --> |
+| Status | Building. Import engine and its database side done and tested; exports built; Natalie's staff app, sponsor portal, and Supabase backend in `main`; team Supabase project loaded; staff sign-in in review (PR #27); prototype demonstration Oct 19 <!-- modified 2026-10-06 20:41 Aisling --> |
 
 ## Team
 <!-- updated 2026-10-05 20:37 Aisling pairs -->

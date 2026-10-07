@@ -5,6 +5,13 @@ Every change to this hub, newest first. Open it while signed in to claude.ai and
 Each change has a kind, shown the same way on every page next to the exact line that changed: **✦ New** (didn't exist before), **+ Updated** (rows, tasks, or terms added), **✎ Modified** (wording, numbers, or a rule changed), **− Removed** (taken out), and **! Important** (everyone should act on it). Hover an icon for the date, time (New York), and who made the change; click it to mark it read.
 
 ```changes
+2026-10-06 20:41 | updated | Aisling | build-plan.where-each-component-stands | Component status, Oct 6 evening: sign-in in review with its conflicts fixed (#35), exports live, Antonin's portal ideas to port, prototype demonstration Oct 19, live sign-in test added to testing
+2026-10-06 20:41 | updated | Aisling | requirements.working-prd-until-the-final-prds-arrive | Working PRD: Natalie drafting the team PRD; portal ownership and the Oct 19 demonstration; a testing row; gala-night arrivals for sponsors; portal uploads and payments out of scope
+2026-10-06 20:41 | updated | Aisling | tasks.added-october-6-evening | New tasks: PR #36, sign-in tests, live sign-in test, porting Antonin's ideas, AAFE privacy review, guest email decision; Oct 7 demo replaced by Oct 19
+2026-10-06 20:41 | updated | Aisling | decisions | Decisions: one sponsor portal, sponsors see gala-night arrivals, exports return rows, Oct 19 demonstration; guest email pending; 31 accepted advisor warnings
+2026-10-06 20:41 | updated | Aisling | risks | Two new risks: sponsor portals drifting apart, and a secret key reaching the browser or the repo
+2026-10-06 20:41 | updated | Aisling | hosting.before-any-real-data-production-readiness-checklist | Production checklist: rotate keys at handoff, new Supabase keys, limited origins, MFA
+2026-10-06 20:41 | updated | Aisling | glossary | New terms: anon key, service role key, Edge Function secrets
 2026-10-06 06:30 | updated | Aisling | build-plan.where-each-component-stands | Exports built in the database: badge file with table numbers, printed check-in list, and Salesforce attendee file (PR #34); backend tests now 119
 2026-10-06 06:25 | new | Aisling | changes | Weekly review check: every page shows when it was last reviewed, and the sidebar and What's new flag pages that go more than 7 days without one
 2026-10-06 06:12 | modified | Aisling | decisions | Answers to the audit's 17 questions: seven decisions logged and both decision logs synced, Korean and Traditional Chinese, sign-in, QR scope, Cornell's keys, hosting order, and New York dates

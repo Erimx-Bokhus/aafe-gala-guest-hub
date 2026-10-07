@@ -19,6 +19,9 @@ Line Items report | Give Lively's purchase report. Each line carries the Stripe 
 Match | Deciding whether an incoming row is a guest we already have. Checked by purchase key (buyer email + purchase time), then email with last name, then name and organization. Anything less certain goes to review. <!-- modified 2026-10-06 05:50 Aisling -->
 React | The web framework the app is built with (decided Oct 5), written in TypeScript so most web developers can maintain it. <!-- modified 2026-10-05 16:51 Aisling -->
 Supabase | The hosted service the prototype runs on: a Postgres database, staff sign-in, and server functions. Free plan for the demo. <!-- modified 2026-10-05 16:51 Aisling -->
+Anon key | The Supabase key that ships inside the apps. Public by design: it can only do what the access rules allow. <!-- new 2026-10-06 20:41 Aisling -->
+Service role key | The Supabase key that bypasses every access rule. It stays in Supabase's encrypted secret store and never goes in an app, a file, or a chat. <!-- new 2026-10-06 20:41 Aisling -->
+Edge Function secrets | Supabase's encrypted store for server-side keys (email, Give Lively, the service role key). Only the server functions can read them. <!-- new 2026-10-06 20:41 Aisling -->
 Guest category | What kind of guest someone is: sponsor guest, ticket holder, comp, AAFE staff, volunteer, event staff, or government/VIP. <!-- modified 2026-10-05 16:51 Aisling -->
 Seated | A guest with a guaranteed table, which comes with Champion-level sponsorship and above. Other guests are admitted without one. <!-- modified 2026-10-05 16:51 Aisling -->
 Pipeline stage | Where a sponsor prospect stands: not started, reached out, in conversation, closed won, payment received, or lost. <!-- modified 2026-10-05 16:51 Aisling -->
