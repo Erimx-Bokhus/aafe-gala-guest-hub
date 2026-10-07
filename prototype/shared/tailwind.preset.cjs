@@ -17,6 +17,7 @@ module.exports = {
         body: ['"Inter"', 'system-ui', 'sans-serif'],
         serif: ['"Fraunces"', 'Georgia', 'serif'],
         zh: ['"Noto Sans TC"', '"Poppins"', 'sans-serif'],
+        ko: ['"Noto Sans KR"', '"Poppins"', 'sans-serif'],
       },
     },
   },
