@@ -48,6 +48,7 @@ const ACTIONS = [
   ['staff_set_prospect_stage', RM, `select staff_set_prospect_stage((select p.id from sponsor_prospects p join sponsors s on s.id = p.sponsor_id
      where s.organization_name = 'Audit Prospect Co'), 'reached_out')`, 'prospect.stage'],
   ['staff_set_sponsorship_goal', ADMIN, `select staff_set_sponsorship_goal(250000)`, 'gala.goal_set'],
+  ['staff_set_sponsor_arrivals', ADMIN, `select staff_set_sponsor_arrivals(true, 'Test approval')`, 'gala.sponsor_arrivals'],
   ['staff_export_badges', RM, `select * from staff_export_badges(true)`, 'export.badges'],
   ['staff_export_checkin', VOL, `select * from staff_export_checkin()`, 'export.checkin'],
   ['staff_export_salesforce', ADMIN, `select * from staff_export_salesforce()`, 'export.salesforce'],
