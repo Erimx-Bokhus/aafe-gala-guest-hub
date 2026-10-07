@@ -63,7 +63,7 @@ The starter files for the code repository: `CLAUDE.md` (project rules for Claude
 | `design/sponsor-portal-prototype/` on the `antonin` branch | Antonin's Figma Make design prototype of the sponsor portal: the reference for tier layout, Korean, and gala-night arrivals; not merged <!-- updated 2026-10-06 20:41 Aisling --> |
 | `seed/natalie-prototype/` | Natalie's seed data as CSVs, the demo's base state; its README lists what the app's loader must fix <!-- updated 2026-10-03 12:36 Aisling --> |
 | `docs/research/prototype-review-2026-10-03.md` | What we adopted from Natalie's prototype and seed data, and where it meets the hard rules <!-- updated 2026-10-03 12:36 Aisling --> |
-| `.github/workflows/` | Checks on every pull request: secret scan (`gitleaks.yml`), import engine tests (`import-engine.yml`), backend tests (`backend.yml`), app build plus generated demo files up to date (`frontend.yml`), real-data guard (`real-data.yml`, runs `scripts/check-no-real-data.mjs`). The secret scan and real-data guard must pass before anything merges to `main`; the others run only when their folder changes <!-- modified 2026-10-06 03:05 Aisling --> |
+| `.github/workflows/` | Six checks, all run on every pull request and all required before anything merges to `main`: secret scan (`gitleaks.yml`), real-data guard (`real-data.yml`), backend tests (`backend.yml`), import engine tests (`import-engine.yml`), app tests, build, and demo files up to date (`frontend.yml`), server function type-check (`edge-functions.yml`) <!-- modified 2026-10-06 21:33 Aisling --> |
 
 ## Working in the repo
 <!-- team -->
