@@ -60,6 +60,10 @@ alter table email_log add column if not exists approved_at timestamptz;   -- nul
 alter table email_log drop constraint if exists email_log_status_check;
 alter table email_log add constraint email_log_status_check check (status in ('queued','sent','opened','bounced','cancelled'));
 
+-- Field edits in the change log, old and new value per field: {"title": {"from": "Manager", "to": "Director"}}.
+-- Staff only: the sponsor portal's activity list shows the summary, never this column.
+alter table audit_log add column if not exists changes jsonb;
+
 -- One payment per Give Lively transaction.
 create unique index if not exists payments_givelively_txn_uq
   on payments (givelively_transaction_id) where givelively_transaction_id is not null;
@@ -218,12 +222,22 @@ begin
   return s;
 end $$;
 
+-- p_changes: old and new value of each edited field (audit_changes()), or null.
+drop function if exists write_audit(text, text, text, text, text, text, text, text, boolean, text);
 create or replace function write_audit(
   p_actor_type text, p_actor text, p_entity text, p_entity_id text, p_order_id text,
-  p_action text, p_from text, p_to text, p_guest_visible boolean, p_summary text
+  p_action text, p_from text, p_to text, p_guest_visible boolean, p_summary text, p_changes jsonb default null
 ) returns void language sql security definer set search_path = public as $$
-  insert into audit_log (actor_type, actor, entity, entity_id, order_id, action, from_state, to_state, guest_visible, summary)
-  values (p_actor_type, p_actor, p_entity, p_entity_id, p_order_id, p_action, p_from, p_to, p_guest_visible, p_summary)
+  insert into audit_log (actor_type, actor, entity, entity_id, order_id, action, from_state, to_state, guest_visible, summary, changes)
+  values (p_actor_type, p_actor, p_entity, p_entity_id, p_order_id, p_action, p_from, p_to, p_guest_visible, p_summary, p_changes)
+$$;
+
+-- {"field": {"from": old, "to": new}} for each listed field whose value differs; null when none does.
+create or replace function audit_changes(p_old jsonb, p_new jsonb, p_fields text[]) returns jsonb
+language sql immutable set search_path = public as $$
+  select jsonb_object_agg(f, jsonb_build_object('from', p_old -> f, 'to', p_new -> f))
+    from unnest(p_fields) f
+   where p_old -> f is distinct from p_new -> f
 $$;
 
 -- p_approved_by: the staff member sending their own email. Null = draft for staff approval.
@@ -365,7 +379,7 @@ create or replace function portal_save_guest(p_token text, p_slot int, p_guest j
 language plpgsql security definer set search_path = public as $$
 declare
   o orders := portal_order(p_token);
-  st seats; g guests; v_contact text; v_action text; v_from text;
+  st seats; g guests; g_old guests; v_contact text; v_action text; v_from text;
   v_first text := left(trim(coalesce(p_guest ->> 'first_name', '')), 100);
   v_last  text := left(trim(coalesce(p_guest ->> 'last_name', '')), 100);
   f_title text := nullif(left(trim(coalesce(p_guest ->> 'title', '')), 200), '');
@@ -383,6 +397,7 @@ begin
 
   if st.guest_id is not null then
     v_action := 'guest.updated';
+    select * into g_old from guests where id = st.guest_id;
     update guests set first_name = v_first, last_name = v_last, title = f_title, organization = f_org, email = f_email,
            dietary_needs = f_diet, accessibility_needs = f_acc, last_updated_by = 'guest_portal', updated_at = now(),
            -- editing a printed badge means it must be reprinted
@@ -400,7 +415,9 @@ begin
   update seats set guest_id = g.id, status = 'submitted', updated_at = now() where id = st.id;
   perform write_audit('guest_portal', 'Guest portal (' || v_contact || ')', 'guest', g.id, o.id, v_action, v_from, 'submitted', true,
     case when v_action = 'guest.submitted' then format('%s %s added to seat %s.', v_first, v_last, p_slot)
-         else format('%s %s updated (seat %s).', v_first, v_last, p_slot) end);
+         else format('%s %s updated (seat %s).', v_first, v_last, p_slot) end,
+    case when v_action = 'guest.updated' then audit_changes(to_jsonb(g_old), to_jsonb(g),
+      array['first_name','last_name','title','organization','email','dietary_needs','accessibility_needs']) end);
   return portal_get_view(p_token);
 end $$;
 
@@ -458,7 +475,8 @@ begin
                              else badge_status end
    where id = g.id;
   perform write_audit('staff', me.name, 'guest', g.id, g.order_id, 'guest.updated', null, null, false,
-    format('%s %s: %s edited by staff.', n.first_name, n.last_name, array_to_string(v_changed, ', ')));
+    format('%s %s: %s edited by staff.', n.first_name, n.last_name, array_to_string(v_changed, ', ')),
+    audit_changes(to_jsonb(g), to_jsonb(n), v_changed));
 end $$;
 
 -- setSeatStatus: submitted -> reviewed, reviewed -> badge_ready (needs table + seat)
@@ -1213,7 +1231,7 @@ begin
   for f in select p.oid::regprocedure::text from pg_proc p join pg_namespace n on n.oid = p.pronamespace
             where n.nspname = 'public' and p.proname in (
               'hash_token','new_id','new_qr_token','qr_expiry','current_event_id','current_staff','staff_role','require_staff',
-              'write_audit','enqueue_email','create_seats','money_fmt','portal_order','portal_get_view','portal_save_guest',
+              'write_audit','audit_changes','enqueue_email','create_seats','money_fmt','portal_order','portal_get_view','portal_save_guest',
               'portal_release_seat','staff_me','staff_update_guest','staff_set_seat_status','staff_mark_printed',
               'staff_assign_seat','staff_seat_order_at_table','staff_record_payment','staff_add_pledge','staff_add_comp_guest',
               'staff_send_qr_invite','staff_resend_portal_link','staff_approve_email','staff_cancel_email','checkin_list','staff_check_in','staff_check_in_qr',

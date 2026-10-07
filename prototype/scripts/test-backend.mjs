@@ -79,6 +79,15 @@ ok((await as('anon', null, `select portal_get_view('new-link-abc')->>'organizati
 // Guest -> staff review -> seat -> badge -> check-in
 await as('anon', null, `select portal_save_guest('new-link-abc', 1, $1)`, [{ first_name: 'Ana', last_name: 'Diaz' }])
 const gid = (await db.query(`select guest_id from seats where order_id=$1 and slot_number=1`, [ord])).rows[0].guest_id
+// Change log keeps the old and new value of each edited field (staff only; the portal shows the summary).
+const lastChanges = async (action) => (await db.query(`select changes from audit_log where entity_id=$1 and action=$2 order by id desc limit 1`, [gid, action])).rows[0].changes
+ok((await lastChanges('guest.submitted')) === null, 'a new guest has no old values to log')
+const editView = (await as('anon', null, `select portal_save_guest('new-link-abc', 1, $1) v`, [{ first_name: 'Ana', last_name: 'Diaz', title: 'Analyst', dietary_needs: 'vegetarian' }]))[0].v
+const portalEdit = (await lastChanges('guest.updated')) ?? {}
+ok(Object.keys(portalEdit).sort().join() === 'dietary_needs,title' && portalEdit.title?.from === null && portalEdit.title?.to === 'Analyst'
+  && portalEdit.dietary_needs?.to === 'vegetarian', 'portal edit logs old and new values of the changed fields only')
+ok(editView.activity.every((a) => Object.keys(a).sort().join() === 'action,at,summary'), 'portal activity never shows the old and new values')
+ok((await db.query(`select count(*)::int n from pg_proc where proname = 'write_audit'`)).rows[0].n === 1, 'one write_audit after re-running backend.sql')
 ok((await err('authenticated', RM, `select staff_set_seat_status($1,'badge_ready')`, [gid]))?.startsWith('invalid_transition'), 'cannot skip review')
 await as('authenticated', RM, `select staff_set_seat_status($1,'reviewed')`, [gid])
 ok((await err('authenticated', RM, `select staff_set_seat_status($1,'badge_ready')`, [gid]))?.includes('assign a table'), 'badge_ready needs seat')
@@ -90,6 +99,9 @@ await as('authenticated', RM, `select staff_set_seat_status($1,'badge_ready')`, 
 await as('authenticated', RM, `select staff_mark_printed(array[$1])`, [gid])
 await as('authenticated', RM, `select staff_update_guest($1, $2)`, [gid, { title: 'Director', email: '' }])
 ok((await db.query(`select badge_status from guests where id=$1`, [gid])).rows[0].badge_status === 'reprint_needed', 'title edit flags reprint')
+const staffEdit = (await lastChanges('guest.updated')) ?? {}
+ok(Object.keys(staffEdit).join() === 'title' && staffEdit.title?.from === 'Analyst' && staffEdit.title?.to === 'Director',
+  'staff edit logs old and new values (a blank email that was already empty is not a change)')
 ok((await as('authenticated', vol, `select staff_check_in($1) r`, [gid]))[0].r === true, 'volunteer checks guest in')
 ok((await as('authenticated', vol, `select staff_check_in($1) r`, [gid]))[0].r === false, 'double check-in is a no-op')
 ok((await err('anon', null, `select portal_release_seat('new-link-abc', 1)`))?.startsWith('seat_locked'), 'checked-in seat locked in portal')
