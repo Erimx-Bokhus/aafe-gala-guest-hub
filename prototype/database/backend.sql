@@ -102,6 +102,30 @@ alter table check_ins add column if not exists device    text;   -- e.g. "Door 2
 create unique index if not exists check_ins_client_id_uq on check_ins (client_id) where client_id is not null;
 create unique index if not exists check_ins_one_per_guest on check_ins (event_id, guest_id) where guest_id is not null;
 
+-- Sponsor pipeline (decided Oct 6), from AAFE's prospect tracker: one row per sponsor prospect per gala,
+-- with its stage, the ask, and the order once there is one (its commitment and payments). The stages and
+-- their likelihood are AAFE's: not started 0%, reached out 10%, in conversation 50%, closed won 90%,
+-- payment received 100%, lost 0%. See staff_pipeline().
+create table if not exists sponsor_prospects (
+  id                 text primary key,
+  event_id           text not null references gala_events(id),
+  sponsor_id         text not null references sponsors(id),
+  stage              text not null default 'not_started'
+                     check (stage in ('not_started','reached_out','in_conversation','closed_won','payment_received','lost')),
+  sector             text check (sector in ('board','community','corporate','foundation','individual','small_business')),
+  ask_amount         numeric(12,2) check (ask_amount >= 0),
+  ask_tier_id        text references sponsorship_tiers(id),
+  order_id           text references orders(id),          -- the pledge or purchase, once there is one
+  follow_up_owner_id text references staff_users(id),     -- AAFE's follow-up contact, besides the relationship manager
+  notes              text,                                -- STAFF ONLY
+  stage_changed_at   timestamptz not null default now(),
+  created_at         timestamptz not null default now(),
+  updated_at         timestamptz not null default now(),
+  unique (event_id, sponsor_id)
+);
+create unique index if not exists sponsor_prospects_order_uq on sponsor_prospects (order_id) where order_id is not null;
+alter table gala_events add column if not exists sponsorship_goal numeric(12,2);   -- the board's target for this gala
+
 -- Give Lively import (docs/import-matching-spec.md, section 9).
 alter table payments    add column if not exists purchase_key text;   -- SHA-256(email | UTC purchase time); see purchase_key()
 create unique index if not exists payments_purchase_key_uq on payments (purchase_key) where purchase_key is not null;
@@ -288,7 +312,7 @@ declare t text;
 begin
   foreach t in array array['gala_events','staff_users','sponsorship_tiers','sponsors','orders','payments',
     'event_tables','guests','seats','check_ins','email_log','audit_log','salesforce_sync',
-    'givelively_sync_state','givelively_raw','import_runs','import_review','tier_mappings']
+    'givelively_sync_state','givelively_raw','import_runs','import_review','tier_mappings','sponsor_prospects']
   loop
     execute format('alter table %I enable row level security', t);
     execute format('drop policy if exists staff_read on %I', t);
@@ -1355,6 +1379,258 @@ language sql security definer set search_path = public as $$
 $$;
 
 -- ---------------------------------------------------------------------
+-- 7b. SPONSOR PIPELINE  (AAFE's prospect tracker; table sponsor_prospects)
+--     Staff move prospects through the early stages. An order moves its prospect on by itself:
+--     a pledge or purchase to closed won, and the first payment to payment received.
+-- ---------------------------------------------------------------------
+
+create or replace function pipeline_stage_label(p_stage text) returns text
+language sql immutable set search_path = public as $$
+  select case p_stage when 'not_started' then 'Not started' when 'reached_out' then 'Reached out'
+    when 'in_conversation' then 'In conversation' when 'closed_won' then 'Closed won'
+    when 'payment_received' then 'Payment received' when 'lost' then 'Lost' end
+$$;
+
+-- Links an order to its prospect and moves the stage on: money received → payment received; a pledge,
+-- invoice or purchase → closed won (only forward, or back from lost). Logs any stage change.
+create or replace function pipeline_apply_order(p_prospect_id text, o orders, p_actor_type text, p_actor text)
+returns void language plpgsql security definer set search_path = public as $$
+declare p sponsor_prospects; v_to text; v_org text;
+begin
+  select * into p from sponsor_prospects where id = p_prospect_id for update;
+  if p.id is null or (p.order_id is not null and p.order_id <> o.id) then return; end if;
+  v_to := case
+    when o.status in ('paid', 'partially_paid') then 'payment_received'
+    when o.status in ('pledged', 'invoice_sent') and p.stage in ('not_started', 'reached_out', 'in_conversation', 'lost') then 'closed_won'
+    else p.stage end;
+  update sponsor_prospects set order_id = o.id, stage = v_to, updated_at = now(),
+         stage_changed_at = case when v_to <> p.stage then now() else stage_changed_at end
+   where id = p.id;
+  if v_to <> p.stage then
+    select organization_name into v_org from sponsors where id = p.sponsor_id;
+    perform write_audit(p_actor_type, p_actor, 'prospect', p.id, o.id, 'prospect.stage', p.stage, v_to, false,
+      format('%s: %s → %s (%s).', v_org, pipeline_stage_label(p.stage), pipeline_stage_label(v_to),
+             case when v_to = 'payment_received' then 'payment recorded' else 'pledge or purchase recorded' end));
+  end if;
+end $$;
+
+-- Every order passes through here: it moves its sponsor's prospect on. A sponsorship bought or pledged
+-- with no prospect yet (a Give Lively purchase, say) gets one, so the board counts it; a ticket only
+-- counts when its buyer is already a prospect.
+create or replace function orders_pipeline() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare v_id text; v_cat text;
+begin
+  -- Sponsorships and tickets count toward a prospect; ads (an add-on) and comps don't.
+  select tier_category into v_cat from sponsorship_tiers where id = new.tier_id;
+  if new.status in ('cancelled', 'comp') or v_cat not in ('sponsorship', 'ticket') then return new; end if;
+  -- The prospect this order is already linked to, else this sponsor's prospect.
+  select id into v_id from sponsor_prospects where order_id = new.id;
+  if v_id is null then
+    select id into v_id from sponsor_prospects where event_id = new.event_id and sponsor_id = new.sponsor_id;
+  end if;
+  -- A pledge or purchase recorded under a new sponsor record (staff_add_pledge and the Give Lively import
+  -- create one) belongs to the prospect with the same organization name, if it has no order yet.
+  if v_id is null then
+    select p.id into v_id from sponsor_prospects p join sponsors s on s.id = p.sponsor_id
+     where p.event_id = new.event_id and p.order_id is null
+       and lower(btrim(s.organization_name)) = (select lower(btrim(organization_name)) from sponsors where id = new.sponsor_id)
+     order by p.created_at limit 1;
+  end if;
+  if v_id is null then
+    if v_cat <> 'sponsorship' then return new; end if;
+    v_id := new_id('pr');
+    insert into sponsor_prospects (id, event_id, sponsor_id, stage, ask_amount, ask_tier_id)
+    values (v_id, new.event_id, new.sponsor_id, 'not_started', new.commitment_amount, new.tier_id);
+  end if;
+  perform pipeline_apply_order(v_id, new, 'system', 'Pipeline');
+  return new;
+end $$;
+drop trigger if exists orders_pipeline on orders;
+create trigger orders_pipeline after insert or update of status, sponsor_id on orders for each row execute function orders_pipeline();
+
+-- Sponsorship orders already on this gala's list join the pipeline once (backend.sql re-runs are safe).
+do $$
+declare o orders;
+begin
+  for o in select ord.* from orders ord join sponsorship_tiers t on t.id = ord.tier_id
+            where ord.event_id = current_event_id() and t.tier_category = 'sponsorship' and ord.status not in ('cancelled', 'comp')
+              and not exists (select 1 from sponsor_prospects p where p.event_id = ord.event_id and p.sponsor_id = ord.sponsor_id)
+  loop
+    update orders set status = status where id = o.id;   -- fires orders_pipeline
+  end loop;
+end $$;
+
+-- The pipeline board: totals per stage against the goal, and every prospect with its ask, commitment,
+-- money received, and the last two galas' giving. No emails or phone numbers.
+create or replace function staff_pipeline() returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+declare e gala_events; v jsonb;
+begin
+  perform require_staff(array['gala_admin','relationship_manager']);
+  select * into e from gala_events where id = current_event_id();
+  with st(ord, stage, probability) as (values (1, 'not_started', 0.0), (2, 'reached_out', 0.1), (3, 'in_conversation', 0.5),
+                                               (4, 'closed_won', 0.9), (5, 'payment_received', 1.0), (6, 'lost', 0.0)),
+  p as (
+    select sp.*, s.organization_name, s.primary_contact_name, rm.name rm_name, fu.name fu_name, st.probability, st.ord,
+           o.commitment_amount commitment, t.name tier_name, ta.name ask_tier_name,
+           coalesce((select sum(pay.original_amount - pay.refunded_amount) from payments pay where pay.order_id = o.id), 0) received,
+           (select coalesce(jsonb_agg(jsonb_build_object('year', ge.year, 'given',
+                     coalesce((select sum(pay.original_amount - pay.refunded_amount) from orders oo join payments pay on pay.order_id = oo.id
+                                where oo.sponsor_id = sp.sponsor_id and oo.event_id = ge.id and oo.status <> 'cancelled'), 0))
+                     order by ge.year desc), '[]')
+              from gala_events ge where ge.year in (e.year - 1, e.year - 2)) prior_years
+      from sponsor_prospects sp join st on st.stage = sp.stage join sponsors s on s.id = sp.sponsor_id
+      left join staff_users rm on rm.id = s.relationship_owner_id
+      left join staff_users fu on fu.id = sp.follow_up_owner_id
+      left join orders o on o.id = sp.order_id and o.status <> 'cancelled'
+      left join sponsorship_tiers t on t.id = o.tier_id
+      left join sponsorship_tiers ta on ta.id = sp.ask_tier_id
+     where sp.event_id = e.id)
+  select jsonb_build_object(
+    'event_id', e.id, 'event_name', e.name, 'goal', e.sponsorship_goal,
+    'totals', (select jsonb_build_object(
+        'committed', coalesce(sum(commitment) filter (where stage in ('closed_won', 'payment_received')), 0),
+        'received', coalesce(sum(received), 0),
+        -- What the pipeline is likely to bring in: each prospect's commitment (or ask) times its stage's likelihood.
+        'weighted', coalesce(round(sum(probability * coalesce(commitment, ask_amount, 0)), 2), 0),
+        'open_ask', coalesce(sum(ask_amount) filter (where stage in ('not_started', 'reached_out', 'in_conversation')), 0),
+        'prospects', count(*)) from p),
+    'stages', (select jsonb_agg(x order by x.ord) from (
+        select st.ord, st.stage, pipeline_stage_label(st.stage) label, st.probability, count(p.id) count,
+               coalesce(sum(p.ask_amount), 0) ask, coalesce(sum(p.commitment), 0) committed, coalesce(sum(p.received), 0) received
+          from st left join p on p.stage = st.stage group by st.ord, st.stage, st.probability) x),
+    'prospects', coalesce((select jsonb_agg(jsonb_build_object(
+        'id', id, 'sponsor_id', sponsor_id, 'organization', organization_name, 'contact', primary_contact_name,
+        'relationship_manager', rm_name, 'follow_up', fu_name, 'sector', sector, 'stage', stage,
+        'stage_label', pipeline_stage_label(stage), 'probability', probability, 'stage_changed_at', stage_changed_at,
+        'ask', ask_amount, 'ask_tier', ask_tier_name, 'order_id', order_id, 'tier', tier_name, 'commitment', commitment,
+        'received', received, 'balance', greatest(coalesce(commitment, 0) - received, 0), 'prior_years', prior_years, 'notes', notes)
+        order by ord, organization_name) from p), '[]'))
+  into v;
+  return v;
+end $$;
+
+-- Add a prospect, or edit one. p: { id? (edit), sponsor_id? or organization + contact_name (+ contact_email)
+-- for a new sponsor, sector, ask_amount, ask_tier_id, follow_up_owner_id, notes, order_id? (link a
+-- pledge or purchase made under another sponsor record) }. Returns the prospect id.
+create or replace function staff_save_prospect(p jsonb) returns text
+language plpgsql security definer set search_path = public as $$
+declare
+  me staff_users := require_staff(array['gala_admin','relationship_manager']);
+  fields text[] := array['sector','ask_amount','ask_tier_id','follow_up_owner_id','notes'];
+  old sponsor_prospects; n sponsor_prospects; v_sp text; v_org text; v_changed text[]; o orders;
+begin
+  p := coalesce(p, '{}');
+  if p ? 'sector' and nullif(p ->> 'sector', '') is not null
+     and p ->> 'sector' not in ('board','community','corporate','foundation','individual','small_business') then
+    raise exception 'invalid_input: sector must be board, community, corporate, foundation, individual or small_business';
+  end if;
+  if nullif(p ->> 'ask_amount', '') is not null and (p ->> 'ask_amount')::numeric < 0 then raise exception 'invalid_input: the ask cannot be negative'; end if;
+  if nullif(p ->> 'ask_tier_id', '') is not null and not exists (select 1 from sponsorship_tiers where id = p ->> 'ask_tier_id') then
+    raise exception 'not_found: tier';
+  end if;
+  if nullif(p ->> 'follow_up_owner_id', '') is not null and not exists (select 1 from staff_users where id = p ->> 'follow_up_owner_id') then
+    raise exception 'not_found: staff member';
+  end if;
+
+  if nullif(p ->> 'id', '') is null then
+    v_sp := nullif(p ->> 'sponsor_id', '');
+    if v_sp is null then
+      v_org := btrim(coalesce(p ->> 'organization', ''));
+      if v_org = '' or btrim(coalesce(p ->> 'contact_name', '')) = '' then
+        raise exception 'invalid_input: organization and contact name are required';
+      end if;
+      select id into v_sp from sponsors where lower(btrim(organization_name)) = lower(v_org) limit 1;
+      if v_sp is not null then raise exception 'invalid_input: % is already a sponsor (%); add them by sponsor_id', v_org, v_sp; end if;
+      v_sp := new_id('sp');
+      insert into sponsors (id, organization_name, primary_contact_name, primary_contact_email, phone, relationship_owner_id)
+      values (v_sp, v_org, btrim(p ->> 'contact_name'), btrim(coalesce(p ->> 'contact_email', '')), '', me.id);
+    elsif not exists (select 1 from sponsors where id = v_sp) then
+      raise exception 'not_found: sponsor';
+    end if;
+    if exists (select 1 from sponsor_prospects where event_id = current_event_id() and sponsor_id = v_sp) then
+      raise exception 'invalid_input: this sponsor is already in this gala''s pipeline';
+    end if;
+    n.id := new_id('pr');
+    insert into sponsor_prospects (id, event_id, sponsor_id, sector, ask_amount, ask_tier_id, follow_up_owner_id, notes)
+    values (n.id, current_event_id(), v_sp, nullif(p ->> 'sector', ''), nullif(p ->> 'ask_amount', '')::numeric,
+            nullif(p ->> 'ask_tier_id', ''), nullif(p ->> 'follow_up_owner_id', ''), nullif(btrim(coalesce(p ->> 'notes', '')), ''));
+    select organization_name into v_org from sponsors where id = v_sp;
+    perform write_audit('staff', me.name, 'prospect', n.id, null, 'prospect.created', null, 'not_started', false,
+      format('%s added to the pipeline%s.', v_org,
+             case when nullif(p ->> 'ask_amount', '') is not null then ', ask ' || money_fmt((p ->> 'ask_amount')::numeric) else '' end));
+  else
+    select * into old from sponsor_prospects where id = p ->> 'id' and event_id = current_event_id() for update;
+    if old.id is null then raise exception 'not_found'; end if;
+    n := jsonb_populate_record(old, (select coalesce(jsonb_object_agg(key, case when value = '""'::jsonb then 'null'::jsonb else value end), '{}')
+                                       from jsonb_each(p) where key = any (fields)));
+    select coalesce(array_agg(k), '{}') into v_changed from unnest(fields) k where to_jsonb(n) -> k is distinct from to_jsonb(old) -> k;
+    if cardinality(v_changed) > 0 then
+      update sponsor_prospects set sector = n.sector, ask_amount = n.ask_amount, ask_tier_id = n.ask_tier_id,
+             follow_up_owner_id = n.follow_up_owner_id, notes = n.notes, updated_at = now()
+       where id = old.id;
+      select organization_name into v_org from sponsors where id = old.sponsor_id;
+      perform write_audit('staff', me.name, 'prospect', old.id, old.order_id, 'prospect.updated', null, null, false,
+        format('%s: %s edited.', v_org, array_to_string(v_changed, ', ')), audit_changes(to_jsonb(old), to_jsonb(n), v_changed));
+    end if;
+  end if;
+
+  -- Link a pledge or purchase recorded under another sponsor record.
+  if nullif(p ->> 'order_id', '') is not null then
+    select * into o from orders where id = p ->> 'order_id' and event_id = current_event_id();
+    if o.id is null then raise exception 'not_found: order'; end if;
+    if exists (select 1 from sponsor_prospects where order_id = o.id and id <> n.id) then
+      raise exception 'invalid_input: that order belongs to another prospect';
+    end if;
+    select * into old from sponsor_prospects where id = n.id;
+    if old.order_id is not null and old.order_id <> o.id then raise exception 'invalid_input: this prospect already has an order'; end if;
+    if old.order_id is null then
+      update sponsor_prospects set order_id = o.id, updated_at = now() where id = n.id;
+      select organization_name into v_org from sponsors where id = old.sponsor_id;
+      perform write_audit('staff', me.name, 'prospect', n.id, o.id, 'prospect.order_linked', null, null, false,
+        format('%s: order %s linked.', v_org, o.id));
+      perform pipeline_apply_order(n.id, o, 'staff', me.name);
+    end if;
+  end if;
+  return n.id;
+end $$;
+
+-- Move a prospect to a stage. Payment received comes from recording a payment (staff_record_payment or
+-- the Give Lively import), and a prospect that has paid stays there.
+create or replace function staff_set_prospect_stage(p_id text, p_stage text) returns void
+language plpgsql security definer set search_path = public as $$
+declare me staff_users := require_staff(array['gala_admin','relationship_manager']); p sponsor_prospects; v_paid boolean; v_org text;
+begin
+  if p_stage is null or pipeline_stage_label(p_stage) is null then
+    raise exception 'invalid_input: stage must be not_started, reached_out, in_conversation, closed_won, payment_received or lost';
+  end if;
+  select * into p from sponsor_prospects where id = p_id and event_id = current_event_id() for update;
+  if p.id is null then raise exception 'not_found'; end if;
+  if p.stage = p_stage then return; end if;
+  v_paid := exists (select 1 from payments where order_id = p.order_id and original_amount - refunded_amount > 0);
+  if p_stage = 'payment_received' and not v_paid then raise exception 'invalid_transition: record the payment first'; end if;
+  if v_paid and p_stage <> 'payment_received' then raise exception 'invalid_transition: this sponsor has paid; their stage stays payment received'; end if;
+  update sponsor_prospects set stage = p_stage, stage_changed_at = now(), updated_at = now() where id = p.id;
+  select organization_name into v_org from sponsors where id = p.sponsor_id;
+  perform write_audit('staff', me.name, 'prospect', p.id, p.order_id, 'prospect.stage', p.stage, p_stage, false,
+    format('%s: %s → %s.', v_org, pipeline_stage_label(p.stage), pipeline_stage_label(p_stage)));
+end $$;
+
+-- The board's goal for the current gala (gala admins).
+create or replace function staff_set_sponsorship_goal(p_amount numeric) returns void
+language plpgsql security definer set search_path = public as $$
+declare me staff_users := require_staff(array['gala_admin']); v_old numeric;
+begin
+  if p_amount is not null and p_amount < 0 then raise exception 'invalid_input: the goal cannot be negative'; end if;
+  select sponsorship_goal into v_old from gala_events where id = current_event_id();
+  if v_old is not distinct from p_amount then return; end if;
+  update gala_events set sponsorship_goal = p_amount where id = current_event_id();
+  perform write_audit('staff', me.name, 'gala_event', current_event_id(), null, 'gala.goal_set', v_old::text, p_amount::text, false,
+    format('Sponsorship goal set to %s.', coalesce(money_fmt(p_amount), 'none')));
+end $$;
+
+-- ---------------------------------------------------------------------
 -- 8. EXPORTS  (rows for the staff app to save as CSV; every export is logged)
 -- Columns are a first proposal until AAFE sends its badge and check-in templates.
 -- ---------------------------------------------------------------------
@@ -1453,7 +1729,9 @@ begin
               'purchase_key','name_key','add_import_review','import_fill_guests','staff_set_tier_mapping','staff_set_gala_page',
               'staff_resolve_import_review','seats_void_qr','guests_void_qr',
               'staff_export_badges','staff_export_checkin','staff_export_salesforce',
-              'staff_queue_guest_list_reminders','staff_email_queue','staff_checkin_snapshot','staff_sync_check_ins')
+              'staff_queue_guest_list_reminders','staff_email_queue','staff_checkin_snapshot','staff_sync_check_ins',
+              'pipeline_stage_label','pipeline_apply_order','orders_pipeline','staff_pipeline','staff_save_prospect',
+              'staff_set_prospect_stage','staff_set_sponsorship_goal')
   loop
     execute format('revoke all on function %s from public, anon, authenticated', f);
   end loop;
@@ -1474,6 +1752,7 @@ grant execute on function
   staff_add_comp_guest(jsonb), staff_send_qr_invite(text), staff_resend_portal_link(text), staff_approve_email(text), staff_cancel_email(text),
   checkin_list(), staff_check_in(text, text), staff_check_in_qr(text), staff_check_in_exception(text, text, text, text),
   staff_checkin_snapshot(), staff_sync_check_ins(jsonb),
+  staff_pipeline(), staff_save_prospect(jsonb), staff_set_prospect_stage(text, text), staff_set_sponsorship_goal(numeric),
   staff_import_givelively(jsonb, jsonb), staff_set_tier_mapping(text, text), staff_set_gala_page(text),
   staff_resolve_import_review(text, text),
   staff_export_badges(boolean), staff_export_checkin(), staff_export_salesforce(),
