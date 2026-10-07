@@ -15,3 +15,18 @@ condition = "AND"
 paths = ['''^prototype/''']
 regexTarget = "match"
 regexes = ['''(qr_token|portal_token)"?\s*:\s*"(AAFE-[0-9A-F]{32}|[a-z]{2}-[0-9a-z]{8})"''']
+
+# Supabase keys that bypass every access rule (docs/keys-and-secrets.md). They belong only in
+# Supabase Edge Function secrets, never in a file. The anon / publishable key is public by design;
+# gitleaks' default jwt rule still flags any committed JWT, anon included, to keep keys out of the repo.
+[[rules]]
+id = "supabase-secret-key"
+description = "Supabase secret API key (sb_secret_...)"
+regex = '''sb_secret_[A-Za-z0-9_-]{20,}'''
+keywords = ["sb_secret_"]
+
+[[rules]]
+id = "supabase-service-role-assignment"
+description = "A Supabase service_role key assigned to a variable"
+regex = '''(?i)service_role_key\s*[:=]\s*["']?[A-Za-z0-9_.-]{20,}'''
+keywords = ["service_role_key"]
