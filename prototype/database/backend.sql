@@ -57,6 +57,8 @@ alter table email_log add column if not exists attempts    int not null default 
 alter table email_log add column if not exists last_error  text;
 alter table email_log add column if not exists approved_by text;          -- staff name
 alter table email_log add column if not exists approved_at timestamptz;   -- null = draft awaiting approval
+alter table email_log add column if not exists created_at  timestamptz not null default now();
+alter table email_log add column if not exists payment_id  text references payments(id);  -- payment_receipt: which payment
 alter table email_log drop constraint if exists email_log_status_check;
 alter table email_log add constraint email_log_status_check check (status in ('queued','sent','opened','bounced','cancelled'));
 
@@ -241,14 +243,17 @@ language sql immutable set search_path = public as $$
 $$;
 
 -- p_approved_by: the staff member sending their own email. Null = draft for staff approval.
+-- p_payment_id: the payment a payment_receipt confirms.
 drop function if exists enqueue_email(text, text, text, text, text, text);
+drop function if exists enqueue_email(text, text, text, text, text, text, text);
 create or replace function enqueue_email(
-  p_template text, p_to text, p_to_name text, p_order_id text, p_guest_id text, p_trigger text, p_approved_by text default null
+  p_template text, p_to text, p_to_name text, p_order_id text, p_guest_id text, p_trigger text, p_approved_by text default null,
+  p_payment_id text default null
 ) returns text language plpgsql security definer set search_path = public as $$
 declare v_id text := new_id('em');
 begin
-  insert into email_log (id, template, to_email, to_name, order_id, guest_id, trigger, status, approved_by, approved_at)
-  values (v_id, p_template, p_to, p_to_name, p_order_id, p_guest_id, p_trigger, 'queued',
+  insert into email_log (id, template, to_email, to_name, order_id, guest_id, payment_id, trigger, status, approved_by, approved_at)
+  values (v_id, p_template, p_to, p_to_name, p_order_id, p_guest_id, p_payment_id, p_trigger, 'queued',
           p_approved_by, case when p_approved_by is not null then now() end);
   return v_id;
 end $$;
@@ -584,11 +589,15 @@ begin
   perform write_audit('staff', me.name, 'payment', v_id, o.id, 'payment.recorded', o.status, v_status, true,
     format('Payment received: %s.', money_fmt(p_amount)));
 
+  select * into sp from sponsors where id = o.sponsor_id;
   -- First money in and no link yet: send the guest-list link.
   if o.portal_link_sent_at is null and exists (select 1 from seats where order_id = o.id and status <> 'cancelled') then
-    select * into sp from sponsors where id = o.sponsor_id;
     perform enqueue_email('portal_link', sp.primary_contact_email, sp.primary_contact_name, o.id, null, 'payment_recorded');
   end if;
+  -- A payment confirmation for staff to review and send. Only for payments staff record (check, ACH,
+  -- wire): Give Lively sends its own receipts.
+  perform enqueue_email('payment_receipt', sp.primary_contact_email, sp.primary_contact_name, o.id, null, 'payment_recorded',
+                        null, v_id);
   return v_id;
 end $$;
 
@@ -1115,7 +1124,8 @@ begin
   update email_log set status = 'sent', sent_at = now(), attempts = attempts + 1, last_error = null
    where id = p_email_id and status = 'queued' and approved_at is not null returning * into m;
   if m.id is null then return; end if;
-  if m.template = 'portal_link' and p_token_hash is not null then
+  -- A reminder carries a fresh link too, so the newest email always has the one that works.
+  if m.template in ('portal_link', 'guest_list_reminder') and p_token_hash is not null then
     -- The link works through the end of AAFE's guest-list deadline day (New York time).
     select coalesce(o.guest_list_deadline, e.guest_list_deadline, e.event_date) into v_deadline
       from orders o join gala_events e on e.id = o.event_id where o.id = m.order_id;
@@ -1127,11 +1137,67 @@ begin
       from orders o
      where seats.guest_id = m.guest_id and seats.status <> 'cancelled' and o.id = seats.order_id;
   end if;
-  perform write_audit('system', 'Email service', 'email', m.id, m.order_id,
-    case when m.template = 'portal_link' then 'portal_link.sent' else m.template || '.sent' end, null, 'sent',
-    m.template = 'portal_link',
-    case when m.template = 'portal_link' then 'Private guest-list link emailed.'
-         else format('%s emailed to %s.', replace(m.template, '_', ' '), m.to_name) end);
+  perform write_audit('system', 'Email service', 'email', m.id, m.order_id, m.template || '.sent', null, 'sent',
+    m.template in ('portal_link', 'guest_list_reminder', 'payment_receipt'),   -- shown in the sponsor's activity list
+    case m.template when 'portal_link' then 'Private guest-list link emailed.'
+                    when 'guest_list_reminder' then 'Guest-list reminder emailed, with a new private link.'
+                    when 'payment_receipt' then 'Payment confirmation emailed.'
+                    else format('%s emailed to %s.', replace(m.template, '_', ' '), m.to_name) end);
+end $$;
+
+-- Guest-list reminders: one draft per sponsor who still has unnamed seats, already has a link, and
+-- whose deadline hasn't passed. Skips sponsors with an unsent link or reminder, or one sent in the last
+-- p_min_days. Drafts only (hard rule 4): staff review and approve each before it sends. Returns how many.
+create or replace function staff_queue_guest_list_reminders(p_min_days int default 7) returns int
+language plpgsql security definer set search_path = public as $$
+declare me staff_users := require_staff(array['gala_admin','relationship_manager']); r record; n int := 0;
+begin
+  for r in
+    select o.id, sp.primary_contact_email email, sp.primary_contact_name contact
+      from orders o join sponsors sp on sp.id = o.sponsor_id join gala_events e on e.id = o.event_id
+     where o.event_id = current_event_id() and o.status <> 'cancelled' and o.portal_link_sent_at is not null
+       and coalesce(o.guest_list_deadline, e.guest_list_deadline) >= (now() at time zone 'America/New_York')::date
+       and exists (select 1 from seats s where s.order_id = o.id and s.status = 'unnamed')
+       and not exists (select 1 from email_log m where m.order_id = o.id and m.template in ('portal_link', 'guest_list_reminder')
+                        and (m.status = 'queued' or m.sent_at > now() - make_interval(days => greatest(coalesce(p_min_days, 7), 0))))
+     order by o.id
+  loop
+    perform enqueue_email('guest_list_reminder', r.email, r.contact, r.id, null, 'staff_manual');
+    n := n + 1;
+  end loop;
+  if n > 0 then
+    perform write_audit('staff', me.name, 'email', 'guest_list_reminder', null, 'email.reminders_drafted', null, 'draft', false,
+      format('%s guest-list reminder%s drafted for review.', n, case when n = 1 then '' else 's' end));
+  end if;
+  return n;
+end $$;
+
+-- The approval screen: every unsent email, drafts first, with what staff need to judge it.
+-- state: 'draft' (waiting for approval), 'approved' (waiting for the sender), 'failed' (stopped retrying).
+create or replace function staff_email_queue() returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+declare me staff_users := require_staff(array['gala_admin','relationship_manager']);
+begin
+  return coalesce((select jsonb_agg(row order by row ->> 'sort', row ->> 'created_at', row ->> 'id') from (
+    select jsonb_build_object(
+      'id', m.id, 'template', m.template, 'to_name', m.to_name, 'to_email', m.to_email, 'trigger', m.trigger,
+      'created_at', m.created_at, 'approved_by', m.approved_by, 'attempts', m.attempts, 'last_error', m.last_error,
+      'state', case when m.approved_at is null then 'draft' when m.attempts >= 5 then 'failed' else 'approved' end,
+      'sort', case when m.approved_at is null then 0 when m.attempts >= 5 then 1 else 2 end,
+      'order_id', m.order_id, 'organization', sp.organization_name, 'tier', t.name,
+      'deadline', coalesce(o.guest_list_deadline, e.guest_list_deadline),
+      'seats_unnamed', (select count(*) from seats s where s.order_id = m.order_id and s.status = 'unnamed'),
+      'seats_total', (select count(*) from seats s where s.order_id = m.order_id and s.status <> 'cancelled'),
+      'guest', case when g.id is null then null else g.first_name || ' ' || g.last_name end,
+      'payment', case when p.id is null then null else jsonb_build_object(
+        'amount', p.gross_amount, 'method', p.method, 'received_at', p.received_at, 'check_number', p.check_number) end
+    ) row
+      from email_log m
+      left join orders o on o.id = m.order_id left join sponsors sp on sp.id = o.sponsor_id
+      left join sponsorship_tiers t on t.id = o.tier_id left join gala_events e on e.id = o.event_id
+      left join guests g on g.id = m.guest_id left join payments p on p.id = m.payment_id
+     where m.status = 'queued'
+  ) q), '[]');
 end $$;
 
 -- After 5 failed attempts the email stays 'queued' but the worker stops retrying.
@@ -1238,7 +1304,8 @@ begin
               'staff_check_in_exception','gl_import','staff_import_givelively','email_mark_sent','email_mark_failed',
               'purchase_key','name_key','add_import_review','import_fill_guests','staff_set_tier_mapping','staff_set_gala_page',
               'staff_resolve_import_review','seats_void_qr','guests_void_qr',
-              'staff_export_badges','staff_export_checkin','staff_export_salesforce')
+              'staff_export_badges','staff_export_checkin','staff_export_salesforce',
+              'staff_queue_guest_list_reminders','staff_email_queue')
   loop
     execute format('revoke all on function %s from public, anon, authenticated', f);
   end loop;
@@ -1260,7 +1327,8 @@ grant execute on function
   checkin_list(), staff_check_in(text, text), staff_check_in_qr(text), staff_check_in_exception(text, text, text, text),
   staff_import_givelively(jsonb, jsonb), staff_set_tier_mapping(text, text), staff_set_gala_page(text),
   staff_resolve_import_review(text, text),
-  staff_export_badges(boolean), staff_export_checkin(), staff_export_salesforce()
+  staff_export_badges(boolean), staff_export_checkin(), staff_export_salesforce(),
+  staff_queue_guest_list_reminders(int), staff_email_queue()
   to authenticated;
 
 -- Edge functions (service role)
