@@ -1,5 +1,5 @@
 # Hosting
-<!-- reviewed 2026-10-06 Aisling -->
+<!-- reviewed 2026-10-07 Aisling -->
 
 We are building a capstone prototype, not choosing AAFE's production infrastructure. The team delivers a working, AAFE-branded prototype with invented data, plus code and documentation that any qualified partner can pick up. **Production hosting is intentionally not selected during this project.** AAFE decides that, if it adopts the tool, after reviewing the finished prototype.
 
@@ -18,7 +18,7 @@ We are building a capstone prototype, not choosing AAFE's production infrastruct
 | --- | --- |
 | Builds a convincing, useful prototype | Decides whether the tool is worth adopting |
 | Uses invented data only | Decides when, and whether, real data is used |
-| Delivers clean code and documentation | Chooses GreyBox Creative, another vendor, or internal staff |
+| Delivers clean code and documentation | Chooses a technical partner: its web agency, another vendor, or internal staff <!-- modified 2026-10-07 13:45 Aisling --> |
 | Runs a temporary demo preview | Chooses a production host and budget |
 | Explains future considerations | Approves privacy, security, support, and maintenance policies |
 | Keeps the code portable | Decides which integrations are worth paying for |
@@ -38,9 +38,12 @@ Whoever runs a production version should be able to say yes to each of these, wh
 - **Sponsor links:** secure, expiring, and revocable, with a defined revocation process.
 - **Encryption:** HTTPS everywhere; the managed database encrypted at rest.
 - **Exports:** a decision about who may download guest lists.
-- **Backups:** a documented backup, restore, retention, and deletion process, with a restore that has actually been tested.
+- **Backups:** a documented backup and restore process, with a restore that has actually been tested and a named person who tests it. <!-- modified 2026-10-07 13:45 Aisling -->
+- **Retention:** how long guest data is kept after each gala, and how it is deleted. <!-- new 2026-10-07 13:45 Aisling -->
 - **Gala night:** a support plan with a phone escalation contact, a downloaded check-in list and a printed alphabetical backup, and a tested procedure for weak connectivity.
 - **Data review:** a data-processing and acceptable-use review before any real personal information is entered.
+- **Separate from the public website:** the guest tool's app, database, access, backups, and support stay separate from aafe.org, unless AAFE's technical partner documents an alternative. <!-- new 2026-10-07 13:45 Aisling -->
+- **Custom address:** before relying on an address like guests.aafe.org, confirm the process with whoever administers aafe.org's domain and DNS (not yet confirmed). <!-- new 2026-10-07 13:45 Aisling -->
 - **Two owners:** a business owner and a technical or vendor owner. One person may hold both roles, but the responsibilities differ.
 - **Keys:** rotate every key at handoff; move to Supabase's new publishable and secret keys so each can be revoked on its own; limit the server functions' allowed origins to the deployed apps instead of `*`; MFA on every Supabase and GitHub account. <!-- updated 2026-10-06 20:41 Aisling -->
 
@@ -50,7 +53,7 @@ Whoever runs a production version should be able to say yes to each of these, wh
 
 The team Supabase project is loaded with the schema, seed, and backend (Oct 6); `npm run db:backend` in `prototype/` re-applies it. <!-- updated 2026-10-06 05:50 Aisling -->
 
-- The demo runs under a team account with invented data, on Supabase's free plan (decided Oct 5). Where the web app itself is previewed is still open. <!-- modified 2026-10-05 16:51 Aisling -->
+- The demo runs under a team account with invented data, on Supabase's free plan (decided Oct 5). The web apps are previewed on Vercel's free plan (decided Oct 6): two projects, rooted at `prototype/staff-app` and `prototype/guest-portal`, with only the Supabase URL and public (anon) key set in Vercel's settings, never in the repo. Vercel's free plan is meant for personal, non-commercial projects: fine for the team's demo, not for AAFE's production. <!-- modified 2026-10-07 13:45 Aisling -->
 - A free Supabase project pauses after a week without activity. Wake it before any demo, or rebuild it from the seed data. <!-- modified 2026-10-05 16:51 Aisling -->
 - Free web services can sleep when idle; wake the preview before any demo.
 

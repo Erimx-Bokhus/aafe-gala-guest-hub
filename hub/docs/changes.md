@@ -5,6 +5,13 @@ Every change to this hub, newest first. Open it while signed in to claude.ai and
 Each change has a kind, shown the same way on every page next to the exact line that changed: **✦ New** (didn't exist before), **+ Updated** (rows, tasks, or terms added), **✎ Modified** (wording, numbers, or a rule changed), **− Removed** (taken out), and **! Important** (everyone should act on it). Hover an icon for the date, time (New York), and who made the change; click it to mark it read.
 
 ```changes
+2026-10-07 13:45 | new | Aisling | tasks.added-october-7 | Oct 7: what was built tonight, and what's next for each pair (Vercel setup, check-in screen, pipeline board, arrivals in the portal, AAFE's translation review)
+2026-10-07 13:45 | updated | Aisling | decisions | Six decisions: Vercel for the demo, offline check-in, first arrival wins, the sponsor pipeline, AAFE-gated features built switched off, and the test gala for tests only; a new open question on names in Chinese or Korean script
+2026-10-07 13:45 | updated | Aisling | build-plan.where-each-component-stands | Component status, Oct 7: emails, offline check-in, the sponsor pipeline, sponsor arrivals (off), translations, and a 553-guest test gala built (PRs #42–#50); about 1,090 automated checks
+2026-10-07 13:45 | modified | Aisling | build-plan.testing-what-to-add | Testing list: staff-action logging, access rules for every table and role, sponsor link limits, email and sync tests, and import edge cases done, plus a full-size gala
+2026-10-07 13:45 | updated | Aisling | hosting.before-any-real-data-production-readiness-checklist | From Natalie's hosting critique: keep the guest tool separate from the public website, confirm the custom-address process, set how long data is kept, and name who tests restores
+2026-10-07 13:45 | modified | Aisling | hosting.demo-preview-team-notes | Demo host decided: Vercel's free plan, two projects, keys in Vercel's settings only
+2026-10-07 13:45 | modified | Aisling | hosting.who-decides-what | AAFE chooses its technical partner (wording follows the corrected GreyBox note)
 2026-10-07 02:18 | modified | Aisling | tasks | GreyBox correction done in the docs: the web partner is most likely GreyBox Creative (not graybox.co), who hosts aafe.org is unconfirmed, and the unverified OVH server note is gone
 2026-10-07 00:11 | updated | Aisling | discovery.still-to-ask | Two questions for AAFE: who sends tax acknowledgments to check and ACH sponsors, and whether the tool's payment confirmation replaces the one accounting already emails
 2026-10-07 00:11 | modified | Aisling | systems.stripe | How AAFE acknowledges check and ACH gifts is now an open question, not a stated fact: the October 1 call didn't cover it
