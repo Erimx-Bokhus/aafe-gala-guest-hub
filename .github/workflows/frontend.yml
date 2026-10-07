@@ -1,0 +1,45 @@
+name: Frontend tests, build, and demo data
+
+on:
+  push:
+    branches: [main]
+    paths: ['prototype/**', '.github/workflows/frontend.yml']
+  # Runs on every pull request (no path filter) so it can be a required check on main;
+  # a path filter would leave PRs that don't touch these folders waiting forever.
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  frontend-tests-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: prototype
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: prototype/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: npm ci
+      # Unit tests: the build guard that keeps secret keys out of the browser, and app tests.
+      - run: npm test
+      # Demo data comes from generate_seed.py. Regenerate it first: the apps bundle seed.json.
+      - run: npm run seed
+      # Type-checks and builds the guest portal and the staff app.
+      - run: npm run build
+      - run: python3 scripts/make_open_files.py
+      # seed.sql, seed.json and the OPEN-*.html files must be exactly what the generator and build
+      # produce, so a hand edit can't drift from the generator or ship stale demo files.
+      - name: Check generated files are up to date
+        run: |
+          if ! git diff --exit-code --stat -- database/seed.sql shared/src/seed.json OPEN-Guest-Portal.html OPEN-Staff-App.html; then
+            echo "::error::Generated demo files are out of date. In prototype/, run: npm run seed && npm run build && python3 scripts/make_open_files.py, then commit the result. Change demo data in database/generate_seed.py, not in seed.sql or seed.json."
+            exit 1
+          fi

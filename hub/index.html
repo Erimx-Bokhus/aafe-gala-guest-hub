@@ -19,7 +19,7 @@
   --gold:#8a6a2e; --mark:#f6dca6;
   --own-backend:#c64c28; --own-frontend:#2a78d6; --own-shared:#8a8478;
   --k-update:#2a78d6; --k-review:#a8770f; --k-new:#c64c28; --k-reject:#8a8478;
-  --ok:#17795a; --ok-wash:rgba(23,121,90,.1);
+  --ok:#17795a; --ok-wash:rgba(23,121,90,.1); --crit:#b42318;
   --shadow:0 1px 2px rgba(31,29,26,.06),0 8px 24px rgba(31,29,26,.06);
   --f-display:"Shippori Mincho","Noto Serif","Georgia",serif;
   --f-body:"Zen Kaku Gothic New","Segoe UI",system-ui,-apple-system,sans-serif;
@@ -33,7 +33,7 @@
   --gold:#cfa860; --mark:#6b4f1f;
   --own-backend:#d95926; --own-frontend:#3987e5; --own-shared:#8e877b;
   --k-update:#3987e5; --k-review:#c99a2e; --k-new:#e0714d; --k-reject:#8e877b;
-  --ok:#4cc79a; --ok-wash:rgba(76,199,154,.12);
+  --ok:#4cc79a; --ok-wash:rgba(76,199,154,.12); --crit:#f97066;
   --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25); color-scheme:dark;
 }}
 :root[data-theme="dark"]{
@@ -43,7 +43,7 @@
   --gold:#cfa860; --mark:#6b4f1f;
   --own-backend:#d95926; --own-frontend:#3987e5; --own-shared:#8e877b;
   --k-update:#3987e5; --k-review:#c99a2e; --k-new:#e0714d; --k-reject:#8e877b;
-  --ok:#4cc79a; --ok-wash:rgba(76,199,154,.12);
+  --ok:#4cc79a; --ok-wash:rgba(76,199,154,.12); --crit:#f97066;
   --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25); color-scheme:dark;
 }
 [hidden]{display:none!important}
@@ -93,7 +93,19 @@ mark{background:var(--mark);color:inherit;border-radius:2px;padding:0 1px}
 .nav a .tags{display:flex;gap:4px;align-items:baseline}
 /* change markers: <!-- new|updated|modified [date] --> under a heading; label always in text, color is a second cue */
 .chg{--c:var(--accent);display:inline-block;vertical-align:middle;font:600 9.5px/1 var(--f-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--c);border:1px solid var(--c);border-radius:4px;padding:3px 5px;white-space:nowrap}
-.chg.k-updated{--c:var(--ok)} .chg.k-modified{--c:var(--k-review)}
+.chg.k-updated{--c:var(--ok)} .chg.k-modified{--c:var(--k-review)} .chg.k-removed{--c:var(--soft)} .chg.k-important{--c:var(--crit)}
+/* one glyph per kind, drawn from CSS so it never enters page text, search, or checkbox keys */
+.k-new{--g:"✦"} .k-updated{--g:"+"} .k-modified{--g:"✎"} .k-removed{--g:"−"} .k-important{--g:"!"}
+.chg::before{content:var(--g);margin-right:4px;font-weight:700;letter-spacing:0}
+/* inline marker next to the exact line that changed; hover or focus shows kind, time, and who */
+.chg-i{--c:var(--accent);display:inline-grid;place-items:center;width:18px;height:18px;margin:0 7px 0 0;border-radius:50%;border:1.5px solid var(--c);color:var(--c);background:var(--surface);font:700 11px/1 var(--f-ui);vertical-align:1px;cursor:pointer;text-decoration:none;text-indent:0}
+.chg-i::before{content:var(--g)}
+.chg-i.k-updated{--c:var(--ok)} .chg-i.k-modified{--c:var(--k-review)} .chg-i.k-removed{--c:var(--soft)} .chg-i.k-important{--c:var(--crit);background:var(--crit);color:var(--surface)}
+.chg-i:hover,.chg-i:focus-visible{background:var(--c);color:var(--surface)}
+/* in tables the icon sits in a gutter left of the row, so columns stay aligned */
+.doc table:has(.chg-i) :is(td,th):first-child{padding-left:38px}
+.doc td:first-child{position:relative}
+.doc td:first-child > .chg-i{position:absolute;left:11px;top:12px;margin:0}
 .doc h1 .chg,.doc h2 .chg{margin-left:10px;position:relative;top:-3px;font-size:10px;padding:4px 6px;background:none;cursor:pointer}
 .doc h1 .chg:hover,.doc h2 .chg:hover{background:color-mix(in srgb,var(--c) 12%,transparent)}
 .doc h1 .chg:hover::after,.doc h2 .chg:hover::after{content:" · mark read"}
@@ -126,7 +138,7 @@ mark{background:var(--mark);color:inherit;border-radius:2px;padding:0 1px}
 .client-banner{font:500 12.5px/1.4 var(--f-ui);color:var(--soft);background:var(--surface);border:1px solid var(--rule);border-radius:8px;padding:8px 12px;margin:0 0 18px;display:flex;gap:8px;align-items:center}
 .client-banner b{color:var(--ink)}
 .doc h1{font:700 clamp(32px,4.4vw,46px)/1.12 var(--f-display);margin:0 0 18px;text-wrap:balance;letter-spacing:.005em}
-.doc h1 + p{font-size:18.5px;line-height:1.65;color:var(--soft);max-width:66ch;margin-top:0}
+.doc h1 + p,.doc h1 + .rev-note + p{font-size:18.5px;line-height:1.65;color:var(--soft);max-width:66ch;margin-top:0}
 .doc h2{font:700 25px/1.25 var(--f-display);margin:52px 0 14px;padding-top:20px;border-top:1px solid var(--rule);text-wrap:balance;position:relative}
 .doc h3{font:600 17px/1.35 var(--f-ui);margin:30px 0 8px}
 .h-link{position:absolute;left:-30px;top:24px;width:24px;height:24px;border:0;border-radius:5px;background:none;color:var(--faint);cursor:pointer;opacity:0;font:600 15px/24px var(--f-ui)}
@@ -141,6 +153,10 @@ mark{background:var(--mark);color:inherit;border-radius:2px;padding:0 1px}
 .doc strong{font-weight:700;color:var(--ink)}
 .doc blockquote{margin:20px 0;padding:6px 0 6px 20px;border-left:3px solid var(--accent);font:500 19px/1.6 var(--f-display);color:var(--ink);max-width:62ch}
 .doc blockquote p{margin:0}
+/* screenshots, GIFs, and video of the build */
+.doc p > img,.doc video{display:block;width:100%;max-width:100%;height:auto;border:1px solid var(--rule);border-radius:10px;background:var(--surface);margin:6px 0 4px}
+.doc video{aspect-ratio:8/5}
+.doc p > em:only-child{font:400 13px/1.5 var(--f-ui);color:var(--faint)}
 .doc code{font:13.5px/1.5 var(--f-mono);background:var(--surface-2);padding:1px 5px;border-radius:4px}
 .doc pre{background:var(--surface-2);border:1px solid var(--rule);border-radius:10px;padding:16px 18px;overflow-x:auto;margin:0 0 18px}
 .doc pre code{background:none;padding:0;font-size:13px;line-height:1.6}
@@ -401,6 +417,70 @@ mark{background:var(--mark);color:inherit;border-radius:2px;padding:0 1px}
 .wf-pad .panel{border:1px solid var(--rule);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
 .wf-pad .panel b{display:block;color:var(--ink);font-size:20px;font-family:var(--f-display)}
 
+/* ---------- what's new: changelog with per-person read state ---------- */
+.chlog{display:flex;flex-direction:column;gap:14px;margin:18px 0 10px}
+.ch-bar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;font:500 13px/1.3 var(--f-ui);color:var(--soft)}
+.ch-bar label{display:inline-flex;align-items:center;gap:8px}
+.ch-bar select{font:500 13px/1.3 var(--f-ui);padding:6px 8px;border:1px solid var(--rule-strong);border-radius:7px;background:var(--surface);color:var(--ink)}
+.ch-seg{display:inline-grid;grid-template-columns:repeat(3,auto)}
+.ch-you{font:400 12.5px/1.5 var(--f-ui);color:var(--soft);margin:0}
+.ch-you b{color:var(--ink);font-weight:600}
+.ch-person.guest{border-style:dotted}
+.ch-roster{border:1px solid var(--rule);border-radius:10px;background:var(--surface);padding:4px 14px}
+.ch-roster p{font:400 12.5px/1.5 var(--f-ui);color:var(--soft);margin:2px 0 10px}
+.ch-roster-grid{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px 12px;align-items:center;max-width:460px;margin-bottom:12px;font:500 13px/1.3 var(--f-ui)}
+.ch-roster select{font:500 13px/1.3 var(--f-ui);padding:6px 8px;border:1px solid var(--rule-strong);border-radius:7px;background:var(--surface);color:var(--ink);min-width:0}
+.ch-team{display:flex;flex-wrap:wrap;gap:8px}
+.ch-person{font:500 12px/1.4 var(--f-ui);color:var(--soft);padding:6px 11px;border:1px solid var(--rule);border-radius:999px;background:var(--surface);font-variant-numeric:tabular-nums}
+.ch-person b{color:var(--ink);font-weight:600;margin-right:4px}
+.ch-person.away{border-style:dashed;color:var(--faint)}
+.ch-person.done{border-color:var(--ok)}
+.ch-date{font:600 11px/1 var(--f-ui);letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin:12px 0 4px}
+.doc .ch-list{list-style:none;margin:0;padding:0}
+.doc .ch-item{max-width:none;margin:0;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 14px;padding:12px 4px;border-top:1px solid var(--rule)}
+.doc .ch-item::marker{content:none}
+.ch-main{display:flex;flex-direction:column;gap:3px;min-width:0}
+.ch-meta{font:500 11.5px/1.3 var(--f-ui);color:var(--faint)}
+.ch-who{font:600 11px/1 var(--f-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--accent-text);margin-right:6px}
+.ch-meta .chg{margin-right:8px;vertical-align:1px}
+.ch-text{font:500 15px/1.5 var(--f-body);color:var(--ink);text-decoration:none}
+.ch-text:hover{text-decoration:underline}
+.ch-item.read .ch-text{color:var(--soft);font-weight:400}
+.ch-mark{align-self:start;border:1px solid var(--rule-strong);background:var(--surface);border-radius:6px;padding:6px 9px;font:600 11.5px/1 var(--f-ui);cursor:pointer;color:var(--soft);white-space:nowrap}
+.ch-mark:hover{border-color:var(--accent);color:var(--accent-text)}
+.ch-item.read .ch-mark{border-color:transparent;background:none;color:var(--ok)}
+.ch-receipts{grid-column:1/-1;margin:2px 0 0;font:400 12px/1.45 var(--f-ui);color:var(--faint)}
+.ch-receipts b{color:var(--ok);font-weight:600}
+.ch-empty{padding:16px 18px;border:1px dashed var(--rule-strong);border-radius:10px;color:var(--soft);font:400 14px/1.5 var(--f-ui);margin:0}
+
+/* ---------- history: every hub edit and merged PR ---------- */
+.hl-seg{display:inline-grid;grid-template-columns:repeat(4,auto)}
+.hl-nav{display:flex;align-items:center;flex-wrap:wrap;gap:8px 10px;font:600 15px/1.3 var(--f-ui)}
+.hl-nav b{flex:1 1 160px;min-width:0}
+.hl-summary{font:500 13px/1.9 var(--f-ui);color:var(--soft);margin:0}
+.hl-summary .chg{margin:0 2px}
+.doc .hl-list{list-style:none;margin:0;padding:0}
+.doc .hl-item{max-width:none;margin:0;display:grid;grid-template-columns:70px minmax(0,1fr);gap:12px;padding:12px 0;border-top:1px solid var(--rule)}
+.doc .hl-item::marker{content:none}
+.hl-time{font:500 12px/1.7 var(--f-ui);color:var(--faint);font-variant-numeric:tabular-nums}
+.hl-body{min-width:0;display:flex;flex-direction:column;gap:3px}
+.hl-body > b,.hl-body > a{font:600 14.5px/1.4 var(--f-ui)}
+.hl-tag{font:600 10px/1 var(--f-ui);letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.hl-pr .hl-tag{color:var(--k-update)}
+.hl-meta{font:400 12px/1.4 var(--f-ui);color:var(--faint)}
+.doc .hl-lines{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:9px}
+.doc .hl-line{max-width:none;margin:0;display:grid;grid-template-columns:18px minmax(0,1fr);gap:9px;align-items:start}
+.doc .hl-line::marker{content:none}
+.hl-line .chg-i{margin:2px 0 0;cursor:default}
+.hl-where{font:500 11.5px/1.4 var(--f-ui);color:var(--soft);text-decoration:none;display:block;margin-bottom:2px}
+.hl-where:hover{color:var(--accent-text)}
+.hl-line del,.hl-line ins{display:block;font-size:13.5px;line-height:1.5;overflow-wrap:anywhere;padding:2px 8px;border-radius:5px}
+.hl-line del{color:var(--soft);background:color-mix(in srgb,var(--crit) 9%,transparent);text-decoration:line-through;text-decoration-color:color-mix(in srgb,var(--crit) 55%,transparent)}
+.hl-line ins{color:var(--ink);background:var(--ok-wash);text-decoration:none}
+.hl-line del + ins{margin-top:3px}
+.hl-more > summary{font:600 12px/1.4 var(--f-ui)!important;color:var(--accent-text)!important}
+@media (max-width:620px){.doc .hl-item{grid-template-columns:minmax(0,1fr);gap:2px}}
+
 /* ---------- page-end nav + footer ---------- */
 .pager{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:56px 0 0}
 .pager a{display:flex;flex-direction:column;gap:3px;padding:14px 16px;border:1px solid var(--rule);border-radius:10px;background:var(--surface);text-decoration:none;color:var(--ink)}
@@ -414,7 +494,14 @@ mark{background:var(--mark);color:inherit;border-radius:2px;padding:0 1px}
 .loading{color:var(--faint);font:500 14px var(--f-ui)}
 
 /* ---------- client view ---------- */
-body.client [data-team],body.client .notes,body.client .h-link + .team-tag{display:none!important}
+body.client [data-team],body.client .notes,body.client .h-link + .team-tag,body.client .rev-note,body.client .nav a .tag.rev,body.client .ch-due{display:none!important}
+/* standing review check: when each page was last reviewed, flagged once it's overdue */
+.rev-note{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;font:500 12px/1.4 var(--f-ui);color:var(--faint);margin:-8px 0 18px}
+.rev-note.due{color:var(--k-review)}
+.rev-note.due::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--k-review)}
+.nav a .tag.rev{color:var(--k-review);border-color:var(--k-review)}
+.ch-due{font:500 12.5px/1.6 var(--f-ui);color:var(--soft);margin:0;padding:10px 14px;border:1px dashed var(--k-review);border-radius:10px}
+.ch-due b{color:var(--k-review)}
 
 /* ---------- present mode ---------- */
 .presbar{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:12px;
@@ -482,7 +569,7 @@ body.presenting .pager,body.presenting .foot,body.presenting .check-note,body.pr
   .plot-note{font-size:12px}
   .plot-axis .tick:nth-child(even){display:none}
 }
-@media (max-width:520px){.pager{grid-template-columns:minmax(0,1fr)}.pager a.next{grid-column:1}.doc h1 + p{font-size:17px}}
+@media (max-width:520px){.pager{grid-template-columns:minmax(0,1fr)}.pager a.next{grid-column:1}.doc h1 + p,.doc h1 + .rev-note + p{font-size:17px}}
 </style>
 
 <div class="shell">
@@ -529,7 +616,7 @@ body.presenting .pager,body.presenting .foot,body.presenting .check-note,body.pr
     </div>
     <footer class="foot">
       <span>Prepared by team ERIMX BOKHUS, Pursuit AI Native Fellowship. Not an official AAFE website.</span>
-      <span>Updated October 5, 2026 · Invented example data only</span>
+      <span>Updated October 6, 2026 · Invented example data only</span>
     </footer>
   </main>
 </div>
@@ -553,6 +640,7 @@ body.presenting .pager,body.presenting .foot,body.presenting .check-note,body.pr
 (() => {
 const ARTIFACT_URL = 'https://claude.ai/artifact/QVViUNx6SWRBZYKCfrAmp6';
 const PAGES = [
+  {id:'changes',      title:"What's new",    group:'Project', team:true},
   {id:'overview',     title:'Overview',      group:'Project'},
   {id:'discovery',    title:'Discovery',     group:'Project'},
   {id:'requirements', title:'Requirements',  group:'Project'},
@@ -569,6 +657,7 @@ const PAGES = [
   {id:'decisions',    title:'Decisions',     group:'Operate'},
   {id:'documents',    title:'Documents',     group:'Reference'},
   {id:'glossary',     title:'Glossary',      group:'Reference'},
+  {id:'history',      title:'History',       group:'Reference', team:true},
 ];
 const NUMERALS = ['一','二','三','四','五','六','七','八','九','十'];
 const OWNERS = {backend:'Backend pair: Aisling + Cornell', frontend:'Frontend pair: Natalie + Antonin', shared:'Everyone'};
@@ -906,7 +995,8 @@ function fenceGlossary(src){
   rows.forEach(([t, d]) => { const L = /[A-Za-z]/.test(t[0]) ? t[0].toUpperCase() : '#'; (groups[L] ||= []).push([t, d]); });
   return `<div class="gl"><input class="gl-filter" type="search" placeholder="Filter ${rows.length} terms" aria-label="Filter glossary">${
     Object.entries(groups).map(([L, items]) => `<section data-gl><div class="gl-letter">${L}</div><dl>${
-      items.map(([t, d]) => `<dt id="term-${slug(t)}">${esc(t)}</dt><dd>${esc(d)}</dd>`).join('')}</dl></section>`).join('')}</div>`;
+      items.map(([t, d = '']) => { const cm = d.match(/\s*(<!--[\s\S]*?-->)\s*$/), def = cm ? d.slice(0, cm.index) : d;
+        return `<dt id="term-${slug(t)}">${esc(t)}</dt><dd>${cm ? cm[1] : ''}${esc(def)}</dd>`; }).join('')}</dl></section>`).join('')}</div>`;
 }
 
 /* --- wireframes --- */
@@ -949,11 +1039,186 @@ const WF = {
 };
 function fenceWireframe(kind){ const f = WF[kind]; return f ? `<div class="wf-wrap">${f()}</div>` : ''; }
 
+/* --- what's new: one line per change, "YYYY-MM-DD | who | page.section | what changed" --- */
+const TEAM = ['Aisling','Natalie','Cornell','Antonin'];
+let chlog = [];                                            // newest first, as written in docs/changes.md
+let myReads = new Set(store.get('aafe-hub-chlog-read', []));
+let chFilter = store.get('aafe-hub-chlog-filter', 'unread'), chWho = '', chKind = '';
+/* Who someone is comes from their claude.ai account, never from a name they pick. Only the hub's
+   owner links an account to a team name (roster/team; the db rule lets only the owner write it). */
+let userNs = null, myUid = null, amOwner = false, readsDb = null, rosterDb = null;
+let readers = {}, roster = {}, names = {}, readsMerged = false, readsWrite = Promise.resolve();
+const teamOf = uid => (uid && TEAM.find(n => roster[n] === uid)) || '';
+const nameOf = uid => teamOf(uid) || names[uid] || 'Someone';
+function fenceChanges(src){
+  // "2026-10-06 14:32 | modified | Aisling | page.section | what changed" (time is New York time)
+  chlog = lines(src).map(cells).filter(r => r.length >= 5).map(([stamp, kind, who, target, text]) => {
+    const [date, time = ''] = stamp.split(/\s+/); return {date, time, kind: CHG[kind.toLowerCase()] ? kind.toLowerCase() : 'updated', who, target, text}; });
+  chlog.forEach(e => { e.key = slug(`${e.target} ${e.text}`).slice(0, 96); });   // not the time, so correcting a timestamp keeps read state
+  return '<div class="chlog" data-chlog></div>';
+}
+function saveReads(){
+  store.set('aafe-hub-chlog-read', [...myReads]);
+  if (!readsDb || !myUid) return;
+  // one write at a time to this person's own doc; a refused write means read-only for this visit
+  readsWrite = readsWrite.then(() => readsDb.collection('reads').doc(myUid).set({read: [...myReads], at: new Date().toISOString()}))
+    .catch(e => { if (e && e.code === 'invalid_argument') readsDb = null; renderChlogs(); });
+}
+/* reading a change also clears that section's New/Updated tag; markRead does the reverse */
+function readEntries(keys, read = true){
+  for (const k of keys){
+    if (read) myReads.add(k); else myReads.delete(k);
+    const e = chlog.find(x => x.key === k); if (!read || !e) continue;
+    const [pg, sec] = e.target.split('.');
+    (docs[pg] && docs[pg].marks || []).filter(m => m.key.startsWith(`${pg}|${sec || 'page'}|`)).forEach(m => { readMarks[m.key] = true; });
+  }
+  store.set('aafe-hub-read', readMarks); saveReads(); renderChlogs(); buildNav(); updateNav();
+}
+function readersById(){
+  const m = {};
+  for (const [uid, r] of Object.entries(readers)){ if (!r) continue;
+    m[uid] = {read: new Set((Array.isArray(r.read) ? r.read : []).map(String)), at: typeof r.at === 'string' ? r.at : ''}; }
+  if (myUid){ const o = m[myUid] ||= {read: new Set(), at: ''}; myReads.forEach(k => o.read.add(k)); }
+  return m;
+}
+/* account names are resolved fresh for each render and never stored */
+async function refreshNames(){
+  if (!userNs) return;
+  const ids = [...new Set([myUid, ...Object.keys(readers), ...Object.values(roster)].filter(Boolean))];
+  if (!ids.length) return;
+  const ps = await userNs.profiles(ids); let changed = false;
+  for (const id of ids){ const n = (ps[id] && ps[id].name) || ''; if (names[id] !== n){ names[id] = n; changed = true; } }
+  if (changed) renderChlogs(false);
+}
+const shortDate = iso => { const d = new Date(iso); return isNaN(d) ? '' : fmt(d); };
+function chlogMark(){ const n = chlog.filter(e => !myReads.has(e.key)).length; return n ? {kind: 'new', text: `${n} new`, tip: `${n} change${n > 1 ? 's' : ''} you haven't read`} : null; }
+function renderChlogs(fetchNames = true){ document.querySelectorAll('#doc [data-chlog]').forEach(renderChlog); if (fetchNames) refreshNames(); }
+function renderChlog(el){
+  const shared = !!readsDb && !!myUid, rb = readersById(), mine = teamOf(myUid);
+  const unread = chlog.filter(e => !myReads.has(e.key));
+  let list = chFilter === 'unread' ? unread : chFilter === 'mine' ? chlog.filter(e => mine && e.who === mine) : chlog;
+  if (chWho) list = list.filter(e => e.who === chWho);
+  if (chKind) list = list.filter(e => e.kind === chKind);
+  const opt = (v, cur, label) => `<option value="${esc(v)}"${v === cur ? ' selected' : ''}>${esc(label)}</option>`;
+  const seg = [['unread', `Unread by me · ${unread.length}`], ['mine', 'Made by me'], ['all', 'All']]
+    .map(([v, l]) => `<button type="button" data-chf="${v}" aria-pressed="${chFilter === v}"${v === 'mine' && !mine ? ' disabled title="Works once your account is linked to your team name"' : ''}>${esc(l)}</button>`).join('');
+  const you = !myUid ? 'Not signed in. Your reading is saved in this browser only; sign in to claude.ai and open the published hub to share it with the team.'
+    : `Signed in as <b>${esc(names[myUid] || 'you')}</b>${mine ? ` · listed as ${esc(mine)}` : ' · not linked to a team name yet (Aisling links accounts)'}.`
+      + (shared ? ' Your reading is shared with the team.' : ' Your reading is saved in this browser only.');
+  const anyShared = shared || Object.keys(readers).length > 0;
+  const chip = (cls, label, rest) => `<span class="ch-person${cls}"><b>${esc(label)}</b>${rest}</span>`;
+  const team = anyShared ? `<div class="ch-team" aria-label="Who has caught up">${TEAM.map(n => { const uid = roster[n], o = uid && rb[uid];
+      if (!uid) return chip(' away', n, 'not linked yet');
+      if (!o) return chip(' away', n, "hasn't opened this page yet");
+      const k = chlog.filter(e => o.read.has(e.key)).length;
+      return chip(k === chlog.length ? ' done' : '', n, `${k} of ${chlog.length} read${o.at ? ` · last ${shortDate(o.at)}` : ''}`); }).join('')
+    }${Object.keys(rb).filter(uid => !teamOf(uid)).map(uid => chip(' guest', names[uid] || 'Someone', 'not on the team list')).join('')}</div>` : '';
+  const others = Object.keys(rb).filter(uid => uid !== myUid || amOwner);
+  const rosterPanel = amOwner ? `<details class="ch-roster"><summary>Link accounts to team names</summary>
+    <p>Only you can change these. A teammate shows up here after they open What's new while signed in to claude.ai.</p>
+    <div class="ch-roster-grid">${TEAM.map(n => `<label for="ch-link-${n}">${esc(n)}</label><select id="ch-link-${n}" data-link="${n}">${opt('', roster[n] || '', 'Not linked')}${
+      [...new Set([...(roster[n] ? [roster[n]] : []), ...others, myUid].filter(Boolean))].map(uid => opt(uid, roster[n] || '', `${names[uid] || 'Someone'}${uid === myUid ? ' (you)' : ''}`)).join('')}</select>`).join('')}</div></details>` : '';
+  let body = '';
+  if (!list.length) body = `<p class="ch-empty">${chFilter === 'unread' && !chWho ? "You're caught up. Nothing new since your last visit." : 'No changes match this view.'}</p>`;
+  else {
+    const days = [...new Set(list.map(e => e.date))];
+    body = days.map(d => `<section><h3 class="ch-date">${esc(fmt(parseDate(d)))}</h3><ol class="ch-list">${list.filter(e => e.date === d).map(e => {
+      const read = myReads.has(e.key), [pg] = e.target.split('.'), page = PAGES.find(p => p.id === pg);
+      const by = Object.keys(rb).filter(uid => rb[uid].read.has(e.key)).map(nameOf);
+      const notYet = TEAM.filter(n => !(roster[n] && rb[roster[n]] && rb[roster[n]].read.has(e.key)));
+      const receipts = anyShared ? `<p class="ch-receipts">${by.length ? `<b>Read by</b> ${esc(by.join(', '))}` : 'Nobody has read this yet'}${by.length && notYet.length ? ` · not yet: ${esc(notYet.join(', '))}` : ''}</p>` : '';
+      return `<li class="ch-item${read ? ' read' : ''}"><div class="ch-main"><span class="ch-meta"><span class="chg k-${e.kind}" data-tip="${esc(markTip(parseMark(e.kind, `${e.date} ${e.time} ${e.who}`)))}">${CHG[e.kind]}</span><span class="ch-who">${esc(e.who)}</span>${esc(page ? page.title : pg)}${e.time ? ` · ${esc(fmtTime(+e.time.split(':')[0], e.time.split(':')[1]))} ET` : ''}</span>
+        <a class="ch-text" href="#${esc(e.target)}" data-chopen="${e.key}">${esc(e.text)}</a></div>
+        <button type="button" class="ch-mark" data-chmark="${e.key}" aria-pressed="${read}">${read ? 'Read ✓' : 'Mark read'}</button>${receipts}</li>`; }).join('')}</ol></section>`).join('');
+  }
+  const due = dueReviews();
+  const dueNote = due.length ? `<p class="ch-due"><b>Due for review:</b> ${due.map(p => `<a href="#${p.id}">${esc(p.title)}</a>`).join(', ')}. Read the page, fix what's out of date, then update its <code>reviewed</code> line.</p>` : '';
+  el.innerHTML = `<p class="ch-you">${you}</p>${dueNote}
+    <div class="ch-bar"><div class="seg ch-seg" role="group" aria-label="Show">${seg}</div>
+    <label for="ch-kind">Kind <select id="ch-kind">${opt('', chKind, 'Any')}${Object.keys(CHG).map(k => opt(k, chKind, CHG[k])).join('')}</select></label>
+    <label for="ch-who">Made by <select id="ch-who">${opt('', chWho, 'Anyone')}${TEAM.map(n => opt(n, chWho, n)).join('')}</select></label>
+    <button class="btn" type="button" data-chall${unread.length ? '' : ' disabled'}>Mark all read</button></div>${team}${rosterPanel}${body}`;
+}
+function setLink(member, uid){
+  if (!rosterDb) return;
+  const next = {}; TEAM.forEach(n => { next[n] = roster[n] && roster[n] !== uid ? roster[n] : null; });   // one account, one name
+  next[member] = uid || null;
+  rosterDb.collection('roster').doc('team').set({members: next})
+    .catch(() => toast("That link didn't save. Only the hub's owner can link accounts."));
+}
+
+/* --- history: every hub edit and merged PR, from docs/history.json (hub/scripts/build-history.mjs builds it from git) --- */
+let hist = null, histP = null;
+const histState = {period: store.get('aafe-hub-hist-period', 'week'), anchor: null, kind: '', who: '', page: '', type: 'all'};
+function fenceHistory(){ return '<div class="hist" data-hist><p class="loading">Loading the history…</p></div>'; }
+const dayOf = t => t.slice(0, 10);
+function periodStart(d, period){ const x = new Date(d); if (period === 'week') x.setDate(x.getDate() - (x.getDay() + 6) % 7); if (period === 'month') x.setDate(1); return x; }
+function periodShift(d, period, n){ const x = new Date(d); if (period === 'day') x.setDate(x.getDate() + n); else if (period === 'week') x.setDate(x.getDate() + 7 * n); else x.setMonth(x.getMonth() + n); return x; }
+function periodLabel(start, period){
+  if (period === 'day') return start.toLocaleDateString('en-US', {weekday: 'long', month: 'short', day: 'numeric', year: 'numeric'});
+  if (period === 'week'){ const e = periodShift(start, 'day', 6); return `Week of ${fmtR(start, e)}, ${e.getFullYear()}`; }
+  return start.toLocaleDateString('en-US', {month: 'long', year: 'numeric'});
+}
+function mountHistory(el){
+  if (hist){ renderHistory(el); return; }
+  (histP ||= fetch('docs/history.json', {cache: 'no-cache'}).then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); }))
+    .then(h => { hist = h; document.querySelectorAll('#doc [data-hist]').forEach(renderHistory); })
+    .catch(e => { histP = null; el.innerHTML = `<p class="ch-empty">The history couldn't load (${esc(e.message || e)}). Rebuild it with <code>node hub/scripts/build-history.mjs</code> and publish again.</p>`; });
+}
+function renderHistories(){ document.querySelectorAll('#doc [data-hist]').forEach(mountHistory); }
+function renderHistory(el){
+  const s = histState, h = hist;
+  const days = [...h.commits, ...h.prs].map(x => dayOf(x.t)).sort();
+  const latest = days.length ? parseDate(days[days.length - 1]) : new Date();
+  const start = s.period === 'all' ? null : periodStart(s.anchor || latest, s.period), end = start && periodShift(start, s.period, 1);
+  const inRange = t => { if (!start) return true; const d = parseDate(dayOf(t)); return d >= start && d < end; };
+  const commits = s.type === 'pr' ? [] : h.commits.filter(c => inRange(c.t) && (!s.who || c.who === s.who))
+    .map(c => ({...c, changes: c.changes.filter(x => (!s.kind || x.kind === s.kind) && (!s.page || x.page === s.page))})).filter(c => c.changes.length);
+  // kind and page describe hub edits, so they hide PRs unless the view is PRs only
+  const prs = s.type === 'hub' || (s.type !== 'pr' && (s.kind || s.page)) ? [] : h.prs.filter(p => inRange(p.t) && (!s.who || p.who === s.who));
+  const counts = {}; commits.forEach(c => c.changes.forEach(x => { counts[x.kind] = (counts[x.kind] || 0) + 1; }));
+  const nLines = Object.values(counts).reduce((a, b) => a + b, 0), pl = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+  const summary = `${pl(commits.length, 'hub edit')} · ${pl(nLines, 'line')}${Object.keys(CHG).filter(k => counts[k]).map(k => ` <span class="chg k-${k}">${counts[k]} ${CHG[k]}</span>`).join('')} · ${pl(prs.length, 'pull request')} merged`;
+  const pageTitle = id => (PAGES.find(p => p.id === id) || {title: id}).title;
+  const time = t => fmtTime(+t.slice(11, 13), t.slice(14, 16));
+  const line = x => `<li class="hl-line"><span class="chg-i k-${x.kind}" role="img" aria-label="${CHG[x.kind]}" data-tip="${CHG[x.kind]}"></span><div>
+    <a class="hl-where" href="#${esc(x.page)}${x.sec ? '.' + esc(x.sec) : ''}">${esc(pageTitle(x.page))}${x.sec ? ' › ' + esc(x.sec.replace(/-/g, ' ')) : ''}</a>
+    ${x.before ? `<del>${esc(x.before)}</del>` : ''}${x.after ? `<ins>${esc(x.after)}</ins>` : ''}</div></li>`;
+  const card = i => {
+    if (i.p) return `<li class="hl-item hl-pr"><span class="hl-time">${time(i.t)}</span><div class="hl-body"><span class="hl-tag">Pull request merged</span>
+      <a href="https://github.com/${esc(h.repo)}/pull/${i.p.n}" target="_blank" rel="noopener">#${i.p.n} ${esc(i.p.title)}</a><span class="hl-meta">${esc(i.p.who || 'Someone')} · ${esc(i.p.branch)}</span></div></li>`;
+    const c = i.c, first = c.changes.slice(0, 6), rest = c.changes.slice(6);
+    return `<li class="hl-item"><span class="hl-time">${time(i.t)}</span><div class="hl-body"><span class="hl-tag">Hub edit</span><b>${esc(c.msg)}</b>
+      <span class="hl-meta">${esc(c.who)} · ${pl(c.changes.length, 'line')} · ${esc(c.sha)}</span><ul class="hl-lines">${first.map(line).join('')}</ul>${
+      rest.length ? `<details class="hl-more"><summary>Show ${rest.length} more</summary><ul class="hl-lines">${rest.map(line).join('')}</ul></details>` : ''}</div></li>`;
+  };
+  const items = [...commits.map(c => ({t: c.t, c})), ...prs.map(p => ({t: p.t, p}))].sort((a, b) => (a.t < b.t ? 1 : -1));
+  const itemDays = [...new Set(items.map(i => dayOf(i.t)))];
+  const body = items.length ? itemDays.map(d => `<section><h3 class="ch-date">${esc(parseDate(d).toLocaleDateString('en-US', {weekday: 'long', month: 'short', day: 'numeric'}))}</h3><ol class="hl-list">${
+      items.filter(i => dayOf(i.t) === d).map(card).join('')}</ol></section>`).join('')
+    : `<p class="ch-empty">${start ? `Nothing in this ${s.period}. Use ← to step back.` : 'Nothing matches these filters.'}</p>`;
+  const opt = (v, cur, label) => `<option value="${esc(v)}"${v === cur ? ' selected' : ''}>${esc(label)}</option>`;
+  const pages = [...new Set(h.commits.flatMap(c => c.changes.map(x => x.page)))].sort((a, b) => pageTitle(a).localeCompare(pageTitle(b)));
+  const whos = [...new Set([...h.commits.map(c => c.who), ...h.prs.map(p => p.who)].filter(Boolean))].sort();
+  const seg = [['day', 'Day'], ['week', 'Week'], ['month', 'Month'], ['all', 'All time']]
+    .map(([v, l]) => `<button type="button" data-hp="${v}" aria-pressed="${s.period === v}">${l}</button>`).join('');
+  const nav = start ? `<div class="hl-nav"><button class="btn" type="button" data-hstep="-1" aria-label="Previous ${s.period}">←</button><b>${esc(periodLabel(start, s.period))}</b>
+    <button class="btn" type="button" data-hstep="1" aria-label="Next ${s.period}"${latest < end ? ' disabled' : ''}>→</button><button class="btn" type="button" data-hstep="0"${latest < end ? ' disabled' : ''}>Latest</button></div>` : '';
+  el.innerHTML = `<div class="ch-bar"><div class="seg hl-seg" role="group" aria-label="Period">${seg}</div>
+    <label for="hl-type">Show <select id="hl-type">${opt('all', s.type, 'Hub edits and PRs')}${opt('hub', s.type, 'Hub edits')}${opt('pr', s.type, 'Pull requests')}</select></label>
+    <label for="hl-kind">Kind <select id="hl-kind">${opt('', s.kind, 'Any')}${['new', 'updated', 'modified', 'removed'].map(k => opt(k, s.kind, CHG[k])).join('')}</select></label>
+    <label for="hl-page">Page <select id="hl-page">${opt('', s.page, 'Any')}${pages.map(p => opt(p, s.page, pageTitle(p))).join('')}</select></label>
+    <label for="hl-who">Who <select id="hl-who">${opt('', s.who, 'Anyone')}${whos.map(w => opt(w, s.who, w)).join('')}</select></label></div>
+    ${nav}<p class="hl-summary">${summary}</p>${body}<p class="ch-you">Built from the repository's history on ${esc(h.generated)} ET. Times are New York time.</p>`;
+}
+
 function fenceNotes(src){ return `<details class="notes" data-notes><summary>Speaker notes</summary><p>${esc(src.trim())}</p></details>`; }
 
 marked.use({ gfm:true, renderer:{
   code(code, info){
     const [lang, arg] = (info || '').trim().split(/\s+/);
+    // Change markers can't show inside these blocks, so drop any that slipped in (glossary handles its own).
+    if (lang !== 'glossary') code = code.replace(/\s*<!--\s*(new|updated|modified|removed|important)\b[\s\S]*?-->/g, '');
     switch (lang){
       case 'steps': return fenceSteps(code);
       case 'layers': return fenceLayers(code);
@@ -968,6 +1233,8 @@ marked.use({ gfm:true, renderer:{
       case 'glossary': return fenceGlossary(code);
       case 'wireframe': return fenceWireframe(arg);
       case 'notes': return fenceNotes(code);
+      case 'changes': return fenceChanges(code);
+      case 'history': return fenceHistory();
     }
     return `<pre><code${lang ? ` class="lang-${esc(lang)}"` : ''}>${esc(code)}</code></pre>`;
   },
@@ -988,7 +1255,9 @@ function sectionize(container){
   for (const k of kids){
     if (k.nodeName === 'H2'){ s = document.createElement('section'); s.className = 'slide'; container.appendChild(s); }
     if (k.nodeType === 8 && k.data.trim() === 'team'){ s.dataset.team = ''; continue; }
-    const cm = k.nodeType === 8 && k.data.trim().match(/^(new|updated|modified)\b\s*(.*)$/i);
+    const rv = k.nodeType === 8 && k.data.trim().match(/^reviewed\s+(\d{4}-\d{2}-\d{2})\s*(.*)$/i);
+    if (rv){ container.dataset.reviewed = rv[1]; container.dataset.reviewedBy = rv[2].trim(); continue; }
+    const cm = k.nodeType === 8 && k.data.trim().match(CHG_RE);
     if (cm){ s.dataset.mark = cm[1].toLowerCase(); s.dataset.markOn = cm[2].trim(); continue; }
     s.appendChild(k);
   }
@@ -996,23 +1265,66 @@ function sectionize(container){
 }
 
 /* ============ change markers ============ */
-const CHG = {new:'New', updated:'Updated', modified:'Modified'}, CHG_RANK = {new:3, modified:2, updated:1};
+const CHG = {new:'New', updated:'Updated', modified:'Modified', removed:'Removed', important:'Important'};
+const CHG_RANK = {important:5, new:4, removed:3, modified:2, updated:1};
+const CHG_RE = /^(new|updated|modified|removed|important)\b\s*(.*)$/is;
+/* "<!-- modified 2026-10-06 14:32 Aisling optional note -->": time is New York wall-clock time.
+   Older markers carry free text ("Oct 5 (pairs)") and still work. */
+const fmtTime = (h, mm) => `${(h % 12) || 12}:${mm} ${h < 12 ? 'AM' : 'PM'}`;
+function parseMark(kind, raw){
+  const d = (raw || '').trim().match(/^(\d{4}-\d{2}-\d{2})(?:[ T](\d{1,2}):(\d{2}))?\s*(.*)$/s);
+  if (!d) return {kind, on: (raw || '').trim(), when: '', who: '', note: ''};
+  let note = d[4].trim(); const who = TEAM.find(n => note === n || note.startsWith(n + ' ')) || '';
+  if (who) note = note.slice(who.length).trim();
+  const day = fmt(parseDate(d[1]));
+  return {kind, on: day, when: day + (d[2] ? `, ${fmtTime(+d[2], d[3])} ET` : ''), who, note};
+}
+const markTip = m => [CHG[m.kind], m.when || m.on, m.who, m.note].filter(Boolean).join(' · ');
 /* read state: per viewer, in this browser only (a convenience, so it may reset) */
 let readMarks = store.get('aafe-hub-read', {});
 const markKey = (id, section, kind, on) => `${id}|${section}|${kind}|${on}`;
 const isRead = key => !!readMarks[key];
-function markRead(key){ readMarks = {...readMarks, [key]: true}; store.set('aafe-hub-read', readMarks); buildNav(); updateNav(); }
-function chgTag(kind, on, key){ const t = document.createElement('button'); t.type = 'button'; t.className = `chg k-${kind}`;
-  t.textContent = CHG[kind] + (on ? ` · ${on}` : ''); t.title = 'Mark as read'; t.setAttribute('aria-label', `${t.textContent}. Mark as read`);
+function markRead(key){ readMarks = {...readMarks, [key]: true};
+  const [pg, sec] = key.split('|'), target = sec === 'page' ? pg : `${pg}.${sec}`;
+  (docs[pg] && docs[pg].marks || []).filter(m => m.inline && m.key.startsWith(`${pg}|${sec}|`)).forEach(m => { readMarks[m.key] = true; });
+  document.querySelectorAll(`#doc .chg-i[data-sec="${sec}"]`).forEach(i => i.remove());
+  store.set('aafe-hub-read', readMarks);
+  const keys = chlog.filter(e => e.target === target && !myReads.has(e.key)).map(e => e.key);
+  if (keys.length) readEntries(keys); else { buildNav(); updateNav(); } }
+function chgTag(kind, on, key){ const m = parseMark(kind, on), t = document.createElement('button'); t.type = 'button'; t.className = `chg k-${kind}`;
+  t.textContent = CHG[kind] + (m.on ? ` · ${m.on}` : ''); t.dataset.tip = `${markTip(m)} · click to mark read`;
+  t.setAttribute('aria-label', `${markTip(m)}. Mark as read`);
   t.addEventListener('click', () => { markRead(key); t.remove(); }); return t; }
+/* inline markers: comments inside a paragraph, list item, or table cell (not the ones right under a heading) */
+function inlineMarks(slideEl){
+  const out = [], w = document.createTreeWalker(slideEl, NodeFilter.SHOW_COMMENT);
+  while (w.nextNode()){ const c = w.currentNode, cm = c.data.trim().match(CHG_RE);
+    if (cm && c.parentNode !== slideEl) out.push({node: c, kind: cm[1].toLowerCase(), raw: cm[2].trim()}); }
+  return out;
+}
+const lineLabel = el => (el.closest('li,tr,p,td') || el.parentElement).textContent.replace(/\s+/g, ' ').trim().slice(0, 70);
 /* page badge: the page's own unread marker, else its most significant unread section marker (hidden team sections skipped in client view) */
 function pageMark(id){
   const m = (docs[id] && docs[id].marks || []).filter(x => !(client && x.team) && !isRead(x.key));
   const own = m.find(x => x.page); if (own) return {kind: own.kind, tip: `${CHG[own.kind]} page${own.on ? ' · ' + own.on : ''}`};
   if (!m.length) return null;
   const top = m.reduce((a, b) => CHG_RANK[b.kind] > CHG_RANK[a.kind] ? b : a);
-  return {kind: top.kind, tip: m.map(x => `${CHG[x.kind]}: ${x.label}`).join(' · ')};
+  return {kind: top.kind, sec: m[0].key.split('|')[1], tip: m.map(x => `${CHG[x.kind]}: ${x.label}`).join(' · ')};
 }
+
+/* ============ standing review check ============ */
+const REVIEW_DAYS = 7, NO_REVIEW = ['changes', 'history'];   // these two build themselves
+function reviewState(id){
+  if (NO_REVIEW.includes(id) || !docs[id] || docs[id].error) return null;
+  const r = docs[id].reviewed;
+  if (!r) return {due: true, text: 'Not reviewed yet'};
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const d = parseDate(r.date), days = Math.round((today - d) / 864e5), next = periodShift(d, 'day', REVIEW_DAYS);
+  const by = `Reviewed ${fmt(d)}${r.who ? ' by ' + r.who : ''}`;
+  return days > REVIEW_DAYS ? {due: true, text: `${by} · review overdue by ${days - REVIEW_DAYS} day${days - REVIEW_DAYS === 1 ? '' : 's'}`}
+    : {due: false, text: `${by} · next review by ${fmt(next)}`};
+}
+const dueReviews = () => PAGES.filter(p => (reviewState(p.id) || {}).due);
 
 /* ============ nav ============ */
 function visiblePages(){ return PAGES.filter(p => !(client && p.team)); }
@@ -1020,8 +1332,9 @@ function buildNav(){
   const vis = visiblePages(), groups = [...new Set(vis.map(p => p.group))];
   $('#nav').innerHTML = groups.map(g => `<div class="nav-group"><div class="nav-label">${g}</div>${
     vis.filter(p => p.group === g).map(p => { const i = vis.indexOf(p);
-      const mk = pageMark(p.id);
-      const tags = (mk ? `<span class="chg k-${mk.kind}" title="${esc(mk.tip)}">${CHG[mk.kind]}</span>` : '') + (p.team ? '<span class="tag">Team</span>' : '');
+      const mk = p.id === 'changes' ? chlogMark() : pageMark(p.id);
+      const tags = (mk ? `<span class="chg k-${mk.kind}" title="${esc(mk.tip)}${mk.sec ? ' · click to go there' : ''}"${mk.sec ? ` data-sec="${mk.sec}"` : ''}>${mk.text || CHG[mk.kind]}</span>` : '') + (p.team ? '<span class="tag">Team</span>' : '')
+        + ((reviewState(p.id) || {}).due ? `<span class="tag rev" title="${esc(reviewState(p.id).text)}">Review</span>` : '');
       return `<a href="#${p.id}" data-id="${p.id}"><span class="n">${pad(i+1)}</span><span>${esc(p.title)}</span>${tags ? `<span class="tags">${tags}</span>` : ''}</a><ul class="toc" data-toc="${p.id}" hidden></ul>`; }).join('')
   }</div>`).join('');
   document.querySelectorAll('[data-mode]').forEach(b => b.setAttribute('aria-pressed', String((b.dataset.mode === 'client') === client)));
@@ -1036,8 +1349,9 @@ function updateNav(){
     t.innerHTML = hs.map(h => `<li><button type="button" data-h="${h.id}">${esc(h.dataset.label)}</button></li>`).join('');
     t.hidden = hs.length === 0;
   });
-  const a = document.querySelector(`#nav a[data-id="${current}"]`);
-  if (a && window.matchMedia('(max-width:900px)').matches) a.scrollIntoView({block:'nearest', inline:'center'});
+  const a = document.querySelector(`#nav a[data-id="${current}"]`), nav = $('#nav');
+  // scroll only the tab strip: scrollIntoView would also scroll the page up to the sticky strip
+  if (a && window.matchMedia('(max-width:900px)').matches) nav.scrollLeft = a.offsetLeft - (nav.clientWidth - a.offsetWidth) / 2;
 }
 
 /* ============ load + render ============ */
@@ -1055,7 +1369,11 @@ async function load(id){
     const marks = secs.filter(s => s.dataset.mark).map(s => ({kind: s.dataset.mark, on: s.dataset.markOn,
       page: s === secs[0], team: 'team' in s.dataset, label: (s.querySelector('h2') || {}).textContent || '',
       key: markKey(id, s === secs[0] ? 'page' : slug(s.querySelector('h2').textContent), s.dataset.mark, s.dataset.markOn)}));
-    docs[id] = {md, html, marks, text: textOf(secs), pub: textOf(secs.filter(s => !('team' in s.dataset)))};
+    secs.forEach(s => { const h2 = s.querySelector('h2'), sec = h2 ? slug(h2.textContent) : 'page';
+      inlineMarks(s).forEach(m => marks.push({kind: m.kind, on: m.raw, inline: true, team: 'team' in s.dataset,
+        label: lineLabel(m.node.parentNode.nodeType === 1 ? m.node.parentNode : s), key: markKey(id, sec, m.kind, m.raw)})); });
+    docs[id] = {md, html, marks, text: textOf(secs), pub: textOf(secs.filter(s => !('team' in s.dataset))),
+      reviewed: tmp.dataset.reviewed ? {date: tmp.dataset.reviewed, who: tmp.dataset.reviewedBy || ''} : null};
   } catch (e) { docs[id] = {error: String(e.message || e)}; }
   return docs[id];
 }
@@ -1105,6 +1423,9 @@ function decorate(doc, id){
   const boxes = doc.querySelectorAll('input[type=checkbox]');
   boxes.forEach(b => {
     const li = b.closest('li'); b.dataset.key = keyFor(id, li);
+    // the li is a flex row: keep the text (code spans, change icons) in one flowing item next to the box
+    if (b.parentNode === li){ const body = document.createElement('span'); body.className = 'li-body';
+      while (b.nextSibling) body.appendChild(b.nextSibling); li.appendChild(body); }
     b.removeAttribute('disabled'); b.setAttribute('aria-label', li.textContent.trim());
     b.addEventListener('change', () => setCheck(b.dataset.key, b.checked));
   });
@@ -1113,7 +1434,23 @@ function decorate(doc, id){
     const firstH2 = doc.querySelector('.slide:first-child'); firstH2.appendChild(n);
   }
   applyChecks();
+  slides.forEach(sl => { const h2 = sl.querySelector('h2'), sec = h2 ? h2.id : 'page';
+    inlineMarks(sl).forEach(({node, kind, raw}) => { const key = markKey(id, sec, kind, raw);
+      if (isRead(key)){ node.remove(); return; }
+      const m = parseMark(kind, raw), par = node.parentElement;
+      const item = par.closest('tr') || par.closest('li') || par.closest('dd, p, blockquote, h3, h4, td, th');
+      const host = !item ? null : item.tagName === 'TR' ? item.cells[0] : item.tagName === 'LI' ? (item.querySelector(':scope > .li-body') || item) : item;
+      const same = host && host.querySelector(`:scope > .chg-i.k-${kind}`);
+      if (same){   // one icon per kind per item; its tooltip lists every time
+        same.dataset.key += '\n' + key; same.dataset.tip = same.dataset.tip.replace(' · click to mark read', '') + ` | ${m.when || m.on}` + ' · click to mark read';
+        node.remove(); return; }
+      const i = document.createElement('span');
+      i.className = `chg-i k-${kind}`; i.tabIndex = 0; i.setAttribute('role', 'button'); i.dataset.sec = sec; i.dataset.key = key;
+      i.dataset.tip = `${markTip(m)} · click to mark read`; i.setAttribute('aria-label', `${markTip(m)}. Mark as read`);
+      if (host){ node.remove(); host.prepend(i); } else node.replaceWith(i); }); });
   doc.querySelectorAll('[data-wt]').forEach(mountWalkthrough);
+  doc.querySelectorAll('[data-chlog]').forEach(renderChlog);
+  doc.querySelectorAll('[data-hist]').forEach(mountHistory);
   doc.querySelectorAll('[data-erd]').forEach(e => { drawErd(e); });
   // glossary filter
   doc.querySelectorAll('.gl-filter').forEach(inp => inp.addEventListener('input', () => {
@@ -1153,6 +1490,8 @@ async function show(id, {slide = 0, section = null, focusTerm = null} = {}){
   } else {
     doc.innerHTML = marked.parse(d.md);   // re-parse so fences that depend on earlier fences (workload) see fresh data
     decorate(doc, id);
+    const rs = reviewState(id), h1 = doc.querySelector('h1');
+    if (rs && h1){ const n = document.createElement('div'); n.className = `rev-note${rs.due ? ' due' : ''}`; n.textContent = rs.text; h1.after(n); }
   }
   const prev = vis[i-1], next = vis[i+1];
   $('#pager').innerHTML = (prev ? `<a class="prev" href="#${prev.id}"><small>← Previous</small><b>${esc(prev.title)}</b></a>` : '')
@@ -1294,6 +1633,9 @@ window.addEventListener('hashchange', () => {
 
 /* ============ events ============ */
 document.addEventListener('click', e => {
+  const badge = e.target.closest('#nav .chg[data-sec]');
+  if (badge){ e.preventDefault(); const id = badge.closest('a').dataset.id;
+    if (id === current) show(id, {section: badge.dataset.sec}); else location.hash = `${id}.${badge.dataset.sec}`; return; }
   const t = e.target.closest('[data-present],[data-go],[data-h],[data-mode],[data-copy],#prev,#next,#exit,#notes-btn,#copy-view'); if (!t) return;
   if (t.matches('[data-present]')) setPresenting(true);
   else if (t.matches('[data-mode]')) setClient(t.dataset.mode === 'client');
@@ -1310,6 +1652,28 @@ document.addEventListener('click', e => {
   } else if (t.dataset.h){
     const h = document.getElementById(t.dataset.h); if (h) h.scrollIntoView({behavior:'smooth', block:'start'});
   }
+});
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-chf],[data-chmark],[data-chall],[data-chopen]'); if (!t) return;
+  if (t.dataset.chf){ chFilter = t.dataset.chf; store.set('aafe-hub-chlog-filter', chFilter); renderChlogs(); }
+  else if (t.dataset.chmark) readEntries([t.dataset.chmark], !myReads.has(t.dataset.chmark));
+  else if (t.hasAttribute('data-chall')) readEntries(chlog.map(x => x.key));
+  else if (t.dataset.chopen) readEntries([t.dataset.chopen]);   // the link still opens the change
+});
+function readInline(i){ readMarks = {...readMarks}; i.dataset.key.split('\n').forEach(k => { readMarks[k] = true; }); store.set('aafe-hub-read', readMarks); i.remove(); tip.hidden = true; buildNav(); updateNav(); }
+document.addEventListener('click', e => { const i = e.target.closest('.chg-i[data-key]'); if (i){ e.preventDefault(); readInline(i); } });
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-hp],[data-hstep]'); if (!t) return;
+  if (t.dataset.hp){ histState.period = t.dataset.hp; histState.anchor = null; store.set('aafe-hub-hist-period', t.dataset.hp); }
+  else { const n = +t.dataset.hstep; histState.anchor = n === 0 ? null : periodShift(periodStart(histState.anchor || parseDate(dayOf([...hist.commits, ...hist.prs].map(x => x.t).sort().pop())), histState.period), histState.period, n); }
+  renderHistories();
+});
+document.addEventListener('keydown', e => { const i = e.target.closest && e.target.closest('.chg-i[data-key]'); if (i && (e.key === 'Enter' || e.key === ' ')){ e.preventDefault(); readInline(i); } });
+document.addEventListener('change', e => {
+  if (e.target.id === 'ch-who'){ chWho = e.target.value; renderChlogs(); }
+  else if (e.target.id === 'ch-kind'){ chKind = e.target.value; renderChlogs(); }
+  else if (/^hl-(type|kind|page|who)$/.test(e.target.id)){ histState[e.target.id.slice(3)] = e.target.value; renderHistories(); }
+  else if (e.target.dataset && e.target.dataset.link) setLink(e.target.dataset.link, e.target.value);
 });
 $('#q').addEventListener('input', e => runSearch(e.target.value));
 $('#q').addEventListener('keydown', e => {
@@ -1334,10 +1698,27 @@ async function connectShared(){
   const c = window.claude; if (!c || typeof c.use !== 'function') return;
   let db = null; try { db = await c.use('db'); } catch { db = null; }
   if (!db) return;
+  let user = null;
   try {
-    const user = await c.use('user').catch(() => null);
+    user = await c.use('user').catch(() => null);
     if (user && typeof user.can === 'function'){ const w = await user.can('data.write'); if (w === false) canWrite = false; }
+    if (user){ userNs = user; myUid = await user.id(); amOwner = await user.isOwner(); }
   } catch {}
+  if (myUid && canWrite) readsDb = db;
+  if (amOwner) rosterDb = db;
+  db.collection('roster').doc('team').onSnapshot(snap => {
+    const m = (snap.exists && snap.data() && snap.data().members) || {};
+    roster = {}; TEAM.forEach(n => { if (typeof m[n] === 'string' && m[n]) roster[n] = m[n]; });
+    renderChlogs(); buildNav(); updateNav();
+  }, () => {});
+  // everyone's read state, live; on first load fold this person's saved reads into this browser's
+  db.collection('reads').onSnapshot(snap => {
+    const r = {}; snap.docs.forEach(d => { r[d.id] = d.data(); }); readers = r;
+    if (!readsMerged && myUid){ readsMerged = true; const mine = readers[myUid] || {};
+      const before = myReads.size; (Array.isArray(mine.read) ? mine.read : []).forEach(k => myReads.add(String(k)));
+      if (myReads.size !== before || (!readers[myUid] && myReads.size)) saveReads(); else store.set('aafe-hub-chlog-read', [...myReads]); }
+    renderChlogs(); buildNav(); updateNav();
+  }, () => { readsDb = null; renderChlogs(); });
   sharedDb = db; checkMode = 'shared'; sharedChecks = sharedChecks || {};
   db.collection('checks').onSnapshot(snap => {
     const m = {}; snap.docs.forEach(d => { const v = d.data(); m[d.id] = !!(v && v.done); });

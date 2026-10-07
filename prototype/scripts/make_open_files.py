@@ -18,5 +18,10 @@ for app, out in [('guest-portal', 'OPEN-Guest-Portal.html'), ('staff-app', 'OPEN
     s = s[:start] + s[end:]
     s = s.replace('</body>', '<script>' + body + '</script>\n</body>')
     assert 'type="module"' not in s and './photos/' not in s
+    # The OPEN files are committed demos. An app built with its .env.local has the Supabase project
+    # address and key baked in, so stop instead of writing them into the repo.
+    if re.search(r'https://[a-z0-9]+\.supabase\.co', s):
+        raise SystemExit(f'{app} was built with a Supabase .env.local, so its demo file would carry the project address '
+                         f'and key. Move {app}/.env.local aside, run npm run build again, then rerun this script.')
     open(f'{root}/{out}', 'w').write(s)
     print('wrote', out, f'{len(s)/1e6:.1f} MB')
