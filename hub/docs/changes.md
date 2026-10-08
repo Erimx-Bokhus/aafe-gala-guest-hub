@@ -5,6 +5,13 @@ Every change to this hub, newest first. Open it while signed in to claude.ai and
 Each change has a kind, shown the same way on every page next to the exact line that changed: **✦ New** (didn't exist before), **+ Updated** (rows, tasks, or terms added), **✎ Modified** (wording, numbers, or a rule changed), **− Removed** (taken out), and **! Important** (everyone should act on it). Hover an icon for the date, time (New York), and who made the change; click it to mark it read.
 
 ```changes
+2026-10-07 22:38 | modified | Aisling | decisions | Decisions from Natalie's two PRDs: first prototype review with AAFE on Oct 15; emails follow AAFE's gala lead (staff approve every one); no pre-fill from Give Lively guest lists; new Demo Day scope; three labeled data sets; 60-day retention and no AI in v1 proposed to AAFE; who builds each part. New pending: edits after the deadline
+2026-10-07 22:38 | updated | Aisling | requirements.must-have-for-demo-day | Must haves added: iPad check-in, after-gala results, Give Lively fee analytics, a seating map that staff control, and a simulated Salesforce push; the import drops the typed guest list
+2026-10-07 22:38 | modified | Aisling | requirements.later-or-out-of-scope | Out of scope now: automatic seating, automatic emails (unless AAFE's gala lead asks), and a live connection to a real Salesforce org
+2026-10-07 22:38 | modified | Aisling | data-ai | No AI in the first version (proposed to AAFE); retention proposal: contact details deleted within 60 days, dietary and accessibility included; sponsor arrivals built switched off
+2026-10-07 22:38 | new | Aisling | tasks.added-october-7-night | New tasks: Natalie's PRD fixes, drop the guest-list text from the import, three labeled data sets, the iPad check-in PR, and the new must-have screens
+2026-10-07 22:38 | modified | Aisling | overview.team | Team: the two areas stay, and the page names who is building each part
+2026-10-07 22:38 | modified | Aisling | build-plan | Prototype review with AAFE moved to Oct 15; who is building each part; check-in raised to P0; the import drops the typed guest list; three labeled data sets next
 2026-10-07 20:23 | modified | Aisling | hosting.demo-preview-team-notes | The Supabase backend runs in Aisling's test project, in her own account, not a team project: wording fixed on Hosting, Build plan, Overview, and Tasks
 2026-10-07 20:23 | updated | Aisling | decisions | Open question: which Supabase project the demo and the handoff use, and who owns it
 2026-10-07 19:15 | modified | Aisling | tasks | Cornell's staff sign-in (PR #27) and Antonin's Korean (PR #51) merged: tasks ticked off; Cornell's live sign-in test waits on which Supabase project the demo uses
