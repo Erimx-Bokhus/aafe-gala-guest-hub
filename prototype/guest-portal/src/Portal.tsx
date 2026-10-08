@@ -98,7 +98,11 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
           <div className="rounded-xl border border-cream-200 bg-surface p-3"><div className="type-nav text-brand-600">{t.package}</div><div className="mt-1 text-sm font-semibold text-navy-900">{view.tierName}</div></div>
           <div className="rounded-xl border border-cream-200 bg-surface p-3"><div className="type-nav text-brand-600">{t.eventWhen}</div><div className="mt-1 text-sm font-semibold text-navy-900">{fmtDate(view.event.date, loc)}</div></div>
         </div>
-        <a href="#seats" className="btn-primary mt-6">{t.openList}</a>
+        <button type="button" className="btn-primary mt-6" onClick={() => {
+          const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+          document.getElementById('seats')?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' })
+          document.getElementById('seats-h')?.focus({ preventScroll: true })
+        }}>{t.openList}</button>
       </Hero>
 
       <div className="mx-auto max-w-6xl space-y-8 px-5 py-10">
@@ -144,8 +148,8 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
         )}
 
         {/* Seats */}
-        <section id="seats" className="scroll-mt-20">
-          <h2 className="type-h2 text-navy-900">{t.seatsTitle}</h2>
+        <section id="seats" className="scroll-mt-20" aria-labelledby="seats-h">
+          <h2 id="seats-h" tabIndex={-1} className="type-h2 text-navy-900">{t.seatsTitle}</h2>
           <p className="type-lead mt-1 max-w-3xl text-navy-600">{t.seatsHelp}</p>
           <ul className="mt-5 grid gap-3 md:grid-cols-2">
             {view.seats.map((s) => {
