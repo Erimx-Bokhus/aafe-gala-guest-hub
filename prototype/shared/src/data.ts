@@ -1,9 +1,26 @@
 // Shared data access. Today: synthetic seed.json held in memory.
 // Tomorrow: replace loadDB()/mutations with Supabase queries + RPCs (see docs/WORKFLOW.md).
-import seed from './seed.json'
-import type { AuditEntry, DB, PayMethod } from './types'
+import small from './seed.json'
+import fullAsSent from './seed.full-as-sent.json'
+import fullFixed from './seed.full-fixed.json'
+import type { AuditEntry, DB, GuestType, PayMethod } from './types'
 
-export const loadDB = (): DB => structuredClone(seed) as unknown as DB
+// The three labeled demo data sets (decisions Oct 7-8), one at a time. The same sets load into Supabase
+// with npm run db:load -- <set>.
+export const DEMO_SET_LABEL = { small: 'Small demo', 'full-as-sent': 'Full gala, as sent', 'full-fixed': 'Full gala, fixed' } as const
+export type DemoSet = keyof typeof DEMO_SET_LABEL
+const DEMO_DATA: Record<DemoSet, unknown> = { small, 'full-as-sent': fullAsSent, 'full-fixed': fullFixed }
+const DEMO_KEY = 'aafe-demo-data'
+export function demoSet(): DemoSet {
+  try { const v = window.localStorage.getItem(DEMO_KEY); if (v && v in DEMO_SET_LABEL) return v as DemoSet } catch { /* storage blocked */ }
+  return 'small'
+}
+/** Switch sets: saved in this browser, then the page reloads with it. Where storage is blocked (sandboxed previews) the small set stays. */
+export function chooseDemoSet(s: DemoSet) {
+  try { window.localStorage.setItem(DEMO_KEY, s) } catch { return }
+  window.location.reload()
+}
+export const loadDB = (): DB => structuredClone(DEMO_DATA[demoSet()]) as DB
 export const nowIso = () => new Date().toISOString()
 export const uid = (p: string) => `${p}-${Math.random().toString(36).slice(2, 9)}` // record IDs only; never for secrets
 /** Secret token (sponsor links, QR codes): 128 random bits from the browser's secure generator, base64url. */
@@ -32,6 +49,13 @@ export function addAudit(db: DB, e: Omit<AuditEntry, 'id' | 'at'> & { at?: strin
   const id = (db.audit_log.at(-1)?.id ?? 0) + 1
   return { ...db, audit_log: [...db.audit_log, { id, at: e.at ?? nowIso(), ...e }] }
 }
+
+export const GUEST_TYPE_LABEL: Record<GuestType, string> = {
+  sponsor_guest: 'Sponsor guest', ticket_holder: 'Ticket holder', comp_relationship: 'Guest of AAFE', government_vip: 'Government or VIP',
+  aafe_staff: 'AAFE staff', event_volunteer: 'Event volunteer', event_staff: 'Event staff',
+}
+/** Whether a guest came through a sponsor or ticket purchase (and so has a sponsor to show). */
+export const hasSponsor = (t: GuestType) => t === 'sponsor_guest' || t === 'ticket_holder'
 
 export const tierOf = (db: DB, id: string) => db.sponsorship_tiers.find((t) => t.id === id)!
 export const sponsorOf = (db: DB, id: string) => db.sponsors.find((s) => s.id === id)!

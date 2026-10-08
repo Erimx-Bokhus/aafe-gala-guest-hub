@@ -8,7 +8,8 @@ export type Material = 'not_required' | 'pending' | 'received' | 'approved'
 export type PayMethod = 'card' | 'amex' | 'givelively_ach' | 'check' | 'ach_direct' | 'wire'
 export type SeatStatus = 'unnamed' | 'submitted' | 'reviewed' | 'badge_ready' | 'checked_in' | 'cancelled'
 export type BadgeStatus = 'needs_review' | 'ready' | 'printed' | 'reprint_needed'
-export type GuestType = 'sponsor_guest' | 'ticket_holder' | 'comp_relationship'
+// AAFE's seven guest categories (requirements); the Full demo data sets use all of them.
+export type GuestType = 'sponsor_guest' | 'ticket_holder' | 'comp_relationship' | 'government_vip' | 'aafe_staff' | 'event_volunteer' | 'event_staff'
 
 export interface GalaEvent { id: string; year: number; name: string; event_date: string; doors_time: string; program_time: string; venue_name: string; venue_address: string; dress_code: string; guest_list_deadline: string; program_ad_deadline: string; status: 'planning' | 'live' | 'closed'; is_synthetic: boolean }
 export interface StaffUser { id: string; name: string; email: string; role: Role }
@@ -20,7 +21,7 @@ export interface EventTable { id: string; event_id: string; number: number; labe
 export interface Guest { id: string; order_id: string; first_name: string; last_name: string; title: string; organization: string; email: string; dietary_needs: string | null; accessibility_needs: string | null; guest_type: GuestType; relationship_note: string | null; table_id: string | null; seat_number: number | null; badge_status: BadgeStatus; attendance_status: 'expected' | 'checked_in' | 'no_show'; qr_token: string | null; last_updated_by: 'guest_portal' | 'staff' | 'givelively_sync'; created_at: string; updated_at: string }
 export interface Seat { id: string; order_id: string; slot_number: number; guest_id: string | null; status: SeatStatus; updated_at: string }
 export interface CheckIn { id: string; event_id: string; guest_id: string | null; order_id: string | null; arrival_name: string | null; method: 'qr' | 'search' | 'exception'; type: string; checked_in_by: string; note: string; checked_in_at: string; source?: string; device?: string | null; received_at?: string }
-export interface EmailLog { id: string; template: 'portal_link' | 'qr_invitation' | 'guest_list_reminder' | 'payment_receipt'; to_email: string; to_name: string; order_id: string | null; guest_id: string | null; trigger: string; status: 'queued' | 'sent' | 'opened' | 'bounced' | 'cancelled'; sent_at: string | null; approved_by?: string | null }
+export interface EmailLog { id: string; template: 'portal_link' | 'qr_invitation' | 'guest_list_reminder' | 'payment_receipt'; to_email: string; to_name: string; order_id: string | null; guest_id: string | null; trigger: string; status: 'queued' | 'sent' | 'opened' | 'bounced' | 'cancelled'; sent_at: string | null; approved_by?: string | null; approved_at?: string | null }
 export interface AuditEntry { id: number; at: string; actor_type: 'guest_portal' | 'staff' | 'system'; actor: string; entity: string; entity_id: string; order_id: string | null; action: string; from_state: string | null; to_state: string | null; guest_visible: boolean; summary: string }
 export interface SfSync { entity: string; entity_id: string; sf_object: string; sf_id: string | null; status: 'pending' | 'synced' | 'error'; last_synced_at: string | null; error_message: string | null }
 
