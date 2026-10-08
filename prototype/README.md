@@ -22,7 +22,7 @@ Double-clicking `guest-portal/index.html` or `staff-app/index.html` also works: 
 Rebuild the OPEN files after changes: `npm run build`, then `python3 scripts/make_open_files.py`.
 
 ## Run
-Needs **Node 22** or newer (`node --version`). The backend tests use Node 22 features and fail on Node 20 with `ERR_UNKNOWN_FILE_EXTENSION`. With nvm, `nvm install` in this folder picks the version from `.nvmrc`.
+Needs **Node 22.18** or newer (`node --version`). The backend tests load TypeScript files directly, which Node does from 22.18; older versions fail with `ERR_UNKNOWN_FILE_EXTENSION`. With nvm, `nvm install` in this folder picks the version from `.nvmrc`.
 ```bash
 npm install            # once, at this folder (npm workspaces)
 npm run dev:guest      # http://localhost:5173  -> open #/s/ac-6w9k3p5d
