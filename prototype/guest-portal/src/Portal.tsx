@@ -141,7 +141,7 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
           </div>
           <div className="card p-5">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-navy-500">{t.seats}</h2>
-            <div className="mt-2 font-serif text-4xl text-navy-900">{view.stats.named}<span className="text-2xl text-navy-300"> / {view.stats.total}</span></div>
+            <div className="mt-2 font-serif text-4xl text-navy-900">{view.stats.named}<span className="text-2xl text-navy-500"> / {view.stats.total}</span></div>
             <div className="text-sm text-navy-500">{t.progress(view.stats.named, view.stats.total)}</div>
             <div className="mt-3 h-2 overflow-hidden rounded-full bg-navy-50" role="progressbar" aria-label={t.seats} aria-valuemin={0} aria-valuemax={view.stats.total} aria-valuenow={view.stats.named} aria-valuetext={t.progress(view.stats.named, view.stats.total)}><div className="h-full rounded-full bg-brand-500" style={{ width: `${pct}%` }} /></div>
             <dl className="mt-4 space-y-2 border-t border-navy-100 pt-4 text-sm">
