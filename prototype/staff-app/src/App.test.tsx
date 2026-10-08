@@ -3,9 +3,16 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import type { StaffUser } from '@shared/types'
+import { loadDB } from '@shared/data'
 
 const unsubscribe = vi.fn()
 const signOut = vi.fn()
+// After sign-in a volunteer loads only the door list (issue #9); managers would read the tables.
+const rpc = vi.fn(async (fn: string) => {
+  const { demoSnapshot } = await vi.importActual<typeof import('./api')>('./api')
+  return fn === 'staff_checkin_snapshot' ? { data: demoSnapshot(loadDB()), error: null } : { data: null, error: { message: 'not mocked' } }
+})
+const tableRead = vi.fn()
 
 async function renderApp(opts: { session: boolean; staff: StaffUser | null }) {
   vi.resetModules()
@@ -15,6 +22,8 @@ async function renderApp(opts: { session: boolean; staff: StaffUser | null }) {
         getSession: vi.fn().mockResolvedValue({ data: { session: opts.session ? { access_token: 't' } : null } }),
         onAuthStateChange: vi.fn(() => ({ data: { subscription: { unsubscribe } } })),
       },
+      rpc,
+      from: tableRead,
     },
     currentStaff: vi.fn().mockResolvedValue(opts.staff),
     signOut,
@@ -24,7 +33,7 @@ async function renderApp(opts: { session: boolean; staff: StaffUser | null }) {
   return render(<App />)
 }
 
-afterEach(() => { cleanup(); signOut.mockReset(); unsubscribe.mockReset(); vi.doUnmock('./supabase'); history.replaceState(null, '', '/') })
+afterEach(() => { cleanup(); signOut.mockReset(); rpc.mockClear(); tableRead.mockReset(); unsubscribe.mockReset(); vi.doUnmock('./supabase'); history.replaceState(null, '', '/') })
 
 describe('staff app session (live mode)', () => {
   it('signs out a session whose email is not on the staff list, and says why', async () => {
@@ -44,7 +53,9 @@ describe('staff app session (live mode)', () => {
   it('sends a check-in volunteer straight to check-in', async () => {
     await renderApp({ session: true, staff: { id: 'st-9', name: 'Kenji Abe', email: 'kenji.abe@aafe-demo.example.org', role: 'check_in_volunteer' } as StaffUser })
     await waitFor(() => expect(window.location.hash).toBe('#/checkin'))
-    expect(screen.getByText('Kenji Abe')).toBeTruthy()
+    expect(await screen.findByText('Kenji Abe')).toBeTruthy()
+    expect(rpc).toHaveBeenCalledWith('staff_checkin_snapshot')
+    expect(tableRead).not.toHaveBeenCalled()
   })
 
   it('stops listening for sign-in changes when the app closes', async () => {

@@ -2,15 +2,16 @@ import { useEffect, useRef, useState } from 'react'
 import { Camera, CheckCircle2, QrCode, Search, UserPlus } from 'lucide-react'
 import { GUEST_TYPE_LABEL, hasSponsor, sponsorOf } from '@shared/data'
 import { Field, Modal, fmtDate } from '@shared/ui'
-import { checkIn, checkInException, useStaff } from '../store'
+import { useStaff } from '../store'
 import { curOrders } from './Dashboard'
+import { errorText } from '../api'
 
 // iPad check-in. Volunteers see ONLY name, title, organization, sponsor, table/seat and status.
 const EXCEPTIONS = ['Arrived with sponsor', 'Sponsor seat was not previously named', 'Comp guest', 'Approved by relationship manager', 'Walk-in pending confirmation']
 type Detector = { detect: (v: HTMLVideoElement) => Promise<{ rawValue: string }[]> }
 
 export default function CheckIn() {
-  const { db, update, user, toast } = useStaff()
+  const { db, api, toast, act } = useStaff()
   const [q, setQ] = useState('')
   const [code, setCode] = useState('')
   const [scan, setScan] = useState(false)
@@ -24,15 +25,22 @@ export default function CheckIn() {
   const sp = (oid: string) => sponsorOf(db, db.orders.find((o) => o.id === oid)!.sponsor_id).organization_name
   const results = q.trim().length < 2 ? [] : guests.filter((g) => `${g.first_name} ${g.last_name} ${g.organization} ${sp(g.order_id)}`.toLowerCase().includes(q.trim().toLowerCase())).slice(0, 8)
 
-  const arrive = (gid: string, method: 'qr' | 'search') => {
+  const arrive = async (gid: string, method: 'qr' | 'search') => {
     const g = guests.find((x) => x.id === gid)!
     if (g.attendance_status === 'checked_in') { toast(`${g.first_name} ${g.last_name} is already checked in`); return }
-    update((d) => checkIn(d, user.name, gid, method)); setLast(gid); toast(`${g.first_name} ${g.last_name} checked in`)
+    await act(api.checkIn(gid, method).then((r) => { setLast(gid); toast(r.already ? `${g.first_name} ${g.last_name} is already checked in` : `${g.first_name} ${g.last_name} checked in`) }))
   }
-  const byCode = (c: string) => {
-    const g = guests.find((x) => x.qr_token?.toLowerCase() === c.trim().toLowerCase())
-    if (!g) { toast('No guest found for that code'); return }
-    arrive(g.id, 'qr'); setCode('')
+  // The door list never holds QR codes (the database keeps only their hash), so the server matches the code.
+  const byCode = async (c: string) => {
+    if (!c.trim()) return
+    try {
+      const r = await api.checkInByCode(c)
+      const g = guests.find((x) => x.id === r.guestId)
+      setLast(r.guestId); setCode('')
+      toast(`${g ? `${g.first_name} ${g.last_name}` : 'Guest'} ${r.already ? 'is already checked in' : 'checked in'}`)
+    } catch (e) {
+      toast(e instanceof Error && e.message.startsWith('not_found') ? 'No guest found for that code' : errorText(e))
+    }
   }
 
   // Camera QR scanning where the browser supports BarcodeDetector (Safari on iPadOS 17+, Chrome). Manual code entry otherwise.
@@ -101,7 +109,7 @@ export default function CheckIn() {
       </section>
 
       <Modal open={exc} onClose={() => setExc(false)} title="Add approved exception">
-        <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); if (!ex.name.trim()) return; update((d) => checkInException(d, user.name, { ...ex, orderId: ex.orderId || null })); toast('Exception check-in saved'); setExc(false); setEx({ name: '', orderId: '', type: EXCEPTIONS[0], note: '' }) }}>
+        <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); if (!ex.name.trim()) return; void act(api.checkInException({ ...ex, orderId: ex.orderId || null }), 'Exception check-in saved').then((ok) => { if (ok) { setExc(false); setEx({ name: '', orderId: '', type: EXCEPTIONS[0], note: '' }) } }) }}>
           <Field id="xn" label="Guest name"><input id="xn" className="input" value={ex.name} onChange={(e) => setEx({ ...ex, name: e.target.value })} /></Field>
           <Field id="xs" label="With sponsor (optional)"><select id="xs" className="input" value={ex.orderId} onChange={(e) => setEx({ ...ex, orderId: e.target.value })}><option value="">—</option>{curOrders(db).map((o) => <option key={o.id} value={o.id}>{sponsorOf(db, o.sponsor_id).organization_name}</option>)}</select></Field>
           <fieldset><legend className="mb-1 text-sm font-medium text-navy-800">Exception type</legend><div className="space-y-1.5">{EXCEPTIONS.map((x) => <label key={x} className="flex items-center gap-2 text-sm"><input type="radio" name="xt" checked={ex.type === x} onChange={() => setEx({ ...ex, type: x })} className="accent-[#C64C28]" /> {x}</label>)}</div></fieldset>
