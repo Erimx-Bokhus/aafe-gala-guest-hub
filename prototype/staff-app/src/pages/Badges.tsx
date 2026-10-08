@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Download, Printer } from 'lucide-react'
-import { sponsorOf } from '@shared/data'
+import { GUEST_TYPE_LABEL, hasSponsor, sponsorOf } from '@shared/data'
 import { downloadCsv } from '@shared/ui'
 import type { Guest } from '@shared/types'
 import { PageHead } from '../App'
@@ -28,7 +28,7 @@ function Badge({ g, sponsor, table, tpl, year }: { g: Guest; sponsor: string; ta
       </div>
       <div className="border-t border-[#EEE6D8] px-4 py-1.5">
         {tpl.tableSeat && <div className="text-sm font-bold">{table ? `Table ${table} · Seat ${g.seat_number}` : 'Table assignment pending'}</div>}
-        {tpl.sponsor && <div className="truncate text-[0.6875rem] text-[#5E5650]">{g.guest_type === 'comp_relationship' ? 'Guest of AAFE' : `Sponsored by ${sponsor}`}</div>}
+        {tpl.sponsor && <div className="truncate text-[0.6875rem] text-[#5E5650]">{hasSponsor(g.guest_type) ? `Sponsored by ${sponsor}` : GUEST_TYPE_LABEL[g.guest_type]}</div>}
       </div>
     </div>
   )

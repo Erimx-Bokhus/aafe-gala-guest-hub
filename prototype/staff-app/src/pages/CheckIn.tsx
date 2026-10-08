@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Camera, CheckCircle2, QrCode, Search, UserPlus } from 'lucide-react'
-import { sponsorOf } from '@shared/data'
+import { GUEST_TYPE_LABEL, hasSponsor, sponsorOf } from '@shared/data'
 import { Field, Modal, fmtDate } from '@shared/ui'
 import { checkIn, checkInException, useStaff } from '../store'
 import { curOrders } from './Dashboard'
@@ -83,7 +83,7 @@ export default function CheckIn() {
               <div>
                 <div className="text-xl font-semibold text-navy-900">{g.first_name} {g.last_name}</div>
                 <div className="text-sm text-navy-600">{g.title} · {g.organization}</div>
-                <div className="mt-1 text-sm text-navy-500">{g.guest_type === 'comp_relationship' ? 'Guest of AAFE' : `Sponsor: ${sp(g.order_id)}`} · <strong className="text-navy-800">{t ? `Table ${t.number}, seat ${g.seat_number}` : 'Table pending'}</strong></div>
+                <div className="mt-1 text-sm text-navy-500">{hasSponsor(g.guest_type) ? `Sponsor: ${sp(g.order_id)}` : GUEST_TYPE_LABEL[g.guest_type]} · <strong className="text-navy-800">{t ? `Table ${t.number}, seat ${g.seat_number}` : 'Table pending'}</strong></div>
               </div>
               {done ? <span className="inline-flex items-center gap-2 rounded-lg bg-emerald-50 px-4 py-3 font-semibold text-emerald-800"><CheckCircle2 size={18} /> Checked in</span>
                 : <button className="btn-primary h-14 px-8 text-base" onClick={() => arrive(g.id, 'search')} data-testid={`arrive-${g.id}`}>Mark arrived</button>}

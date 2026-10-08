@@ -39,7 +39,7 @@ jobs:
       # produce, so a hand edit can't drift from the generator or ship stale demo files.
       - name: Check generated files are up to date
         run: |
-          if ! git diff --exit-code --stat -- database/seed.sql shared/src/seed.json OPEN-Guest-Portal.html OPEN-Staff-App.html; then
-            echo "::error::Generated demo files are out of date. In prototype/, run: npm run seed && npm run build && python3 scripts/make_open_files.py, then commit the result. Change demo data in database/generate_seed.py, not in seed.sql or seed.json."
+          if ! git diff --exit-code --stat -- database/seed.sql shared/src/seed.json database/seed.full-as-sent.sql database/seed.full-fixed.sql shared/src/seed.full-as-sent.json shared/src/seed.full-fixed.json OPEN-Guest-Portal.html OPEN-Staff-App.html; then
+            echo "::error::Generated demo files are out of date. In prototype/, run: npm run seed && npm run build && python3 scripts/make_open_files.py, then commit the result. Change demo data in database/generate_seed.py and generate_full_seed.py, not in the seed files."
             exit 1
           fi
