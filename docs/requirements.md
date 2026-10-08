@@ -23,7 +23,7 @@ Until the final PRDs (Natalie's and Pursuit's) arrive, this file plus the hub's 
 - **QR-code e-tickets** emailed per guest; scan to check in on an iPad. [call: Sarah]
 - **Check-in app:** search by name or sponsor, mark arrived, handle walk-ins and unnamed sponsor seats, record attendance. [call]
 - **Blank sponsor name tags** for unnamed seats. [call]
-- **Multilingual sponsor form** (English, Chinese, Korean, Spanish; the prototype has three, Korean is missing). [Natalie scope]
+- **Multilingual sponsor form** (English, Chinese, Korean, Spanish; all four in the portal since PR #51, Oct 7; AAFE reviews the translations). [Natalie scope]
 - **Relationship guests** (comps for officials, board, partners) with personal QR invites. [prototype]
 - **Branding** matching aafe.org. [call]
 
