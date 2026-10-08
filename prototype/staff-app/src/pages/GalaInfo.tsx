@@ -1,7 +1,6 @@
 import { useState } from 'react'
-import { addAudit } from '@shared/data'
 import { fmtDate, money } from '@shared/ui'
-import type { GalaEvent } from '@shared/types'
+import type { GalaEvent, Seat } from '@shared/types'
 import { PageHead } from '../App'
 import { useStaff } from '../store'
 
@@ -16,17 +15,28 @@ const RUN = [
 ]
 
 export default function GalaInfo() {
-  const { db, update, user, toast } = useStaff()
+  const { db, api, user, act } = useStaff()
   const ev = db.gala_events.find((e) => e.id === db.meta.current_event_id)!
   const [f, setF] = useState<GalaEvent>(ev)
   const set = (k: keyof GalaEvent) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.value })
   const canEdit = user.role === 'gala_admin'
   const past = db.gala_events.filter((e) => e.id !== ev.id).sort((a, b) => b.year - a.year)
+  // What saving moves (staff_update_gala_event): QR e-ticket expiry follows the date; sponsors on the gala's deadline
+  // follow the new deadline, with their links. Live seats carry the code's hash; demo data keeps codes on guests.
+  const orders = db.orders.filter((o) => o.event_id === ev.id)
+  const ids = new Set(orders.map((o) => o.id))
+  const qrCount = db.seats.filter((s) => ids.has(s.order_id) && s.status !== 'cancelled' && (s as Seat & { qr_token_hash?: string | null }).qr_token_hash).length
+    || db.guests.filter((g) => ids.has(g.order_id) && g.qr_token).length
+  const followers = orders.filter((o) => (o.guest_list_deadline ?? '') === (ev.guest_list_deadline ?? '')).length
+  const moves = [
+    f.event_date !== ev.event_date && qrCount > 0 && `${qrCount} QR e-ticket${qrCount === 1 ? '' : 's'} will expire the morning after the new date.`,
+    f.guest_list_deadline !== ev.guest_list_deadline && followers > 0 && `${followers} sponsor${followers === 1 ? '' : 's'} on the gala's deadline will move to the new one, with their links. Sponsors with their own deadline keep it.`,
+  ].filter(Boolean) as string[]
   return (
     <div>
       <PageHead title="Gala information" sub="The single source for date, venue and deadlines. Guest-portal pages and emails read from here." />
       <div className="grid gap-6 xl:grid-cols-[1.3fr_1fr]">
-        <form className="card space-y-4 p-5" onSubmit={(e) => { e.preventDefault(); update((d) => addAudit({ ...d, gala_events: d.gala_events.map((x) => (x.id === f.id ? f : x)) }, { actor_type: 'staff', actor: user.name, entity: 'gala_event', entity_id: f.id, order_id: null, action: 'event.updated', from_state: null, to_state: null, guest_visible: false, summary: 'Gala information updated.' })); toast('Gala information saved') }}>
+        <form className="card space-y-4 p-5" onSubmit={(e) => { e.preventDefault(); const { name, event_date, doors_time, program_time, venue_name, venue_address, dress_code, guest_list_deadline, program_ad_deadline } = f; void act(api.updateGalaEvent({ name, event_date, doors_time, program_time, venue_name, venue_address, dress_code, guest_list_deadline, program_ad_deadline }), 'Gala information saved') }}>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2"><label className="label" htmlFor="n">Event name</label><input id="n" className="input" value={f.name} onChange={set('name')} disabled={!canEdit} /></div>
             <div><label className="label" htmlFor="d">Date</label><input id="d" type="date" className="input" value={f.event_date} onChange={set('event_date')} disabled={!canEdit} /></div>
@@ -37,6 +47,7 @@ export default function GalaInfo() {
             <div><label className="label" htmlFor="gd">Guest names due</label><input id="gd" type="date" className="input" value={f.guest_list_deadline} onChange={set('guest_list_deadline')} disabled={!canEdit} /></div>
             <div><label className="label" htmlFor="ad">Logos & program ads due</label><input id="ad" type="date" className="input" value={f.program_ad_deadline} onChange={set('program_ad_deadline')} disabled={!canEdit} /></div>
           </div>
+          {canEdit && moves.length > 0 && <ul className="space-y-1 rounded-lg bg-amber-50 p-3 text-sm text-amber-900" role="status" data-testid="gala-moves">{moves.map((m) => <li key={m}>{m}</li>)}</ul>}
           {canEdit ? <button className="btn-primary">Save gala information</button> : <p className="text-xs text-navy-500">Only gala admins can edit.</p>}
         </form>
         <div className="space-y-6">
