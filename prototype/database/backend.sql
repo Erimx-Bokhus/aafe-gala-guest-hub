@@ -1983,3 +1983,41 @@ grant execute on function
 -- Edge functions (service role)
 grant execute on function gl_import(jsonb, text, text), email_mark_sent(text, text), email_mark_failed(text, text), hash_token(text)
   to service_role;
+
+-- ---------------------------------------------------------------------
+-- 10. API WRAPPERS  (Supabase advisor, lints 0028 and 0029)
+--    Every function the apps call runs with the owner's rights (SECURITY DEFINER) and checks the caller
+--    itself, so the tables can stay closed to the API. Supabase's advisor warns about any such function in
+--    the schema the API exposes ("public"). Its recommended fix: the real function moves to schema
+--    "private", which the API doesn't expose, and "public" keeps a SECURITY INVOKER wrapper with the same
+--    name, arguments, defaults and grants that only calls it. The apps, the tests and the role checks see
+--    no difference. staff_role() stays in public: the access rules call it directly.
+--    Picks up every function granted to anon or authenticated above, so a new one needs nothing here.
+--    Re-running backend.sql recreates each function in public, and this block moves it again.
+-- ---------------------------------------------------------------------
+create schema if not exists private;
+revoke all on schema private from public;
+grant usage on schema private to anon, authenticated;
+
+do $$
+declare f record; r text;
+begin
+  for f in select p.proname, pg_get_function_identity_arguments(p.oid) ident, pg_get_function_arguments(p.oid) args,
+                  pg_get_function_result(p.oid) result, p.proretset, p.pronargs,
+                  array_remove(array[case when has_function_privilege('anon', p.oid, 'execute') then 'anon' end,
+                                     case when has_function_privilege('authenticated', p.oid, 'execute') then 'authenticated' end], null) roles
+             from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+            where n.nspname = 'public' and p.prosecdef and p.proname <> 'staff_role'
+              and (has_function_privilege('anon', p.oid, 'execute') or has_function_privilege('authenticated', p.oid, 'execute'))
+  loop
+    execute format('drop function if exists private.%I(%s)', f.proname, f.ident);
+    execute format('alter function public.%I(%s) set schema private', f.proname, f.ident);
+    execute format('create function public.%I(%s) returns %s language sql security invoker set search_path = '''' as $w$ select %s private.%I(%s) $w$',
+                   f.proname, f.args, f.result, case when f.proretset then '* from' else '' end, f.proname,
+                   coalesce((select string_agg('$' || i, ', ') from generate_series(1, f.pronargs) i), ''));
+    execute format('revoke all on function public.%I(%s) from public', f.proname, f.ident);
+    foreach r in array f.roles loop
+      execute format('grant execute on function public.%I(%s) to %I', f.proname, f.ident, r);
+    end loop;
+  end loop;
+end $$;
