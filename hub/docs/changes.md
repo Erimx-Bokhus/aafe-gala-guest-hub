@@ -5,6 +5,7 @@ Every change to this hub, newest first. Open it while signed in to claude.ai and
 Each change has a kind, shown the same way on every page next to the exact line that changed: **✦ New** (didn't exist before), **+ Updated** (rows, tasks, or terms added), **✎ Modified** (wording, numbers, or a rule changed), **− Removed** (taken out), and **! Important** (everyone should act on it). Hover an icon for the date, time (New York), and who made the change; click it to mark it read.
 
 ```changes
+2026-10-08 01:59 | new | Aisling | decisions | Sponsor links and QR e-tickets keep SHA-256 fingerprints (not SHA-512 or SHA-3): the codes are random, so a longer hash adds no protection, and SHA-256 works in every browser, Postgres, and Supabase
 2026-10-08 01:50 | new | Aisling | build-plan.where-each-component-stands | Natalie's iPad check-in app is in `main` (PR #56): 553 invented guests A to Z, search, check in several at once with undo, QR scan, approved exceptions, offline queue. Next: connect it to the backend
 2026-10-08 01:50 | modified | Aisling | build-plan.where-each-component-stands | Check-in sync fix (PR #60), full 128-bit QR code generator (PR #61), and invented names for 12 real organizations in the door list (PR #62); about 1,120 automated checks
 2026-10-08 01:50 | new | Aisling | tasks.added-october-8 | New tasks: connect the iPad app to the backend (Aisling, with Cornell for sign-in); app manifest, opening offline and camera scanning (Natalie)
