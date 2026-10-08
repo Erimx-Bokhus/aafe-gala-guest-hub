@@ -81,7 +81,7 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
   if (!view) return (
     <main className="mx-auto max-w-xl px-5 py-20 text-center">
       <Lock className="mx-auto text-navy-300" size={32} />
-      <h1 className="mt-4 text-2xl font-semibold text-navy-900">{t.notFound}</h1>
+      <h1 className="type-display mt-4 text-navy-900">{t.notFound}</h1>
       <p className="mt-2 text-navy-600">{t.notFoundHelp}</p>
     </main>
   )
@@ -95,8 +95,8 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
     <main>
       <Hero lang={lang} eyebrow={t.eyebrow} title={`${t.welcome}, ${view.organization}`} body={t.heroBody}>
         <div className="mt-6 grid max-w-md grid-cols-2 gap-3">
-          <div className="rounded-xl border border-cream-200 bg-surface p-3"><div className="text-[0.6875rem] font-semibold uppercase tracking-wide text-brand-600">{t.package}</div><div className="mt-1 text-sm font-semibold text-navy-900">{view.tierName}</div></div>
-          <div className="rounded-xl border border-cream-200 bg-surface p-3"><div className="text-[0.6875rem] font-semibold uppercase tracking-wide text-brand-600">{t.eventWhen}</div><div className="mt-1 text-sm font-semibold text-navy-900">{fmtDate(view.event.date, loc)}</div></div>
+          <div className="rounded-xl border border-cream-200 bg-surface p-3"><div className="type-nav text-brand-600">{t.package}</div><div className="mt-1 text-sm font-semibold text-navy-900">{view.tierName}</div></div>
+          <div className="rounded-xl border border-cream-200 bg-surface p-3"><div className="type-nav text-brand-600">{t.eventWhen}</div><div className="mt-1 text-sm font-semibold text-navy-900">{fmtDate(view.event.date, loc)}</div></div>
         </div>
         <a href="#seats" className="btn-primary mt-6">{t.openList}</a>
       </Hero>
@@ -107,9 +107,9 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
           <div className="card p-5 lg:col-span-2">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-navy-500">{t.contribution}</h2>
-                <div className="mt-2 font-serif text-4xl text-navy-900" data-testid="amount-paid">{money(view.money.paid, view.money.paid % 1 !== 0)}</div>
-                <div className="text-sm text-navy-500">{t.amountPaid}</div>
+                <h2 className="type-h2 text-navy-900">{t.contribution}</h2>
+                <div className="type-number mt-2 text-4xl tabular-nums text-navy-900" data-testid="amount-paid">{money(view.money.paid, view.money.paid % 1 !== 0)}</div>
+                <div className="type-nav text-navy-500">{t.amountPaid}</div>
               </div>
               <span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusCls}`}>{statusText}</span>
             </div>
@@ -125,8 +125,8 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
             <p className="mt-4 flex items-center gap-1.5 text-xs text-navy-500"><Lock size={12} /> {t.payNote}</p>
           </div>
           <div className="card p-5">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-navy-500">{t.seats}</h2>
-            <div className="mt-2 font-serif text-4xl text-navy-900">{view.stats.named}<span className="text-2xl text-navy-300"> / {view.stats.total}</span></div>
+            <h2 className="type-h6 text-navy-900">{t.seats}</h2>
+            <div className="type-number mt-2 text-4xl tabular-nums text-navy-900">{view.stats.named}<span className="text-2xl text-navy-300"> / {view.stats.total}</span></div>
             <div className="text-sm text-navy-500">{t.progress(view.stats.named, view.stats.total)}</div>
             <div className="mt-3 h-2 overflow-hidden rounded-full bg-navy-50"><div className="h-full rounded-full bg-brand-500" style={{ width: `${pct}%` }} /></div>
             <dl className="mt-4 space-y-2 border-t border-navy-100 pt-4 text-sm">
@@ -145,7 +145,7 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
 
         {/* Seats */}
         <section id="seats" className="scroll-mt-20">
-          <h2 className="text-2xl font-semibold text-navy-900">{t.seatsTitle}</h2>
+          <h2 className="type-h2 text-navy-900">{t.seatsTitle}</h2>
           <p className="mt-1 max-w-3xl text-navy-600">{t.seatsHelp}</p>
           <ul className="mt-5 grid gap-3 md:grid-cols-2">
             {view.seats.map((s) => {
@@ -154,13 +154,13 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
               return (
                 <li key={s.slot} className={`card flex flex-col p-4 ${named ? '' : 'border-dashed'}`} data-testid={`seat-${s.slot}`}>
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-semibold uppercase tracking-wide text-navy-500">{t.seat} {s.slot}</span>
+                    <span className="type-nav text-navy-500">{t.seat} {s.slot}</span>
                     {named ? <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${confirmed ? 'bg-emerald-50 text-emerald-800' : 'bg-brand-50 text-brand-600'}`}>{confirmed ? t.confirmed : t.received}</span>
                       : <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800">{t.open}</span>}
                   </div>
                   {s.guest ? (
                     <div className="mt-2 flex-1">
-                      <div className="flex items-center gap-2 text-lg font-semibold text-navy-900"><UserRound size={18} className="text-navy-300" /> {s.guest.first_name} {s.guest.last_name}</div>
+                      <div className="type-h6 flex items-center gap-2 text-navy-900"><UserRound size={18} className="text-navy-300" /> {s.guest.first_name} {s.guest.last_name}</div>
                       <div className="text-sm text-navy-600">{s.guest.title} · {s.guest.organization}</div>
                       {(s.guest.dietary_needs || s.guest.accessibility_needs) && (
                         <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
@@ -189,7 +189,7 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
 
         {/* Activity */}
         <section className="card p-5" aria-labelledby="act-h">
-          <h2 id="act-h" className="flex items-center gap-2 text-lg font-semibold text-navy-900"><History size={18} className="text-brand-500" /> {t.activityTitle}</h2>
+          <h2 id="act-h" className="type-h6 flex items-center gap-2 text-navy-900"><History size={18} className="text-brand-500" /> {t.activityTitle}</h2>
           <p className="text-sm text-navy-500">{t.activityHelp}</p>
           <ol className="mt-4 max-h-80 space-y-0 overflow-y-auto" data-testid="activity">
             {view.activity.map((a, k) => (
@@ -207,8 +207,8 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
         <div className="mx-auto grid max-w-6xl items-center gap-8 px-5 py-12 md:grid-cols-2">
           <img src="./photos/gala-guests-dinner.jpg" alt="Guests sharing a table at the AAFE gala" className="aspect-[4/3] w-full rounded-2xl object-cover" style={{ objectPosition: 'center 35%' }} loading="lazy" />
           <div>
-            <h2 className="font-serif text-3xl font-medium text-navy-900">{t.thanksTitle}</h2>
-            <p className="mt-3 leading-relaxed text-navy-600">{t.thanksBody}</p>
+            <h2 className="type-h2 text-navy-900">{t.thanksTitle}</h2>
+            <p className="mt-3 text-navy-600">{t.thanksBody}</p>
             <div className="mt-6 rounded-xl bg-cream-100 p-4 text-sm">
               <div className="font-semibold text-navy-900">{t.help}</div>
               <a className="font-medium text-brand-600 underline underline-offset-2" href="mailto:gala-team@aafe-demo.example.org">{t.contact}</a>
@@ -218,7 +218,7 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
         </div>
       </section>
       <MissionStrip lang={lang} />
-      <footer className="mx-auto max-w-6xl px-5 py-8 text-xs leading-relaxed text-navy-500">{t.privacy}</footer>
+      <footer className="mx-auto max-w-6xl px-5 py-8 text-xs text-navy-500">{t.privacy}</footer>
 
       <Modal open={seat != null} onClose={() => setEditing(null)} title={seat?.guest ? t.formEditTitle : t.formAddTitle}>
         {seat && <AttendeeForm lang={lang} initial={seat.guest ? { ...EMPTY, ...seat.guest } : { ...EMPTY, organization: view.organization }} onCancel={() => setEditing(null)}
