@@ -112,7 +112,7 @@ The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus),
 - [ ] iPad app: app manifest, opening offline, camera QR scanning on a real iPad — Natalie <!-- new 2026-10-08 01:50 Aisling -->
 - [x] Scripts to rebuild the iPad app's double-click file and retake its screenshots (PR #65) — Aisling <!-- new 2026-10-08 08:15 Aisling -->
 - [ ] Pick the demo's Supabase project and its owner — Team <!-- new 2026-10-08 08:15 Aisling -->
-- [ ] iPad app: build guard, CI build and drift check for `OPEN-CheckIn-App.html`, before its Vercel project gets keys — Aisling <!-- new 2026-10-08 08:15 Aisling -->
+- [x] iPad app: build guard, CI build and drift check for `OPEN-CheckIn-App.html`, before its Vercel project gets keys (PR #70) — Aisling <!-- modified 2026-10-08 09:10 Aisling -->
 - [x] Hub cleanup from the Oct 8 audit, and Screens split into Live build and Early sketches — Aisling <!-- new 2026-10-08 08:15 Aisling -->
 
 ## Week of October 12
