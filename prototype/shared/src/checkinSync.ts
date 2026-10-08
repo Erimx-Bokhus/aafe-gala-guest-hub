@@ -1,14 +1,16 @@
 // Check-in sync client shared by the iPad check-in app and the staff app.
-// Talks to the small sync server in server/ (port 8787). If the server can't be reached,
+// Talks to the small demo sync server (checkin-app/sync-server, port 8787). If the server can't be reached,
 // writes wait in an offline queue (saved to localStorage when the browser allows it) and are sent when it's back.
 // PRODUCTION: swap the fetch calls for Supabase inserts/deletes + a realtime subscription on `check_ins`.
 import { useEffect, useState } from 'react'
 import type { CheckIn } from './types'
 
 // `__PORT_8787__` is rewritten by the preview host to a proxy path for the sandbox server.
-// Locally (npm run dev / OPEN-*.html) it stays as-is, so we fall back to localhost:8787.
+// Served over http (npm run dev, including iPads on the same Wi-Fi), calls go to the same address and Vite
+// forwards /api to the sync server. The double-click OPEN file (file://) falls back to localhost:8787.
 const RAW_API = '__PORT_8787__'
-export const API_BASE: string = RAW_API.startsWith('__') ? 'http://localhost:8787' : RAW_API
+export const API_BASE: string = !RAW_API.startsWith('__') ? RAW_API
+  : typeof location !== 'undefined' && location.protocol.startsWith('http') ? '' : 'http://localhost:8787'
 
 export interface Closure { event_id: string; guest_ids: string[]; closed_by: string; closed_at: string }
 export interface SyncSnapshot { check_ins: CheckIn[]; closures: Record<string, Closure> }
@@ -48,10 +50,9 @@ export class SyncClient {
   private timer: ReturnType<typeof setInterval> | null = null
   status: SyncStatus = { online: null, pending: 0, lastSync: null, lastError: null }
   constructor(private key: string, fallback: SyncSnapshot, private device: string, private source: string) {
-    const saved = sget(`${key}:snap`)
-    this.snap = saved ? JSON.parse(saved) : fallback
-    const q = sget(`${key}:queue`)
-    this.queue = q ? JSON.parse(q) : []
+    const parse = <T,>(s: string | null, d: T): T => { try { return s ? JSON.parse(s) : d } catch { return d } } // corrupt storage never stops the door
+    this.snap = parse(sget(`${key}:snap`), fallback)
+    this.queue = parse(sget(`${key}:queue`), [] as SyncOp[])
     this.status.pending = this.queue.length
   }
   subscribe(fn: () => void) { this.listeners.add(fn); return () => { this.listeners.delete(fn) } }

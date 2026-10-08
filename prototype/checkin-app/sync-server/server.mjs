@@ -8,7 +8,7 @@
 //   DELETE /api/checkins/:id                    (undo)  -> { ok, removed }
 //   POST   /api/closures                        body: { event_id, guest_ids[], closed_by } ("Close gala": remaining guests = no-show)
 //   DELETE /api/closures/:event_id              (re-open gala)
-//   POST   /api/reset                           restore seed check-ins (demo / tests only)
+//   POST   /api/reset                           restore seed check-ins (only when started with DEMO_RESET=1)
 //
 // PRODUCTION: replace with Supabase tables `check_ins` + `gala_closures` and RLS (see docs/WORKFLOW.md).
 import http from 'node:http'
@@ -108,11 +108,13 @@ const server = http.createServer(async (req, res) => {
       return send(res, 200, { ok: true, removed })
     }
 
-    if (req.method === 'POST' && p === '/api/reset') { state = seedState(); log('demo.reset', {}); save(); return send(res, 200, { ok: true }) }
+    if (req.method === 'POST' && p === '/api/reset' && process.env.DEMO_RESET === '1') { state = seedState(); log('demo.reset', {}); save(); return send(res, 200, { ok: true }) }
 
     return send(res, 404, { ok: false, error: 'not found' })
   } catch (e) {
     return send(res, 400, { ok: false, error: String(e.message || e) })
   }
 })
-server.listen(PORT, '0.0.0.0', () => console.log(`AAFE check-in sync server on :${PORT} (data: ${DATA})`))
+// Listens on this computer only. iPads reach it through the Vite dev server's /api proxy (npm run dev:ipad).
+const HOST = process.env.HOST || '127.0.0.1'
+server.listen(PORT, HOST, () => console.log(`AAFE check-in sync server on ${HOST}:${PORT} (data: ${DATA})\nDEMO ONLY: no sign-in or access control. Never use with real guest data; production uses Supabase.`))
