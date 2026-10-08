@@ -47,6 +47,8 @@ export class SyncClient {
   private queue: SyncOp[]
   private listeners = new Set<() => void>()
   private busy = false
+  /** The write on its way to the server: Undo and Close must not take it out of the queue mid-request. */
+  private inFlight: SyncOp | null = null
   private timer: ReturnType<typeof setInterval> | null = null
   status: SyncStatus = { online: null, pending: 0, lastSync: null, lastError: null }
   constructor(private key: string, fallback: SyncSnapshot, private device: string, private source: string) {
@@ -74,12 +76,12 @@ export class SyncClient {
 
   add(ci: CheckIn) { this.queue.push({ kind: 'add', ci: { ...ci, source: this.source } as CheckIn }); this.emit(); void this.tick() }
   remove(id: string) {
-    const i = this.queue.findIndex((o) => o.kind === 'add' && o.ci.id === id)
-    if (i >= 0) this.queue.splice(i, 1) // never reached the server — just drop it
+    const i = this.queue.findIndex((o) => o.kind === 'add' && o.ci.id === id && o !== this.inFlight)
+    if (i >= 0) this.queue.splice(i, 1) // never reached the server — just drop it (one already sending gets a delete instead)
     else this.queue.push({ kind: 'del', id })
     this.emit(); void this.tick()
   }
-  close(closure: Closure) { this.queue = this.queue.filter((o) => !(o.kind === 'reopen' && o.event_id === closure.event_id)); this.queue.push({ kind: 'close', closure }); this.emit(); void this.tick() }
+  close(closure: Closure) { this.queue = this.queue.filter((o) => o === this.inFlight || !(o.kind === 'reopen' && o.event_id === closure.event_id)); this.queue.push({ kind: 'close', closure }); this.emit(); void this.tick() }
   reopen(event_id: string) { this.queue.push({ kind: 'reopen', event_id }); this.emit(); void this.tick() }
 
   /** Send queued writes in order, then pull the latest snapshot. */
@@ -88,13 +90,18 @@ export class SyncClient {
     this.busy = true
     try {
       while (this.queue.length) {
-        const op = this.queue[0]
+        const op = this.queue[0]!
+        this.inFlight = op
         const r = op.kind === 'add' ? await call('POST', '/api/checkins', op.ci, this.device)
           : op.kind === 'del' ? await call('DELETE', `/api/checkins/${encodeURIComponent(op.id)}`, undefined, this.device)
           : op.kind === 'close' ? await call('POST', '/api/closures', op.closure, this.device)
           : await call('DELETE', `/api/closures/${encodeURIComponent(op.event_id)}`, undefined, this.device)
         if (r.status >= 400) this.status.lastError = r.j?.error ?? `HTTP ${r.status}` // rejected (bad data): drop it, don't block the queue
-        this.queue.shift(); this.emit()
+        // Remove the op that was sent, by identity: Undo or Close may have changed the queue meanwhile.
+        const sent = this.queue.indexOf(op)
+        if (sent >= 0) this.queue.splice(sent, 1)
+        this.inFlight = null
+        this.emit()
       }
       const { j } = await call('GET', '/api/checkins')
       this.snap = { check_ins: j.check_ins ?? [], closures: j.closures ?? {} }
@@ -104,6 +111,7 @@ export class SyncClient {
       if (e instanceof NetErr) this.status = { ...this.status, online: false }
       else this.status = { ...this.status, lastError: String(e) }
     } finally {
+      this.inFlight = null
       this.busy = false
       this.emit()
     }
