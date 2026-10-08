@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { orderMoney, sponsorOf } from '@shared/data'
 import { Field, Modal, Pill, money, type Tone } from '@shared/ui'
 import type { SeatStatus } from '@shared/types'
-import { addPledge, recordOfflinePayment, useStaff } from './store'
+import { useStaff } from './store'
 import { curOrders } from './pages/Dashboard'
 
 export const GUEST_PORTAL_URL: string = import.meta.env.VITE_GUEST_PORTAL_URL ?? 'https://guest-portal.example.org/'
@@ -15,7 +15,7 @@ export const SeatPill = ({ s }: { s: SeatStatus }) => <Pill tone={SEAT_PILL[s][0
 
 /** Check in the mail, or ACH/wire seen on AAFE's bank statement — staff records it here. */
 export function RecordPaymentModal({ open, onClose, orderId }: { open: boolean; onClose: () => void; orderId?: string }) {
-  const { db, update, user, toast } = useStaff()
+  const { db, api, act } = useStaff()
   const candidates = curOrders(db).filter((o) => o.source !== 'givelively' && o.source !== 'comp' && orderMoney(db, o.id).balance > 0)
   // The order comes from the page when there is one (sponsor detail); otherwise from the picker, falling back if the picked order is now paid.
   const [picked, setOid] = useState(candidates[0]?.id ?? '')
@@ -29,7 +29,7 @@ export function RecordPaymentModal({ open, onClose, orderId }: { open: boolean; 
   const valid = oid && amt > 0 && (method !== 'check' || checkNo.trim())
   return (
     <Modal open={open} onClose={onClose} title="Record check, ACH or wire">
-      <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); if (!valid) return; update((d) => recordOfflinePayment(d, user, oid, { method, amount: amt, received: date, check_number: checkNo })); toast('Payment recorded — guest portal updated'); onClose() }}>
+      <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); if (!valid) return; void act(api.recordPayment(oid, { method, amount: amt, received: date, check_number: checkNo }), 'Payment recorded — guest portal updated').then((done) => { if (done) onClose() }) }}>
         {!orderId && (
           <Field id="ro" label="Sponsor / order">
             <select id="ro" className="input" value={oid} onChange={(e) => setOid(e.target.value)}>
@@ -58,12 +58,12 @@ export function RecordPaymentModal({ open, onClose, orderId }: { open: boolean; 
 }
 
 export function AddPledgeModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { db, update, user, toast } = useStaff()
+  const { db, api, act } = useStaff()
   const [f, setF] = useState({ org: '', contact: '', email: '', tierId: 'silver', source: 'check' as 'check' | 'ach_direct' | 'wire' })
   const ok = f.org.trim() && f.contact.trim() && /\S+@\S+\.\S+/.test(f.email)
   return (
     <Modal open={open} onClose={onClose} title="New pledge (check, ACH or wire)">
-      <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); if (!ok) return; update((d) => addPledge(d, user, f)); toast('Pledge recorded — guest-list email drafted for approval'); onClose(); setF({ ...f, org: '', contact: '', email: '' }) }}>
+      <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); if (!ok) return; void act(api.addPledge(f), 'Pledge recorded — guest-list email drafted for approval').then((done) => { if (done) { onClose(); setF({ ...f, org: '', contact: '', email: '' }) } }) }}>
         <Field id="po" label="Organization or donor name"><input id="po" className="input" value={f.org} onChange={(e) => setF({ ...f, org: e.target.value })} /></Field>
         <div className="grid gap-3 sm:grid-cols-2">
           <Field id="pc" label="Primary contact"><input id="pc" className="input" value={f.contact} onChange={(e) => setF({ ...f, contact: e.target.value })} /></Field>

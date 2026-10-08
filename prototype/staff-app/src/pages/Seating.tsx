@@ -3,14 +3,14 @@ import { UserRound, X } from 'lucide-react'
 import { sponsorOf } from '@shared/data'
 import type { Guest } from '@shared/types'
 import { PageHead } from '../App'
-import { assignSeat, seatOrderAtTable, useStaff } from '../store'
+import { useStaff } from '../store'
 import { curOrders } from './Dashboard'
 
 // No blue (AAFE brand); each color keeps white initials at 4.5:1 or better.
 const PALETTE = ['#C64C28', '#6E5A1E', '#1F7A5C', '#8A5CC2', '#8A6420', '#B8476E', '#2F7A3E', '#6B7A2E', '#9E5B3C', '#9C6B30', '#7A4B8F', '#4D7A2E', '#A0522D', '#8A4F00', '#8F4B6B']
 
 export default function Seating() {
-  const { db, update, user, toast } = useStaff()
+  const { db, api, toast, act } = useStaff()
   const [sel, setSel] = useState<string | null>(null)
   const [grpOrder, setGrpOrder] = useState('')
   const [grpTable, setGrpTable] = useState('')
@@ -28,8 +28,7 @@ export default function Seating() {
     const occupant = guests.find((g) => g.table_id === tableId && g.seat_number === n)
     if (occupant) { setSel(occupant.id === sel ? null : occupant.id); return }
     if (!selected) { toast('Pick a guest first, then tap an open seat'); return }
-    update((d) => assignSeat(d, user.name, selected.id, tableId, n))
-    toast(`${label(selected)} → Table ${tables.find((t) => t.id === tableId)!.number}, seat ${n}`)
+    void act(api.assignSeat(selected.id, tableId, n), `${label(selected)} → Table ${tables.find((t) => t.id === tableId)!.number}, seat ${n}`)
     setSel(null)
   }
 
@@ -43,14 +42,14 @@ export default function Seating() {
             <div className="mt-2 space-y-2">
               <select className="input" value={grpOrder} onChange={(e) => setGrpOrder(e.target.value)} aria-label="Sponsor group"><option value="">Choose sponsor…</option>{byOrder.map(({ o, list }) => <option key={o.id} value={o.id}>{sponsorOf(db, o.sponsor_id).organization_name} ({list.length})</option>)}</select>
               <select className="input" value={grpTable} onChange={(e) => setGrpTable(e.target.value)} aria-label="Table"><option value="">Choose table…</option>{tables.map((t) => <option key={t.id} value={t.id}>Table {t.number} — {t.capacity - guests.filter((g) => g.table_id === t.id).length} open</option>)}</select>
-              <button className="btn-navy w-full" disabled={!grpOrder || !grpTable} onClick={() => { update((d) => seatOrderAtTable(d, user.name, grpOrder, grpTable)); toast('Group seated'); setGrpOrder('') }}>Seat group</button>
+              <button className="btn-navy w-full" disabled={!grpOrder || !grpTable} onClick={() => { void act(api.seatOrderAtTable(grpOrder, grpTable), 'Group seated'); setGrpOrder('') }}>Seat group</button>
             </div>
           </section>
           {selected && (
             <section className="card border-brand-400 p-4" data-testid="selected-guest">
               <div className="flex items-start justify-between"><div><div className="font-semibold text-navy-900">{label(selected)}</div><div className="text-xs text-navy-500">{selected.title} · {sponsorOf(db, db.orders.find((o) => o.id === selected.order_id)!.sponsor_id).organization_name}</div></div><button onClick={() => setSel(null)} aria-label="Clear selection" className="text-navy-500"><X size={16} /></button></div>
               <p className="mt-2 text-sm text-navy-600">{selected.table_id ? `Table ${tables.find((t) => t.id === selected.table_id)?.number}, seat ${selected.seat_number}. Tap an open seat to move.` : 'Tap an open seat on the floor plan.'}</p>
-              {selected.table_id && <button className="btn-ghost btn-sm mt-2" onClick={() => { update((d) => assignSeat(d, user.name, selected.id, null, null)); setSel(null) }}>Remove from seat</button>}
+              {selected.table_id && <button className="btn-ghost btn-sm mt-2" onClick={() => { void act(api.assignSeat(selected.id, null, null)); setSel(null) }}>Remove from seat</button>}
             </section>
           )}
           <section className="card p-4">
