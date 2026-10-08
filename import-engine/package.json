@@ -2,6 +2,7 @@
   "name": "@aafe/import-engine",
   "version": "0.1.0",
   "private": true,
+  "engines": { "node": ">=22.18" },
   "description": "Give Lively import and matching rules for the AAFE gala guest list (docs/import-matching-spec.md). Pure TypeScript: no UI, no database.",
   "type": "module",
   "main": "src/index.ts",
