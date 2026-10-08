@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { matchBuyer, matchGuest, nameWordSet, normName, normOrg, type ExistingGuest, type Sponsor } from '../src/index.ts'
+import { matchBuyer, nameWordSet, normName, normOrg, type Sponsor } from '../src/index.ts'
 
 const sponsors: Sponsor[] = [
   { id: 'sp-ana', organizationName: 'Ruiz Family', primaryContactName: 'Ana Ruiz', primaryContactEmail: 'events@example.com' },
@@ -30,37 +30,5 @@ describe('matchBuyer', () => {
   it("a new buyer's organization is the company, else their name", () => {
     expect(matchBuyer({ first: 'Sam', last: 'Lee', email: 'sam@example.org' }, 'Lotus Bank', sponsors)).toEqual({ kind: 'new', organizationName: 'Lotus Bank' })
     expect(matchBuyer({ first: 'Sam', last: 'Lee', email: 'sam@example.org' }, ' ', sponsors)).toEqual({ kind: 'new', organizationName: 'Sam Lee' })
-  })
-})
-
-describe('matchGuest', () => {
-  const existing: ExistingGuest[] = [
-    { id: 'g-susan', orderId: 'ord-a', displayName: 'Susan Cho', email: null, organization: 'Acme Partners' },
-    { id: 'g-wei', orderId: 'ord-a', displayName: 'Wei Chen', email: 'wei@example.org', organization: 'Harbor Health' },
-    { id: 'g-jane', orderId: 'ord-a', displayName: 'Jane Doe', email: 'jane@example.org', organization: 'Lotus Bank' },
-  ]
-  it('case 16: the same name on another order, organization unknown, is a possible duplicate (Oct 6)', () => {
-    expect(matchGuest({ displayName: 'Susan Cho', email: null, organization: null }, 'ord-b', existing))
-      .toEqual({ reason: 'possible_duplicate', existingGuestId: 'g-susan', existingOrderId: 'ord-a' })
-  })
-  it('case 17: the same words in another order, same organization, are double-booked', () => {
-    expect(matchGuest({ displayName: 'Chen Wei', email: null, organization: 'Harbor Health Inc' }, 'ord-b', existing))
-      .toMatchObject({ reason: 'double_booked', existingGuestId: 'g-wei' })
-  })
-  it('the same name at a different known organization is only a possible duplicate', () => {
-    expect(matchGuest({ displayName: 'Susan Cho', email: null, organization: 'Other Org' }, 'ord-b', existing))
-      .toMatchObject({ reason: 'possible_duplicate', existingGuestId: 'g-susan' })
-  })
-  it('same email and last name is double-booked, whatever the first name', () => {
-    expect(matchGuest({ displayName: 'Janet Doe', email: 'JANE@example.org', organization: null }, 'ord-b', existing))
-      .toMatchObject({ reason: 'double_booked', existingGuestId: 'g-jane' })
-  })
-  it('same first initial and last name at the same organization is a possible duplicate', () => {
-    expect(matchGuest({ displayName: 'J. Doe', email: null, organization: 'Lotus Bank' }, 'ord-b', existing))
-      .toMatchObject({ reason: 'possible_duplicate', existingGuestId: 'g-jane' })
-  })
-  it('ignores guests on the same order, and unrelated names', () => {
-    expect(matchGuest({ displayName: 'Susan Cho', email: null, organization: null }, 'ord-a', existing)).toBeNull()
-    expect(matchGuest({ displayName: 'Ana Ruiz', email: null, organization: null }, 'ord-b', existing)).toBeNull()
   })
 })

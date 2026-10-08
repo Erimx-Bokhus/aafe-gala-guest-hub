@@ -8,13 +8,15 @@ import { parseAmount, parseCount, parsePurchaseTime, ValueError } from './values
 
 export type Field =
   | 'first' | 'last' | 'email' | 'tierName' | 'tierCategory' | 'quantity' | 'seats' | 'gross' | 'refunded'
-  | 'covered' | 'purchasedAt' | 'method' | 'status' | 'pageName' | 'internalName' | 'company' | 'guestText'
+  | 'covered' | 'purchasedAt' | 'method' | 'status' | 'pageName' | 'internalName' | 'company'
 
 /**
- * Normalized header → field. The guest-list question is matched by its start (GUEST_TEXT_PREFIX).
- * Phone columns are recognized only to be dropped: phones are never imported (spec section 1).
+ * Normalized header → field. Two kinds of column are recognized only to be dropped, so they never
+ * reach the database: phone numbers (spec section 1), and the free-text guest list a buyer types
+ * ("Please list the name…", matched by its start): sponsors enter every guest's name through their
+ * private link instead (decided Oct 7, for the guests' privacy).
  */
-const HEADERS: Record<string, Field | 'phone'> = {
+const HEADERS: Record<string, Field | 'dropped'> = {
   firstname: 'first',
   lastname: 'last',
   email: 'email',
@@ -34,10 +36,10 @@ const HEADERS: Record<string, Field | 'phone'> = {
   companyorganizationname: 'company',
   companyname: 'company',
   organizationname: 'company',
-  phonenumber: 'phone',
-  phone: 'phone',
+  phonenumber: 'dropped',
+  phone: 'dropped',
 }
-const GUEST_TEXT_PREFIX = 'pleaselistthename'
+const GUEST_LIST_PREFIX = 'pleaselistthename'
 
 export const REQUIRED_COLUMNS: Record<string, Field> = {
   'First Name': 'first',
@@ -69,8 +71,7 @@ export interface PurchaseRow {
   status: string | null
   pageName: string | null
   internalName: string | null
-  guestText: string | null
-  /** Every column as exported, by header, except the phone number (never imported). */
+  /** Every column as exported, by header, except the dropped ones (phone number, guest list). */
   raw: Record<string, string>
 }
 
@@ -103,7 +104,6 @@ const RowSchema = z.object({
   status: optional,
   pageName: optional,
   internalName: optional,
-  guestText: optional,
 })
 
 /**
@@ -117,11 +117,11 @@ export async function readExport(csv: string): Promise<ReadResult> {
   if (!header) throw new ExportFormatError('the file is empty')
 
   const columns = new Map<Field, number>()
-  const phoneColumns = new Set<number>()
+  const droppedColumns = new Set<number>()
   header.forEach((h, i) => {
     const key = headerKey(h)
-    const field = key.startsWith(GUEST_TEXT_PREFIX) ? 'guestText' : HEADERS[key]
-    if (field === 'phone') phoneColumns.add(i)
+    const field = key.startsWith(GUEST_LIST_PREFIX) ? 'dropped' : HEADERS[key]
+    if (field === 'dropped') droppedColumns.add(i)
     else if (field && !columns.has(field)) columns.set(field, i)
   })
   const missing = Object.entries(REQUIRED_COLUMNS).filter(([, f]) => !columns.has(f)).map(([label]) => label)
@@ -142,7 +142,7 @@ export async function readExport(csv: string): Promise<ReadResult> {
     const checked = RowSchema.safeParse({
       first: cell('first'), last: cell('last'), email: cell('email'), tierName: cell('tierName'),
       tierCategory: cell('tierCategory'), company: cell('company'), method: cell('method'), status: cell('status'),
-      pageName: cell('pageName'), internalName: cell('internalName'), guestText: cell('guestText'),
+      pageName: cell('pageName'), internalName: cell('internalName'),
     })
     if (!checked.success) {
       rejected.push({ rowNumber, reason: checked.error.issues.map((e) => e.message).join('; ') })
@@ -177,7 +177,7 @@ export async function readExport(csv: string): Promise<ReadResult> {
 
     const raw: Record<string, string> = {}
     header.forEach((h, idx) => {
-      if (!phoneColumns.has(idx)) raw[h] = cells[idx] ?? ''
+      if (!droppedColumns.has(idx)) raw[h] = cells[idx] ?? ''
     })
 
     rows.push({
@@ -197,7 +197,6 @@ export async function readExport(csv: string): Promise<ReadResult> {
       status: r.status,
       pageName: r.pageName,
       internalName: r.internalName,
-      guestText: r.guestText,
       raw,
     })
   }

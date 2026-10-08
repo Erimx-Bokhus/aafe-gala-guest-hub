@@ -18,7 +18,7 @@ As of October 6, in the team repo. The build follows Natalie's Supabase schema; 
 
 | Part | Where | What it does <!-- new 2026-10-05 22:58 Aisling --> |
 | --- | --- | --- |
-| Import engine | `import-engine/` | Reads AAFE's Give Lively export, converts times to UTC, splits free-text guest lists, matches buyers and guests, builds the import report. Plain TypeScript, no screens, 94 tests <!-- new 2026-10-05 22:58 Aisling --> |
+| Import engine | `import-engine/` | Reads AAFE's Give Lively export, converts times to UTC, drops phone numbers and the typed guest list, matches buyers, builds the import report. Plain TypeScript, no screens, 82 tests <!-- modified 2026-10-07 22:53 Aisling --> |
 | Database and server functions | `prototype/database/` | Natalie's schema and seed, plus the import tables (`import_runs`, `import_review`, `tier_mappings`). Every staff action goes through a function that writes the history <!-- new 2026-10-05 22:58 Aisling --> |
 | Server jobs | `prototype/supabase/functions/` | Give Lively sync (this gala's page only) and the email sender (staff-approved only) <!-- new 2026-10-05 22:58 Aisling --> |
 | Exports | `prototype/database/backend.sql` | Badge file, printed check-in list, and Salesforce attendee file: role-checked, logged, and returned as rows for the staff app's CSV download (PR #34) <!-- updated 2026-10-06 20:41 Aisling --> |

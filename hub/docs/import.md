@@ -13,8 +13,8 @@ Upload | Staff upload the Give Lively ticket export. Columns are mapped once and
 Check | Rows missing a required field, or with an unreadable amount or date, are rejected with their row number and reason.
 Compare | Each row is compared with the last import. Unchanged rows are skipped, so re-importing the same file changes nothing.
 Identify | Each row is one purchase. With no transaction ID, a purchase is recognized by the buyer's email and purchase time (in UTC), so re-importing never duplicates it, even if the tier is renamed.
-Split | The free-text guest list is split into names and emails to pre-fill the sponsor's portal; the sponsor confirms or fixes them, and anything unclear is left for the sponsor.
-Match | Purchaser and each named guest are matched to people already in the list (rules below).
+Drop | The free-text guest list and phone numbers are dropped, so no guest name is imported; every seat starts unnamed and the sponsor names their guests through their link (Oct 7).
+Match | The purchaser is matched to sponsors already in the list (rules below).
 Apply | New and changed data is written, except where a staff member or sponsor has corrected it.
 Report | A summary: new, updated, unchanged, rejected, and sent to review, with every held change listed.
 ```
@@ -36,15 +36,15 @@ One import is all-or-nothing: if anything fails partway, nothing is applied and 
 
 The import works end to end in code: a file in AAFE's export format goes through the import engine and into the database in one step that either fully succeeds or changes nothing. What's left is the staff app's upload screen (frontend pair). <!-- new 2026-10-05 22:58 Aisling -->
 
-- **Import engine** (`import-engine/`): reads the file, converts times to UTC, splits guest lists, matches buyers and guests, builds the report. 94 automated tests. <!-- new 2026-10-05 22:58 Aisling -->
-- **Database side** (`prototype/database/backend.sql`): skips purchases it has seen, never overwrites a name a sponsor or staff entered, keeps a run record for every upload, and puts close calls in the review queue. 119 backend tests in all, including a sample file run all the way through. <!-- modified 2026-10-06 06:30 Aisling -->
+- **Import engine** (`import-engine/`): reads the file, converts times to UTC, drops phone numbers and the typed guest list, matches buyers, builds the report. 82 automated tests. <!-- modified 2026-10-07 22:53 Aisling -->
+- **Database side** (`prototype/database/backend.sql`): skips purchases it has seen, never creates or changes a guest, keeps a run record for every upload, and puts close calls in the review queue. Backend tests include a sample file and a 553-guest gala run all the way through. <!-- modified 2026-10-07 22:53 Aisling -->
 
 Three choices settled while building (Oct 5; Natalie reviewing in Slack): <!-- modified 2026-10-06 06:12 Aisling -->
 
 | Question | Decision <!-- new 2026-10-05 22:58 Aisling --> |
 | --- | --- |
-| A guest list with clear names and one unclear entry | The clear names are pre-filled for the sponsor to confirm; the unclear one shows as written. More names than seats pre-fills nothing <!-- new 2026-10-05 22:58 Aisling --> |
-| The same guest name on two sponsors' orders | A possible duplicate for staff to confirm, unless the email or a known organization also matches <!-- new 2026-10-05 22:58 Aisling --> |
+| A guest list with clear names and one unclear entry | ~~The clear names are pre-filled for the sponsor to confirm~~ Replaced Oct 7: no names are imported; the sponsor names every seat <!-- modified 2026-10-07 22:53 Aisling --> |
+| The same guest name on two sponsors' orders | ~~A possible duplicate for staff to confirm~~ No longer raised by the import (no names imported); staff catch it reviewing names before badges <!-- modified 2026-10-07 22:53 Aisling --> |
 | An upload before this gala's Give Lively page is set | The upload stops and lists the pages in the file; staff pick one, once a year <!-- new 2026-10-05 22:58 Aisling --> |
 
 ## Tier names and the gala page
@@ -85,10 +85,10 @@ An import only updates the Give Lively layer. If Give Lively changes a field tha
 
 | Reason | When | Staff choose |
 | --- | --- | --- |
-| Possible duplicate | A close name match, or the same name on another order with no email or organization to confirm it | Same person · Different person <!-- modified 2026-10-05 22:58 Aisling --> |
+| ~~Possible duplicate~~ | No longer raised by the import (Oct 7) | — <!-- modified 2026-10-07 22:53 Aisling --> |
 | Shared email | Same email, different last name | Same person · Different person |
-| Guest under two sponsors | Someone on two orders with the same email, or the same name at the same organization | Keep on one · Keep both <!-- modified 2026-10-05 22:58 Aisling --> |
-| Too many names | More names than seats | Add seats · Drop a name |
+| ~~Guest under two sponsors~~ | No longer raised by the import (Oct 7) | — <!-- modified 2026-10-07 22:53 Aisling --> |
+| ~~Too many names~~ | No longer applies: the typed list isn't read (Oct 7) | — <!-- modified 2026-10-07 22:53 Aisling --> |
 | Unknown ticket type | A Give Lively tier name not yet in the tier mapping | Link it (saved for next time), then re-run <!-- modified 2026-10-05 21:28 Aisling --> |
 | Refund | Give Lively shows the order refunded | Keep seats cancelled · Reinstate |
 | Missing from export | A row that was there last time isn't now | Cancel seats · Keep (partial export) |

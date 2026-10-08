@@ -3,27 +3,21 @@ import { GalaPageNotSetError, prepareUpload, purchaseKey } from '../src/index.ts
 import { context, exportCsv } from './helpers.ts'
 
 describe('prepareUpload', () => {
-  it('case 1: a ticket where the buyer attends', async () => {
+  it('case 1: a ticket where the buyer attends: one unnamed seat, nothing pre-filled from "me"', async () => {
     const { rows, report } = await prepareUpload(exportCsv({ Guests: 'me' }), context())
     expect(rows).toHaveLength(1)
     expect(rows[0]).toMatchObject({
       tierId: 'supporter', tierVia: 'mapping', seatCount: 1, cancelled: false, buyerMatch: { kind: 'new', organizationName: 'Grace Kim' },
-      guestList: { kind: 'names', guests: [{ displayName: 'Grace Kim', email: 'grace.kim@example.org', isBuyer: true }], unread: [] },
     })
-    expect(report).toMatchObject({ rowsRead: 1, namesPrefilled: 1, listsForSponsor: 0, reviewItems: [], rejected: [] })
+    expect(report).toMatchObject({ rowsRead: 1, reviewItems: [], rejected: [] })
   })
 
-  it('case 12: a Champion sponsorship with 3 of 6 names', async () => {
-    const { rows } = await prepareUpload(exportCsv({
+  it('case 12: a Champion sponsorship gets its 6 seats; the names typed in Give Lively are dropped (decided Oct 7)', async () => {
+    const { rows, report } = await prepareUpload(exportCsv({
       'Tier Purchased': 'Champion Sponsor', 'Total Seats': '6', 'Amount Spent': '$7,500.00', Guests: 'Jane Doe\nSam Lee\nAna Ruiz',
     }), context())
-    expect(rows[0]).toMatchObject({ tierId: 'champion', seatCount: 6, guestList: { kind: 'names' } })
-    expect(rows[0]!.guestList.kind === 'names' && rows[0]!.guestList.guests).toHaveLength(3)
-  })
-
-  it('case 10: an unclear list is counted for the sponsor, not staff review', async () => {
-    const { report } = await prepareUpload(exportCsv({ Guests: 'Jane' }), context())
-    expect(report).toMatchObject({ listsForSponsor: 1, namesPrefilled: 0, reviewItems: [] })
+    expect(rows[0]).toMatchObject({ tierId: 'champion', seatCount: 6 })
+    expect(JSON.stringify({ rows, report })).not.toMatch(/Jane Doe|Sam Lee|Ana Ruiz/)
   })
 
   it('case 13 and 35: unmapped tiers create nothing, one review item per row, grouped by name for the mapping screen', async () => {
@@ -54,38 +48,11 @@ describe('prepareUpload', () => {
     expect(report.reviewItems).toMatchObject([{ reason: 'email_name_conflict', rowNumber: 2 }])
   })
 
-  it('case 16: a guest name already on another order is a possible duplicate', async () => {
-    const existingGuests = [{ id: 'g-susan', orderId: 'ord-a', displayName: 'Susan Cho', email: null, organization: 'Acme Partners' }]
-    const { rows, report } = await prepareUpload(exportCsv({ Guests: 'Susan Cho' }), context({ existingGuests }))
-    expect(rows[0]!.guestFindings).toEqual([{ reason: 'possible_duplicate', existingGuestId: 'g-susan', existingOrderId: 'ord-a' }])
-    expect(report.reviewItems).toMatchObject([{ reason: 'possible_duplicate', details: { guest: 'Susan Cho' } }])
-  })
-
-  it('a guest whose email is already on another order is double-booked', async () => {
-    const existingGuests = [{ id: 'g-susan', orderId: 'ord-a', displayName: 'Susan Cho', email: 'susan@example.org', organization: null }]
-    const { report } = await prepareUpload(exportCsv({ Guests: 'Susan Cho susan@example.org' }), context({ existingGuests }))
-    expect(report.reviewItems).toMatchObject([{ reason: 'double_booked' }])
-  })
-
-  it('a partly clear list pre-fills the clear names and counts the list for the sponsor', async () => {
-    const { rows, report } = await prepareUpload(exportCsv({ 'Total Seats': '3', Guests: 'Jane Doe\nSam Lee\nBob' }), context())
-    expect(rows[0]!.guestList).toMatchObject({ kind: 'names', unread: ['a one-word name: "Bob"'] })
-    expect(report).toMatchObject({ namesPrefilled: 2, listsForSponsor: 1 })
-  })
-
-  it('the same guest named on two purchases in one file is caught', async () => {
+  it('the same guest typed on two purchases raises nothing: guest names are not read from the export', async () => {
     const { report } = await prepareUpload(exportCsv(
       { Guests: 'Susan Cho' },
       { Email: 'b@example.org', 'First Name': 'Bo', 'Last Name': 'Park', Guests: 'Susan Cho' },
     ), context())
-    expect(report.reviewItems).toMatchObject([{ reason: 'possible_duplicate', rowNumber: 3 }])
-  })
-
-  it('a re-import is not matched against its own guests', async () => {
-    const csv = exportCsv({ Guests: 'Susan Cho' })
-    const key = (await prepareUpload(csv, context())).rows[0]!.purchaseKey
-    const existingGuests = [{ id: 'g-1', orderId: 'ord-1', displayName: 'Susan Cho', email: null, organization: null }]
-    const { report } = await prepareUpload(csv, context({ existingGuests, orderIdByPurchaseKey: { [key]: 'ord-1' } }))
     expect(report.reviewItems).toEqual([])
   })
 

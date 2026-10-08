@@ -3,10 +3,11 @@
 //   Give Lively export (341 seats):  234 sponsor-guest seats in 29 sponsorships, 107 ticket seats
 //   Added by staff (212 guests):     109 comped, 53 government or VIP, 45 AAFE staff, 3 event volunteers, 2 event staff
 // Plus rows the import must leave out or flag: another campaign, a full refund, an unmapped tier, an
-// unreadable email, a shared inbox, a guest on two sponsors' lists.
+// unreadable email, a shared inbox.
 //
 // Guest lists are typed the many ways buyers type them (one per line, "Name <email>", numbered, bullets,
-// commas, "me", TBD, couples, too many names, Chinese and Korean names, all caps). Each row records what
+// commas, "me", TBD, couples, too many names, Chinese and Korean names, all caps). The import drops that
+// column (decided Oct 7), so the tests check that none of it reaches the database. Each row records what
 // the import should make of it, in expected.json.
 //
 // Deterministic (fixed seed): run `node test/fixtures/gala-2026/generate.mts` to rewrite the files; the
@@ -42,8 +43,6 @@ const ORG_A = ['Lantern', 'Harbor', 'Canal', 'Bowery', 'Jade', 'Mott', 'Pell', '
 const ORG_B = ['Example Partners', 'Example Bank', 'Example Foundation', 'Example Health', 'Example Realty', 'Example Law Group',
   'Example Builders', 'Example Trust', 'Example Media', 'Example Credit Union']
 
-type Kind = 'names' | 'none' | 'unclear'
-interface Expect { kind: Kind; named: number; unread: number; buyerIsGuest?: boolean }
 export interface Purchase {
   row: Record<string, string>
   /** What the import should make of this row. */
@@ -51,7 +50,6 @@ export interface Purchase {
     category: 'sponsor' | 'ticket' | 'other_campaign' | 'refunded' | 'unknown_tier' | 'rejected'
     seats: number
     tier: string | null
-    guests: Expect | null
     review: string[]
   }
 }
@@ -92,28 +90,26 @@ export function build() {
     }
   }
 
-  // ---- Guest-list styles: the text a buyer types for `n` named guests in `seats` seats, and what it should give
-  type Style = (n: number, seats: number, buyer: { first: string; last: string; email: string }) => { text: string; expect: Expect }
+  // ---- Guest-list styles: the text a buyer types for `n` named guests in `seats` seats
+  type Style = (n: number, seats: number, buyer: { first: string; last: string; email: string }) => string
   const names = (n: number) => Array.from({ length: n }, person)
   const full = (p: { first: string; last: string }) => `${p.first} ${p.last}`
   const STYLES: Record<string, Style> = {
-    lines: (n) => ({ text: names(n).map(full).join('\n'), expect: { kind: 'names', named: n, unread: 0 } }),
-    dash_email: (n) => ({ text: names(n).map((p) => `${full(p)} - ${guestEmail(p)}`).join('\n'), expect: { kind: 'names', named: n, unread: 0 } }),
-    angle: (n) => ({ text: names(n).map((p) => `${full(p)} <${guestEmail(p).toUpperCase()}>`).join('; '), expect: { kind: 'names', named: n, unread: 0 } }),
-    numbered: (n) => ({ text: names(n).map((p, i) => `${i + 1}. ${full(p)}`).join(' '), expect: { kind: 'names', named: n, unread: 0 } }),
-    bullets: (n) => ({ text: names(n).map((p) => `• ${full(p)}`).join('\n'), expect: { kind: 'names', named: n, unread: 0 } }),
-    commas: (n) => ({ text: names(n).map(full).join(', '), expect: { kind: 'names', named: n, unread: 0 } }),
-    caps_spaces: (n) => ({ text: names(n).map((p) => `   ${full(p).toUpperCase()}   `).join('\n\n'), expect: { kind: 'names', named: n, unread: 0 } }),
-    me_plus: (n, _s, b) => ({ text: ['me', ...names(n - 1).map(full)].join('\n'), expect: { kind: 'names', named: n, unread: 0, buyerIsGuest: true } }),
-    own_name: (n, _s, b) => ({ text: [`${b.first} ${b.last}`, ...names(n - 1).map(full)].join('\n'), expect: { kind: 'names', named: n, unread: 0, buyerIsGuest: true } }),
-    tbd: () => ({ text: pick(['TBD', 'tbd', 'To follow', 'N/A', 'TBA.']), expect: { kind: 'none', named: 0, unread: 0 } }),
-    blank: () => ({ text: '', expect: { kind: 'none', named: 0, unread: 0 } }),
-    // "Mr. and Mrs. Wong" is two people on one line: left for the sponsor, the clear names still pre-filled.
-    couple: (n) => ({ text: [`Mr. and Mrs. ${pick(LAST)}`, ...names(n).map(full)].join('\n'), expect: { kind: 'names', named: n, unread: 1 } }),
-    one_word: (n) => ({ text: [pick(FIRST), ...names(n).map(full)].join('\n'), expect: { kind: 'names', named: n, unread: 1 } }),
-    // Names in Chinese or Korean script have no space, so today they read as one word: left for the sponsor.
-    native_script: (n) => ({ text: [pick(NATIVE), ...names(n).map(full)].join('\n'), expect: { kind: 'names', named: n, unread: 1 } }),
-    too_many: (_n, seats) => ({ text: names(seats + 2).map(full).join('\n'), expect: { kind: 'unclear', named: 0, unread: 0 } }),
+    lines: (n) => names(n).map(full).join('\n'),
+    dash_email: (n) => names(n).map((p) => `${full(p)} - ${guestEmail(p)}`).join('\n'),
+    angle: (n) => names(n).map((p) => `${full(p)} <${guestEmail(p).toUpperCase()}>`).join('; '),
+    numbered: (n) => names(n).map((p, i) => `${i + 1}. ${full(p)}`).join(' '),
+    bullets: (n) => names(n).map((p) => `• ${full(p)}`).join('\n'),
+    commas: (n) => names(n).map(full).join(', '),
+    caps_spaces: (n) => names(n).map((p) => `   ${full(p).toUpperCase()}   `).join('\n\n'),
+    me_plus: (n) => ['me', ...names(n - 1).map(full)].join('\n'),
+    own_name: (n, _s, b) => [`${b.first} ${b.last}`, ...names(n - 1).map(full)].join('\n'),
+    tbd: () => pick(['TBD', 'tbd', 'To follow', 'N/A', 'TBA.']),
+    blank: () => '',
+    couple: (n) => [`Mr. and Mrs. ${pick(LAST)}`, ...names(n).map(full)].join('\n'),
+    one_word: (n) => [pick(FIRST), ...names(n).map(full)].join('\n'),
+    native_script: (n) => [pick(NATIVE), ...names(n).map(full)].join('\n'),
+    too_many: (_n, seats) => names(seats + 2).map(full).join('\n'),
   }
 
   const purchases: Purchase[] = []
@@ -147,8 +143,8 @@ export function build() {
       const g = STYLES[style]!(n, seats, { first: buyer.first, last: buyer.last, email })
       add({
         row: { ...base(buyer, email), 'Tier Purchased': glName, 'Tier Category': 'Sponsorship', 'Tickets Purchased': '1', 'Total Seats': String(seats),
-          'Amount Spent': money(amount), 'Company/Organization Name': r() < 0.15 ? `  ${company.toUpperCase()} ` : company, Guests: g.text },
-        expect: { category: 'sponsor', seats, tier, guests: g.expect, review: s === 7 ? ['email_name_conflict'] : [] },
+          'Amount Spent': money(amount), 'Company/Organization Name': r() < 0.15 ? `  ${company.toUpperCase()} ` : company, Guests: g },
+        expect: { category: 'sponsor', seats, tier, review: s === 7 ? ['email_name_conflict'] : [] },
       })
     }
   }
@@ -163,18 +159,10 @@ export function build() {
     const g = STYLES[style]!(seats, seats, { first: buyer.first, last: buyer.last, email })
     add({
       row: { ...base(buyer, r() < 0.25 ? email.toUpperCase() : email), 'Tier Purchased': 'Ticket', 'Tier Category': 'Ticket',
-        'Tickets Purchased': String(seats), 'Total Seats': String(seats), 'Amount Spent': money(1000 * seats), Guests: g.text },
-      expect: { category: 'ticket', seats, tier: 'supporter', guests: g.expect, review: [] },
+        'Tickets Purchased': String(seats), 'Total Seats': String(seats), 'Amount Spent': money(1000 * seats), Guests: g },
+      expect: { category: 'ticket', seats, tier: 'supporter', review: [] },
     })
   }
-
-  // ---- A guest on two sponsors' lists (same name and email): the second is flagged as double booked.
-  const twice = purchases.find((p) => p.expect.category === 'sponsor' && p.expect.guests?.kind === 'names' && p.row.Guests!.includes(' - '))!
-  const [dupLine] = twice.row.Guests!.split('\n')
-  const second = purchases.filter((p) => p.expect.category === 'sponsor' && p.expect.guests?.kind === 'names' && p !== twice
-    && p.expect.guests.named < p.expect.seats && !p.row.Guests!.includes(';') && !p.row.Guests!.includes(','))[0]!
-  second.row.Guests = `${second.row.Guests}\n${dupLine}`
-  second.expect.guests = { ...second.expect.guests!, named: second.expect.guests!.named + 1 }
 
   // ---- Rows the import leaves out or flags (not part of the 553)
   const extra = (row: Record<string, string>, expect: Purchase['expect']) => {
@@ -183,20 +171,17 @@ export function build() {
       'Tickets Purchased': '1', 'Total Seats': '1', 'Amount Spent': '$1,000.00', Guests: 'me', ...row }, expect })
   }
   extra({ 'Page Name': 'Year-End Appeal 2025', 'Tier Purchased': 'Donation', 'Total Seats': '', 'Amount Spent': '$250.00', Guests: '' },
-    { category: 'other_campaign', seats: 0, tier: null, guests: null, review: [] })
+    { category: 'other_campaign', seats: 0, tier: null, review: [] })
   extra({ 'Page Name': '', 'Internal Name': 'Lunar New Year Appeal', 'Tier Purchased': 'Donation', 'Total Seats': '', 'Amount Spent': '$100.00', Guests: '' },
-    { category: 'other_campaign', seats: 0, tier: null, guests: null, review: [] })
+    { category: 'other_campaign', seats: 0, tier: null, review: [] })
   extra({ 'Tickets Purchased': '2', 'Total Seats': '2', 'Amount Spent': '$2,000.00', 'Amount Refunded': '$2,000.00', Status: 'refunded' },
-    { category: 'refunded', seats: 2, tier: 'supporter', guests: { kind: 'names', named: 1, unread: 0, buyerIsGuest: true }, review: ['refund'] })
+    { category: 'refunded', seats: 2, tier: 'supporter', review: ['refund'] })
   extra({ 'Tier Purchased': 'VIP Table 2026', 'Tier Category': 'Sponsorship', 'Total Seats': '10', 'Amount Spent': '$30,000.00', Guests: 'TBD' },
-    { category: 'unknown_tier', seats: 10, tier: null, guests: null, review: ['unknown_tier'] })
-  extra({ Email: 'not an email', Guests: '' }, { category: 'rejected', seats: 0, tier: null, guests: null, review: [] })
+    { category: 'unknown_tier', seats: 10, tier: null, review: ['unknown_tier'] })
+  extra({ Email: 'not an email', Guests: '' }, { category: 'rejected', seats: 0, tier: null, review: [] })
 
   // In purchase-time order, as Give Lively exports it, so categories interleave.
   purchases.sort((a, b) => saleTimes.get(a.row['Date/Time of Purchase']!)! - saleTimes.get(b.row['Date/Time of Purchase']!)!)
-  // Whichever of the two lists comes later in the file is the one flagged.
-  const later = purchases.indexOf(twice) > purchases.indexOf(second) ? twice : second
-  later.expect.review.push('double_booked')
 
   // ---- 212 guests staff add by hand (comps and the rest): not in Give Lively
   const STAFF_ADDED: [string, number, string][] = [

@@ -1,6 +1,7 @@
 // A full-size, messy, invented gala shaped like AAFE's 2026 one (test/fixtures/gala-2026/): every Give
 // Lively row is checked against what the import should make of it.
 import { readFileSync } from 'node:fs'
+import Papa from 'papaparse'
 import { describe, expect, it } from 'vitest'
 import { prepareUpload, toGlImport, type PreparedRow } from '../src/index.ts'
 import { DIR, FILES, render } from './fixtures/gala-2026/generate.mts'
@@ -44,34 +45,24 @@ describe('a full-size messy gala (AAFE 2026 shape, invented)', async () => {
     expect([sponsorSeats, ticketSeats]).toEqual([234, 107])
   })
 
-  it('reads every guest list the way the fixture expects', () => {
-    const wrong: string[] = []
-    for (const e of expected.rows.filter((x: Row) => x.guests)) {
-      const g = byRow.get(e.rowNumber)!.guestList
-      const named = g.kind === 'names' ? g.guests.length : 0
-      const unread = g.kind === 'names' ? g.unread.length : 0
-      const buyer = g.kind === 'names' && g.guests.some((x) => x.isBuyer)
-      if (g.kind !== e.guests.kind || named !== e.guests.named || unread !== e.guests.unread || buyer !== Boolean(e.guests.buyerIsGuest)) {
-        wrong.push(`row ${e.rowNumber}: expected ${JSON.stringify(e.guests)}, got ${g.kind} ${named} named, ${unread} unread, buyer ${buyer}`)
-      }
-    }
-    expect(wrong).toEqual([])
-  })
-
-  it('never pre-fills more names than seats, and keeps names exactly as typed (trimmed)', () => {
-    for (const r of prepared.rows) {
-      if (r.guestList.kind !== 'names') continue
-      expect(r.guestList.guests.length).toBeLessThanOrEqual(r.seatCount)
-      for (const g of r.guestList.guests) expect(g.displayName).toBe(g.displayName.trim().replace(/\s+/g, ' '))
-    }
+  it('drops every guest list typed in Give Lively: no guest name or email reaches the database rows (decided Oct 7)', async () => {
+    const typed = Papa.parse<Record<string, string>>(csv, { header: true }).data
+      .map((row) => Object.entries(row).find(([h]) => h.startsWith('Please list'))?.[1] ?? '')
+    const guestEmails = typed.flatMap((t) => t.match(/[\w.+-]+@[\w.-]+/g) ?? []).map((e) => e.toLowerCase())
+    expect(guestEmails.length).toBeGreaterThan(20)
+    const { rows, run } = await toGlImport(prepared, 'gala-2026.csv', csv)
+    const sent = JSON.stringify({ rows, run, prepared: prepared.rows }).toLowerCase()
+    expect(guestEmails.filter((e) => sent.includes(e))).toEqual([])
+    const script = /[\u4e00-\u9fff\uac00-\ud7af]/
+    expect(typed.filter((t) => script.test(t)).length).toBeGreaterThan(0)
+    expect(sent).not.toMatch(script)
   })
 
   it('raises exactly the review items planted in the file', () => {
     const planted = (reason: string) => expected.rows.filter((r: Row) => r.review.includes(reason)).map((r: Row) => r.rowNumber)
-    for (const reason of ['email_name_conflict', 'double_booked', 'refund', 'unknown_tier']) {
+    for (const reason of ['email_name_conflict', 'refund', 'unknown_tier']) {
       expect(reviews(reason).map((i) => i.rowNumber), reason).toEqual(planted(reason))
     }
-    expect(reviews('possible_duplicate')).toEqual([])
     expect(prepared.report.unknownTiers.map((t) => t.givelivelyName)).toEqual(['VIP Table 2026'])
   })
 
@@ -83,7 +74,6 @@ describe('a full-size messy gala (AAFE 2026 shape, invented)', async () => {
     const { rows, run } = await toGlImport(prepared, 'gala-2026.csv', csv)
     expect(rows).toHaveLength(rowsOf('sponsor').length + rowsOf('ticket').length + rowsOf('refunded').length + rowsOf('unknown_tier').length)
     expect(rows.filter((r) => !r.tier_id)).toHaveLength(1)
-    expect(rows.reduce((t, r) => t + (r.guests?.length ?? 0), 0)).toBe(prepared.report.namesPrefilled)
     expect(new Set(rows.map((r) => r.purchase_key)).size).toBe(rows.length)
     expect(run.earliest! < run.latest!).toBe(true)
   })

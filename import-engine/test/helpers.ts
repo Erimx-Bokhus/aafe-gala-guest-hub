@@ -55,7 +55,6 @@ export function context(overrides: Partial<UploadContext> = {}): UploadContext {
     tiers: TIERS,
     tierMappings: [{ givelivelyName: 'Ticket', tierId: 'supporter' }],
     sponsors: [],
-    existingGuests: [],
     previousPurchases: [],
     ...overrides,
   }

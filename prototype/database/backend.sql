@@ -135,7 +135,8 @@ alter table gala_events add column if not exists sponsor_arrivals_note text;   -
 alter table payments    add column if not exists purchase_key text;   -- SHA-256(email | UTC purchase time); see purchase_key()
 create unique index if not exists payments_purchase_key_uq on payments (purchase_key) where purchase_key is not null;
 alter table guests      add column if not exists display_name text;   -- the name exactly as typed; printed on badges
-alter table orders      add column if not exists imported_guest_text text;  -- the export's free-text guest list, as written
+-- The export's free-text guest list is never stored (decided Oct 7): sponsors name guests through their link.
+alter table orders      drop column if exists imported_guest_text;
 alter table gala_events add column if not exists givelively_page_name text; -- e.g. "AAFE's 52nd Annual Gala"; set once per year
 do $$ begin
   if not exists (select 1 from information_schema.columns where table_name = 'sponsorship_tiers' and column_name = 'guaranteed_seating') then
@@ -169,6 +170,8 @@ create table if not exists import_review (
   event_id      text not null references gala_events(id),
   purchase_key  text,
   order_id      text references orders(id),
+  -- guest_text_changed, double_booked and possible_duplicate are no longer raised by the import (no guest
+  -- names since Oct 7); they stay allowed so older review rows remain valid.
   reason        text not null check (reason in ('unknown_tier','guest_text_changed','email_name_conflict','double_booked',
                                                 'possible_duplicate','refund','missing_from_source')),
   details       jsonb not null default '{}',
@@ -942,11 +945,13 @@ end $$;
 --    upload both normalize to this shape:
 --      { purchase_key?, txn?, date, first, last, email, company, campaign,
 --        ticket_level, tier_id?, method, status?, quantity, seats?, original,
---        covered, gross, fee, net, refunded, guest_text?, guests?, findings? }
+--        covered, gross, fee, net, refunded, cancelled? }
 --    The CSV upload sends rows prepared by import-engine/ (prepareUpload +
---    toGlImportRows): purchase_key, tier_id, seats, the parsed guests, and
---    matching findings. The JSON sync sends the older shape; the purchase
---    key and tier are then worked out here with the same rules.
+--    toGlImport): purchase_key, tier_id and seats. The JSON sync sends the
+--    older shape; the purchase key and tier are then worked out here with the
+--    same rules. No guest names are imported (decided Oct 7): every seat
+--    starts unnamed, any guest list in a row is ignored, and sponsors name
+--    their guests through their private link.
 --    Fees are stored as Give Lively reports them, never recomputed.
 --    This function is the only place that writes imported data.
 -- ---------------------------------------------------------------------
@@ -979,28 +984,7 @@ begin
   return true;
 end $$;
 
--- Pre-fill parsed guests into the order's next free seats (status 'submitted'), as Give Lively's.
--- Called only for an order nobody has named yet, so sponsor and staff names are never overwritten.
-create or replace function import_fill_guests(p_order_id text, p_guests jsonb, p_guest_type text) returns int
-language plpgsql security definer set search_path = public as $$
-declare g jsonb; st seats; v_id text; v_display text; v_first text; v_last text; v_n int := 0;
-begin
-  for g in select * from jsonb_array_elements(coalesce(p_guests, '[]')) loop
-    select * into st from seats where order_id = p_order_id and guest_id is null and status = 'unnamed'
-     order by slot_number limit 1 for update;
-    exit when st.id is null;
-    v_display := btrim(coalesce(g ->> 'display_name', ''));
-    continue when v_display = '';
-    v_first := coalesce(nullif(btrim(g ->> 'first_name'), ''), nullif(regexp_replace(v_display, '\s+\S+$', ''), v_display), v_display);
-    v_last  := coalesce(nullif(btrim(g ->> 'last_name'), ''), case when v_display ~ '\s' then regexp_replace(v_display, '^.*\s', '') else '' end);
-    v_id := new_id('g');
-    insert into guests (id, order_id, first_name, last_name, display_name, email, guest_type, last_updated_by)
-    values (v_id, p_order_id, v_first, v_last, v_display, nullif(lower(btrim(g ->> 'email')), ''), p_guest_type, 'givelively_sync');
-    update seats set guest_id = v_id, status = 'submitted', updated_at = now() where id = st.id;
-    v_n := v_n + 1;
-  end loop;
-  return v_n;
-end $$;
+drop function if exists import_fill_guests(text, jsonb, text);  -- pre-fill removed Oct 7
 
 drop function if exists gl_import(jsonb, text);
 create or replace function gl_import(p_rows jsonb, p_actor text, p_run_id text default null) returns jsonb
@@ -1008,10 +992,10 @@ language plpgsql security definer set search_path = public as $$
 declare
   r jsonb; p payments; o orders; t sponsorship_tiers; e gala_events; v_sp text; v_order text; v_pay text;
   v_method text; v_qty int; v_seats int; v_commit numeric; v_review text[]; v_name text; v_org text; v_key text;
-  v_at timestamptz; v_original numeric; v_gross numeric; v_fee numeric; v_refunded numeric; v_text text;
-  v_cancel boolean; v_changed boolean; v_named int; v_conflict text[]; f jsonb;
+  v_at timestamptz; v_original numeric; v_gross numeric; v_fee numeric; v_refunded numeric;
+  v_cancel boolean; v_changed boolean; v_conflict text[];
   v_created int := 0; v_updated int := 0; v_skipped int := 0; v_flagged int := 0; v_unknown int := 0;
-  v_prefilled int := 0; v_reviews int := 0;
+  v_reviews int := 0;
 begin
   select * into e from gala_events where id = current_event_id();
   if e.id is null then raise exception 'not_found: no open gala event'; end if;
@@ -1028,7 +1012,6 @@ begin
       v_skipped := v_skipped + 1; continue;
     end if;
     v_key := coalesce(nullif(r ->> 'purchase_key', ''), purchase_key(r ->> 'email', v_at));
-    v_text := nullif(btrim(r ->> 'guest_text'), '');
     v_cancel := coalesce((r ->> 'cancelled')::boolean, false)
              or coalesce(r ->> 'status', '') ~* 'refund|fail|cancel|void'
              or (v_refunded > 0 and v_refunded >= v_gross);
@@ -1064,19 +1047,6 @@ begin
           'Refunded or failed in Give Lively; seats cancelled.');
         if add_import_review(p_run_id, v_key, o.id, 'refund', jsonb_build_object('status', r ->> 'status', 'refunded', v_refunded)) then v_reviews := v_reviews + 1; end if;
         v_changed := true;
-      end if;
-      -- Guest list text changed in Give Lively: fill only if nobody has named a seat yet; otherwise ask staff.
-      if r ? 'guest_text' and v_text is distinct from o.imported_guest_text then
-        select count(*) into v_named from seats where order_id = o.id and guest_id is not null;
-        if v_named = 0 and jsonb_array_length(coalesce(r -> 'guests', '[]')) > 0 and o.status <> 'cancelled' then
-          v_prefilled := v_prefilled + import_fill_guests(o.id, r -> 'guests',
-            case when (select tier_category from sponsorship_tiers where id = o.tier_id) = 'ticket' then 'ticket_holder' else 'sponsor_guest' end);
-          update orders set imported_guest_text = v_text, updated_at = now() where id = o.id;
-          v_changed := true;
-        elsif add_import_review(p_run_id, v_key, o.id, 'guest_text_changed',
-                jsonb_build_object('old_text', o.imported_guest_text, 'new_text', v_text)) then
-          v_reviews := v_reviews + 1;
-        end if;
       end if;
       if v_changed then v_updated := v_updated + 1; else v_skipped := v_skipped + 1; end if;
       continue;
@@ -1150,12 +1120,12 @@ begin
 
     v_order := new_id('ord'); v_pay := new_id('pay');
     insert into orders (id, event_id, sponsor_id, tier_id, source, commitment_amount, status, guest_list_deadline,
-                        logo_status, program_ad_status, givelively_order_ref, imported_guest_text, internal_notes)
+                        logo_status, program_ad_status, givelively_order_ref, internal_notes)
     values (v_order, e.id, v_sp, t.id, 'givelively', v_commit,
             case when v_original - v_refunded + 0.005 >= v_commit then 'paid' else 'partially_paid' end, e.guest_list_deadline,
             case when 'logo' = any (t.required_materials) then 'pending' else 'not_required' end,
             case when exists (select 1 from unnest(t.required_materials) m where m like '%ad') then 'pending' else 'not_required' end,
-            nullif(r ->> 'txn', ''), v_text,
+            nullif(r ->> 'txn', ''),
             format('Imported from Give Lively (%s).', coalesce(nullif(r ->> 'campaign', ''), 'no campaign'))
               || case when cardinality(v_review) > 0 then ' CHECK: ' || array_to_string(v_review, '; ') || '.' else '' end);
     insert into payments (id, order_id, method, processor, givelively_transaction_id, purchase_key, original_amount, covered_fee_amount,
@@ -1166,8 +1136,6 @@ begin
     perform create_seats(v_order, v_seats);
     perform write_audit('system', p_actor, 'order', v_order, v_order, 'order.created', null, 'paid', true,
       format('%s recorded for %s (givelively).', t.name || case when v_qty > 1 then ' × ' || v_qty else '' end, v_org));
-    v_prefilled := v_prefilled + import_fill_guests(v_order, r -> 'guests',
-      case when t.tier_category = 'ticket' then 'ticket_holder' else 'sponsor_guest' end);
 
     if v_conflict is not null then
       if add_import_review(p_run_id, v_key, v_order, 'email_name_conflict',
@@ -1175,13 +1143,6 @@ begin
         v_reviews := v_reviews + 1;
       end if;
     end if;
-    -- Findings the import engine worked out before the upload (double_booked, possible_duplicate).
-    for f in select * from jsonb_array_elements(coalesce(r -> 'findings', '[]')) loop
-      if f ->> 'reason' in ('double_booked','possible_duplicate')
-         and add_import_review(p_run_id, v_key, v_order, f ->> 'reason', coalesce(f -> 'details', '{}')) then
-        v_reviews := v_reviews + 1;
-      end if;
-    end loop;
 
     if v_cancel then
       update orders set status = 'cancelled', updated_at = now() where id = v_order;
@@ -1197,7 +1158,7 @@ begin
   end loop;
 
   return jsonb_build_object('created', v_created, 'updated', v_updated, 'skipped', v_skipped, 'needs_review', v_flagged,
-                            'unknown_tier', v_unknown, 'names_prefilled', v_prefilled, 'review_items', v_reviews);
+                            'unknown_tier', v_unknown, 'review_items', v_reviews);
 end $$;
 
 -- CSV upload from the staff app (Integrations page). Admin only. One call is one transaction: if
@@ -1766,7 +1727,7 @@ begin
               'staff_assign_seat','staff_seat_order_at_table','staff_record_payment','staff_add_pledge','staff_add_comp_guest',
               'staff_send_qr_invite','staff_resend_portal_link','staff_approve_email','staff_cancel_email','checkin_list','staff_check_in','staff_check_in_qr',
               'staff_check_in_exception','gl_import','staff_import_givelively','email_mark_sent','email_mark_failed',
-              'purchase_key','name_key','add_import_review','import_fill_guests','staff_set_tier_mapping','staff_set_gala_page',
+              'purchase_key','name_key','add_import_review','staff_set_tier_mapping','staff_set_gala_page',
               'staff_resolve_import_review','seats_void_qr','guests_void_qr',
               'staff_export_badges','staff_export_checkin','staff_export_salesforce',
               'staff_queue_guest_list_reminders','staff_email_queue','staff_checkin_snapshot','staff_sync_check_ins',

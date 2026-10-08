@@ -27,11 +27,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "none",
-    "named": 0,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -40,11 +35,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "none",
-    "named": 0,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -53,12 +43,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "names",
-    "named": 1,
-    "unread": 0,
-    "buyerIsGuest": true
-   },
    "review": []
   },
   {
@@ -67,11 +51,6 @@
    "category": "ticket",
    "seats": 2,
    "tier": "supporter",
-   "guests": {
-    "kind": "names",
-    "named": 2,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -80,12 +59,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "names",
-    "named": 1,
-    "unread": 0,
-    "buyerIsGuest": true
-   },
    "review": []
   },
   {
@@ -94,12 +67,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "names",
-    "named": 1,
-    "unread": 0,
-    "buyerIsGuest": true
-   },
    "review": []
   },
   {
@@ -108,11 +75,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "none",
-    "named": 0,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -121,11 +83,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "names",
-    "named": 1,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -134,12 +91,6 @@
    "category": "refunded",
    "seats": 2,
    "tier": "supporter",
-   "guests": {
-    "kind": "names",
-    "named": 1,
-    "unread": 0,
-    "buyerIsGuest": true
-   },
    "review": [
     "refund"
    ]
@@ -150,12 +101,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "names",
-    "named": 1,
-    "unread": 0,
-    "buyerIsGuest": true
-   },
    "review": []
   },
   {
@@ -164,11 +109,6 @@
    "category": "ticket",
    "seats": 2,
    "tier": "supporter",
-   "guests": {
-    "kind": "none",
-    "named": 0,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -177,12 +117,6 @@
    "category": "sponsor",
    "seats": 6,
    "tier": "champion",
-   "guests": {
-    "kind": "names",
-    "named": 3,
-    "unread": 0,
-    "buyerIsGuest": true
-   },
    "review": []
   },
   {
@@ -191,11 +125,6 @@
    "category": "sponsor",
    "seats": 2,
    "tier": "friend",
-   "guests": {
-    "kind": "names",
-    "named": 1,
-    "unread": 1
-   },
    "review": []
   },
   {
@@ -204,11 +133,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "none",
-    "named": 0,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -217,11 +141,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "none",
-    "named": 0,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -230,11 +149,6 @@
    "category": "sponsor",
    "seats": 6,
    "tier": "champion",
-   "guests": {
-    "kind": "names",
-    "named": 4,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -243,11 +157,6 @@
    "category": "sponsor",
    "seats": 8,
    "tier": "bronze",
-   "guests": {
-    "kind": "names",
-    "named": 4,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -256,12 +165,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "names",
-    "named": 1,
-    "unread": 0,
-    "buyerIsGuest": true
-   },
    "review": []
   },
   {
@@ -270,11 +173,6 @@
    "category": "sponsor",
    "seats": 8,
    "tier": "bronze",
-   "guests": {
-    "kind": "names",
-    "named": 5,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -283,11 +181,6 @@
    "category": "sponsor",
    "seats": 8,
    "tier": "bronze",
-   "guests": {
-    "kind": "unclear",
-    "named": 0,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -296,11 +189,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "names",
-    "named": 1,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -309,11 +197,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "none",
-    "named": 0,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -322,11 +205,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "none",
-    "named": 0,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -335,7 +213,6 @@
    "category": "other_campaign",
    "seats": 0,
    "tier": null,
-   "guests": null,
    "review": []
   },
   {
@@ -344,12 +221,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "names",
-    "named": 1,
-    "unread": 0,
-    "buyerIsGuest": true
-   },
    "review": []
   },
   {
@@ -358,11 +229,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "names",
-    "named": 1,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -371,11 +237,6 @@
    "category": "ticket",
    "seats": 2,
    "tier": "supporter",
-   "guests": {
-    "kind": "none",
-    "named": 0,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -384,11 +245,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "names",
-    "named": 1,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -397,11 +253,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "none",
-    "named": 0,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -410,11 +261,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "names",
-    "named": 1,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -423,11 +269,6 @@
    "category": "ticket",
    "seats": 2,
    "tier": "supporter",
-   "guests": {
-    "kind": "names",
-    "named": 2,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -436,11 +277,6 @@
    "category": "ticket",
    "seats": 2,
    "tier": "supporter",
-   "guests": {
-    "kind": "none",
-    "named": 0,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -449,11 +285,6 @@
    "category": "sponsor",
    "seats": 2,
    "tier": "friend",
-   "guests": {
-    "kind": "names",
-    "named": 1,
-    "unread": 1
-   },
    "review": []
   },
   {
@@ -462,12 +293,6 @@
    "category": "ticket",
    "seats": 2,
    "tier": "supporter",
-   "guests": {
-    "kind": "names",
-    "named": 2,
-    "unread": 0,
-    "buyerIsGuest": true
-   },
    "review": []
   },
   {
@@ -476,12 +301,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "names",
-    "named": 1,
-    "unread": 0,
-    "buyerIsGuest": true
-   },
    "review": []
   },
   {
@@ -490,11 +309,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "names",
-    "named": 1,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -503,12 +317,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "names",
-    "named": 1,
-    "unread": 0,
-    "buyerIsGuest": true
-   },
    "review": []
   },
   {
@@ -517,11 +325,6 @@
    "category": "sponsor",
    "seats": 6,
    "tier": "champion",
-   "guests": {
-    "kind": "none",
-    "named": 0,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -530,12 +333,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "names",
-    "named": 1,
-    "unread": 0,
-    "buyerIsGuest": true
-   },
    "review": []
   },
   {
@@ -544,11 +341,6 @@
    "category": "sponsor",
    "seats": 10,
    "tier": "silver",
-   "guests": {
-    "kind": "none",
-    "named": 0,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -557,12 +349,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "names",
-    "named": 1,
-    "unread": 0,
-    "buyerIsGuest": true
-   },
    "review": []
   },
   {
@@ -571,11 +357,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "names",
-    "named": 1,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -584,12 +365,6 @@
    "category": "ticket",
    "seats": 2,
    "tier": "supporter",
-   "guests": {
-    "kind": "names",
-    "named": 2,
-    "unread": 0,
-    "buyerIsGuest": true
-   },
    "review": []
   },
   {
@@ -598,11 +373,6 @@
    "category": "ticket",
    "seats": 2,
    "tier": "supporter",
-   "guests": {
-    "kind": "none",
-    "named": 0,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -611,11 +381,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "none",
-    "named": 0,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -624,12 +389,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "names",
-    "named": 1,
-    "unread": 0,
-    "buyerIsGuest": true
-   },
    "review": []
   },
   {
@@ -638,11 +397,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "none",
-    "named": 0,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -651,12 +405,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "names",
-    "named": 1,
-    "unread": 0,
-    "buyerIsGuest": true
-   },
    "review": []
   },
   {
@@ -665,11 +413,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "none",
-    "named": 0,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -678,11 +421,6 @@
    "category": "sponsor",
    "seats": 10,
    "tier": "gold",
-   "guests": {
-    "kind": "names",
-    "named": 9,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -691,11 +429,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "none",
-    "named": 0,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -704,11 +437,6 @@
    "category": "sponsor",
    "seats": 10,
    "tier": "gold",
-   "guests": {
-    "kind": "names",
-    "named": 4,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -717,12 +445,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "names",
-    "named": 1,
-    "unread": 0,
-    "buyerIsGuest": true
-   },
    "review": []
   },
   {
@@ -731,11 +453,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "names",
-    "named": 1,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -744,11 +461,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "names",
-    "named": 1,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -757,11 +469,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "names",
-    "named": 1,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -770,11 +477,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "names",
-    "named": 1,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -783,11 +485,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "none",
-    "named": 0,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -796,11 +493,6 @@
    "category": "sponsor",
    "seats": 10,
    "tier": "gold",
-   "guests": {
-    "kind": "names",
-    "named": 9,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -809,11 +501,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "names",
-    "named": 1,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -822,11 +509,6 @@
    "category": "ticket",
    "seats": 2,
    "tier": "supporter",
-   "guests": {
-    "kind": "names",
-    "named": 2,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -835,12 +517,6 @@
    "category": "ticket",
    "seats": 2,
    "tier": "supporter",
-   "guests": {
-    "kind": "names",
-    "named": 2,
-    "unread": 0,
-    "buyerIsGuest": true
-   },
    "review": []
   },
   {
@@ -849,11 +525,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "none",
-    "named": 0,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -862,11 +533,6 @@
    "category": "ticket",
    "seats": 2,
    "tier": "supporter",
-   "guests": {
-    "kind": "none",
-    "named": 0,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -875,12 +541,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "names",
-    "named": 1,
-    "unread": 0,
-    "buyerIsGuest": true
-   },
    "review": []
   },
   {
@@ -889,12 +549,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "names",
-    "named": 1,
-    "unread": 0,
-    "buyerIsGuest": true
-   },
    "review": []
   },
   {
@@ -903,11 +557,6 @@
    "category": "ticket",
    "seats": 2,
    "tier": "supporter",
-   "guests": {
-    "kind": "none",
-    "named": 0,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -916,12 +565,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "names",
-    "named": 1,
-    "unread": 0,
-    "buyerIsGuest": true
-   },
    "review": []
   },
   {
@@ -930,11 +573,6 @@
    "category": "sponsor",
    "seats": 6,
    "tier": "champion",
-   "guests": {
-    "kind": "names",
-    "named": 5,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -943,11 +581,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "none",
-    "named": 0,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -956,11 +589,6 @@
    "category": "ticket",
    "seats": 2,
    "tier": "supporter",
-   "guests": {
-    "kind": "none",
-    "named": 0,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -969,11 +597,6 @@
    "category": "sponsor",
    "seats": 10,
    "tier": "silver",
-   "guests": {
-    "kind": "none",
-    "named": 0,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -982,11 +605,6 @@
    "category": "sponsor",
    "seats": 6,
    "tier": "champion",
-   "guests": {
-    "kind": "names",
-    "named": 4,
-    "unread": 1
-   },
    "review": []
   },
   {
@@ -995,12 +613,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "names",
-    "named": 1,
-    "unread": 0,
-    "buyerIsGuest": true
-   },
    "review": []
   },
   {
@@ -1009,12 +621,6 @@
    "category": "ticket",
    "seats": 2,
    "tier": "supporter",
-   "guests": {
-    "kind": "names",
-    "named": 2,
-    "unread": 0,
-    "buyerIsGuest": true
-   },
    "review": []
   },
   {
@@ -1023,12 +629,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "names",
-    "named": 1,
-    "unread": 0,
-    "buyerIsGuest": true
-   },
    "review": []
   },
   {
@@ -1037,11 +637,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "none",
-    "named": 0,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -1050,11 +645,6 @@
    "category": "sponsor",
    "seats": 10,
    "tier": "gold",
-   "guests": {
-    "kind": "names",
-    "named": 8,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -1063,11 +653,6 @@
    "category": "sponsor",
    "seats": 6,
    "tier": "champion",
-   "guests": {
-    "kind": "names",
-    "named": 4,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -1076,11 +661,6 @@
    "category": "sponsor",
    "seats": 10,
    "tier": "silver",
-   "guests": {
-    "kind": "names",
-    "named": 6,
-    "unread": 1
-   },
    "review": []
   },
   {
@@ -1089,7 +669,6 @@
    "category": "other_campaign",
    "seats": 0,
    "tier": null,
-   "guests": null,
    "review": []
   },
   {
@@ -1098,11 +677,6 @@
    "category": "sponsor",
    "seats": 8,
    "tier": "bronze",
-   "guests": {
-    "kind": "names",
-    "named": 6,
-    "unread": 1
-   },
    "review": []
   },
   {
@@ -1111,11 +685,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "none",
-    "named": 0,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -1124,12 +693,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "names",
-    "named": 1,
-    "unread": 0,
-    "buyerIsGuest": true
-   },
    "review": []
   },
   {
@@ -1138,11 +701,6 @@
    "category": "ticket",
    "seats": 2,
    "tier": "supporter",
-   "guests": {
-    "kind": "none",
-    "named": 0,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -1151,11 +709,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "none",
-    "named": 0,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -1164,11 +717,6 @@
    "category": "sponsor",
    "seats": 8,
    "tier": "bronze",
-   "guests": {
-    "kind": "names",
-    "named": 5,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -1177,12 +725,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "names",
-    "named": 1,
-    "unread": 0,
-    "buyerIsGuest": true
-   },
    "review": []
   },
   {
@@ -1191,12 +733,6 @@
    "category": "sponsor",
    "seats": 10,
    "tier": "silver",
-   "guests": {
-    "kind": "names",
-    "named": 8,
-    "unread": 0,
-    "buyerIsGuest": true
-   },
    "review": []
   },
   {
@@ -1205,11 +741,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "none",
-    "named": 0,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -1218,11 +749,6 @@
    "category": "sponsor",
    "seats": 8,
    "tier": "bronze",
-   "guests": {
-    "kind": "names",
-    "named": 3,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -1231,11 +757,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "none",
-    "named": 0,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -1244,11 +765,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "none",
-    "named": 0,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -1257,11 +773,6 @@
    "category": "sponsor",
    "seats": 10,
    "tier": "gold",
-   "guests": {
-    "kind": "names",
-    "named": 5,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -1270,12 +781,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "names",
-    "named": 1,
-    "unread": 0,
-    "buyerIsGuest": true
-   },
    "review": []
   },
   {
@@ -1284,12 +789,6 @@
    "category": "sponsor",
    "seats": 10,
    "tier": "silver",
-   "guests": {
-    "kind": "names",
-    "named": 9,
-    "unread": 0,
-    "buyerIsGuest": true
-   },
    "review": [
     "email_name_conflict"
    ]
@@ -1300,11 +799,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "none",
-    "named": 0,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -1313,12 +807,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "names",
-    "named": 1,
-    "unread": 0,
-    "buyerIsGuest": true
-   },
    "review": []
   },
   {
@@ -1327,11 +815,6 @@
    "category": "sponsor",
    "seats": 12,
    "tier": "platinum",
-   "guests": {
-    "kind": "names",
-    "named": 10,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -1340,12 +823,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "names",
-    "named": 1,
-    "unread": 0,
-    "buyerIsGuest": true
-   },
    "review": []
   },
   {
@@ -1354,11 +831,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "names",
-    "named": 1,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -1367,12 +839,6 @@
    "category": "ticket",
    "seats": 2,
    "tier": "supporter",
-   "guests": {
-    "kind": "names",
-    "named": 2,
-    "unread": 0,
-    "buyerIsGuest": true
-   },
    "review": []
   },
   {
@@ -1381,11 +847,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "none",
-    "named": 0,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -1394,11 +855,6 @@
    "category": "ticket",
    "seats": 2,
    "tier": "supporter",
-   "guests": {
-    "kind": "names",
-    "named": 2,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -1407,11 +863,6 @@
    "category": "sponsor",
    "seats": 10,
    "tier": "silver",
-   "guests": {
-    "kind": "names",
-    "named": 5,
-    "unread": 1
-   },
    "review": []
   },
   {
@@ -1420,12 +871,6 @@
    "category": "ticket",
    "seats": 2,
    "tier": "supporter",
-   "guests": {
-    "kind": "names",
-    "named": 2,
-    "unread": 0,
-    "buyerIsGuest": true
-   },
    "review": []
   },
   {
@@ -1434,7 +879,6 @@
    "category": "unknown_tier",
    "seats": 10,
    "tier": null,
-   "guests": null,
    "review": [
     "unknown_tier"
    ]
@@ -1445,11 +889,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "names",
-    "named": 1,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -1458,12 +897,6 @@
    "category": "sponsor",
    "seats": 6,
    "tier": "champion",
-   "guests": {
-    "kind": "names",
-    "named": 4,
-    "unread": 0,
-    "buyerIsGuest": true
-   },
    "review": []
   },
   {
@@ -1472,11 +905,6 @@
    "category": "sponsor",
    "seats": 6,
    "tier": "champion",
-   "guests": {
-    "kind": "none",
-    "named": 0,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -1485,12 +913,6 @@
    "category": "ticket",
    "seats": 2,
    "tier": "supporter",
-   "guests": {
-    "kind": "names",
-    "named": 2,
-    "unread": 0,
-    "buyerIsGuest": true
-   },
    "review": []
   },
   {
@@ -1499,11 +921,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "names",
-    "named": 1,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -1512,12 +929,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "names",
-    "named": 1,
-    "unread": 0,
-    "buyerIsGuest": true
-   },
    "review": []
   },
   {
@@ -1526,14 +937,7 @@
    "category": "sponsor",
    "seats": 12,
    "tier": "platinum",
-   "guests": {
-    "kind": "names",
-    "named": 10,
-    "unread": 0
-   },
-   "review": [
-    "double_booked"
-   ]
+   "review": []
   },
   {
    "rowNumber": 116,
@@ -1541,11 +945,6 @@
    "category": "ticket",
    "seats": 2,
    "tier": "supporter",
-   "guests": {
-    "kind": "names",
-    "named": 2,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -1554,7 +953,6 @@
    "category": "rejected",
    "seats": 0,
    "tier": null,
-   "guests": null,
    "review": []
   },
   {
@@ -1563,11 +961,6 @@
    "category": "ticket",
    "seats": 2,
    "tier": "supporter",
-   "guests": {
-    "kind": "names",
-    "named": 2,
-    "unread": 0
-   },
    "review": []
   },
   {
@@ -1576,12 +969,6 @@
    "category": "ticket",
    "seats": 2,
    "tier": "supporter",
-   "guests": {
-    "kind": "names",
-    "named": 2,
-    "unread": 0,
-    "buyerIsGuest": true
-   },
    "review": []
   },
   {
@@ -1590,11 +977,6 @@
    "category": "ticket",
    "seats": 1,
    "tier": "supporter",
-   "guests": {
-    "kind": "none",
-    "named": 0,
-    "unread": 0
-   },
    "review": []
   }
  ]

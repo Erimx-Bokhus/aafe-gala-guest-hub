@@ -23,9 +23,6 @@ export interface GlImportRow {
   covered: number | null
   gross: number
   refunded: number | null
-  guest_text: string | null
-  guests?: { display_name: string; email: string | null; is_buyer: boolean }[]
-  findings?: { reason: string; details: Record<string, unknown> }[]
   cancelled?: boolean
 }
 
@@ -57,22 +54,11 @@ function baseRow(r: PurchaseRow): GlImportRow {
     covered: r.covered,
     gross: r.gross,
     refunded: r.refunded,
-    guest_text: r.guestText,
   }
 }
 
 function preparedRow(r: PreparedRow): GlImportRow {
-  const row: GlImportRow = { ...baseRow(r), tier_id: r.tierId, seats: r.seatCount, cancelled: r.cancelled }
-  if (r.guestList.kind === 'names') {
-    row.guests = r.guestList.guests.map((g) => ({ display_name: g.displayName, email: g.email, is_buyer: g.isBuyer }))
-  }
-  const findings = r.guestFindings.flatMap((f, i) => {
-    if (!f || r.guestList.kind !== 'names') return []
-    const guest = r.guestList.guests[i]!.displayName
-    return [{ reason: f.reason, details: { guest, existing_guest_id: f.existingGuestId, existing_order_id: f.existingOrderId } }]
-  })
-  if (findings.length) row.findings = findings
-  return row
+  return { ...baseRow(r), tier_id: r.tierId, seats: r.seatCount, cancelled: r.cancelled }
 }
 
 /** SHA-256 of the file text, so a run records exactly which file was uploaded. */

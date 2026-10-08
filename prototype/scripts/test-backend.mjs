@@ -160,38 +160,36 @@ const csv = (over) => ({ date: '2027-02-05T22:14:46Z', first: 'Grace', last: 'Ki
 const upload = (rowsIn, run = {}) => as('authenticated', ADMIN, `select staff_import_givelively($1, $2) r`, [JSON.stringify(rowsIn), JSON.stringify({ file_name: 'export.csv', file_hash: 'h', ...run })]).then((x) => x[0].r)
 
 // Cases 34-35: "Ticket" needs a tier mapping; mapping it resolves the review and the re-run creates the order.
-res = await upload([csv({ guest_text: 'me', guests: [{ display_name: 'Grace Kim', email: 'grace.kim@example.org', is_buyer: true }] })])
+// Rows carry a typed guest list the way an older caller might send one: the import ignores it (decided Oct 7).
+const typed = { guest_text: 'me', guests: [{ display_name: 'Grace Kim', email: 'grace.kim@example.org', is_buyer: true }] }
+res = await upload([csv(typed)])
 ok(res.unknown_tier === 1 && res.created === 0 && (await reviews('unknown_tier')).some((v) => v.details.tier_purchased === 'Ticket'), 'case 35: unmapped "Ticket" goes to review')
 ok((await err('authenticated', RM, `select staff_set_tier_mapping('Ticket', 'community_ticket')`)) === 'forbidden', 'only admin maps tiers')
 await as('authenticated', ADMIN, `select staff_set_tier_mapping(' ticket ', 'community_ticket')`)
 ok(!(await reviews('unknown_tier')).some((v) => v.details.tier_purchased === 'Ticket'), 'mapping resolves the open review')
-res = await upload([csv({ guest_text: 'me', guests: [{ display_name: 'Grace Kim', email: 'grace.kim@example.org', is_buyer: true }] })])
-ok(res.created === 1 && res.unknown_tier === 0 && res.names_prefilled === 1 && res.run_id, 'case 34 + 1: mapped tier imports; buyer seated: ' + JSON.stringify(res))
-const g1 = (await db.query(`select o.id, o.tier_id, o.imported_guest_text t, g.display_name, g.last_updated_by u, s.status from payments p join orders o on o.id=p.order_id join seats s on s.order_id=o.id join guests g on g.id=s.guest_id where p.purchase_key=$1`, [sqlKey])).rows
-ok(g1.length === 1 && g1[0].tier_id === 'community_ticket' && g1[0].t === 'me' && g1[0].display_name === 'Grace Kim' && g1[0].u === 'givelively_sync' && g1[0].status === 'submitted', 'pre-filled guest is "submitted", marked as from Give Lively')
+res = await upload([csv(typed)])
+ok(res.created === 1 && res.unknown_tier === 0 && res.run_id && !('names_prefilled' in res), 'case 34: mapped tier imports: ' + JSON.stringify(res))
+const g1 = (await db.query(`select o.id, o.tier_id, s.status, s.guest_id from payments p join orders o on o.id=p.order_id join seats s on s.order_id=o.id where p.purchase_key=$1`, [sqlKey])).rows
+ok(g1.length === 1 && g1[0].tier_id === 'community_ticket' && g1[0].status === 'unnamed' && g1[0].guest_id === null, 'no pre-fill: the seat arrives unnamed, whatever the row says')
+ok((await db.query(`select count(*)::int n from guests where order_id=$1`, [g1[0].id])).rows[0].n === 0, 'no guest created from the typed guest list')
+ok((await db.query(`select count(*)::int n from information_schema.columns where table_name='orders' and column_name='imported_guest_text'`)).rows[0].n === 0, 'orders keep no copy of the typed guest list')
 ok((await db.query(`select status, counts from import_runs where id=$1`, [res.run_id])).rows[0].status === 'succeeded', 'import run recorded')
 
 // Case 3: same file twice changes nothing.
-res = await upload([csv({ guest_text: 'me', guests: [{ display_name: 'Grace Kim', email: 'grace.kim@example.org', is_buyer: true }] })])
+res = await upload([csv(typed)])
 ok(res.created === 0 && res.updated === 0 && res.skipped === 1 && res.review_items === 0, 'case 3: re-import changes nothing')
 
-// Case 21: a staff correction survives the next import.
-await as('authenticated', RM, `select staff_update_guest($1, $2)`, [(await db.query(`select guest_id from seats where order_id=$1`, [g1[0].id])).rows[0].guest_id, { title: 'Dr.' }])
-await upload([csv({ guest_text: 'me', guests: [{ display_name: 'Grace Kim', email: 'grace.kim@example.org', is_buyer: true }] })])
-ok((await db.query(`select title from guests where order_id=$1`, [g1[0].id])).rows[0].title === 'Dr.', 'case 21: staff edit survives re-import')
-
-// Cases 20 + 32: the guest list changed in Give Lively after names exist -> review, nothing overwritten.
+// Case 21: the sponsor names the seat, staff correct it, and both survive the next import, even when the
+// Give Lively guest list has changed meanwhile (no guest_text_changed review: the list isn't read).
+await db.exec(`update email_log set approved_by='test', approved_at=now() where order_id='${g1[0].id}'`)
+await as('service_role', null, `select email_mark_sent(id, hash_token('grace-link')) from email_log where order_id=$1 and template='portal_link'`, [g1[0].id])
+await as('anon', null, `select portal_save_guest('grace-link', 1, $1)`, [{ first_name: 'Grace', last_name: 'Kim' }])
+const sponsorNamed = (await db.query(`select guest_id from seats where order_id=$1`, [g1[0].id])).rows[0].guest_id
+await as('authenticated', RM, `select staff_update_guest($1, $2)`, [sponsorNamed, { title: 'Dr.' }])
 res = await upload([csv({ guest_text: 'Sam Lee', guests: [{ display_name: 'Sam Lee', email: null }] })])
-ok(res.review_items === 1 && (await reviews('guest_text_changed')).some((v) => v.details.old_text === 'me' && v.details.new_text === 'Sam Lee'), 'case 20: changed guest list goes to review')
-ok((await db.query(`select display_name from guests where order_id=$1`, [g1[0].id])).rows[0].display_name === 'Grace Kim', 'case 32: existing names kept')
-res = await upload([csv({ guest_text: 'Sam Lee', guests: [{ display_name: 'Sam Lee', email: null }] })])
-ok(res.review_items === 0, 'the same change is not reviewed twice')
-
-// Names arriving later on an order nobody has named yet are filled (first upload that names them).
-const later = { date: '2027-02-06T15:00:00Z', email: 'ana.ruiz@example.org', first: 'Ana', last: 'Ruiz', ticket_level: 'Ticket', seats: 2, quantity: 2, original: 1000, gross: 1000 }
-await upload([csv({ ...later, guest_text: 'TBD', guests: [] })])
-res = await upload([csv({ ...later, guest_text: 'Jane Doe\nSam Park', guests: [{ display_name: 'Jane Doe' }, { display_name: 'Sam Park' }] })])
-ok(res.names_prefilled === 2 && res.review_items === 0, 'names arriving after "TBD" fill the unnamed seats')
+const kept = (await db.query(`select first_name, last_name, title from guests where order_id=$1`, [g1[0].id])).rows
+ok(kept.length === 1 && kept[0].first_name === 'Grace' && kept[0].title === 'Dr.', 'case 21: sponsor name and staff edit survive re-import')
+ok(res.review_items === 0 && (await reviews('guest_text_changed')).length === 0, 'a changed Give Lively guest list raises nothing')
 
 // Case 18: full refund cancels order and seats, raises review; nothing deleted.
 const refundRow = csv({ date: '2027-02-07T15:00:00Z', email: 'bo.han@example.org', first: 'Bo', last: 'Han', guest_text: '' })
@@ -205,11 +203,12 @@ await upload([csv({ date: '2027-02-08T15:00:00Z', email: 'grace.kim@example.org'
 ok((await reviews('email_name_conflict')).some((v) => v.details.buyer === 'Mark Lee'), 'case 14: same email, different last name -> review')
 ok((await db.query(`select count(*)::int n from sponsors where lower(primary_contact_email)='grace.kim@example.org'`)).rows[0].n === 2, 'case 14: a new sponsor so the order is not lost')
 
-// Engine findings and missing purchases arrive with the upload.
+// Missing purchases arrive with the upload; guest findings from an older caller are ignored.
 res = await upload([csv({ date: '2027-02-09T15:00:00Z', email: 'cy.wu@example.org', first: 'Cy', last: 'Wu',
   guest_text: 'Susan Cho', guests: [{ display_name: 'Susan Cho' }], findings: [{ reason: 'possible_duplicate', details: { guest: 'Susan Cho', existing_guest_id: 'g-x' } }] })],
   { missing: [{ purchase_key: sqlKey, purchased_at: '2027-02-05T22:14:46Z' }] })
-ok((await reviews('possible_duplicate')).length === 1 && (await reviews('missing_from_source')).length === 1 && res.missing_from_source === 1, 'case 22: engine findings and missing purchases become reviews')
+ok((await reviews('missing_from_source')).length === 1 && res.missing_from_source === 1, 'case 22: missing purchases become reviews')
+ok((await reviews('possible_duplicate')).length === 0, 'guest findings are not imported')
 ok((await db.query(`select status from orders o join payments p on p.order_id=o.id where p.purchase_key=$1`, [sqlKey])).rows[0].status !== 'cancelled', 'case 22: nothing cancelled automatically')
 
 // Case 24: a failing upload applies nothing.
@@ -222,7 +221,7 @@ await as('authenticated', ADMIN, `select staff_set_tier_mapping('Ticket', 'gold'
 ok((await db.query(`select tier_id from orders where id=$1`, [g1[0].id])).rows[0].tier_id === 'community_ticket', 'case 36: existing orders keep their tier')
 ok((await db.query(`select count(*)::int n from audit_log where action='tier_mapping.set' and from_state='community_ticket'`)).rows[0].n === 1, 'case 36: mapping change logged')
 
-// End to end: a CSV in the real export's format -> import engine (parse, split, match) -> staff_import_givelively.
+// End to end: a CSV in the real export's format -> import engine (parse, match) -> staff_import_givelively.
 {
   const { prepareUpload, toGlImport } = await import('../../import-engine/src/index.ts')
   const csvText = [
@@ -236,17 +235,17 @@ ok((await db.query(`select count(*)::int n from audit_log where action='tier_map
     tiers: (await q(`select id, name, tier_category, included_seat_count from sponsorship_tiers`)).map((t) => ({ id: t.id, name: t.name, tierCategory: t.tier_category, includedSeatCount: t.included_seat_count })),
     tierMappings: (await q(`select givelively_name, tier_id from tier_mappings where event_id=current_event_id()`)).map((m) => ({ givelivelyName: m.givelively_name, tierId: m.tier_id })),
     sponsors: (await q(`select id, organization_name, primary_contact_name, primary_contact_email from sponsors`)).map((x) => ({ id: x.id, organizationName: x.organization_name, primaryContactName: x.primary_contact_name, primaryContactEmail: x.primary_contact_email })),
-    existingGuests: (await q(`select g.id, g.order_id, coalesce(g.display_name, g.first_name || ' ' || g.last_name) n, g.email, g.organization from guests g join orders o on o.id=g.order_id where o.event_id=current_event_id()`)).map((x) => ({ id: x.id, orderId: x.order_id, displayName: x.n, email: x.email, organization: x.organization })),
     previousPurchases: [],
   })
   ok(prepared.rows.length === 1 && prepared.report.skippedOtherPage.length === 1, 'e2e: other Give Lively page skipped')
   const { rows: glRows, run } = await toGlImport(prepared, 'aafe-export.csv', csvText)
   res = await upload(glRows, run)
-  const dana = (await q(`select o.tier_id, o.imported_guest_text t, (select count(*)::int from seats where order_id=o.id) seats,
+  const dana = (await q(`select o.tier_id, (select count(*)::int from seats where order_id=o.id) seats,
     (select array_agg(g.display_name order by s.slot_number) from seats s join guests g on g.id=s.guest_id where s.order_id=o.id) names
     from orders o join sponsors sp on sp.id=o.sponsor_id where sp.primary_contact_email='dana.choi@example.org'`))[0]
   ok(dana.tier_id === 'champion' && dana.seats === 6, 'e2e: Champion sponsorship with 6 seats: ' + JSON.stringify(dana))
-  ok(JSON.stringify(dana.names) === JSON.stringify(['Jane Doe', 'Sam Lee']), 'e2e: clear names pre-filled, "Bob" left for the sponsor')
+  ok(dana.names === null, 'e2e: no names pre-filled; the sponsor names all 6 seats')
+  ok((await q(`select count(*)::int n from guests where display_name in ('Jane Doe','Sam Lee') or email = 'jane@example.org'`))[0].n === 0, 'e2e: the typed guest list is not stored anywhere')
   ok((await q(`select count(*)::int n from sponsors where phone like '%555-0150%'`))[0].n === 0, 'e2e: phone never imported')
   ok((await q(`select file_name, file_hash from import_runs where id='${res.run_id}'`))[0].file_hash === run.file_hash, 'e2e: run records the file')
 }
@@ -254,7 +253,7 @@ ok((await db.query(`select count(*)::int n from audit_log where action='tier_map
 // Gala page name and review resolution.
 await as('authenticated', ADMIN, `select staff_set_gala_page($1)`, ["AAFE's 52nd Annual Gala"])
 ok((await db.query(`select givelively_page_name p from gala_events where id=current_event_id()`)).rows[0].p === "AAFE's 52nd Annual Gala", 'gala page name saved')
-const rv = (await reviews('possible_duplicate'))[0].id
+const rv = (await reviews('email_name_conflict'))[0].id
 await as('authenticated', RM, `select staff_resolve_import_review($1, 'Different person')`, [rv])
 ok((await db.query(`select status, resolved_by from import_review where id=$1`, [rv])).rows[0].resolved_by === 'Daniel Seo', 'staff resolve a review item')
 ok((await as('authenticated', vol, `select count(*)::int n from import_review`))[0].n === 0, 'volunteers cannot read the review queue')

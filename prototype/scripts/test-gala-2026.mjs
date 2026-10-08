@@ -31,9 +31,6 @@ const context = async () => ({
     .map((m) => ({ givelivelyName: m.givelively_name, tierId: m.tier_id })),
   sponsors: (await q(`select id, organization_name, primary_contact_name, primary_contact_email from sponsors`))
     .map((x) => ({ id: x.id, organizationName: x.organization_name, primaryContactName: x.primary_contact_name, primaryContactEmail: x.primary_contact_email })),
-  existingGuests: (await q(`select g.id, g.order_id, coalesce(g.display_name, g.first_name || ' ' || g.last_name) n, g.email, g.organization
-    from guests g join orders o on o.id = g.order_id where o.event_id = current_event_id()`))
-    .map((x) => ({ id: x.id, orderId: x.order_id, displayName: x.n, email: x.email, organization: x.organization })),
   previousPurchases: [],
 })
 const upload = async () => {
@@ -65,14 +62,12 @@ const seatsOf = (rows) => rows.reduce((t, r) => t + (order(r.rowNumber)?.seats ?
 ok(seatsOf(sponsorRows) === 234 && seatsOf(ticketRows) === 107, `234 sponsor seats and 107 ticket seats (${seatsOf(sponsorRows)}, ${seatsOf(ticketRows)})`)
 const refunded = order(expected.rows.find((r) => r.category === 'refunded').rowNumber)
 ok(refunded?.status === 'cancelled' && refunded.seats === 0, 'the refunded purchase is cancelled, with no open seats')
-const onCancelled = prepared.rows.filter((r) => r.cancelled && r.guestList.kind === 'names').reduce((t, r) => t + r.guestList.guests.length, 0)
-ok(imported.reduce((t, o) => t + o.named, 0) === prepared.report.namesPrefilled - onCancelled,
-  `every clear name is on a seat, except on the refunded purchase (${prepared.report.namesPrefilled} - ${onCancelled})`)
+ok(imported.reduce((t, o) => t + o.named, 0) === 0, 'no pre-fill: every imported seat arrives unnamed for the sponsor (decided Oct 7)')
 const wrongTier = [...sponsorRows, ...ticketRows].filter((r) => order(r.rowNumber)?.tier_id !== r.tier)
 ok(wrongTier.length === 0, `every order has its tier: ${wrongTier.map((r) => r.rowNumber)}`)
 
 const open = async (reason) => (await q(`select count(*)::int n from import_review where run_id = $1 and reason = $2`, [res.run_id, reason]))[0].n
-for (const reason of ['unknown_tier', 'refund', 'email_name_conflict', 'double_booked']) {
+for (const reason of ['unknown_tier', 'refund', 'email_name_conflict']) {
   ok((await open(reason)) === expected.rows.filter((r) => r.review.includes(reason)).length, `staff review: one ${reason}`)
 }
 ok((await q(`select count(*)::int n from orders o join sponsors s on s.id = o.sponsor_id where s.primary_contact_email = 'events@sharedinbox.example.org'`))[0].n === 1,

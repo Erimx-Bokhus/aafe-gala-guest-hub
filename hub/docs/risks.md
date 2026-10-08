@@ -5,7 +5,7 @@
 What could go wrong, how likely it is, and what we are doing about it. Ranked by likelihood times impact; reviewed at each weekly check-in.
 
 ```risks
-Real guest-list text from Give Lively is messier than the one sample | 3 | 2 | Split with plain rules first; anything unclear goes to staff review; ask AAFE for a few more redacted rows | Aisling
+~~Real guest-list text from Give Lively is messier than the one sample~~ Closed Oct 7: the import no longer reads the guest list | 1 | 1 | Sponsors name every guest through their link | Aisling <!-- modified 2026-10-07 22:53 Aisling -->
 AI features turn out to be required and aren't planned | 2 | 2 | Team confirms this week; candidates are on the Data and AI page | Team
 The handoff isn't clear enough for another partner to pick up | 2 | 3 | Standard stack; setup docs a teammate has tested from scratch; invented seed data; a known-limitations list | Aisling, Natalie
 The same guest arrives from several sources | 3 | 2 | Rule-based matching, a review queue, and corrections that survive re-import | Aisling

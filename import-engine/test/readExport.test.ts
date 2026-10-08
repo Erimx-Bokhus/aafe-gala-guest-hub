@@ -10,7 +10,7 @@ describe('readExport', () => {
     const r = rows[0]!
     expect(r).toMatchObject({
       rowNumber: 2, purchasedAt: '2027-02-05T22:14:46Z', buyer: { first: 'Grace', last: 'Kim', email: 'grace.kim@example.org' },
-      tierName: 'Ticket', quantity: 1, seats: 1, gross: 1000, refunded: 0, company: 'Harbor Health', guestText: 'me',
+      tierName: 'Ticket', quantity: 1, seats: 1, gross: 1000, refunded: 0, company: 'Harbor Health',
       pageName: "AAFE's 52nd Annual Gala",
     })
     expect(r.purchaseKey).toMatch(/^[0-9a-f]{64}$/)
@@ -73,9 +73,10 @@ describe('readExport', () => {
     expect(rows[0]!.raw['City']).toBe('')
   })
 
-  it('reads a multi-line guest list inside one quoted cell', async () => {
+  it('never keeps the guest list a buyer types (decided Oct 7), even across lines in one quoted cell', async () => {
     const { rows } = await readExport(exportCsv({ Guests: 'Jane Doe jane@example.org\nSam Lee sam@example.org' }, { Email: 'b@example.org' }))
-    expect(rows[0]!.guestText).toBe('Jane Doe jane@example.org\nSam Lee sam@example.org')
+    expect(JSON.stringify(rows)).not.toMatch(/Jane Doe|jane@example\.org|Sam Lee/)
+    expect(Object.keys(rows[0]!.raw).some((h) => h.startsWith('Please list'))).toBe(false)
     expect(rows[1]!.rowNumber).toBe(3)
   })
 })

@@ -11,12 +11,9 @@ describe('toGlImport', () => {
       date: '2027-02-05T22:14:46Z', first: 'Grace', last: 'Kim', email: 'grace.kim@example.org', company: null,
       campaign: "AAFE's 52nd Annual Gala", ticket_level: 'Ticket', tier_id: 'supporter', method: 'Stripe Card', status: 'succeeded',
       quantity: 2, seats: 2, original: 1000, covered: 30, gross: 1030, refunded: 0, cancelled: false,
-      guest_text: 'Jane Doe jane@example.org\nme',
-      guests: [
-        { display_name: 'Jane Doe', email: 'jane@example.org', is_buyer: false },
-        { display_name: 'Grace Kim', email: 'grace.kim@example.org', is_buyer: true },
-      ],
     }])
+    // The guest list typed in Give Lively never reaches the database (decided Oct 7).
+    expect(JSON.stringify({ rows, run })).not.toMatch(/Jane Doe|jane@example\.org/)
     expect(run).toMatchObject({ file_name: 'export.csv', earliest: '2027-02-05T22:14:46Z', latest: '2027-02-05T22:14:46Z', missing: [] })
     expect(run.file_hash).toMatch(/^[0-9a-f]{64}$/)
   })
@@ -29,15 +26,13 @@ describe('toGlImport', () => {
     expect(rows[0]!.ticket_level).toBe('VIP Table 2027')
   })
 
-  it('carries guest findings and missing purchases', async () => {
+  it('carries missing purchases', async () => {
     const gone = await purchaseKey('gone@example.org', '2027-02-05T23:00:00Z')
     const csv = exportCsv({ Guests: 'Susan Cho' }, { Email: 'b@example.org', 'Date/Time of Purchase': '2027-02-06 10:00:00 AM EST' })
     const prepared = await prepareUpload(csv, context({
-      existingGuests: [{ id: 'g-1', orderId: 'ord-a', displayName: 'Susan Cho', email: null, organization: null }],
       previousPurchases: [{ purchaseKey: gone, purchasedAt: '2027-02-05T23:00:00Z' }],
     }))
-    const { rows, run } = await toGlImport(prepared, 'f.csv', csv)
-    expect(rows[0]!.findings).toEqual([{ reason: 'possible_duplicate', details: { guest: 'Susan Cho', existing_guest_id: 'g-1', existing_order_id: 'ord-a' } }])
+    const { run } = await toGlImport(prepared, 'f.csv', csv)
     expect(run.missing).toEqual([{ purchase_key: gone, purchased_at: '2027-02-05T23:00:00Z' }])
   })
 })

@@ -5,6 +5,10 @@ Every change to this hub, newest first. Open it while signed in to claude.ai and
 Each change has a kind, shown the same way on every page next to the exact line that changed: **✦ New** (didn't exist before), **+ Updated** (rows, tasks, or terms added), **✎ Modified** (wording, numbers, or a rule changed), **− Removed** (taken out), and **! Important** (everyone should act on it). Hover an icon for the date, time (New York), and who made the change; click it to mark it read.
 
 ```changes
+2026-10-07 22:53 | modified | Aisling | import | The import drops the typed Give Lively guest list like phone numbers: no names pre-filled, every seat starts unnamed, and the duplicate-guest checks that relied on it are gone
+2026-10-07 22:53 | modified | Aisling | architecture | Import engine: drops the typed guest list; 82 tests
+2026-10-07 22:53 | modified | Aisling | risks | Risk closed: messy guest-list text, since the import no longer reads it
+2026-10-07 22:53 | modified | Aisling | build-plan | Test counts: about 1,080 automated checks (the import's name-splitting tests removed)
 2026-10-07 22:38 | modified | Aisling | decisions | Decisions from Natalie's two PRDs: first prototype review with AAFE on Oct 15; emails follow Sarah (staff approve every one); no pre-fill from Give Lively guest lists; new Demo Day scope; three labeled data sets; 60-day retention and no AI in v1 proposed to AAFE; who builds each part. New pending: edits after the deadline
 2026-10-07 22:38 | updated | Aisling | requirements.must-have-for-demo-day | Must haves added: iPad check-in, after-gala results, Give Lively fee analytics, a seating map that staff control, and a simulated Salesforce push; the import drops the typed guest list
 2026-10-07 22:38 | modified | Aisling | requirements.later-or-out-of-scope | Out of scope now: automatic seating, automatic emails (unless Sarah asks), and a live connection to a real Salesforce org
