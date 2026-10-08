@@ -86,7 +86,7 @@ ok(c7.not_gala === 1 && c7.created === 0, 'without a page name nothing imports')
 ok(pollStart(null) === null && pollStart(0) === null, 'first poll reads everything')
 ok(pollStart(1_800_000_000_000) === 1_800_000_000_000 - OVERLAP_MS && OVERLAP_MS === 600_000, 'later polls re-read the last 10 minutes')
 
-const KEY = 'k3y/with+chars'
+const KEY = 'k3y/with+chars' // gitleaks:allow (an invented test key, not a credential)
 const netErr = `error sending request for url (https://secure.givelively.org/nonprofits/org/json_dataclips/${encodeURIComponent(KEY)}.json?start_time_ms=1): dns error`
 ok(!withoutKey(netErr, KEY).includes(encodeURIComponent(KEY)) && withoutKey(netErr, KEY).includes('***') && !withoutKey(`bad ${KEY}`, KEY).includes(KEY), 'a network error never carries the API key into the saved status')
 
