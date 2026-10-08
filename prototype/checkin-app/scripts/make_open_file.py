@@ -17,5 +17,5 @@ if re.search(r'https://[a-z0-9]+\.supabase\.co', s):
     raise SystemExit('The check-in app was built with a Supabase .env.local, so its demo file would carry the project '
                      'address and key. Move checkin-app/.env.local aside, run npm run build again, then rerun this script.')
 out = f'{root}/OPEN-CheckIn-App.html'
-open(out, 'w', encoding='utf-8').write(s)
+open(out, 'w', encoding='utf-8', newline='\n').write(s)   # LF on every OS, like scripts/make_open_files.py
 print('wrote OPEN-CheckIn-App.html', f'{len(s)/1e6:.1f} MB')
