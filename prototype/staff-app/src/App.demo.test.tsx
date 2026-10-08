@@ -6,12 +6,12 @@ import { loadDB } from '@shared/data'
 
 async function renderDemo() {
   vi.resetModules()
-  vi.doMock('./supabase', () => ({ supabase: null, currentStaff: vi.fn(), signOut: vi.fn(), sendSignInLink: vi.fn() }))
+  vi.doMock('@shared/supabase', () => ({ supabase: null, currentStaff: vi.fn(), signOut: vi.fn(), sendSignInLink: vi.fn() }))
   const { default: App } = await import('./App')
   return render(<App />)
 }
 
-afterEach(() => { cleanup(); vi.doUnmock('./supabase'); history.replaceState(null, '', '/') })
+afterEach(() => { cleanup(); vi.doUnmock('@shared/supabase'); history.replaceState(null, '', '/') })
 
 describe('staff app (demo mode)', () => {
   it('a volunteer checks a guest in from the door list, which holds no email addresses', async () => {
