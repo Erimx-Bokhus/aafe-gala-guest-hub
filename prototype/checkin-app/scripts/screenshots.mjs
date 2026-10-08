@@ -1,5 +1,6 @@
 // Retakes the iPad check-in screenshots in docs/screenshots/ipad-checkin/ that show guest rows or the scanner:
-// 02 guest list, 05 checked in, 06 QR scan, 09 portrait, 10 repeat-scan warning, 11 exceptions list.
+// 02 guest list, 05 checked in, 06 QR scan, 09 portrait, 10 repeat-scan warning, 11 exceptions list,
+// 12 dark mode and 13 keyboard search (both searching "Park").
 // Same steps, times and counts every run: Kenji Abe signs in, check-ins at 9:37 PM on the seed's evening,
 // Eddie Chan's code is scanned twice, Jordan Rivera is a walk-in. Run it after changing the door list.
 //
@@ -93,4 +94,13 @@ for (const [id, name] of [['g-003', 'Sofia Reyes'], ['g-004', 'Hao Zhang'], ['g-
 await toastGone()
 await p.setViewportSize({ width: 820, height: 1180 }); await p.waitForTimeout(500)
 await shot('09-portrait.png')
+
+// A search for "Park" in dark mode, then in light mode with the on-screen keyboard taking the lower half.
+await p.setViewportSize({ width: 1180, height: 820 }); await p.waitForTimeout(500)
+await p.getByTestId('search').fill('Park'); await p.getByTestId('search').blur()
+await p.getByRole('button', { name: 'Switch to dark mode' }).click(); await p.waitForTimeout(500)
+await shot('12-dark-mode.png')
+await p.getByRole('button', { name: 'Switch to light mode' }).click()
+await p.setViewportSize({ width: 1180, height: 420 }); await p.getByTestId('search').focus(); await p.waitForTimeout(500)
+await shot('13-keyboard-search.png')
 await b.close()
