@@ -5,7 +5,8 @@
 //   demo behaves like the real app, including what a check-in volunteer can and can't see.
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { addAudit, loadDB } from '@shared/data'
-import type { DB, GalaEvent, Guest, Material, PayMethod, Role, StaffUser } from '@shared/types'
+import type { Snapshot } from '@shared/offlineCheckin'
+import type { AuditEntry, DB, GalaEvent, Guest, Material, PayMethod, Role, StaffUser } from '@shared/types'
 import * as store from './store'
 
 export type OfflineMethod = Extract<PayMethod, 'check' | 'ach_direct' | 'wire'>
@@ -36,6 +37,8 @@ export interface StaffApi {
   checkInException(p: ExceptionInput): Promise<void>
   updateGalaEvent(patch: GalaPatch): Promise<void>
   setMaterialStatus(orderId: string, material: 'logo' | 'program_ad', status: Material): Promise<void>
+  /** One order's whole change log, oldest first. Live, the app holds only the newest 1,000 entries, so a sponsor's page asks for its own. */
+  history(orderId: string): Promise<AuditEntry[]>
 }
 
 // Who may do what. Mirrors require_staff(...) in each staff_* function, and scripts/test-access.mjs checks the server side.
@@ -47,7 +50,7 @@ export const ROLES: Record<Exclude<keyof StaffApi, 'live'>, Role[]> = {
   recordPayment: MANAGERS, addPledge: MANAGERS, addCompGuest: MANAGERS, sendQrInvite: MANAGERS, resendPortalLink: MANAGERS,
   approveEmail: MANAGERS, cancelEmail: MANAGERS, setMaterialStatus: MANAGERS,
   checkIn: ALL, checkInByCode: ALL, checkInException: ALL,
-  updateGalaEvent: ADMIN,
+  updateGalaEvent: ADMIN, history: MANAGERS,
 }
 export const canDo = (role: Role, action: keyof typeof ROLES) => ROLES[action].includes(role)
 
@@ -55,6 +58,9 @@ export const canDo = (role: Role, action: keyof typeof ROLES) => ROLES[action].i
 export function errorText(e: unknown): string {
   const m = (e instanceof Error ? e.message : typeof e === 'object' && e && 'message' in e ? String((e as { message: unknown }).message) : String(e)) || ''
   if (m === 'forbidden') return 'Your role can’t do that.'
+  // "forbidden: only Kenji Abe or a gala admin can undo this check-in": the server's own reason says more.
+  const reason = m.match(/^forbidden:\s*(.+)$/)
+  if (reason) return reason[1].charAt(0).toUpperCase() + reason[1].slice(1) + '.'
   if (m === 'seat_taken') return 'That seat is already taken.'
   if (m === 'not_found' || m.startsWith('not_found')) return 'That record wasn’t found. It may have changed; the page has been refreshed.'
   if (m.startsWith('expired')) return 'That QR code has expired.'
@@ -103,8 +109,15 @@ export function demoApi(user: StaffUser, update: (fn: (d: DB) => DB) => void, fu
       return { guestId: g.id, already }
     },
     checkInException: (p) => run('checkInException', (d) => store.checkInException(d, user.name, p)),
-    updateGalaEvent: (patch) => run('updateGalaEvent', (d) => addAudit({ ...d, gala_events: d.gala_events.map((x) => (x.id === d.meta.current_event_id ? { ...x, ...patch } : x)) },
-      { actor_type: 'staff', actor: user.name, entity: 'gala_event', entity_id: d.meta.current_event_id, order_id: null, action: 'event.updated', from_state: null, to_state: null, guest_visible: false, summary: 'Gala information updated.' })),
+    // Like staff_update_gala_event: sponsors on the gala's deadline follow a new one (demo data has no QR expiry to move).
+    updateGalaEvent: (patch) => run('updateGalaEvent', (d) => {
+      const ev = d.gala_events.find((x) => x.id === d.meta.current_event_id)!
+      const follows = (o: DB['orders'][number]) => o.event_id === ev.id && (o.guest_list_deadline ?? '') === (ev.guest_list_deadline ?? '')
+      const orders = patch.guest_list_deadline !== undefined && patch.guest_list_deadline !== ev.guest_list_deadline
+        ? d.orders.map((o) => (follows(o) ? { ...o, guest_list_deadline: patch.guest_list_deadline || null } : o)) : d.orders
+      return addAudit({ ...d, orders, gala_events: d.gala_events.map((x) => (x.id === ev.id ? { ...x, ...patch } : x)) },
+        { actor_type: 'staff', actor: user.name, entity: 'gala_event', entity_id: d.meta.current_event_id, order_id: null, action: 'event.updated', from_state: null, to_state: null, guest_visible: false, summary: 'Gala information updated.' })
+    }),
     setMaterialStatus: (o, material, status) => run('setMaterialStatus', (d) => {
       const k = material === 'logo' ? 'logo_status' : 'program_ad_status'
       const order = d.orders.find((x) => x.id === o)!
@@ -112,6 +125,7 @@ export function demoApi(user: StaffUser, update: (fn: (d: DB) => DB) => void, fu
       return addAudit({ ...d, orders: d.orders.map((x) => (x.id === o ? { ...x, [k]: status } : x)) },
         { actor_type: 'staff', actor: user.name, entity: 'order', entity_id: o, order_id: o, action: 'materials.updated', from_state: order[k], to_state: status, guest_visible: false, summary: `${material === 'logo' ? 'Logo' : 'Program ad'} marked ${status.replace(/_/g, ' ')}.` })
     }),
+    history: async (o) => (may('history') ? full().audit_log.filter((a) => a.order_id === o) : forbidden()),
   }
 }
 
@@ -148,33 +162,48 @@ export function liveApi(client: SupabaseClient, reload: () => Promise<void>): St
     checkInException: (p) => write('staff_check_in_exception', { p_name: p.name, p_order_id: p.orderId, p_type: p.type, p_note: p.note }),
     updateGalaEvent: (patch) => write('staff_update_gala_event', { p_patch: patch }),
     setMaterialStatus: (o, material, status) => write('staff_set_material_status', { p_order_id: o, p_material: material, p_status: status }),
+    history: async (o) => {
+      const { data, error } = await client.from('audit_log').select('*').eq('order_id', o).order('id')
+      if (error) throw new Error(error.message)
+      return data as AuditEntry[]
+    },
   }
 }
 
 // ---- WHAT EACH ROLE LOADS ---------------------------------------------------------------------------------
 
-/** The door list a check-in volunteer works from: staff_checkin_snapshot() in the database, or the same shape from the demo data. */
-export interface CheckinSnapshot {
-  event_id: string; event_name: string
-  guests: { id: string; order_id: string; first_name: string; last_name: string; title: string | null; organization: string | null; sponsor: string; guest_type: Guest['guest_type']; table_number: number | null; seat_number: number | null; accessibility_needs: string | null; arrived: boolean; checked_in_at: string | null; checked_in_by: string | null }[]
-}
+/**
+ * The door list a check-in volunteer works from: staff_checkin_snapshot() in the database, or the same shape from the demo
+ * data. One type with the iPad app (shared/src/offlineCheckin.ts), so the staff app reads what the database really returns.
+ */
+export type CheckinSnapshot = Snapshot
 
 /** The demo data cut down to what staff_checkin_snapshot() returns, so a demo volunteer sees no more than a real one. */
 export function demoSnapshot(db: DB): CheckinSnapshot {
   const ev = db.gala_events.find((e) => e.id === db.meta.current_event_id)!
   const orders = new Map(db.orders.filter((o) => o.event_id === ev.id && o.status !== 'cancelled').map((o) => [o.id, o]))
+  const sponsorOf = (orderId: string) => db.sponsors.find((s) => s.id === orders.get(orderId)!.sponsor_id)?.organization_name ?? ''
+  const unnamed = new Map<string, number>()
+  for (const s of db.seats) if (!s.guest_id && s.status !== 'cancelled' && orders.has(s.order_id)) unnamed.set(s.order_id, (unnamed.get(s.order_id) ?? 0) + 1)
   return {
-    event_id: ev.id, event_name: ev.name,
+    event_id: ev.id, event_name: ev.name, generated_at: new Date().toISOString(),
+    event_date: ev.event_date, doors_time: ev.doors_time, venue_name: ev.venue_name, status: ev.status,
     guests: db.guests.filter((g) => orders.has(g.order_id)).map((g) => {
       const ci = db.check_ins.find((c) => c.guest_id === g.id && c.event_id === ev.id)
       return {
         id: g.id, order_id: g.order_id, first_name: g.first_name, last_name: g.last_name, title: g.title, organization: g.organization,
-        sponsor: db.sponsors.find((s) => s.id === orders.get(g.order_id)!.sponsor_id)?.organization_name ?? '', guest_type: g.guest_type,
-        table_number: db.event_tables.find((t) => t.id === g.table_id)?.number ?? null, seat_number: g.seat_number,
-        accessibility_needs: g.accessibility_needs, arrived: g.attendance_status === 'checked_in' || !!ci,
-        checked_in_at: ci?.checked_in_at ?? null, checked_in_by: ci?.checked_in_by ?? null,
+        sponsor: sponsorOf(g.order_id), package: db.sponsorship_tiers.find((t) => t.id === orders.get(g.order_id)!.tier_id)?.name ?? null,
+        guest_type: g.guest_type, table_number: db.event_tables.find((t) => t.id === g.table_id)?.number ?? null, seat_number: g.seat_number,
+        accessibility_needs: g.accessibility_needs, qr_hash: null, qr_expires_at: null,
+        arrived: g.attendance_status === 'checked_in' || !!ci, checkin_id: ci?.id ?? null, checkin_client_id: null,
+        checked_in_at: ci?.checked_in_at ?? null, checked_in_by: ci?.checked_in_by ?? null, device: null,
       }
     }),
+    unnamed_seats: [...unnamed].map(([order_id, count]) => ({ order_id, sponsor: sponsorOf(order_id), count })),
+    exceptions: db.check_ins.filter((c) => !c.guest_id && c.event_id === ev.id).map((c) => ({
+      id: c.id, client_id: null, name: c.arrival_name ?? '', type: c.type, order_id: c.order_id,
+      checked_in_at: c.checked_in_at, checked_in_by: c.checked_in_by, device: null,
+    })),
   }
 }
 
@@ -185,8 +214,9 @@ export function demoSnapshot(db: DB): CheckinSnapshot {
 export function volunteerDb(snap: CheckinSnapshot, user: StaffUser): DB {
   const empty = loadDB()
   const tableId = (n: number | null) => (n == null ? null : `table-${n}`)
-  const orderIds = [...new Set(snap.guests.map((g) => g.order_id))]
-  const sponsorOfOrder = new Map(snap.guests.map((g) => [g.order_id, g.sponsor]))
+  // Orders come from named guests and from sponsors whose seats are still unnamed (the walk-in "With sponsor" list).
+  const sponsorOfOrder = new Map([...snap.guests.map((g) => [g.order_id, g.sponsor] as const), ...snap.unnamed_seats.map((u) => [u.order_id, u.sponsor] as const)])
+  const orderIds = [...sponsorOfOrder.keys()]
   const at = new Date(0).toISOString()
   return {
     meta: { ...empty.meta, current_event_id: snap.event_id },
@@ -197,9 +227,13 @@ export function volunteerDb(snap: CheckinSnapshot, user: StaffUser): DB {
     orders: orderIds.map((o) => ({ id: o, event_id: snap.event_id, sponsor_id: `sp-${o}`, tier_id: '', source: 'staff_entry' as const, commitment_amount: 0, status: 'pledged' as const, portal_token: null, portal_token_expires_at: null, portal_link_sent_at: null, guest_list_deadline: null, logo_status: 'not_required' as const, program_ad_status: 'not_required' as const, givelively_order_ref: null, salesforce_opportunity_id: null, internal_notes: '', created_at: at, updated_at: at })),
     payments: [],
     event_tables: [...new Set(snap.guests.map((g) => g.table_number).filter((n): n is number => n != null))].map((n) => ({ id: tableId(n)!, event_id: snap.event_id, number: n, label: null, capacity: 0, pos_x: 0, pos_y: 0 })),
-    guests: snap.guests.map((g) => ({ id: g.id, order_id: g.order_id, first_name: g.first_name, last_name: g.last_name, title: g.title ?? '', organization: g.organization ?? '', email: '', dietary_needs: null, accessibility_needs: g.accessibility_needs, guest_type: g.guest_type, relationship_note: null, table_id: tableId(g.table_number), seat_number: g.seat_number, badge_status: 'ready' as const, attendance_status: g.arrived ? 'checked_in' as const : 'expected' as const, qr_token: null, last_updated_by: 'staff' as const, created_at: at, updated_at: at })),
+    guests: snap.guests.map((g) => ({ id: g.id, order_id: g.order_id, first_name: g.first_name, last_name: g.last_name, title: g.title ?? '', organization: g.organization ?? '', email: '', dietary_needs: null, accessibility_needs: g.accessibility_needs, guest_type: g.guest_type as Guest['guest_type'], relationship_note: null, table_id: tableId(g.table_number), seat_number: g.seat_number, badge_status: 'ready' as const, attendance_status: g.arrived ? 'checked_in' as const : 'expected' as const, qr_token: null, last_updated_by: 'staff' as const, created_at: at, updated_at: at })),
     seats: [],
-    check_ins: snap.guests.filter((g) => g.arrived).map((g) => ({ id: `ci-${g.id}`, event_id: snap.event_id, guest_id: g.id, order_id: g.order_id, arrival_name: null, method: 'search' as const, type: 'standard', checked_in_by: g.checked_in_by ?? '', note: '', checked_in_at: g.checked_in_at ?? at })),
+    check_ins: [
+      ...snap.guests.filter((g) => g.arrived).map((g) => ({ id: g.checkin_id ?? `ci-${g.id}`, event_id: snap.event_id, guest_id: g.id, order_id: g.order_id, arrival_name: null, method: 'search' as const, type: 'standard', checked_in_by: g.checked_in_by ?? '', note: '', checked_in_at: g.checked_in_at ?? at })),
+      // Walk-ins and other exceptions so far tonight (their notes stay on the server).
+      ...(snap.exceptions ?? []).map((e) => ({ id: e.id, event_id: snap.event_id, guest_id: null, order_id: e.order_id, arrival_name: e.name, method: 'exception' as const, type: e.type, checked_in_by: e.checked_in_by, note: '', checked_in_at: e.checked_in_at })),
+    ],
     email_log: [], audit_log: [], salesforce_sync: [],
   }
 }
@@ -207,10 +241,12 @@ export function volunteerDb(snap: CheckinSnapshot, user: StaffUser): DB {
 const TABLES = ['gala_events', 'staff_users', 'sponsorship_tiers', 'sponsors', 'orders', 'payments', 'event_tables', 'guests', 'seats', 'check_ins', 'email_log', 'salesforce_sync'] as const
 const PAGE = 1000 // Supabase returns at most 1,000 rows per request
 
-async function selectAll(client: SupabaseClient, table: string): Promise<unknown[]> {
+export async function selectAll(client: SupabaseClient, table: string): Promise<unknown[]> {
   const rows: unknown[] = []
   for (let from = 0; ; from += PAGE) {
-    const { data, error } = await client.from(table).select('*').range(from, from + PAGE - 1)
+    // Sorted by id so each page starts where the last ended: without a sort, Postgres may return rows in a different
+    // order on each request (likely on gala night, when check-ins rewrite rows), so rows could repeat or go missing.
+    const { data, error } = await client.from(table).select('*').order('id').range(from, from + PAGE - 1)
     if (error) throw new Error(error.message)
     rows.push(...data)
     if (data.length < PAGE) return rows

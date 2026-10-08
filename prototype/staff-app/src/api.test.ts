@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { loadDB } from '@shared/data'
 import type { DB, StaffUser } from '@shared/types'
-import { ROLES, demoApi, demoSnapshot, errorText, liveApi, loadLiveDb, volunteerDb, type CheckinSnapshot } from './api'
+import { ROLES, demoApi, demoSnapshot, errorText, liveApi, loadLiveDb, selectAll, volunteerDb, type CheckinSnapshot } from './api'
 
 const staff = (role: StaffUser['role']): StaffUser => ({ id: `st-${role}`, name: `Test ${role}`, email: `${role}@aafe-demo.example.org`, role })
 const VOL = staff('check_in_volunteer'), RM = staff('relationship_manager'), ADMIN = staff('gala_admin')
@@ -166,5 +166,80 @@ describe('error text', () => {
     expect(errorText(new Error('seat_taken'))).toBe('That seat is already taken.')
     expect(errorText(new Error('invalid_transition: assign a table and seat first'))).toBe('Assign a table and seat first.')
     expect(errorText(new Error('something unexpected'))).toMatch(/^Something went wrong/)
+  })
+
+  it("shows the server's own reason when it gives one", () => {
+    expect(errorText(new Error('forbidden: only Kenji Abe or a gala admin can undo this check-in'))).toBe('Only Kenji Abe or a gala admin can undo this check-in.')
+  })
+})
+
+// Review of PR #72 (Oct 8): the volunteer's walk-ins, paging order, a sponsor's whole history, and gala deadline moves.
+describe('the volunteer door list keeps walk-in details', () => {
+  const snap = demoSnapshot(loadDB())
+  const withExtras: CheckinSnapshot = {
+    ...snap,
+    unnamed_seats: [...snap.unnamed_seats, { order_id: 'ord-only-unnamed', sponsor: 'Unnamed Seats Example Co', count: 4 }],
+    exceptions: [{ id: 'ci-walkin', client_id: null, name: 'Walk-in Example', type: 'Walk-in pending confirmation', order_id: 'ord-only-unnamed', checked_in_at: '2027-05-20T23:00:00Z', checked_in_by: 'Test Volunteer', device: null }],
+  }
+  const v = volunteerDb(withExtras, VOL)
+
+  it('lists a sponsor whose seats are all unnamed, for the walk-in "With sponsor" choice', () => {
+    expect(v.orders.some((o) => o.id === 'ord-only-unnamed')).toBe(true)
+    expect(v.sponsors.find((s) => s.id === 'sp-ord-only-unnamed')?.organization_name).toBe('Unnamed Seats Example Co')
+  })
+  it("counts tonight's walk-ins as arrivals", () => {
+    const w = v.check_ins.find((c) => c.id === 'ci-walkin')
+    expect(w?.arrival_name).toBe('Walk-in Example')
+    expect(w?.guest_id).toBeNull()
+  })
+  it('the demo door list carries the same unnamed seats and walk-ins the database sends', () => {
+    const full = loadDB()
+    const current = new Set(full.orders.filter((o) => o.event_id === full.meta.current_event_id && o.status !== 'cancelled').map((o) => o.id))
+    const unnamed = full.seats.filter((s) => !s.guest_id && s.status !== 'cancelled' && current.has(s.order_id)).length
+    expect(snap.unnamed_seats.reduce((n, u) => n + u.count, 0)).toBe(unnamed)
+    expect(snap.exceptions).toHaveLength(full.check_ins.filter((c) => !c.guest_id && c.event_id === full.meta.current_event_id).length)
+  })
+})
+
+describe('paged reads', () => {
+  it('reads a table of 2,500 rows in id order, each row once', async () => {
+    const rows = Array.from({ length: 2500 }, (_, i) => ({ id: `r${String(i).padStart(4, '0')}` }))
+    const order = vi.fn()
+    const client = { from: () => ({ select: () => ({ order: (col: string) => { order(col); return { range: async (a: number, b: number) => ({ data: rows.slice(a, b + 1), error: null }) } } }) }) }
+    const got = await selectAll(client as unknown as SupabaseClient, 'guests')
+    expect(got).toHaveLength(2500)
+    expect(new Set(got.map((r) => (r as { id: string }).id)).size).toBe(2500)
+    expect(order).toHaveBeenCalledWith('id')
+    expect(order).toHaveBeenCalledTimes(3)
+  })
+})
+
+describe("a sponsor's whole change history", () => {
+  it('live, asks the server for that order only, oldest first', async () => {
+    const eq = vi.fn(), ord = vi.fn()
+    const client = { rpc: vi.fn(), from: vi.fn(() => ({ select: () => ({ eq: (c: string, v: string) => { eq(c, v); return { order: async (col: string) => { ord(col); return { data: [{ id: 1, order_id: 'ord-acme' }], error: null } } } } }) })) }
+    const log = await liveApi(client as unknown as SupabaseClient, async () => {}).history('ord-acme')
+    expect(client.from).toHaveBeenCalledWith('audit_log')
+    expect(eq).toHaveBeenCalledWith('order_id', 'ord-acme')
+    expect(ord).toHaveBeenCalledWith('id')
+    expect(log).toHaveLength(1)
+  })
+  it('demo, returns every entry for the order; a volunteer may not read it', async () => {
+    const all = loadDB().audit_log.filter((a) => a.order_id === 'ord-acme')
+    expect(await demo(RM).api.history('ord-acme')).toHaveLength(all.length)
+    await expect(demo(VOL).api.history('ord-acme')).rejects.toThrow('forbidden')
+  })
+})
+
+describe('moving the gala deadline (demo, like staff_update_gala_event)', () => {
+  it("moves sponsors on the gala's deadline, not one with its own", async () => {
+    const { api, db } = demo(ADMIN)
+    const ev = db().gala_events.find((e) => e.id === db().meta.current_event_id)!
+    const on = db().orders.filter((o) => o.event_id === ev.id && (o.guest_list_deadline ?? '') === (ev.guest_list_deadline ?? '')).map((o) => o.id)
+    const own = db().orders.find((o) => o.event_id === ev.id && (o.guest_list_deadline ?? '') !== (ev.guest_list_deadline ?? ''))
+    await api.updateGalaEvent({ guest_list_deadline: '2027-05-01' })
+    for (const id of on) expect(db().orders.find((o) => o.id === id)!.guest_list_deadline).toBe('2027-05-01')
+    if (own) expect(db().orders.find((o) => o.id === own.id)!.guest_list_deadline).toBe(own.guest_list_deadline)
+    expect(on.length).toBeGreaterThan(0)
   })
 })
