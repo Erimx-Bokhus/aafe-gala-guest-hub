@@ -5,6 +5,14 @@ Every change to this hub, newest first. Open it while signed in to claude.ai and
 Each change has a kind, shown the same way on every page next to the exact line that changed: **✦ New** (didn't exist before), **+ Updated** (rows, tasks, or terms added), **✎ Modified** (wording, numbers, or a rule changed), **− Removed** (taken out), and **! Important** (everyone should act on it). Hover an icon for the date, time (New York), and who made the change; click it to mark it read.
 
 ```changes
+2026-10-08 20:40 | new | Aisling | decisions | The staff app saves every change through the server, which checks the role (PR #72); gala date and deadline changes move QR e-tickets and sponsor links; Node 22.18 or newer (PR #73); how teammates' PRs are reviewed
+2026-10-08 20:40 | modified | Aisling | decisions | When sponsor links stop is now three options (A, B recommended, C) on the PR review plan, for Natalie and then AAFE; 43 advisor warnings after PR #72, all by design; new pending question on admins' direct table edits
+2026-10-08 20:40 | modified | Aisling | build-plan.where-each-component-stands | Sign-in and roles, commitments and seats, and the staff dashboard are connected to the server (PR #72); about 1,230 automated checks (90 app)
+2026-10-08 20:40 | updated | Aisling | tasks | PRs #72 and #73 reviewed, fixed and merged; the audit after the merge; four audit bugs fixed with tests (PR next) and the smaller findings listed; the deadline decision, the #76 split and #77 follow-ups
+2026-10-08 20:40 | updated | Aisling | risks | New risk: the staff app hasn't yet run against Supabase with real sign-in; test on Saturday, Oct 10
+2026-10-08 20:40 | modified | Aisling | architecture.what-s-built | Staff app: every change through a role-checked server function, reads through the access rules (PR #72)
+2026-10-08 20:40 | modified | Aisling | overview | Status: roles checked on the server for every staff action (PR #72)
+2026-10-08 20:40 | updated | Aisling | documents | New: the PR review plan for #72–#77
 2026-10-08 18:45 | modified | Aisling | decisions | Supabase advisor: 41 warnings after PR #71 (the iPad undo function adds one of the same accepted kind); the test project now holds the Full gala, fixed set (553 guests)
 2026-10-08 09:40 | modified | Aisling | build-plan.where-each-component-stands | The iPad check-in app is connected to the backend (PR #71): staff sign in, the door list comes from Supabase, check-ins sync with first arrival winning, and only the person who checked a guest in, or a gala admin, can undo it. The first live run waits for the in-person sign-in test
 2026-10-08 09:40 | new | Aisling | decisions | The iPad shows an "Access needs" flag, not the details; undo is limited to the same person or a gala admin; demo mode keeps the demo sync server

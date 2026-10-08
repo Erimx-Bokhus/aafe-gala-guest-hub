@@ -9,6 +9,7 @@ Everything the team has produced or collected, in one place. Living documents ar
 | Document | What it is | Status |
 | --- | --- | --- |
 | [AAFE Gala Project Hub](https://claude.ai/artifact/QVViUNx6SWRBZYKCfrAmp6) | This hub: plan, tasks, decisions, What's new, History, and the build so far | Live tracker, with Trello for day-to-day tasks <!-- updated 2026-10-06 06:12 Aisling --> |
+| [PR Review Plan, Oct 8](https://claude.ai/artifact/M25oqGpKjoyXbZiUc1UFGB) | Review of PRs #72–#77: what each needed, the fixes with screenshots, the three options for when sponsor links stop, and the merge order | Shared with the team in Slack, Oct 8; #72 and #73 merged <!-- new 2026-10-08 20:40 Aisling --> |
 | [Findings, Build Plan, and Tasks](https://claude.ai/code/artifact/25db30ba-7c5a-42dc-8e25-4c2b5dc47d2c) | Overview of findings, the component plan with estimates, the task tracker, and the decision log | Superseded by this hub (Oct 5) <!-- modified 2026-10-06 06:12 Aisling --> |
 | [Discovery Guide v2](https://claude.ai/code/artifact/eedd8e14-cc7b-403e-9f92-4a5a6f96ea78) | Questions in decision order for the October 1 call | Used |
 | [Guest Data and AI Handling](https://claude.ai/code/artifact/1d0571f4-d854-4e4a-90df-b60a62de28ce) | What the tool stores, what it never stores, and how AI is used | Draft for AAFE |
