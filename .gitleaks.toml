@@ -33,11 +33,11 @@ keywords = ["service_role_key"]
 
 # The "Full gala, fixed" demo data set (prototype/shared/src/seed.full-fixed.json) gives every sponsor a random
 # 192-bit demo link, the format the email sender mints. They're invented demo links, not credentials. Only that
-# file and only that format are exempt.
+# file, the two OPEN demo files that embed it, and only that format are exempt.
 [[allowlists]]
 description = "Invented 192-bit demo sponsor links in the Full gala, fixed data set"
 targetRules = ["generic-api-key"]
 condition = "AND"
-paths = ['''^prototype/shared/src/seed\.full-fixed\.json$''']
+paths = ['''^prototype/shared/src/seed\.full-fixed\.json$''', '''^prototype/OPEN-(Staff-App|Guest-Portal)\.html$''']
 regexTarget = "match"
 regexes = ['''portal_token"?\s*:\s*"[A-Za-z0-9_-]{32}"''']
