@@ -82,7 +82,7 @@ The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus),
 - [x] Sponsor-facing arrivals, switched off until AAFE approves (PR #49) — Aisling <!-- new 2026-10-07 13:45 Aisling -->
 - [x] Translation review sheet for AAFE, and no silent English fallback (PR #50) — Aisling <!-- new 2026-10-07 13:45 Aisling -->
 - [x] Full-size invented test gala, 553 guests, through the import into the database (PR #50) — Aisling <!-- new 2026-10-07 13:45 Aisling -->
-- [ ] Load PRs #42–#66 into Aisling's test Supabase project: `npm run db:backend`, then `npm run db:advisors` (#61 changed `new_qr_token()`; #66 adds the seven guest categories), then try a data set with `npm run db:load -- <set>` — Aisling <!-- modified 2026-10-08 08:15 Aisling -->
+- [x] Load PRs #42–#66 into Aisling's test Supabase project (Oct 8): `npm run db:backend`, then `npm run db:advisors`, 40 warnings, all by design; try a data set with `npm run db:load -- <set>` — Aisling <!-- modified 2026-10-08 09:20 Aisling -->
 - [ ] Set up the Vercel demo: three projects (staff app, guest portal, iPad check-in app at `prototype/checkin-app`); the Supabase URL and public key in Vercel's settings only — Aisling <!-- modified 2026-10-08 08:15 Aisling -->
 - [x] ~~Check-in screen: wire in the offline module (`CheckInDesk`) and the "Offline · N check-ins waiting" banner~~ Superseded by the iPad check-in app (PR #56) and connecting it to the backend (Added October 8) — Frontend pair <!-- modified 2026-10-08 08:15 Aisling -->
 - [ ] Pipeline board and prospect form in the staff app — Frontend pair <!-- new 2026-10-07 13:45 Aisling -->
@@ -112,7 +112,7 @@ The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus),
 - [ ] iPad app: app manifest, opening offline, camera QR scanning on a real iPad — Natalie <!-- new 2026-10-08 01:50 Aisling -->
 - [x] Scripts to rebuild the iPad app's double-click file and retake its screenshots (PR #65) — Aisling <!-- new 2026-10-08 08:15 Aisling -->
 - [ ] Pick the demo's Supabase project and its owner — Team <!-- new 2026-10-08 08:15 Aisling -->
-- [ ] iPad app: build guard, CI build and drift check for `OPEN-CheckIn-App.html`, before its Vercel project gets keys — Aisling <!-- new 2026-10-08 08:15 Aisling -->
+- [x] iPad app: build guard, CI build and drift check for `OPEN-CheckIn-App.html`, before its Vercel project gets keys (PR #70) — Aisling <!-- modified 2026-10-08 09:10 Aisling -->
 - [x] Hub cleanup from the Oct 8 audit, and Screens split into Live build and Early sketches — Aisling <!-- new 2026-10-08 08:15 Aisling -->
 
 ## Week of October 12
