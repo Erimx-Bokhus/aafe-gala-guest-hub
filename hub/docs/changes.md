@@ -11,7 +11,7 @@ Each change has a kind, shown the same way on every page next to the exact line 
 2026-10-07 22:38 | modified | Aisling | data-ai | No AI in the first version (proposed to AAFE); retention proposal: contact details deleted within 60 days, dietary and accessibility included; sponsor arrivals built switched off
 2026-10-07 22:38 | new | Aisling | tasks.added-october-7-night | New tasks: Natalie's PRD fixes, drop the guest-list text from the import, three labeled data sets, the iPad check-in PR, and the new must-have screens
 2026-10-07 22:38 | modified | Aisling | overview.team | Team: the two areas stay, and the page names who is building each part
-2026-10-07 22:38 | modified | Aisling | build-plan | Prototype review with AAFE moved to Oct 15; who is building each part
+2026-10-07 22:38 | modified | Aisling | build-plan | Prototype review with AAFE moved to Oct 15; who is building each part; check-in raised to P0; the import drops the typed guest list; three labeled data sets next
 2026-10-07 20:23 | modified | Aisling | hosting.demo-preview-team-notes | The Supabase backend runs in Aisling's test project, in her own account, not a team project: wording fixed on Hosting, Build plan, Overview, and Tasks
 2026-10-07 20:23 | updated | Aisling | decisions | Open question: which Supabase project the demo and the handoff use, and who owns it
 2026-10-07 19:15 | modified | Aisling | tasks | Cornell's staff sign-in (PR #27) and Antonin's Korean (PR #51) merged: tasks ticked off; Cornell's live sign-in test waits on which Supabase project the demo uses
