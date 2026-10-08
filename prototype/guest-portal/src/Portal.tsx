@@ -98,33 +98,19 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
           <div className="rounded-xl border border-cream-200 bg-surface p-3"><div className="text-[0.6875rem] font-semibold uppercase tracking-wide text-brand-600">{t.package}</div><div className="mt-1 text-sm font-semibold text-navy-900">{view.tierName}</div></div>
           <div className="rounded-xl border border-cream-200 bg-surface p-3"><div className="text-[0.6875rem] font-semibold uppercase tracking-wide text-brand-600">{t.eventWhen}</div><div className="mt-1 text-sm font-semibold text-navy-900">{fmtDate(view.event.date, loc)}</div></div>
         </div>
-        <a href="#seats" className="btn-primary mt-6">{t.openList}</a>
+        <button type="button" className="btn-primary mt-6" onClick={() => {
+          const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+          document.getElementById('seats')?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' })
+          document.getElementById('seats-h')?.focus({ preventScroll: true })
+        }}>{t.openList}</button>
       </Hero>
 
       <div className="mx-auto max-w-6xl space-y-8 px-5 py-10">
-        {/* Summary */}
-        <section className="grid gap-4 lg:grid-cols-3" aria-label={t.contribution}>
-          <div className="card p-5 lg:col-span-2">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-navy-500">{t.contribution}</h2>
-                <div className="mt-2 font-serif text-4xl text-navy-900" data-testid="amount-paid">{money(view.money.paid, view.money.paid % 1 !== 0)}</div>
-                <div className="text-sm text-navy-500">{t.amountPaid}</div>
-              </div>
-              <span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusCls}`}>{statusText}</span>
-            </div>
-            <dl className="mt-5 grid grid-cols-2 gap-4 border-t border-navy-100 pt-4 text-sm sm:grid-cols-3">
-              <div><dt className="text-navy-500">{t.commitment}</dt><dd className="font-semibold text-navy-900">{money(view.money.commitment)}</dd></div>
-              <div><dt className="text-navy-500">{t.balance}</dt><dd className="font-semibold text-navy-900">{money(view.money.balance)}</dd></div>
-              <div className="col-span-2 sm:col-span-1"><dt className="text-navy-500">{t.paymentsTitle}</dt>
-                <dd className="space-y-0.5">
-                  {view.money.payments.length ? view.money.payments.map((p) => <div key={p.date} className="text-navy-900"><span className="font-semibold">{money(p.amount, p.amount % 1 !== 0)}</span> · {t.paidOn} {fmtDate(p.date, loc)}</div>) : <span className="text-navy-600">{t.noPayments}</span>}
-                </dd>
-              </div>
-            </dl>
-            <p className="mt-4 flex items-center gap-1.5 text-xs text-navy-500"><Lock size={12} /> {t.payNote}</p>
-          </div>
-          <div className="card p-5">
+        {/* Seats */}
+        <section id="seats" className="scroll-mt-20" aria-labelledby="seats-h">
+          <h2 id="seats-h" tabIndex={-1} className="text-2xl font-semibold text-navy-900">{t.seatsTitle}</h2>
+          <p className="mt-1 max-w-3xl text-navy-600">{t.seatsHelp}</p>
+          <div className="card mt-5 p-5">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-navy-500">{t.seats}</h2>
             <div className="mt-2 font-serif text-4xl text-navy-900">{view.stats.named}<span className="text-2xl text-navy-300"> / {view.stats.total}</span></div>
             <div className="text-sm text-navy-500">{t.progress(view.stats.named, view.stats.total)}</div>
@@ -135,18 +121,6 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
               <div className="flex items-start gap-2 text-navy-700"><MapPin size={15} className="mt-0.5 shrink-0 text-brand-500" /> <span>{view.event.venue}<br /><span className="text-xs text-navy-500">{view.event.address}</span></span></div>
             </dl>
           </div>
-        </section>
-
-        {justSaved && (
-          <div role="status" className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800">
-            <CheckCircle2 size={20} /> <span className="font-medium">{t.saved}</span>
-          </div>
-        )}
-
-        {/* Seats */}
-        <section id="seats" className="scroll-mt-20">
-          <h2 className="text-2xl font-semibold text-navy-900">{t.seatsTitle}</h2>
-          <p className="mt-1 max-w-3xl text-navy-600">{t.seatsHelp}</p>
           <ul className="mt-5 grid gap-3 md:grid-cols-2">
             {view.seats.map((s) => {
               const named = !!s.guest
@@ -187,6 +161,12 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
           </ul>
         </section>
 
+        {justSaved && (
+          <div role="status" className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800">
+            <CheckCircle2 size={20} /> <span className="font-medium">{t.saved}</span>
+          </div>
+        )}
+
         {/* Activity */}
         <section className="card p-5" aria-labelledby="act-h">
           <h2 id="act-h" className="flex items-center gap-2 text-lg font-semibold text-navy-900"><History size={18} className="text-brand-500" /> {t.activityTitle}</h2>
@@ -199,6 +179,30 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
               </li>
             ))}
           </ol>
+        </section>
+
+        {/* Contribution */}
+        <section className="grid gap-4 lg:grid-cols-3" aria-label={t.contribution}>
+          <div className="card p-5 lg:col-span-2">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-navy-500">{t.contribution}</h2>
+                <div className="mt-2 font-serif text-4xl text-navy-900" data-testid="amount-paid">{money(view.money.paid, view.money.paid % 1 !== 0)}</div>
+                <div className="text-sm text-navy-500">{t.amountPaid}</div>
+              </div>
+              <span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusCls}`}>{statusText}</span>
+            </div>
+            <dl className="mt-5 grid grid-cols-2 gap-4 border-t border-navy-100 pt-4 text-sm sm:grid-cols-3">
+              <div><dt className="text-navy-500">{t.commitment}</dt><dd className="font-semibold text-navy-900">{money(view.money.commitment)}</dd></div>
+              <div><dt className="text-navy-500">{t.balance}</dt><dd className="font-semibold text-navy-900">{money(view.money.balance)}</dd></div>
+              <div className="col-span-2 sm:col-span-1"><dt className="text-navy-500">{t.paymentsTitle}</dt>
+                <dd className="space-y-0.5">
+                  {view.money.payments.length ? view.money.payments.map((p) => <div key={p.date} className="text-navy-900"><span className="font-semibold">{money(p.amount, p.amount % 1 !== 0)}</span> · {t.paidOn} {fmtDate(p.date, loc)}</div>) : <span className="text-navy-600">{t.noPayments}</span>}
+                </dd>
+              </div>
+            </dl>
+            <p className="mt-4 flex items-center gap-1.5 text-xs text-navy-500"><Lock size={12} /> {t.payNote}</p>
+          </div>
         </section>
       </div>
 
