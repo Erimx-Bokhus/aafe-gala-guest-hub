@@ -18,7 +18,7 @@ Every key the project uses, what it can do, where it lives, and how to replace i
 
 ## What enforces it
 
-- **Build guard** (`prototype/shared/vite/envGuard.ts`, in both apps' Vite settings): the build stops if a `VITE_` variable holds a service_role or `sb_secret_` key, or has a secret-sounding name. Vite copies every `VITE_` variable into the browser code, so this is the one place a secret key could leak to visitors. Tested in `envGuard.test.ts` and in CI (`npm test`).
+- **Build guard** (`prototype/shared/vite/envGuard.ts`, in all three apps' Vite settings: staff app, guest portal, iPad check-in app): the build stops if a `VITE_` variable holds a service_role or `sb_secret_` key, or has a secret-sounding name. Vite copies every `VITE_` variable into the browser code, so this is the one place a secret key could leak to visitors. Tested in `envGuard.test.ts` and in CI (`npm test`).
 - **Demo-file guard** (`prototype/scripts/make_open_files.py`): refuses to write `OPEN-*.html` if the build contains a Supabase project address, so a build made with `.env.local` can't be committed.
 - **Secret scan** (`.gitleaks.toml`, required on every pull request): gitleaks' default rules (any JWT, including the anon key) plus Supabase secret keys and service_role assignments.
 - **`.gitignore`** keeps every `.env*` file out of git except `.env.example`, which holds placeholders only.
