@@ -40,7 +40,7 @@ From AAFE's intake form, for staff and for the Demo Day mock investor:
 
 - **Commitments and seats.** Every purchase or pledge has a package and a seat count; each seat is named or open. [call]
 - **Manual entry** for checks, ACH, and verbal pledges, with payment method, date, and status. [call]
-- **Give Lively import** from CSV, with column mapping, duplicate detection, and source tracking. Staff corrections survive the next import. The export's free-text guest list is dropped, like phone numbers: sponsors enter every name through their link. [scope; Oct 7] <!-- modified 2026-10-07 22:38 Aisling -->
+- **Give Lively import** from CSV, with column mapping, duplicate detection, and source tracking. Staff corrections survive the next import. Clearly readable names in the export's guest list are pre-filled for the sponsor to confirm. [scope] <!-- modified 2026-10-07 23:27 Aisling -->
 - **Sponsor guest form** on a private link: the right number of slots per package, editable until AAFE's deadline, no account needed. [call, top priority]
 - **Purchaser and attendee kept separate.** [intake]
 - **A relationship owner on every guest**, with missing information grouped by owner. [intake]
