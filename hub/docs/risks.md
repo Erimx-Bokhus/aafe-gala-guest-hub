@@ -1,8 +1,8 @@
 # Risks
 <!-- modified 2026-10-05 16:51 Aisling -->
-<!-- modified 2026-10-08 08:15 Aisling AI and free-plan rows, owners, three new risks -->
-<!-- removed 2026-10-08 09:10 Aisling The iPad app's missing build guard: fixed in PR #70 -->
-<!-- updated 2026-10-08 20:40 Aisling New risk: the staff app not yet run with real sign-in -->
+<!-- modified 2026-10-08 04:15 Aisling AI and free-plan rows, owners, three new risks -->
+<!-- removed 2026-10-08 05:10 Aisling The iPad app's missing build guard: fixed in PR #70 -->
+<!-- updated 2026-10-08 16:40 Aisling New risk: the staff app not yet run with real sign-in -->
 <!-- reviewed 2026-10-08 Aisling -->
 
 What could go wrong, how likely it is, and what we are doing about it. Ranked by likelihood times impact; reviewed at each weekly check-in.
