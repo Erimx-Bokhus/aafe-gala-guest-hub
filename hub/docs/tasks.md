@@ -23,7 +23,7 @@ The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus),
 - [x] CI with secret scanning (gitleaks on every PR and on `main`), .gitignore, .env.example — Aisling <!-- modified 2026-10-06 05:50 Aisling -->
 - [x] Import and matching spec with 22 test cases (now 38, PRs #20, #22) — Aisling <!-- modified 2026-10-06 05:50 Aisling -->
 - [x] Seed data requirements for the import tests — Aisling <!-- modified 2026-10-03 11:56 Aisling -->
-- [ ] Web app preview deploy (database is live in the team Supabase project) — Backend pair <!-- modified 2026-10-06 06:12 Aisling -->
+- [ ] Web app preview deploy (database is live in Aisling's test Supabase project; the demo's project is still to agree) — Backend pair <!-- modified 2026-10-07 20:23 Aisling -->
 - [x] Database schema and migrations (Natalie's backend, merged Oct 5) — Backend pair <!-- modified 2026-10-06 06:12 Aisling -->
 - [x] Synthetic data generator: 553 invented guests, messy cases, for the import tests (PR #50) — Aisling <!-- modified 2026-10-07 13:45 Aisling -->
 - [ ] Supabase sign-in (#8, PR #27 merged Oct 7) and server-side staff roles (#9, still to do) — Cornell <!-- modified 2026-10-07 19:15 Aisling -->
@@ -54,14 +54,14 @@ The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus),
 - [ ] Staff app: show "sent" and "resend" for QR codes instead of the code itself — Frontend pair <!-- modified 2026-10-05 22:58 Aisling -->
 - [ ] Portal: "From your purchase: please confirm" labels (Korean done, PR #51) — Frontend pair <!-- modified 2026-10-07 19:15 Aisling -->
 - [x] Frontend build check, demo-data drift check, real-data guard in CI — Backend pair <!-- modified 2026-10-06 01:13 Aisling -->
-- [x] Supabase project loaded (schema, seed, backend); access rules (RLS) on for all 18 tables; Supabase advisor warnings cut from 41 to 28, all by design (PR #30) — Aisling <!-- modified 2026-10-06 05:50 Aisling -->
+- [x] Aisling's test Supabase project loaded (schema, seed, backend); access rules (RLS) on for all 18 tables; Supabase advisor warnings cut from 41 to 28, all by design (PR #30) — Aisling <!-- modified 2026-10-07 20:23 Aisling -->
 - [x] Real-data guard required before merging to `main`, alongside the secret scan — Aisling <!-- updated 2026-10-06 03:05 Aisling -->
 - [x] ~~Informal client demo, Wednesday Oct 7~~ Replaced by the prototype demonstration on Oct 19 — Natalie <!-- modified 2026-10-06 20:41 Aisling -->
 
 ## Added October 6 (evening)
 <!-- new 2026-10-06 20:41 Aisling -->
 
-- [x] Exports built and loaded into the team Supabase project (PR #34) — Aisling <!-- updated 2026-10-06 20:41 Aisling -->
+- [x] Exports built and loaded into Aisling's test Supabase project (PR #34) — Aisling <!-- modified 2026-10-07 20:23 Aisling -->
 - [x] Antonin's sponsor portal prototype reviewed — Natalie, Aisling <!-- updated 2026-10-06 20:41 Aisling -->
 - [x] Merge PR #36: keys kept out of the browser and the repo, app unit tests in CI — Aisling <!-- modified 2026-10-06 20:56 Aisling -->
 - [x] Add the 20 staff sign-in tests to #35 — Aisling <!-- modified 2026-10-06 20:56 Aisling -->
@@ -82,7 +82,7 @@ The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus),
 - [x] Sponsor-facing arrivals, switched off until AAFE approves (PR #49) — Aisling <!-- new 2026-10-07 13:45 Aisling -->
 - [x] Translation review sheet for AAFE, and no silent English fallback (PR #50) — Aisling <!-- new 2026-10-07 13:45 Aisling -->
 - [x] Full-size invented test gala, 553 guests, through the import into the database (PR #50) — Aisling <!-- new 2026-10-07 13:45 Aisling -->
-- [ ] Load PRs #42–#50 into the team Supabase project: `npm run db:backend`, then `npm run db:advisors` — Aisling <!-- new 2026-10-07 13:45 Aisling -->
+- [ ] Load PRs #42–#52 into Aisling's test Supabase project: `npm run db:backend`, then `npm run db:advisors` — Aisling <!-- modified 2026-10-07 20:23 Aisling -->
 - [ ] Set up the Vercel demo: two projects (staff app, guest portal); the Supabase URL and public key in Vercel's settings only — Aisling <!-- new 2026-10-07 13:45 Aisling -->
 - [ ] Check-in screen: wire in the offline module (`CheckInDesk`) and the "Offline · N check-ins waiting" banner — Frontend pair <!-- new 2026-10-07 13:45 Aisling -->
 - [ ] Pipeline board and prospect form in the staff app — Frontend pair <!-- new 2026-10-07 13:45 Aisling -->
@@ -105,7 +105,7 @@ The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus),
 
 ## Week of October 26
 
-- [ ] Exports: database side done and loaded into the team project (badge file with table numbers, check-in list, Salesforce file; PR #34); staff app buttons next, with the frontend pair — Backend pair <!-- modified 2026-10-06 20:41 Aisling -->
+- [ ] Exports: database side done and loaded into Aisling's test project (badge file with table numbers, check-in list, Salesforce file; PR #34); staff app buttons next, with the frontend pair — Backend pair <!-- modified 2026-10-07 20:23 Aisling -->
 - [ ] Approval screen in the staff app (reminder and payment-confirmation templates and the queue are built, PR #44) — Frontend pair <!-- modified 2026-10-07 13:45 Aisling -->
 - [ ] Check-in app: search, arrivals, walk-ins, blank sponsor seats — Frontend pair <!-- modified 2026-10-05 20:37 Aisling -->
 - [ ] Show AAFE the full path for feedback — Natalie
