@@ -5,6 +5,7 @@ Every change to this hub, newest first. Open it while signed in to claude.ai and
 Each change has a kind, shown the same way on every page next to the exact line that changed: **✦ New** (didn't exist before), **+ Updated** (rows, tasks, or terms added), **✎ Modified** (wording, numbers, or a rule changed), **− Removed** (taken out), and **! Important** (everyone should act on it). Hover an icon for the date, time (New York), and who made the change; click it to mark it read.
 
 ```changes
+2026-10-08 18:45 | modified | Aisling | decisions | Supabase advisor: 41 warnings after PR #71 (the iPad undo function adds one of the same accepted kind); the test project now holds the Full gala, fixed set (553 guests)
 2026-10-08 09:40 | modified | Aisling | build-plan.where-each-component-stands | The iPad check-in app is connected to the backend (PR #71): staff sign in, the door list comes from Supabase, check-ins sync with first arrival winning, and only the person who checked a guest in, or a gala admin, can undo it. The first live run waits for the in-person sign-in test
 2026-10-08 09:40 | new | Aisling | decisions | The iPad shows an "Access needs" flag, not the details; undo is limited to the same person or a gala admin; demo mode keeps the demo sync server
 2026-10-08 09:20 | modified | Aisling | tasks | PRs #42–#66 loaded into Aisling's test Supabase project; 40 advisor warnings, all the two kinds accepted by design (staff functions check the role inside; portal functions take the link as the credential)
