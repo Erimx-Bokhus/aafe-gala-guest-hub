@@ -7,7 +7,7 @@ Until the final PRDs (Natalie's and Pursuit's) arrive, this file plus the hub's 
 ## Must have (Demo Day)
 - **Commitments and seats.** Each purchase or pledge has a package level and a seat entitlement; seats are named or open. [call]
 - **Manual entry** for check, ACH, and verbal pledges, with payment method, date, and status label. [call]
-- **Give Lively import** by CSV with column mapping, duplicate detection, and source tracking; staff corrections survive re-import. The export's free-text guest list is dropped, like phone numbers: sponsors enter every name through their link (Oct 7). [scope]
+- **Give Lively import** by CSV with column mapping, duplicate detection, and source tracking; staff corrections survive re-import. Clearly readable names in the export's guest list are pre-filled for the sponsor to confirm. [scope]
 - **Sponsor guest form** via private link: correct number of slots per package, editable until AAFE's deadline, no account. [call: #1 priority]
 - **Purchaser vs. attendee** kept separate. [intake]
 - **Relationship owner** on every guest; missing-information view grouped by owner. [intake]
