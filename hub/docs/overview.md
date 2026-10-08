@@ -58,7 +58,7 @@ This is the demo in miniature. Pause on step 4: the sponsor fixes their own list
 | Aisling Leiva-Davila | Backend | Backend, GitHub and integrations | nessaisling-lab / aislingld-pursuit <!-- modified 2026-10-06 05:50 Aisling --> |
 | Cornell Robertson | Backend | Backend | CodeToTheCore <!-- modified 2026-10-05 20:37 Aisling --> |
 
-Build work is split between two pairs (decided Oct 5): **Frontend pair: Natalie + Antonin** (staff app, sponsor portal, check-in, branding) and **Backend pair: Aisling + Cornell** (Supabase backend, import, sign-in and roles, secure links, exports, emails). Natalie also stays product lead and client contact. Owners per component are on the [Build plan](#build-plan) page. <!-- modified 2026-10-05 20:37 Aisling -->
+Build work is split between two pairs (decided Oct 5): **Frontend pair: Natalie + Antonin** (staff app, sponsor portal, check-in, branding) and **Backend pair: Aisling + Cornell** (Supabase backend, import, sign-in and roles, secure links, exports, emails). Natalie also stays product lead and client contact. Owners per component are on the [Build plan](#build-plan) page. Who is building each part (Oct 7): backend by Aisling (Supabase backend, import, secure links, exports, emails, offline check-in, pipeline) and Cornell (staff sign-in); frontend by Natalie (sponsor portal, staff app, iPad check-in app, PRDs) and Antonin (portal ideas, Korean). <!-- modified 2026-10-07 22:38 Aisling -->
 
 ## What we will not build
 

@@ -18,7 +18,7 @@ Until Natalie's team PRD and Pursuit's PRD are final, these pages together are t
 | Data and AI rules | [Data and AI](#data-ai) | Settled; AAFE still to approve <!-- new 2026-10-06 04:16 Aisling --> |
 | Security and keys | [`docs/keys-and-secrets.md`](https://github.com/Erimx-Bokhus/aafe-gala-guest-hub/blob/main/docs/keys-and-secrets.md): where every key lives and what enforces it | Set Oct 6 (PR #36) <!-- updated 2026-10-06 20:56 Aisling --> |
 | Import rules | [Import and matching](#import) | Settled Oct 5; three choices awaiting Natalie's review <!-- modified 2026-10-06 06:12 Aisling --> |
-| Owners and timeline | [Build plan](#build-plan): two pairs, components C0–C12; Natalie owns the sponsor portal and approves its PRs; prototype demonstration Oct 19 | Settled Oct 5; updated Oct 6 <!-- modified 2026-10-06 20:41 Aisling --> |
+| Owners and timeline | [Build plan](#build-plan): two areas, components C0–C12, with who is building each part; Natalie owns the sponsor portal and approves its PRs; first prototype review with AAFE Oct 15 | Settled Oct 5; updated Oct 7 <!-- modified 2026-10-07 22:38 Aisling --> |
 | Decisions and open questions | [Decisions](#decisions), including "Pending" | Updated as we go <!-- new 2026-10-06 04:16 Aisling --> |
 | Risks | [Risks](#risks) | Updated as we go <!-- new 2026-10-06 04:16 Aisling --> |
 | Testing | [Build plan](#build-plan), "Testing: what to add" | About 1,110 automated checks on `main` (940 backend, 116 import engine, 56 app, including 20 sign-in tests) <!-- modified 2026-10-07 19:15 Aisling --> |
@@ -40,7 +40,7 @@ From AAFE's intake form, for staff and for the Demo Day mock investor:
 
 - **Commitments and seats.** Every purchase or pledge has a package and a seat count; each seat is named or open. [call]
 - **Manual entry** for checks, ACH, and verbal pledges, with payment method, date, and status. [call]
-- **Give Lively import** from CSV, with column mapping, duplicate detection, and source tracking. Staff corrections survive the next import. [scope]
+- **Give Lively import** from CSV, with column mapping, duplicate detection, and source tracking. Staff corrections survive the next import. The export's free-text guest list is dropped, like phone numbers: sponsors enter every name through their link. [scope; Oct 7] <!-- modified 2026-10-07 22:38 Aisling -->
 - **Sponsor guest form** on a private link: the right number of slots per package, editable until AAFE's deadline, no account needed. [call, top priority]
 - **Purchaser and attendee kept separate.** [intake]
 - **A relationship owner on every guest**, with missing information grouped by owner. [intake]
@@ -52,24 +52,30 @@ From AAFE's intake form, for staff and for the Demo Day mock investor:
 - **A category on every guest:** sponsor guest, ticket holder, comp, AAFE staff, volunteer, event staff, or government/VIP. [AAFE data] <!-- updated 2026-10-05 16:51 Aisling -->
 - **Seated or admitted.** Champion and above guarantee a table; Friend and Supporter tickets admit guests without one, so the guest list and badges show the difference. [AAFE data] <!-- updated 2026-10-05 16:51 Aisling -->
 - **Activity log** visible to staff, and to each sponsor for their own seats. [prototype] <!-- updated 2026-10-06 06:12 Aisling -->
+- **iPad check-in:** A to Z by last name, search by name, organization or sponsor, tick and check in, approved exceptions (walk-ins, unnamed sponsor seats), keeps working offline. [call; Natalie's PRD, Oct 7] <!-- new 2026-10-07 22:38 Aisling -->
+- **After-gala results:** expected, arrived and no-shows; each sponsor's seats, arrivals, committed, paid and balance. [Natalie's PRD, Oct 7] <!-- new 2026-10-07 22:38 Aisling -->
+- **Give Lively fee analytics:** fees and net per sponsor and in total, from the payment records. [Natalie's PRD, Oct 7] <!-- new 2026-10-07 22:38 Aisling -->
+- **A seating map that staff control:** staff place guests and sponsor groups at tables themselves; nothing seats guests automatically and guests don't choose. [Natalie's PRD, Oct 7; call: staff assign seats] <!-- new 2026-10-07 22:38 Aisling -->
+- **Salesforce push, simulated:** results go to a stand-in endpoint in the demo, never a real Salesforce org; the Salesforce-ready file stays the real deliverable. [Natalie's PRD, Oct 7] <!-- new 2026-10-07 22:38 Aisling -->
 
 ## Should have
 <!-- updated 2026-10-05 16:51 Aisling -->
 
 - **QR-code e-tickets** emailed to each guest and scanned on an iPad. [call]
-- **A check-in app** that searches by guest or sponsor, marks arrivals, and handles walk-ins and unnamed sponsor seats. [call]
+- ~~**A check-in app** that searches by guest or sponsor, marks arrivals, and handles walk-ins and unnamed sponsor seats.~~ Now a must-have (iPad check-in), Oct 7 <!-- modified 2026-10-07 22:38 Aisling -->
 - **Blank sponsor name tags** for unnamed seats. [call]
 - **A multilingual sponsor form** in English, Chinese, Korean, and Spanish, reviewed by AAFE staff. [scope]
 - **aafe.org branding.** [call]
 - **Sponsor pipeline:** each prospect's stage (not started, reached out, in conversation, closed won, payment received, lost), the ask against the commitment, and the last two years' giving, as in AAFE's prospect tracker. [AAFE data] <!-- updated 2026-10-05 16:51 Aisling -->
-- **Gala-night arrivals for sponsors:** each sponsor sees which of their guests have arrived; AAFE reviews the privacy side first. [team, Oct 6] <!-- updated 2026-10-06 20:41 Aisling -->
+- **Gala-night arrivals for sponsors:** each sponsor sees which of their guests have arrived (never the time); built switched off until AAFE approves. [team, Oct 6] <!-- modified 2026-10-07 22:38 Aisling -->
 - **Relationship guests** (comps for officials, board, and partners) with personal QR invites. [prototype] <!-- updated 2026-10-06 06:12 Aisling -->
 
 ## Later or out of scope
 
-- Seating chart builder
+- Automatic seating: anything that places guests without staff (the staff-controlled seating map is now a must-have) <!-- modified 2026-10-07 22:38 Aisling -->
+- Automatic emails: every email waits for staff approval, as Sarah asked; this changes only if Sarah asks <!-- new 2026-10-07 22:38 Aisling -->
 - Automatic Give Lively sync (exists in Natalie's backend; not part of the Demo Day path, which uses the file upload) <!-- modified 2026-10-06 06:12 Aisling -->
-- Direct Salesforce integration
+- A live connection to a real Salesforce org (the demo's push is simulated) <!-- modified 2026-10-07 22:38 Aisling -->
 - Payments, checkout, auctions, donor CRM
 - Logo and program-ad uploads in the sponsor portal: the requirement is to track their status <!-- updated 2026-10-06 20:41 Aisling -->
 - Paying or downloading invoices in the portal: payments stay with Give Lively and AAFE's invoices <!-- updated 2026-10-06 20:41 Aisling -->

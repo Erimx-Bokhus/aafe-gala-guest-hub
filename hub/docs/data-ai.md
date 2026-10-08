@@ -5,8 +5,8 @@ The prototype uses invented data only. This page sets out what a production vers
 
 1. **No payment processing.** Payments stay in Give Lively and Stripe. The tool never stores card or bank details, and the prototype does not connect to Stripe.
 2. **No real donor data during the capstone.** Everything through Demo Day uses invented names.
-3. **AI is optional and supervised.** It sees the fewest fields possible, and a staff member approves everything before it reaches a sponsor.
-4. **AAFE decides retention.** Guest data can be exported for Salesforce and deleted after the gala.
+3. **No AI in the first version** (proposed Oct 7; AAFE confirms). If AAFE wants AI later, it is optional and supervised: it sees the fewest fields possible, and a staff member approves everything before it reaches a sponsor. <!-- modified 2026-10-07 22:38 Aisling -->
+4. **AAFE decides retention.** Our proposal: export for Salesforce after the gala, then delete guest contact details within 60 days, dietary and accessibility details included. <!-- modified 2026-10-07 22:38 Aisling -->
 
 ## What the tool stores
 
@@ -32,9 +32,9 @@ The prototype uses invented data only. This page sets out what a production vers
 ## AI features for Demo Day
 <!-- new 2026-10-05 16:51 Aisling -->
 
-Antonin flagged on Oct 3 that AI Native Demo Day may expect two or three real AI features; the team is confirming whether that is required. Candidates that fit the rules above (off by default, staff approve everything, no emails, phone numbers, or payment details sent to AI): <!-- new 2026-10-05 16:51 Aisling -->
+Settled Oct 7: no AI features in the first version, proposed to AAFE. <!-- modified 2026-10-07 22:38 Aisling --> Antonin flagged on Oct 3 that AI Native Demo Day may expect two or three real AI features. The ideas stay here for later; candidates that fit the rules above (off by default, staff approve everything, no emails, phone numbers, or payment details sent to AI): <!-- new 2026-10-05 16:51 Aisling -->
 
-1. **Split the free-text guest list** from Give Lively into names; emails are removed before the text goes to AI, and staff confirm the result. <!-- new 2026-10-05 16:51 Aisling -->
+1. ~~**Split the free-text guest list** from Give Lively into names~~ No longer applies: the import drops the guest list (Oct 7) <!-- modified 2026-10-07 22:38 Aisling -->
 2. **Flag likely badge errors**, such as a title or organization that differs from earlier records, for the relationship owner to review. <!-- new 2026-10-05 16:51 Aisling -->
 3. **Explain why two records may be the same person** in the review queue. <!-- new 2026-10-05 16:51 Aisling -->
 4. **Draft follow-up emails** for staff to edit and approve. <!-- new 2026-10-05 16:51 Aisling -->
@@ -42,7 +42,7 @@ Antonin flagged on Oct 3 that AI Native Demo Day may expect two or three real AI
 ## Access
 
 - The prototype uses demo accounts with three roles: gala admin, relationship manager, and check-in volunteer. A production version would use AAFE's Google accounts with MFA. <!-- modified 2026-10-06 05:50 Aisling -->
-- Sponsors will see their own guests' gala-night arrival status (decided Oct 6). AAFE reviews the privacy side, including whether arrival times are shown, before it goes live. <!-- updated 2026-10-06 20:41 Aisling -->
+- Sponsors can see their own guests' gala-night arrivals: arrived or not, never a time. It's built switched off until AAFE approves it. <!-- modified 2026-10-07 22:38 Aisling -->
 - Keys: only the project address and the public anon key ever go in an app. Keys that can bypass the access rules stay in Supabase's encrypted secret store; the build refuses to ship one to the browser. Details: `docs/keys-and-secrets.md`. <!-- updated 2026-10-06 20:56 Aisling -->
 - Sponsor links open only that sponsor's purchase and expire at AAFE's deadline. QR e-tickets open only one seat and expire after gala night. Both are random, and only a scrambled (hashed) copy is stored, so a database leak doesn't reveal working links. <!-- modified 2026-10-03 11:56 Aisling -->
 - Every email is approved by staff before it sends. A relationship manager who reviews and sends their own comp ticket counts as the approver; every send is logged. <!-- modified 2026-10-03 11:56 Aisling -->
@@ -52,7 +52,7 @@ Antonin flagged on Oct 3 that AI Native Demo Day may expect two or three real AI
 ## Decisions for AAFE, if the tool is adopted
 
 - [ ] AI on or off
-- [ ] Delete contact details 60 days after the gala, or keep them
+- [ ] Delete contact details, dietary and accessibility details included, 60 days after the gala (our proposal), or keep them <!-- modified 2026-10-07 22:38 Aisling -->
 - [ ] Collect dietary needs in the tool, or not
 - [ ] Who holds admin access
 - [ ] Share AAFE's AI acceptable-use policy with the team
