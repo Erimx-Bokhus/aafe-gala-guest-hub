@@ -20,8 +20,8 @@ const GALA: Gala = door.events.find((e) => e.id === door.current_event_id) ?? do
 const CATS = ['Sponsor guest', 'Ticket holder', 'Comped', 'AAFE staff', 'Event volunteer', 'Event staff', 'Government or VIP']
 const CAT_TONE: Record<string, string> = {
   'Sponsor guest': 'bg-brand-50 text-brand-700 ring-brand-200', 'Ticket holder': 'bg-cream-100 text-navy-800 ring-navy-100',
-  Comped: 'bg-amber-50 text-amber-800 ring-amber-200', 'AAFE staff': 'bg-surface text-brand-700 ring-brand-300',
-  'Event volunteer': 'bg-surface text-navy-700 ring-navy-200', 'Event staff': 'bg-surface text-navy-700 ring-navy-200',
+  Comped: 'bg-amber-50 text-amber-800 ring-amber-200', 'AAFE staff': 'bg-surface text-brand-700 ring-brand-200',
+  'Event volunteer': 'bg-surface text-navy-700 ring-navy-300', 'Event staff': 'bg-surface text-navy-700 ring-navy-300',
   'Government or VIP': 'bg-brand-600 text-white ring-brand-600',
 }
 const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
@@ -103,7 +103,7 @@ function Door({ vol, prefs, onExit }: { vol: Volunteer; prefs: ReturnType<typeof
   const pct = ALL.length ? Math.round((arrived / ALL.length) * 100) : 0
 
   const rows = useMemo(() => {
-    const words = norm(q.trim()).split(/\s+/).filter(Boolean)
+    const words = norm(q.trim()).replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(Boolean)
     return ALL.filter((g) => (cat === 'all' || g.category === cat)
       && (show === 'all' || (show === 'in' ? byGuest.has(g.id) : !byGuest.has(g.id)))
       && (!words.length || words.every((w) => (' ' + norm(`${g.first_name} ${g.last_name} ${g.organization} ${g.sponsor}`).replace(/[^a-z0-9 ]/g, ' ')).includes(' ' + w))))
@@ -163,7 +163,7 @@ function Door({ vol, prefs, onExit }: { vol: Volunteer; prefs: ReturnType<typeof
             </div>
           </div>
           <div className={`order-last min-w-0 basis-full lg:order-none lg:basis-0 lg:flex-1 ${compact ? 'hidden' : ''}`}>
-            <div className="flex items-baseline justify-between gap-2 text-navy-900" data-testid="counter"><span><strong className="text-2xl tabular-nums text-brand-600">{arrived}</strong> of <strong className="tabular-nums">{ALL.length}</strong> checked in</span><span className="whitespace-nowrap text-sm text-navy-600"><span className="tabular-nums">{pct}%</span>{exceptions > 0 && <> · <button className="underline underline-offset-2" onClick={() => setExcList(true)} data-testid="exc-count">+{exceptions} exception{exceptions === 1 ? '' : 's'}</button></>}</span></div>
+            <div className="flex items-baseline justify-between gap-2 text-navy-900" data-testid="counter"><span><strong className="text-2xl tabular-nums text-brand-600">{arrived}</strong> of <strong className="tabular-nums">{ALL.length}</strong> checked in</span><span className="whitespace-nowrap text-sm text-navy-600"><span className="tabular-nums">{pct}%</span>{exceptions > 0 && <> · <button className="tap inline-flex min-h-[44px] items-center px-1 underline underline-offset-2" onClick={() => setExcList(true)} data-testid="exc-count">+{exceptions} exception{exceptions === 1 ? '' : 's'}</button></>}</span></div>
             <div className="mt-1 h-2 overflow-hidden rounded-full bg-cream-100" aria-hidden><div className="h-full rounded-full bg-brand-500 transition-all" style={{ width: `${pct}%` }} /></div>
           </div>
           <div className="ml-auto flex shrink-0 items-center gap-2">
@@ -179,7 +179,7 @@ function Door({ vol, prefs, onExit }: { vol: Volunteer; prefs: ReturnType<typeof
         <div className="flex flex-wrap items-center gap-2 border-t border-navy-100 px-5 py-2.5">
           <div className="relative min-w-[200px] flex-1">
             <Search size={22} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-navy-500" aria-hidden />
-            <input value={q} onChange={(e) => { setQ(e.target.value); if (e.target.value) setUndo(null) }} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} autoComplete="off" autoCorrect="off" spellCheck={false} placeholder="Name, organization, sponsor" aria-label="Search guests" data-testid="search"
+            <input value={q} onChange={(e) => { setQ(e.target.value); if (e.target.value) setUndo(null) }} onFocus={() => setFocused(true)} onBlur={() => setTimeout(() => setFocused(false), 400)} autoComplete="off" autoCorrect="off" spellCheck={false} placeholder="Name, organization, sponsor" aria-label="Search guests" data-testid="search"
               className="h-14 w-full rounded-xl border-2 border-navy-100 bg-surface pl-12 pr-12 text-lg text-navy-900 placeholder:text-navy-500 focus:border-brand-500 focus:outline-none" />
             {q && <button className="tap absolute right-1 top-1/2 flex -translate-y-1/2 items-center justify-center rounded-full text-navy-600" onClick={() => setQ('')} aria-label="Clear search"><X size={22} /></button>}
           </div>
@@ -194,7 +194,7 @@ function Door({ vol, prefs, onExit }: { vol: Volunteer; prefs: ReturnType<typeof
       </header>
 
       <div className="relative flex min-h-0 flex-1">
-        <div ref={listRef} className="relative min-h-0 flex-1 overflow-y-auto pb-32 pr-12" data-testid="guest-list" aria-label="Guest list, by last name">
+        <div ref={listRef} className={`relative min-h-0 flex-1 overflow-y-auto pb-32 ${q.trim() ? '' : 'pr-12'}`} data-testid="guest-list" aria-label="Guest list, by last name">
           {!rows.length && (
             <div className="m-6 rounded-2xl border-2 border-dashed border-navy-100 p-8 text-center text-navy-700">
               <p className="text-lg font-semibold text-navy-900">No guests match.</p>
