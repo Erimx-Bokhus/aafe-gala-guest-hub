@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { AArrowDown, AArrowUp, Globe, Moon, Sun, X } from 'lucide-react'
 import { chooseDemoSet, DEMO_SET_LABEL, demoSet, type DemoSet } from './data'
 
@@ -60,7 +60,7 @@ export function DisplayControls({ prefs, labels, onDark }: { prefs: Prefs; label
 
 export function LanguageSelect<T extends string>({ value, onChange, options, label }: { value: T; onChange: (v: T) => void; options: { id: T; label: string }[]; label: string }) {
   return (
-    <label className="relative inline-flex h-9 items-center rounded-md border border-navy-100 bg-surface pl-2.5 pr-1 text-sm text-navy-800 hover:bg-navy-50">
+    <label className="relative inline-flex h-9 items-center rounded-md border border-navy-100 bg-surface pl-2.5 pr-1 text-sm text-navy-800 hover:bg-navy-50 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand-500">
       <Globe size={16} className="text-navy-500" aria-hidden />
       <span className="sr-only">{label}</span>
       <select value={value} onChange={(e) => onChange(e.target.value as T)} className="cursor-pointer appearance-none bg-transparent py-1 pl-2 pr-6 text-sm font-medium focus:outline-none">
@@ -93,20 +93,47 @@ export function Pill({ tone = 'gray', children }: { tone?: Tone; children: React
 }
 
 // ---------- modal / toast / field ----------
-export function Modal({ open, onClose, title, children, wide }: { open: boolean; onClose: () => void; title: string; children: ReactNode; wide?: boolean }) {
+const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+export function Modal({ open, onClose, title, children, wide, closeLabel = 'Close' }: { open: boolean; onClose: () => void; title: string; children: ReactNode; wide?: boolean; closeLabel?: string }) {
+  const boxRef = useRef<HTMLDivElement>(null)
+  const titleId = useId()
+  const closeRef = useRef(onClose)
+  closeRef.current = onClose
+  // Remember what had focus when the dialog opened, so focus can go back there on close.
+  // Captured during render because autoFocus inside the dialog moves focus before effects run.
+  const openerRef = useRef<HTMLElement | null>(null)
+  const wasOpen = useRef(false)
+  if (open && !wasOpen.current && typeof document !== 'undefined') openerRef.current = document.activeElement as HTMLElement | null
+  wasOpen.current = open
   useEffect(() => {
     if (!open) return
-    const k = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    const box = boxRef.current
+    if (box && !box.contains(document.activeElement)) box.focus()
+    const k = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { closeRef.current(); return }
+      if (e.key !== 'Tab' || !box) return
+      // Keep Tab / Shift+Tab inside the dialog
+      const items = Array.from(box.querySelectorAll<HTMLElement>(FOCUSABLE))
+      if (!items.length) return
+      const first = items[0], last = items[items.length - 1], active = document.activeElement
+      if (e.shiftKey && (active === first || active === box)) { e.preventDefault(); last.focus() }
+      else if (!e.shiftKey && active === last) { e.preventDefault(); first.focus() }
+      else if (!box.contains(active)) { e.preventDefault(); first.focus() }
+    }
     window.addEventListener('keydown', k)
-    return () => window.removeEventListener('keydown', k)
-  }, [open, onClose])
+    return () => {
+      window.removeEventListener('keydown', k)
+      const opener = openerRef.current
+      if (opener && document.contains(opener)) opener.focus()
+    }
+  }, [open])
   if (!open) return null
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/60 p-0 sm:items-center sm:p-6" onMouseDown={onClose}>
-      <div role="dialog" aria-modal="true" aria-label={title} onMouseDown={(e) => e.stopPropagation()} className={`max-h-[92vh] w-full overflow-y-auto rounded-t-2xl bg-surface shadow-2xl sm:rounded-2xl ${wide ? 'sm:max-w-3xl' : 'sm:max-w-lg'}`}>
+      <div ref={boxRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby={titleId} onMouseDown={(e) => e.stopPropagation()} className={`max-h-[92vh] w-full overflow-y-auto rounded-t-2xl bg-surface shadow-2xl outline-none sm:rounded-2xl ${wide ? 'sm:max-w-3xl' : 'sm:max-w-lg'}`}>
         <div className="flex items-center justify-between border-b border-navy-100 px-5 py-4">
-          <h2 className="text-base font-semibold text-navy-900">{title}</h2>
-          <button onClick={onClose} className="rounded-md p-1 text-navy-500 hover:bg-navy-50" aria-label="Close"><X size={20} /></button>
+          <h2 id={titleId} className="text-base font-semibold text-navy-900">{title}</h2>
+          <button type="button" onClick={onClose} className="rounded-md p-1 text-navy-500 hover:bg-navy-50" aria-label={closeLabel} title={closeLabel}><X size={20} /></button>
         </div>
         <div className="p-5">{children}</div>
       </div>
@@ -123,8 +150,8 @@ export function Field({ label, hint, error, children, id }: { label: string; hin
     <div>
       <label htmlFor={id} className="mb-1 block text-sm font-medium text-navy-800">{label}</label>
       {children}
-      {hint && !error && <p className="mt-1 text-xs text-navy-500">{hint}</p>}
-      {error && <p className="mt-1 text-xs font-medium text-rose-700">{error}</p>}
+      {hint && !error && <p id={`${id}-hint`} className="mt-1 text-xs text-navy-500">{hint}</p>}
+      {error && <p id={`${id}-err`} className="mt-1 text-xs font-medium text-rose-700">{error}</p>}
     </div>
   )
 }

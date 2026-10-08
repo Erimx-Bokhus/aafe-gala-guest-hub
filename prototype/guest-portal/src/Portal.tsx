@@ -13,21 +13,32 @@ function AttendeeForm({ lang, initial, onSave, onCancel }: { lang: Lang; initial
   const t = DICT[lang]
   const [v, setV] = useState(initial)
   const [touched, setTouched] = useState(false)
+  const IDS = { first_name: 'fn', last_name: 'ln', title: 'ti', organization: 'or', email: 'em' } as const
   const errs: Partial<Record<keyof AttendeeInput, string>> = {}
   ;(['first_name', 'last_name', 'title', 'organization', 'email'] as const).forEach((k) => { if (!v[k].trim()) errs[k] = t.required })
   if (v.email.trim() && !EMAIL_RE.test(v.email.trim())) errs.email = t.invalidEmail
   const set = (k: keyof AttendeeInput) => (e: ChangeEvent<HTMLInputElement>) => setV({ ...v, [k]: e.target.value })
   const err = (k: keyof AttendeeInput) => (touched ? errs[k] : undefined)
+  // Link each required field to its error / hint so screen readers read them with the field
+  const a11y = (k: keyof typeof IDS, hint = false) => {
+    const id = IDS[k]
+    return { 'aria-required': true, 'aria-invalid': err(k) ? true : undefined, 'aria-describedby': err(k) ? `${id}-err` : hint ? `${id}-hint` : undefined }
+  }
   const trimmed = Object.fromEntries(Object.entries(v).map(([k, x]) => [k, x.trim()])) as unknown as AttendeeInput
   return (
-    <form noValidate className="space-y-4" onSubmit={(e) => { e.preventDefault(); setTouched(true); if (!Object.keys(errs).length) onSave(trimmed) }}>
+    <form noValidate className="space-y-4" onSubmit={(e) => {
+      e.preventDefault(); setTouched(true)
+      const firstBad = (Object.keys(IDS) as (keyof typeof IDS)[]).find((k) => errs[k])
+      if (firstBad) document.getElementById(IDS[firstBad])?.focus() // jump to the first field that needs fixing
+      else onSave(trimmed)
+    }}>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field id="fn" label={t.firstName} error={err('first_name')}><input id="fn" className="input" value={v.first_name} onChange={set('first_name')} autoFocus /></Field>
-        <Field id="ln" label={t.lastName} error={err('last_name')}><input id="ln" className="input" value={v.last_name} onChange={set('last_name')} /></Field>
+        <Field id="fn" label={t.firstName} error={err('first_name')}><input id="fn" className="input" value={v.first_name} onChange={set('first_name')} autoFocus {...a11y('first_name')} /></Field>
+        <Field id="ln" label={t.lastName} error={err('last_name')}><input id="ln" className="input" value={v.last_name} onChange={set('last_name')} {...a11y('last_name')} /></Field>
       </div>
-      <Field id="ti" label={t.title} hint={t.titleHint} error={err('title')}><input id="ti" className="input" value={v.title} onChange={set('title')} /></Field>
-      <Field id="or" label={t.organization} hint={t.titleHint} error={err('organization')}><input id="or" className="input" value={v.organization} onChange={set('organization')} /></Field>
-      <Field id="em" label={t.email} error={err('email')}><input id="em" type="email" className="input" value={v.email} onChange={set('email')} placeholder="name@example.org" /></Field>
+      <Field id="ti" label={t.title} hint={t.titleHint} error={err('title')}><input id="ti" className="input" value={v.title} onChange={set('title')} {...a11y('title', true)} /></Field>
+      <Field id="or" label={t.organization} hint={t.titleHint} error={err('organization')}><input id="or" className="input" value={v.organization} onChange={set('organization')} {...a11y('organization', true)} /></Field>
+      <Field id="em" label={t.email} error={err('email')}><input id="em" type="email" className="input" value={v.email} onChange={set('email')} placeholder="name@example.org" {...a11y('email')} /></Field>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field id="di" label={t.dietary}><input id="di" className="input" value={v.dietary_needs} onChange={set('dietary_needs')} /></Field>
         <Field id="ac" label={t.access}><input id="ac" className="input" value={v.accessibility_needs} onChange={set('accessibility_needs')} /></Field>
@@ -98,7 +109,11 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
           <div className="rounded-xl border border-cream-200 bg-surface p-3"><div className="text-[0.6875rem] font-semibold uppercase tracking-wide text-brand-600">{t.package}</div><div className="mt-1 text-sm font-semibold text-navy-900">{view.tierName}</div></div>
           <div className="rounded-xl border border-cream-200 bg-surface p-3"><div className="text-[0.6875rem] font-semibold uppercase tracking-wide text-brand-600">{t.eventWhen}</div><div className="mt-1 text-sm font-semibold text-navy-900">{fmtDate(view.event.date, loc)}</div></div>
         </div>
-        <a href="#seats" className="btn-primary mt-6">{t.openList}</a>
+        <button type="button" className="btn-primary mt-6" onClick={() => {
+          const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+          document.getElementById('seats')?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' })
+          document.getElementById('seats-h')?.focus({ preventScroll: true })
+        }}>{t.openList}</button>
       </Hero>
 
       <div className="mx-auto max-w-6xl space-y-8 px-5 py-10">
@@ -122,13 +137,13 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
                 </dd>
               </div>
             </dl>
-            <p className="mt-4 flex items-center gap-1.5 text-xs text-navy-500"><Lock size={12} /> {t.payNote}</p>
+            <p className="mt-4 flex items-center gap-1.5 text-xs text-navy-500"><Lock size={12} aria-hidden /> {t.payNote}</p>
           </div>
           <div className="card p-5">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-navy-500">{t.seats}</h2>
             <div className="mt-2 font-serif text-4xl text-navy-900">{view.stats.named}<span className="text-2xl text-navy-300"> / {view.stats.total}</span></div>
             <div className="text-sm text-navy-500">{t.progress(view.stats.named, view.stats.total)}</div>
-            <div className="mt-3 h-2 overflow-hidden rounded-full bg-navy-50"><div className="h-full rounded-full bg-brand-500" style={{ width: `${pct}%` }} /></div>
+            <div className="mt-3 h-2 overflow-hidden rounded-full bg-navy-50" role="progressbar" aria-label={t.seats} aria-valuemin={0} aria-valuemax={view.stats.total} aria-valuenow={view.stats.named} aria-valuetext={t.progress(view.stats.named, view.stats.total)}><div className="h-full rounded-full bg-brand-500" style={{ width: `${pct}%` }} /></div>
             <dl className="mt-4 space-y-2 border-t border-navy-100 pt-4 text-sm">
               {view.deadline && <div className="flex items-center gap-2 text-navy-700"><Clock size={15} className="text-brand-500" /> {t.deadline}: <strong className="text-navy-900">{fmtDate(view.deadline, loc)}</strong></div>}
               <div className="flex items-center gap-2 text-navy-700"><CalendarDays size={15} className="text-brand-500" /> {fmtDate(view.event.date, loc)} · {view.event.doors}</div>
@@ -144,13 +159,15 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
         )}
 
         {/* Seats */}
-        <section id="seats" className="scroll-mt-20">
-          <h2 className="text-2xl font-semibold text-navy-900">{t.seatsTitle}</h2>
+        <section id="seats" className="scroll-mt-20" aria-labelledby="seats-h">
+          <h2 id="seats-h" tabIndex={-1} className="text-2xl font-semibold text-navy-900">{t.seatsTitle}</h2>
           <p className="mt-1 max-w-3xl text-navy-600">{t.seatsHelp}</p>
           <ul className="mt-5 grid gap-3 md:grid-cols-2">
             {view.seats.map((s) => {
               const named = !!s.guest
               const confirmed = s.status === 'reviewed' || s.status === 'badge_ready' || s.status === 'checked_in'
+              // Screen readers hear which seat a button is for, not just "Update attendee" five times
+              const seatName = `${t.seat} ${s.slot}${s.guest ? `, ${s.guest.first_name} ${s.guest.last_name}` : ''}`
               return (
                 <li key={s.slot} className={`card flex flex-col p-4 ${named ? '' : 'border-dashed'}`} data-testid={`seat-${s.slot}`}>
                   <div className="flex items-center justify-between gap-2">
@@ -172,11 +189,11 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
                     </div>
                   ) : <div className="flex-1" />}
                   <div className="mt-3 flex flex-wrap gap-2">
-                    <button className={named ? 'btn-ghost btn-sm' : 'btn-primary btn-sm'} onClick={() => setEditing(s.slot)} data-testid={`edit-seat-${s.slot}`}>
+                    <button className={named ? 'btn-ghost btn-sm' : 'btn-primary btn-sm'} onClick={() => setEditing(s.slot)} aria-label={`${named ? t.update : t.add}: ${seatName}`} data-testid={`edit-seat-${s.slot}`}>
                       {named ? <><Pencil size={14} /> {t.update}</> : <><Plus size={14} /> {t.add}</>}
                     </button>
                     {named && s.status !== 'checked_in' && (
-                      <button className="btn-ghost btn-sm text-rose-700" onClick={() => { if (window.confirm(t.confirmRemove)) remove(s.slot, () => setToast(t.saved)) }}>
+                      <button className="btn-ghost btn-sm text-rose-700" aria-label={`${t.remove}: ${seatName}`} onClick={() => { if (window.confirm(t.confirmRemove)) remove(s.slot, () => setToast(t.saved)) }}>
                         <Trash2 size={14} /> {t.remove}
                       </button>
                     )}
@@ -191,7 +208,7 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
         <section className="card p-5" aria-labelledby="act-h">
           <h2 id="act-h" className="flex items-center gap-2 text-lg font-semibold text-navy-900"><History size={18} className="text-brand-500" /> {t.activityTitle}</h2>
           <p className="text-sm text-navy-500">{t.activityHelp}</p>
-          <ol className="mt-4 max-h-80 space-y-0 overflow-y-auto" data-testid="activity">
+          <ol className="mt-4 max-h-80 space-y-0 overflow-y-auto" tabIndex={0} aria-labelledby="act-h" data-testid="activity">
             {view.activity.map((a, k) => (
               <li key={k} className="flex gap-3 border-l-2 border-cream-200 py-2 pl-4">
                 <time className="w-40 shrink-0 text-xs text-navy-500" dateTime={a.at}>{fmtDate(a.at, loc, true)}</time>
@@ -212,7 +229,7 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
             <div className="mt-6 rounded-xl bg-cream-100 p-4 text-sm">
               <div className="font-semibold text-navy-900">{t.help}</div>
               <a className="font-medium text-brand-600 underline underline-offset-2" href="mailto:gala-team@aafe-demo.example.org">{t.contact}</a>
-              <div className="text-navy-500">gala-team@aafe-demo.example.org · (212) 555-0100</div>
+              <div className="text-navy-600">gala-team@aafe-demo.example.org · (212) 555-0100</div>
             </div>
           </div>
         </div>
@@ -220,7 +237,7 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
       <MissionStrip lang={lang} />
       <footer className="mx-auto max-w-6xl px-5 py-8 text-xs leading-relaxed text-navy-500">{t.privacy}</footer>
 
-      <Modal open={seat != null} onClose={() => setEditing(null)} title={seat?.guest ? t.formEditTitle : t.formAddTitle}>
+      <Modal open={seat != null} onClose={() => setEditing(null)} title={seat?.guest ? t.formEditTitle : t.formAddTitle} closeLabel={t.close}>
         {seat && <AttendeeForm lang={lang} initial={seat.guest ? { ...EMPTY, ...seat.guest } : { ...EMPTY, organization: view.organization }} onCancel={() => setEditing(null)}
           onSave={(v) => save(seat.slot, v, () => { setEditing(null); setJustSaved(true); setToast(t.saved) })} />}
       </Modal>
