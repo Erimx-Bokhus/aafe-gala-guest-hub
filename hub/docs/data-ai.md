@@ -34,7 +34,7 @@ The prototype uses invented data only. This page sets out what a production vers
 
 Settled Oct 7: no AI features in the first version, proposed to AAFE. <!-- modified 2026-10-07 22:38 Aisling --> Antonin flagged on Oct 3 that AI Native Demo Day may expect two or three real AI features. The ideas stay here for later; candidates that fit the rules above (off by default, staff approve everything, no emails, phone numbers, or payment details sent to AI): <!-- new 2026-10-05 16:51 Aisling -->
 
-1. ~~**Split the free-text guest list** from Give Lively into names~~ No longer applies: the import drops the guest list (Oct 7) <!-- modified 2026-10-07 22:38 Aisling -->
+1. **Split the free-text guest list** from Give Lively into names; emails are removed before the text goes to AI, and staff confirm the result. (Today plain rules do this without AI.) <!-- modified 2026-10-07 23:27 Aisling -->
 2. **Flag likely badge errors**, such as a title or organization that differs from earlier records, for the relationship owner to review. <!-- new 2026-10-05 16:51 Aisling -->
 3. **Explain why two records may be the same person** in the review queue. <!-- new 2026-10-05 16:51 Aisling -->
 4. **Draft follow-up emails** for staff to edit and approve. <!-- new 2026-10-05 16:51 Aisling -->
