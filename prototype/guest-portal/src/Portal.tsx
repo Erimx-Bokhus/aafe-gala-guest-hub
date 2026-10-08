@@ -159,7 +159,7 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
         )}
 
         {/* Seats */}
-        <section id="seats" className="scroll-mt-20" aria-labelledby="seats-h">
+        <section id="seats" className="scroll-mt-32 sm:scroll-mt-20" aria-labelledby="seats-h">
           <h2 id="seats-h" tabIndex={-1} className="text-2xl font-semibold text-navy-900">{t.seatsTitle}</h2>
           <p className="mt-1 max-w-3xl text-navy-600">{t.seatsHelp}</p>
           <ul className="mt-5 grid gap-3 md:grid-cols-2">
