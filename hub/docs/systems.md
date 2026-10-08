@@ -7,8 +7,8 @@ The tools AAFE already uses, and what each means for the build.
 | --- | --- | --- |
 | Give Lively | Free platform; tickets and donations; sends tax receipts | Keep it. Read from it; never replace it |
 | aafe.org | WordPress site; AAFE works with GreyBox Creative | Match its look in the prototype |
-| Google Workspace | AAFE email and Drive | Staff sign-in later, if adopted (the prototype uses emailed sign-in links); AppSheet may be included <!-- modified 2026-10-08 08:15 Aisling --> |
-| Salesforce | Being built; live for the 2027 gala | Provide a clean export; the demo also shows a simulated push to a stand-in, never a real Salesforce org <!-- modified 2026-10-08 08:15 Aisling --> |
+| Google Workspace | AAFE email and Drive | Staff sign-in later, if adopted (the prototype uses emailed sign-in links); AppSheet may be included <!-- modified 2026-10-08 04:15 Aisling --> |
+| Salesforce | Being built; live for the 2027 gala | Provide a clean export; the demo also shows a simulated push to a stand-in, never a real Salesforce org <!-- modified 2026-10-08 04:15 Aisling --> |
 | Stripe | Processes Give Lively payments into AAFE's own account | Not connected in the prototype; a future option |
 | Mailchimp | Likely used for gala email (from link tracking) | Confirm with AAFE |
 | Auctria | Ran the 2026 online auction | Out of scope |
@@ -24,7 +24,7 @@ The tools AAFE already uses, and what each means for the build.
 
 ## aafe.org and its web partner
 
-- **AAFE works with GreyBox Creative**, a New York branding and web agency, for its website and brand. GreyBox lists AAFE's rebrand and trilingual website in its portfolio. <!-- updated 2026-10-08 08:15 Aisling -->
+- **AAFE works with GreyBox Creative**, a New York branding and web agency, for its website and brand. GreyBox lists AAFE's rebrand and trilingual website in its portfolio. <!-- updated 2026-10-08 04:15 Aisling -->
 - **The site** is WordPress with a custom theme, Poppins type, and AAFE's orange-red brand color. The prototype matches that look.
 - **If AAFE adopts the tool,** it confirms who administers its domain, DNS, hosting, WordPress, and maintenance accounts before choosing a production host or a custom address like guests.aafe.org, and may request a scoped quote from its web partner.
 

@@ -1,17 +1,17 @@
 # Live build
-<!-- modified 2026-10-08 08:15 Aisling Split: the sketches moved to Early sketches; the iPad check-in app added -->
+<!-- modified 2026-10-08 04:15 Aisling Split: the sketches moved to Early sketches; the iPad check-in app added -->
 <!-- reviewed 2026-10-08 Aisling -->
 
-The real apps in `prototype/`, running on invented demo data: Natalie's sponsor portal and staff app, and her iPad check-in app for the door. Layout and visual design belong to the frontend pair. The first sketches of the same screens are on [Early sketches](#sketches). All names are invented. <!-- modified 2026-10-08 08:15 Aisling -->
+The real apps in `prototype/`, running on invented demo data: Natalie's sponsor portal and staff app, and her iPad check-in app for the door. Layout and visual design belong to the frontend pair. The first sketches of the same screens are on [Early sketches](#sketches). All names are invented. <!-- modified 2026-10-08 04:15 Aisling -->
 
 ## The build so far
 <!-- new 2026-10-06 05:45 Aisling -->
 
-Screens from Natalie's staff app and sponsor portal, captured October 6, before staff sign-in (PR #27), Korean in the portal (PR #51), and the demo data picker (PR #66). AAFE's logo and event photos are swapped for grey placeholders until AAFE approves them for public use in writing (hard rule 8). <!-- modified 2026-10-08 08:15 Aisling -->
+Screens from Natalie's staff app and sponsor portal, captured October 6, before staff sign-in (PR #27), Korean in the portal (PR #51), and the demo data picker (PR #66). AAFE's logo and event photos are swapped for grey placeholders until AAFE approves them for public use in writing (hard rule 8). <!-- modified 2026-10-08 04:15 Aisling -->
 
 <video controls muted playsinline preload="metadata" poster="img/portal-welcome.jpg" src="img/build-walkthrough.mp4" aria-label="25-second walkthrough: the sponsor portal, the staff app, and check-in"></video>
 
-*A 25-second walkthrough: a sponsor names a guest, staff see it, badges fill in, and the guest checks in on the staff app's check-in screen.* <!-- modified 2026-10-08 08:15 Aisling -->
+*A 25-second walkthrough: a sponsor names a guest, staff see it, badges fill in, and the guest checks in on the staff app's check-in screen.* <!-- modified 2026-10-08 04:15 Aisling -->
 
 ### Sponsor portal
 
@@ -43,12 +43,12 @@ Badges fill in from the guest list, with table and seat.
 
 ### Check-in in the staff app
 
-Staff can search a name or sponsor and mark the guest arrived. At the door, volunteers use the iPad app below. <!-- modified 2026-10-08 08:15 Aisling -->
+Staff can search a name or sponsor and mark the guest arrived. At the door, volunteers use the iPad app below. <!-- modified 2026-10-08 04:15 Aisling -->
 
 ![Animation: staff search "Acme" on the check-in screen and mark an invented guest, Jordan Lee, as arrived at table 5](img/check-in.gif)
 
 ## iPad check-in app
-<!-- new 2026-10-08 08:15 Aisling -->
+<!-- new 2026-10-08 04:15 Aisling -->
 
 Natalie's app for volunteers at the door (`prototype/checkin-app/`, PR #56), on the Full gala's 553 invented guests, captured October 8. Volunteers sign in with a check-in-only role; the app shows tonight's gala only, keeps working offline, and syncs later. AAFE's logo mark is a grey placeholder (hard rule 8).
 

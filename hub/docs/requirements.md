@@ -5,9 +5,9 @@ What the tool must do, in priority order. Bracketed tags show where each require
 
 ## Working PRD\*
 <!-- new 2026-10-06 04:16 Aisling -->
-<!-- modified 2026-10-08 08:15 Aisling -->
+<!-- modified 2026-10-08 04:15 Aisling -->
 
-These pages together are the team's product requirements. Natalie's two PRDs (Oct 7) are reconciled with this page; differences are in [Decisions](#decisions). Build from them; if something isn't covered here, it goes to Decisions before it gets built. <!-- modified 2026-10-08 08:15 Aisling -->
+These pages together are the team's product requirements. Natalie's two PRDs (Oct 7) are reconciled with this page; differences are in [Decisions](#decisions). Build from them; if something isn't covered here, it goes to Decisions before it gets built. <!-- modified 2026-10-08 04:15 Aisling -->
 
 | PRD section | Where it lives now | Status <!-- new 2026-10-06 04:16 Aisling --> |
 | --- | --- | --- |
@@ -15,16 +15,16 @@ These pages together are the team's product requirements. Natalie's two PRDs (Oc
 | Users and their jobs | [Discovery](#discovery): staff, relationship managers, sponsors, the check-in desk | Settled <!-- new 2026-10-06 04:16 Aisling --> |
 | Requirements, in priority order | This page: must have, should have | Settled; changes go through Decisions <!-- new 2026-10-06 04:16 Aisling --> |
 | Out of scope | This page, "Later or out of scope"; [Overview](#overview), "What we will not build" | Settled <!-- new 2026-10-06 04:16 Aisling --> |
-| Success measures | The three questions below; AAFE's first prototype review (Oct 15); AAFE's feedback on the full path (Oct 30); Demo Day (Nov 10) | No numeric targets yet <!-- modified 2026-10-08 08:15 Aisling --> |
+| Success measures | The three questions below; AAFE's first prototype review (Oct 15); AAFE's feedback on the full path (Oct 30); Demo Day (Nov 10) | No numeric targets yet <!-- modified 2026-10-08 04:15 Aisling --> |
 | Data and AI rules | [Data and AI](#data-ai) | Settled; AAFE still to approve <!-- new 2026-10-06 04:16 Aisling --> |
 | Security and keys | [`docs/keys-and-secrets.md`](https://github.com/Erimx-Bokhus/aafe-gala-guest-hub/blob/main/docs/keys-and-secrets.md): where every key lives and what enforces it | Set Oct 6 (PR #36) <!-- updated 2026-10-06 20:56 Aisling --> |
-| Import rules | [Import and matching](#import) | Settled Oct 5; pre-fill reaffirmed Oct 7 (PR #58 closed) <!-- modified 2026-10-08 08:15 Aisling --> |
-| Owners and timeline | [Build plan](#build-plan): two areas, components C0–C13, with who is building each part; Natalie owns the sponsor portal and approves its PRs; first prototype review with AAFE Oct 15 | Settled Oct 5; updated Oct 8 <!-- modified 2026-10-08 08:15 Aisling --> |
+| Import rules | [Import and matching](#import) | Settled Oct 5; pre-fill reaffirmed Oct 7 (PR #58 closed) <!-- modified 2026-10-08 04:15 Aisling --> |
+| Owners and timeline | [Build plan](#build-plan): two areas, components C0–C13, with who is building each part; Natalie owns the sponsor portal and approves its PRs; first prototype review with AAFE Oct 15 | Settled Oct 5; updated Oct 8 <!-- modified 2026-10-08 04:15 Aisling --> |
 | Decisions and open questions | [Decisions](#decisions), including "Pending" | Updated as we go <!-- new 2026-10-06 04:16 Aisling --> |
 | Risks | [Risks](#risks) | Updated as we go <!-- new 2026-10-06 04:16 Aisling --> |
-| Testing | [Build plan](#build-plan), "Testing: what to add" | About 1,160 automated checks on `main`; the counts are kept in [Build plan](#build-plan.where-each-component-stands), C11 <!-- modified 2026-10-08 08:15 Aisling --> |
+| Testing | [Build plan](#build-plan), "Testing: what to add" | About 1,160 automated checks on `main`; the counts are kept in [Build plan](#build-plan.where-each-component-stands), C11 <!-- modified 2026-10-08 04:15 Aisling --> |
 
-Natalie's two PRDs (enterprise and client-facing) were compared with this table on Oct 7, and every difference is recorded in [Decisions](#decisions). <!-- modified 2026-10-08 08:15 Aisling -->
+Natalie's two PRDs (enterprise and client-facing) were compared with this table on Oct 7, and every difference is recorded in [Decisions](#decisions). <!-- modified 2026-10-08 04:15 Aisling -->
 
 \* **Why it's set up this way.** The build had to start before a PRD existed. The discovery call with AAFE was October 1, and AAFE's spreadsheet, Give Lively export, and tier flyer arrived October 5, the same week the stack was chosen and building began. Demo Day (November 10) didn't move, so instead of waiting, the team built from what AAFE actually said and sent. Every requirement on this page carries its source in brackets: the call, the intake form, the project scope, or AAFE's data. <!-- new 2026-10-06 04:16 Aisling -->
 
