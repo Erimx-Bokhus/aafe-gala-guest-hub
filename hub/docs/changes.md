@@ -5,6 +5,7 @@ Every change to this hub, newest first. Open it while signed in to claude.ai and
 Each change has a kind, shown the same way on every page next to the exact line that changed: **✦ New** (didn't exist before), **+ Updated** (rows, tasks, or terms added), **✎ Modified** (wording, numbers, or a rule changed), **− Removed** (taken out), and **! Important** (everyone should act on it). Hover an icon for the date, time (New York), and who made the change; click it to mark it read.
 
 ```changes
+2026-10-08 09:20 | modified | Aisling | tasks | PRs #42–#66 loaded into Aisling's test Supabase project; 40 advisor warnings, all the two kinds accepted by design (staff functions check the role inside; portal functions take the link as the credential)
 2026-10-08 09:10 | modified | Aisling | build-plan.where-each-component-stands | The iPad check-in app now has the same build guard as the other two apps, builds in CI, and its demo file is drift-checked (PR #70)
 2026-10-08 08:15 | new | Aisling | screens.ipad-check-in-app | Screens is now Live build, with six screenshots of Natalie's iPad check-in app on the Full gala (AAFE's logo as a grey placeholder)
 2026-10-08 08:15 | new | Aisling | sketches | New page: Early sketches, the first wireframes moved off Screens; the check-in sketch is marked superseded by the iPad app
