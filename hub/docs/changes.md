@@ -5,6 +5,7 @@ Every change to this hub, newest first. Open it while signed in to claude.ai and
 Each change has a kind, shown the same way on every page next to the exact line that changed: **✦ New** (didn't exist before), **+ Updated** (rows, tasks, or terms added), **✎ Modified** (wording, numbers, or a rule changed), **− Removed** (taken out), and **! Important** (everyone should act on it). Hover an icon for the date, time (New York), and who made the change; click it to mark it read.
 
 ```changes
+2026-10-07 22:53 | modified | Aisling | tasks.added-october-7-night | Done: the import drops the typed guest list (PR #58)
 2026-10-07 22:53 | modified | Aisling | import | The import drops the typed Give Lively guest list like phone numbers: no names pre-filled, every seat starts unnamed, and the duplicate-guest checks that relied on it are gone
 2026-10-07 22:53 | modified | Aisling | architecture | Import engine: drops the typed guest list; 82 tests
 2026-10-07 22:53 | modified | Aisling | risks | Risk closed: messy guest-list text, since the import no longer reads it
