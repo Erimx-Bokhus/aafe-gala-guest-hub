@@ -59,6 +59,7 @@ Every decision with its reason and what would reopen it, newest first. Nothing h
 
 | Decision | Who decides | When |
 | --- | --- | --- |
+| Which Supabase project the demo and the handoff use, and who owns it (today the backend runs in Aisling's test project, in her own account) | Team (Natalie, Aisling) | Before the Vercel demo and Cornell's live sign-in test <!-- new 2026-10-07 20:23 Aisling --> |
 | Whether a name written in Chinese or Korean script without a space counts as a full name in the import (today it's left for the sponsor) | Team | Before AAFE's real lists <!-- new 2026-10-07 13:45 Aisling --> |
 | Whether AI features are required for Demo Day | Team, Pursuit | This week <!-- modified 2026-10-05 16:51 Aisling --> |
 | AI on or off, retention, dietary data | AAFE | After the data note is reviewed |

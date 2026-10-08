@@ -51,7 +51,7 @@ Whoever runs a production version should be able to say yes to each of these, wh
 <!-- team -->
 <!-- modified 2026-10-05 16:51 Aisling -->
 
-The team Supabase project is loaded with the schema, seed, and backend (Oct 6); `npm run db:backend` in `prototype/` re-applies it. <!-- updated 2026-10-06 05:50 Aisling -->
+Aisling's test Supabase project, in her own account, is loaded with the schema, seed, and backend (Oct 6); `npm run db:backend` in `prototype/` re-applies it. It is for testing: which Supabase project the demo and the handoff use, and who owns it, is still to agree (Decisions, Pending). <!-- modified 2026-10-07 20:23 Aisling -->
 
 - The demo runs under a team account with invented data, on Supabase's free plan (decided Oct 5). The web apps are previewed on Vercel's free plan (decided Oct 6): two projects, rooted at `prototype/staff-app` and `prototype/guest-portal`, with only the Supabase URL and public (anon) key set in Vercel's settings, never in the repo. Vercel's free plan is meant for personal, non-commercial projects: fine for the team's demo, not for AAFE's production. <!-- modified 2026-10-07 13:45 Aisling -->
 - A free Supabase project pauses after a week without activity. Wake it before any demo, or rebuild it from the seed data. <!-- modified 2026-10-05 16:51 Aisling -->

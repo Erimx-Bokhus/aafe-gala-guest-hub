@@ -5,6 +5,8 @@ Every change to this hub, newest first. Open it while signed in to claude.ai and
 Each change has a kind, shown the same way on every page next to the exact line that changed: **✦ New** (didn't exist before), **+ Updated** (rows, tasks, or terms added), **✎ Modified** (wording, numbers, or a rule changed), **− Removed** (taken out), and **! Important** (everyone should act on it). Hover an icon for the date, time (New York), and who made the change; click it to mark it read.
 
 ```changes
+2026-10-07 20:23 | modified | Aisling | hosting.demo-preview-team-notes | The Supabase backend runs in Aisling's test project, in her own account, not a team project: wording fixed on Hosting, Build plan, Overview, and Tasks
+2026-10-07 20:23 | updated | Aisling | decisions | Open question: which Supabase project the demo and the handoff use, and who owns it
 2026-10-07 19:15 | modified | Aisling | tasks | Cornell's staff sign-in (PR #27) and Antonin's Korean (PR #51) merged: tasks ticked off; Cornell's live sign-in test waits on which Supabase project the demo uses
 2026-10-07 19:15 | modified | Aisling | build-plan.where-each-component-stands | Sign-in merged (PR #27); the portal now has all four languages (PR #51); about 1,110 automated checks
 2026-10-07 19:15 | modified | Aisling | architecture | Staff app has real sign-in (demo accounts when no keys are set); the portal adds 한국어
