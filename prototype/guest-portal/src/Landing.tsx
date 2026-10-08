@@ -9,8 +9,9 @@ import Hero, { MissionStrip } from './Hero'
 export default function Landing({ db, lang }: { db: DB; lang: Lang }) {
   const t = DICT[lang]
   const demo = db.orders.filter((o) => o.portal_token && o.event_id === db.meta.current_event_id)
-  // The sample email links to the Silver sponsor with open seats (Acme Community Partners)
-  const primary = demo.find((o) => o.portal_token === 'ac-6w9k3p5d') ?? demo[0]
+  // The sample email links to the Silver sponsor with open seats (Acme Community Partners). Found by order,
+  // since the demo data sets give Acme different links.
+  const primary = demo.find((o) => o.id === 'ord-acme') ?? demo[0]
   const primarySponsor = primary ? sponsorOf(db, primary.sponsor_id) : undefined
   return (
     <main>
@@ -49,7 +50,7 @@ export default function Landing({ db, lang }: { db: DB; lang: Lang }) {
       <section className="mx-auto max-w-6xl px-5 py-10">
         <h2 className="text-lg font-semibold text-navy-900">{t.demoLinks}</h2>
         <ul className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {demo.map((o) => (
+          {demo.slice(0, 15).map((o) => (   // the Full data sets have ~140 sponsors; the first 15 are enough to try
             <li key={o.id}>
               <a href={`#/s/${o.portal_token}`} className="card block p-4 transition-colors hover:border-brand-400" data-testid={`demo-${o.portal_token}`}>
                 <div className="font-semibold text-navy-900">{sponsorOf(db, o.sponsor_id).organization_name}</div>

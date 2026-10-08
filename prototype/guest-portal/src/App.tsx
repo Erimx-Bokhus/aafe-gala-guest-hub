@@ -24,7 +24,7 @@ export default function App() {
 
   return (
     <div lang={lang === 'zh' ? 'zh-Hant' : lang} className={`min-h-screen bg-cream-50 ${lang === 'zh' ? 'font-zh' : lang === 'ko' ? 'font-ko' : ''}`}>
-      <PrototypeBanner />
+      <PrototypeBanner dataSwitch />
       <header className="no-print sticky top-0 z-30 border-b border-cream-200 bg-surface/95 backdrop-blur">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-2.5 sm:px-5">
           <a href="#/" aria-label="Asian Americans for Equality — home"><AafeLogo /></a>
