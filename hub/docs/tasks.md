@@ -82,7 +82,7 @@ The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus),
 - [x] Sponsor-facing arrivals, switched off until AAFE approves (PR #49) — Aisling <!-- new 2026-10-07 13:45 Aisling -->
 - [x] Translation review sheet for AAFE, and no silent English fallback (PR #50) — Aisling <!-- new 2026-10-07 13:45 Aisling -->
 - [x] Full-size invented test gala, 553 guests, through the import into the database (PR #50) — Aisling <!-- new 2026-10-07 13:45 Aisling -->
-- [x] Load PRs #42–#66 into Aisling's test Supabase project (Oct 8): `npm run db:backend`, then `npm run db:advisors`, 40 warnings, all by design; try a data set with `npm run db:load -- <set>` — Aisling <!-- modified 2026-10-08 09:20 Aisling -->
+- [x] Load PRs #42–#66 into Aisling's test Supabase project (Oct 8): `npm run db:backend`, then `npm run db:advisors`, 40 warnings (41 after PR #71), all by design; try a data set with `npm run db:load -- <set>` — Aisling <!-- modified 2026-10-08 18:45 Aisling -->
 - [ ] Set up the Vercel demo: three projects (staff app, guest portal, iPad check-in app at `prototype/checkin-app`); the Supabase URL and public key in Vercel's settings only — Aisling <!-- modified 2026-10-08 08:15 Aisling -->
 - [x] ~~Check-in screen: wire in the offline module (`CheckInDesk`) and the "Offline · N check-ins waiting" banner~~ Superseded by the iPad check-in app (PR #56) and connecting it to the backend (Added October 8) — Frontend pair <!-- modified 2026-10-08 08:15 Aisling -->
 - [ ] Pipeline board and prospect form in the staff app — Frontend pair <!-- new 2026-10-07 13:45 Aisling -->
