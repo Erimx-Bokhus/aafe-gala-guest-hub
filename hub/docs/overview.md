@@ -46,7 +46,7 @@ This is the demo in miniature. Pause on step 4: the sponsor fixes their own list
 | Target event | AAFE's 2027 gala |
 | Discovery call | October 1, 2026 |
 | Demo Day | November 10, 2026 |
-| Status | Building. Import engine and its database side done and tested; exports built; Natalie's staff app, sponsor portal, and Supabase backend in `main`; Supabase backend loaded in Aisling's test project; staff sign-in merged (PR #27); Korean in the portal (PR #51); email follow-ups, offline check-in, sponsor pipeline, and sponsor arrivals (off) built in the backend; Natalie's iPad check-in app in `main` (PR #56, Oct 8); three labeled demo data sets (PR #66); first prototype review with AAFE on Oct 15 <!-- modified 2026-10-08 08:15 Aisling --> |
+| Status | Building. Import engine and its database side done and tested; exports built; Natalie's staff app, sponsor portal, and Supabase backend in `main`; Supabase backend loaded in Aisling's test project; staff sign-in merged (PR #27) and roles checked on the server for every staff action (PR #72); Korean in the portal (PR #51); email follow-ups, offline check-in, sponsor pipeline, and sponsor arrivals (off) built in the backend; Natalie's iPad check-in app in `main` (PR #56, Oct 8); three labeled demo data sets (PR #66); first prototype review with AAFE on Oct 15 <!-- modified 2026-10-08 16:40 Aisling --> |
 
 ## Team
 <!-- updated 2026-10-05 20:37 Aisling pairs -->
@@ -55,16 +55,16 @@ This is the demo in miniature. Pause on step 4: the sponsor fixes their own list
 | --- | --- | --- | --- |
 | Natalie Walker | Frontend | Product lead, UI/UX, client contact | wsvdesign <!-- modified 2026-10-06 05:50 Aisling --> |
 | Antonin Lesov | Frontend | Frontend | antoninlesov <!-- modified 2026-10-05 20:37 Aisling --> |
-| Aisling Leiva-Davila | Backend | Backend, repo admin | nessaisling-lab / aislingld-pursuit <!-- modified 2026-10-08 08:15 Aisling --> |
-| Cornell Robertson | Backend | Backend, staff sign-in | CodeToTheCore <!-- modified 2026-10-08 08:15 Aisling --> |
+| Aisling Leiva-Davila | Backend | Backend, repo admin | nessaisling-lab / aislingld-pursuit <!-- modified 2026-10-08 04:15 Aisling --> |
+| Cornell Robertson | Backend | Backend, staff sign-in | CodeToTheCore <!-- modified 2026-10-08 04:15 Aisling --> |
 
-Build work is split into two areas (Oct 5): **Frontend: Natalie + Antonin** (staff app, sponsor portal, check-in, branding) and **Backend: Aisling + Cornell** (Supabase backend, import, sign-in and roles, secure links, exports, emails). Who is building each part (Oct 7): Aisling (Supabase backend, import, secure links, exports, emails, offline check-in, pipeline), Cornell (staff sign-in), Natalie (product lead and client contact; sponsor portal, staff app, iPad check-in app, PRDs), and Antonin (portal ideas, Korean). Component status is on the [Build plan](#build-plan). <!-- modified 2026-10-08 08:15 Aisling -->
+Build work is split into two areas (Oct 5): **Frontend: Natalie + Antonin** (staff app, sponsor portal, check-in, branding) and **Backend: Aisling + Cornell** (Supabase backend, import, sign-in and roles, secure links, exports, emails). Who is building each part (Oct 7): Aisling (Supabase backend, import, secure links, exports, emails, offline check-in, pipeline), Cornell (staff sign-in), Natalie (product lead and client contact; sponsor portal, staff app, iPad check-in app, PRDs), and Antonin (portal ideas, Korean). Component status is on the [Build plan](#build-plan). <!-- modified 2026-10-08 04:15 Aisling -->
 
 ## What we will not build
 
 - A replacement for Give Lively. AAFE keeps it for tickets, donations, and tax receipts.
 - Anything that processes payments or stores card or bank details.
-- Automatic seating. Staff place guests at tables themselves on a simple seating map; the tool never seats anyone automatically. <!-- modified 2026-10-08 08:15 Aisling -->
+- Automatic seating. Staff place guests at tables themselves on a simple seating map; the tool never seats anyone automatically. <!-- modified 2026-10-08 04:15 Aisling -->
 - Production hosting. We deliver a portable prototype with invented data; AAFE, with the partner it chooses, decides whether and where it runs.
 
 ## How this hub works

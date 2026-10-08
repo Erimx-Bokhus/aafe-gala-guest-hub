@@ -164,5 +164,13 @@ await db.query(`update orders set status = 'cancelled' where id = $1`, [order.id
 ok((await portal(`select portal_get_view($1)`, [LINK])) === 'invalid_link', 'cancelled order: link stops working')
 await db.query(`update orders set portal_token_expires_at = $2, status = $3 where id = $1`, [order.id, saved.e, saved.status])
 
+// Supabase advisor (lints 0028, 0029): no owner-rights function the API can call sits in public; the apps call
+// SECURITY INVOKER wrappers, and the real functions live in the unexposed "private" schema (backend.sql, section 10).
+const exposed = (await db.query(`select p.proname f from pg_proc p where p.pronamespace = 'public'::regnamespace and p.prosecdef
+  and (has_function_privilege('anon', p.oid, 'execute') or has_function_privilege('authenticated', p.oid, 'execute'))`)).rows.map((r) => r.f)
+ok(exposed.length === 1 && exposed[0] === 'staff_role', `only staff_role() is an owner-rights function the API can call: ${exposed}`)
+const moved = (await db.query(`select count(*)::int n from pg_proc where pronamespace = 'private'::regnamespace and prosecdef`)).rows[0].n
+ok(moved === PORTAL.length + Object.keys(STAFF_FUNCTIONS).length + 1, `every portal and staff function, and staff_me, runs from the private schema (${moved})`)
+
 console.log(`access: ${count.pass} passed, ${count.fail} failed`)
 if (count.fail) process.exitCode = 1

@@ -1,0 +1,3 @@
+# Exact findings that are not secrets (commit:file:rule:line). Keep each one explained.
+# An invented Give Lively key in the key-redaction test (PR #78); the line now carries gitleaks:allow.
+58902d64772a657ab6cd88e4b95c31c5f97fa288:prototype/scripts/test-givelively-sync.mts:generic-api-key:89
