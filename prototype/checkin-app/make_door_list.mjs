@@ -1,5 +1,6 @@
-// CAUTION: running this REPLACES src/doorlist.json. The committed list holds the 553-guest demo gala; main's
-// shared/src/seed.json currently has the 48-guest demo, so don't run it until the team decides which demo data to use.
+// CAUTION: running this REPLACES src/doorlist.json. The committed list holds the 553-guest demo gala, and the two Full
+// demo data sets (database/generate_full_seed.py) are built around it; shared/src/seed.json is the 48-guest Small set.
+// Don't run it unless you mean to rebuild the Full sets from a new door list (then run npm run seed).
 // Builds checkin-app/src/doorlist.json from shared/src/seed.json with ONLY the fields a door volunteer may see.
 // No emails, payments, amounts, relationship owners, internal notes, dietary or accessibility data ever reach the iPad bundle.
 // PRODUCTION: replace with a Supabase view/RPC (`v_door_list`) restricted to the check_in_volunteer role.

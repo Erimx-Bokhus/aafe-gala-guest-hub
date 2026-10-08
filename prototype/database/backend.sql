@@ -62,6 +62,11 @@ alter table email_log add column if not exists payment_id  text references payme
 alter table email_log drop constraint if exists email_log_status_check;
 alter table email_log add constraint email_log_status_check check (status in ('queued','sent','opened','bounced','cancelled'));
 
+-- Seven guest categories (requirements: AAFE's spreadsheet categories). The full demo data sets use all of them.
+alter table guests drop constraint if exists guests_guest_type_check;
+alter table guests add constraint guests_guest_type_check check (guest_type in
+  ('sponsor_guest','ticket_holder','comp_relationship','government_vip','aafe_staff','event_volunteer','event_staff'));
+
 -- Field edits in the change log, old and new value per field: {"title": {"from": "Manager", "to": "Director"}}.
 -- Staff only: the sponsor portal's activity list shows the summary, never this column.
 alter table audit_log add column if not exists changes jsonb;

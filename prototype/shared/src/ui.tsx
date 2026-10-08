@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { AArrowDown, AArrowUp, Globe, Moon, Sun, X } from 'lucide-react'
+import { chooseDemoSet, DEMO_SET_LABEL, demoSet, type DemoSet } from './data'
 
 // ---------- hash router (works on any static host) ----------
 // Hash router that also works inside sandboxed preview iframes (where the host page
@@ -71,8 +72,15 @@ export function LanguageSelect<T extends string>({ value, onChange, options, lab
 }
 
 // ---------- banners / pills ----------
-export function PrototypeBanner() {
-  return <div role="note" className="proto-banner no-print px-4 py-1.5 text-center text-xs font-medium tracking-wide">Capstone prototype — synthetic demonstration data only. Not a production AAFE system.</div>
+/** dataSwitch: the staff app and portal let you pick a demo data set; the iPad app has its own door list. */
+export function PrototypeBanner({ dataSwitch = false }: { dataSwitch?: boolean }) {
+  return <div role="note" className="proto-banner no-print px-4 py-1.5 text-center text-xs font-medium tracking-wide">
+    Capstone prototype — synthetic demonstration data only. Not a production AAFE system.
+    {dataSwitch && <label className="ml-2 inline-flex items-center gap-1">Demo data:
+      <select value={demoSet()} onChange={(e) => chooseDemoSet(e.target.value as DemoSet)} className="rounded bg-transparent font-semibold underline decoration-dotted">
+        {(Object.keys(DEMO_SET_LABEL) as DemoSet[]).map((k) => <option key={k} value={k}>{DEMO_SET_LABEL[k]}</option>)}
+      </select></label>}
+  </div>
 }
 const PILL: Record<string, string> = {
   green: 'bg-emerald-50 text-emerald-800 ring-emerald-200', amber: 'bg-amber-50 text-amber-800 ring-amber-200',
