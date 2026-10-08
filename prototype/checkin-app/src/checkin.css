@@ -1,0 +1,11 @@
+/* iPad check-in: big touch targets, no accidental zoom/selection on buttons */
+html { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+button, [role='button'] { -webkit-user-select: none; user-select: none; }
+.tap { min-height: 44px; min-width: 44px; }
+@keyframes undo-shrink { from { transform: scaleX(1) } to { transform: scaleX(0) } }
+.undo-bar { transform-origin: left; animation: undo-shrink 10s linear forwards; }
+@keyframes pop-in { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: none } }
+.pop-in { animation: pop-in .18s ease-out; }
+
+/* iPad: header controls at least 44px to tap (Apple's minimum). Scoped to this app. */
+.checkin .icon-btn { height: 2.75rem; width: 2.75rem; }
