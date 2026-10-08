@@ -2,6 +2,7 @@
 <!-- modified 2026-10-05 16:51 Aisling -->
 <!-- modified 2026-10-08 08:15 Aisling AI and free-plan rows, owners, three new risks -->
 <!-- removed 2026-10-08 09:10 Aisling The iPad app's missing build guard: fixed in PR #70 -->
+<!-- updated 2026-10-08 20:40 Aisling New risk: the staff app not yet run with real sign-in -->
 <!-- reviewed 2026-10-08 Aisling -->
 
 What could go wrong, how likely it is, and what we are doing about it. Ranked by likelihood times impact; reviewed at each weekly check-in.
@@ -23,6 +24,7 @@ The demo preview's free tier lapses before Demo Day | 2 | 2 | Stay on free plans
 Two sponsor portals drift apart | 2 | 2 | One portal (`prototype/guest-portal`); ideas from Antonin's prototype come in as small PRs that Natalie approves | Natalie, Antonin
 A secret key reaches the browser or the repo | 1 | 3 | Keys that bypass the access rules live only in Supabase's secret store; build and demo-file guards (PR #36); secret scan on every PR; rotate every key at handoff | Aisling
 The demo backend sits in one person's Supabase account | 2 | 2 | Agree on the demo's project and owner; the seed data and `npm run db:load` rebuild it anywhere; rotate keys at handoff | Aisling
+The staff app hasn't yet run against Supabase with real sign-in | 2 | 2 | Live role checks on Aisling's test project pass (Oct 8); in-person sign-in test on Saturday, Oct 10 | Aisling, Cornell
 The Oct 7 scope additions crowd out the full path due Oct 30 | 2 | 3 | Hold to P0: the full path works end to end first; the Demo Day additions (C13) follow | Natalie, Aisling
 ```
 
