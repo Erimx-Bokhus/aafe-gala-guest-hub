@@ -22,6 +22,21 @@ ok(v2.activity[0].summary.includes('Test Person added'), 'guest activity logged'
 ok((await err('anon', null, `select portal_save_guest('ac-6w9k3p5d', $1, $2)`, [slot, { first_name: '' }]))?.startsWith('invalid_input'), 'empty name rejected')
 const v3 = (await as('anon', null, `select portal_release_seat('ac-6w9k3p5d', $1) v`, [slot]))[0].v
 ok(v3.seats.find((s) => s.slot === slot).status === 'unnamed', 'seat released')
+// A guest with a QR invitation can still be removed: the unsent invitation is discarded (audit of Oct 8).
+const v4 = (await as('anon', null, `select portal_save_guest('ac-6w9k3p5d', $1, $2) v`, [slot, { first_name: 'Invited', last_name: 'Guest', email: 'invited.guest@example.org' }]))[0].v
+const invited = (await db.query(`select guest_id from seats s join orders o on o.id = s.order_id where s.slot_number = $1 and s.guest_id is not null and exists (select 1 from guests g where g.id = s.guest_id and g.last_name = 'Guest' and g.first_name = 'Invited')`, [slot])).rows[0].guest_id
+const invite = (await as('authenticated', RM, `select staff_send_qr_invite($1) id`, [invited]))[0].id
+ok(v4 && (await err('anon', null, `select portal_release_seat('ac-6w9k3p5d', $1)`, [slot])) === null, 'a guest with a QR invitation can be removed in the portal')
+const invRow = (await db.query(`select status, guest_id from email_log where id = $1`, [invite])).rows[0]
+ok(invRow.guest_id === null && (invRow.status === 'cancelled' || invRow.status === 'sent'), 'and the invitation is unlinked (discarded if unsent): ' + JSON.stringify(invRow))
+// Whether a portal guest is a ticket holder comes from the tier's category, not its id (audit of Oct 8).
+await db.exec(`insert into sponsorship_tiers (id, name, contribution_amount, included_seat_count, tier_category) values ('gala_seat', 'Gala Seat', 300, 1, 'ticket')`)
+const acmeTier = (await db.query(`select tier_id from orders where id = 'ord-acme'`)).rows[0].tier_id
+await db.query(`update orders set tier_id = 'gala_seat' where id = 'ord-acme'`)
+await as('anon', null, `select portal_save_guest('ac-6w9k3p5d', $1, $2)`, [slot, { first_name: 'Ticket', last_name: 'Holder' }])
+ok((await db.query(`select guest_type from guests where first_name = 'Ticket' and last_name = 'Holder'`)).rows[0]?.guest_type === 'ticket_holder', "a ticket tier's guest is a ticket holder whatever the tier is called")
+await as('anon', null, `select portal_release_seat('ac-6w9k3p5d', $1)`, [slot])
+await db.query(`update orders set tier_id = $1 where id = 'ord-acme'`, [acmeTier])
 ok(await err('anon', null, `select staff_add_pledge('a','b','c','gold','check')`) !== null, 'anon cannot call staff functions')
 ok(await err('anon', null, `select gl_import('[]', 'x')`) !== null, 'anon cannot call gl_import')
 
@@ -170,6 +185,7 @@ ok(res.created === 1 && res.unknown_tier === 0 && res.names_prefilled === 1 && r
 const g1 = (await db.query(`select o.id, o.tier_id, o.imported_guest_text t, g.display_name, g.last_updated_by u, s.status from payments p join orders o on o.id=p.order_id join seats s on s.order_id=o.id join guests g on g.id=s.guest_id where p.purchase_key=$1`, [sqlKey])).rows
 ok(g1.length === 1 && g1[0].tier_id === 'community_ticket' && g1[0].t === 'me' && g1[0].display_name === 'Grace Kim' && g1[0].u === 'givelively_sync' && g1[0].status === 'submitted', 'pre-filled guest is "submitted", marked as from Give Lively')
 ok((await db.query(`select status, counts from import_runs where id=$1`, [res.run_id])).rows[0].status === 'succeeded', 'import run recorded')
+ok((await db.query(`select count(*)::int n from audit_log where action = 'guest.imported' and order_id = $1 and summary like 'Grace Kim added to seat 1 from the Give Lively guest list.'`, [g1[0].id])).rows[0].n === 1, 'the history says the pre-filled guest came from Give Lively (hard rule 7)')
 
 // Case 3: same file twice changes nothing.
 res = await upload([csv({ guest_text: 'me', guests: [{ display_name: 'Grace Kim', email: 'grace.kim@example.org', is_buyer: true }] })])
@@ -199,6 +215,19 @@ await upload([refundRow])
 res = await upload([{ ...refundRow, refunded: 1000, status: 'refunded' }])
 const ro = (await db.query(`select o.status, (select array_agg(distinct status) from seats where order_id=o.id) s from payments p join orders o on o.id=p.order_id where p.purchase_key=(select purchase_key('bo.han@example.org','2027-02-07T15:00:00Z'))`)).rows[0]
 ok(ro.status === 'cancelled' && ro.s.length === 1 && ro.s[0] === 'cancelled' && (await reviews('refund')).length >= 1, 'case 18: refund cancels order and seats, review raised')
+
+// Audit of Oct 8: an order that arrives already refunded is logged as cancelled...
+await upload([csv({ date: '2027-02-07T16:00:00Z', email: 'al.ready@example.org', first: 'Al', last: 'Ready', guest_text: '', refunded: 1000, status: 'refunded' })])
+ok((await db.query(`select count(*)::int n from audit_log a join payments p on p.order_id = a.order_id where a.action = 'order.cancelled'
+                    and p.purchase_key = (select purchase_key('al.ready@example.org', '2027-02-07T16:00:00Z'))`)).rows[0].n === 1, 'an order that arrives already refunded is logged as cancelled')
+// ...and a partial Give Lively refund counts the checks staff recorded on the same order.
+const mixRow = csv({ date: '2027-02-07T17:00:00Z', email: 'mia.fold@example.org', first: 'Mia', last: 'Fold', guest_text: '' })
+await upload([mixRow])
+const mixOrder = (await db.query(`select order_id from payments where purchase_key = (select purchase_key('mia.fold@example.org', '2027-02-07T17:00:00Z'))`)).rows[0].order_id
+await db.query(`update orders set commitment_amount = 1000 where id = $1`, [mixOrder])
+await as('authenticated', RM, `select staff_record_payment($1, 'check', 100, '2027-02-08', '5001')`, [mixOrder])
+await upload([{ ...mixRow, refunded: 100 }])
+ok((await db.query(`select status from orders where id = $1`, [mixOrder])).rows[0].status === 'paid', 'a partial Give Lively refund still counts the check staff recorded')
 
 // Case 14: shared inbox -> new sponsor + review.
 await upload([csv({ date: '2027-02-08T15:00:00Z', email: 'grace.kim@example.org', first: 'Mark', last: 'Lee' })])

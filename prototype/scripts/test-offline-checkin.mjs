@@ -71,6 +71,8 @@ ok(r[0].status === 'checked_in' && ci.length === 1 && new Date(ci[0].checked_in_
 ok((await logCount('checkin.conflict', online.id)) === 1, 'and the online one is logged as the second')
 
 // ---- Times, walk-ins, and bad items
+r = await sync(VOL, [{ client_id: 'door2-old', guest_id: 'g-023', method: 'search', at: ago(25 * 60), device: 'Door 2' }])
+ok(r[0].status === 'error' && r[0].error.startsWith('invalid_input'), 'a check-in time more than a day old is refused, so it cannot claim to be first')
 r = await sync(VOL, [{ client_id: 'door2-0003', guest_id: 'g-023', method: 'search', at: '2099-01-01T00:00:00Z', device: 'Door 2' }])
 ok(r[0].status === 'checked_in' && new Date((await checkIns('g-023'))[0].checked_in_at) <= new Date(), "an iPad clock set in the future is capped at now")
 
