@@ -291,6 +291,9 @@ const unpinned = (await db.query(`select count(*)::int n from pg_proc where pron
   and proname in ('hash_token','new_id','new_qr_token','seats_void_qr','money_fmt','purchase_key','name_key')
   and not coalesce(proconfig, '{}') @> array['search_path=public']`)).rows[0].n
 ok(unpinned === 0, 'helper functions pin search_path')
+const qrs = (await db.query(`select new_qr_token() t from generate_series(1, 400)`)).rows.map((r) => r.t.slice(5))
+ok(qrs.every((t) => /^[0-9A-F]{32}$/.test(t)) && new Set(qrs).size === 400, 'new_qr_token: AAFE- plus 32 hex characters, all different')
+ok([...Array(32).keys()].every((i) => new Set(qrs.map((t) => t[i])).size > 4), 'new_qr_token: no fixed characters (all 128 bits random, unlike a raw UUID)')
 ok((await db.query(`select count(*)::int n from pg_policies where schemaname = 'public' and cmd = 'ALL'`)).rows[0].n === 0, 'no FOR ALL policies overlap staff_read')
 
 // ---- Exports: badge mail merge, printed check-in list, Salesforce attendee file
