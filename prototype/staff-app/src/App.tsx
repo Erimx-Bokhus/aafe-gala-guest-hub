@@ -53,13 +53,22 @@ export default function App() {
   const full = useRef(db)
   full.current = db
   // LIVE: load what this role may read after sign-in, and again after every change (issue #9).
+  // Keyed on who is signed in, not on the user object: Supabase re-sends "signed in" when a tab regains focus, and that
+  // must not reload the gala or close an open form. The data on screen stays while a reload runs, and a reload that a
+  // newer one overtook is dropped, so an older answer never replaces a newer one.
+  const userKey = user ? `${user.id}|${user.role}` : ''
+  const userRef = useRef(user)
+  userRef.current = user
+  const latest = useRef(0)
   const reload = useCallback(async () => {
-    if (!supabase || !user) return
-    try { setLiveDb(await loadLiveDb(supabase, user)); setLoadError('') }
-    catch (e) { setLoadError(errorText(e)) }
-  }, [user])
+    const u = userRef.current
+    if (!supabase || !u) return
+    const n = ++latest.current
+    try { const d = await loadLiveDb(supabase, u); if (n === latest.current) { setLiveDb(d); setLoadError('') } }
+    catch (e) { if (n === latest.current) setLoadError(errorText(e)) }
+  }, [userKey]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { setLiveDb(null); void reload() }, [reload])
-  const api = useMemo(() => (!user ? null : supabase ? liveApi(supabase, reload) : demoApi(user, update, () => full.current)), [user, reload, update])
+  const api = useMemo(() => (!userRef.current ? null : supabase ? liveApi(supabase, reload) : demoApi(userRef.current, update, () => full.current)), [userKey, reload, update]) // eslint-disable-line react-hooks/exhaustive-deps
   const act = useCallback(async (p: Promise<unknown>, done?: string) => {
     try { await p; if (done) toast(done); return true }
     catch (e) { toast(errorText(e)); return false }
