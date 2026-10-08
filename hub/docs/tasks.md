@@ -26,7 +26,7 @@ The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus),
 - [x] Database schema and migrations (Natalie's backend, merged Oct 5) — Backend pair <!-- modified 2026-10-06 06:12 Aisling --> <!-- removed 2026-10-08 08:15 Aisling Web app preview deploy: same task as the Vercel setup under Added October 7 -->
 - [x] Synthetic data generator: 553 invented guests, messy cases, for the import tests (PR #50) — Aisling <!-- modified 2026-10-07 13:45 Aisling -->
 - [x] Staff sign-in (#8, PR #27, Oct 7) — Cornell <!-- modified 2026-10-08 08:15 Aisling -->
-- [ ] Server-side staff roles (#9) — Cornell <!-- modified 2026-10-08 08:15 Aisling -->
+- [x] Server-side staff roles (#9): every staff action goes through the server, which checks the role (PR #72, merged Oct 8 with Aisling's review fixes) — Cornell <!-- modified 2026-10-08 20:40 Aisling -->
 - [x] Get AAFE's materials (received Oct 5) — Natalie <!-- modified 2026-10-05 22:58 Aisling -->
 - [x] Check AAFE's sample export against the import spec — Aisling <!-- modified 2026-10-05 22:58 Aisling -->
 - [x] Revise the import spec for the real Give Lively export — Aisling <!-- modified 2026-10-05 22:58 Aisling -->
@@ -65,8 +65,8 @@ The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus),
 - [x] Antonin's sponsor portal prototype reviewed — Natalie, Aisling <!-- updated 2026-10-06 20:41 Aisling -->
 - [x] Merge PR #36: keys kept out of the browser and the repo, app unit tests in CI — Aisling <!-- modified 2026-10-06 20:56 Aisling -->
 - [x] Add the 20 staff sign-in tests to #35 — Aisling <!-- modified 2026-10-06 20:56 Aisling -->
-- [ ] Live sign-in test, in person with Aisling, once the team agrees which Supabase project the demo uses (#35 and #27 merged Oct 7) — Cornell <!-- modified 2026-10-07 19:15 Aisling -->
-- [ ] Port tier layout, the "still need names" line, and gala-night arrivals into `guest-portal` as small PRs, screenshots first (Korean done, PR #51) — Antonin (Natalie approves) <!-- modified 2026-10-07 19:15 Aisling -->
+- [ ] Live sign-in test, in person with Aisling on Saturday, Oct 10, on Aisling's test project until the team picks the demo's: sign-in, then the staff app's server roles (PR #72) with real accounts (#35 and #27 merged Oct 7) — Cornell <!-- modified 2026-10-08 20:40 Aisling -->
+- [ ] Port tier layout, the "still need names" line, and gala-night arrivals into `guest-portal` as small PRs, screenshots first (Korean done, PR #51; "still need names" is PR #77) — Antonin (Natalie approves) <!-- modified 2026-10-08 20:40 Aisling -->
 - [ ] Switch the prototype's demo emails to `@example.org`; confirm the Figma Make site isn't published — Antonin <!-- updated 2026-10-06 20:41 Aisling -->
 - [x] Team PRDs: Natalie's enterprise and client-facing PRDs (Oct 7) — Natalie <!-- modified 2026-10-08 08:15 Aisling -->
 - [ ] Confirm the Oct 15 prototype review with AAFE — Cornell <!-- modified 2026-10-07 22:38 Aisling -->
@@ -82,7 +82,7 @@ The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus),
 - [x] Sponsor-facing arrivals, switched off until AAFE approves (PR #49) — Aisling <!-- new 2026-10-07 13:45 Aisling -->
 - [x] Translation review sheet for AAFE, and no silent English fallback (PR #50) — Aisling <!-- new 2026-10-07 13:45 Aisling -->
 - [x] Full-size invented test gala, 553 guests, through the import into the database (PR #50) — Aisling <!-- new 2026-10-07 13:45 Aisling -->
-- [x] Load PRs #42–#66 into Aisling's test Supabase project (Oct 8): `npm run db:backend`, then `npm run db:advisors`, 40 warnings (41 after PR #71), all by design; try a data set with `npm run db:load -- <set>` — Aisling <!-- modified 2026-10-08 18:45 Aisling -->
+- [x] Load PRs #42–#66 into Aisling's test Supabase project (Oct 8): `npm run db:backend`, then `npm run db:advisors`, 40 warnings (41 after PR #71, 43 after PR #72), all by design; try a data set with `npm run db:load -- <set>` — Aisling <!-- modified 2026-10-08 20:40 Aisling -->
 - [ ] Set up the Vercel demo: three projects (staff app, guest portal, iPad check-in app at `prototype/checkin-app`); the Supabase URL and public key in Vercel's settings only — Aisling <!-- modified 2026-10-08 08:15 Aisling -->
 - [x] ~~Check-in screen: wire in the offline module (`CheckInDesk`) and the "Offline · N check-ins waiting" banner~~ Superseded by the iPad check-in app (PR #56) and connecting it to the backend (Added October 8) — Frontend pair <!-- modified 2026-10-08 08:15 Aisling -->
 - [ ] Pipeline board and prospect form in the staff app — Frontend pair <!-- new 2026-10-07 13:45 Aisling -->
@@ -116,11 +116,23 @@ The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus),
 - [x] iPad app: build guard, CI build and drift check for `OPEN-CheckIn-App.html`, before its Vercel project gets keys (PR #70) — Aisling <!-- modified 2026-10-08 09:10 Aisling -->
 - [x] Hub cleanup from the Oct 8 audit, and Screens split into Live build and Early sketches — Aisling <!-- new 2026-10-08 08:15 Aisling -->
 
+## Added October 8 (evening)
+<!-- new 2026-10-08 20:40 Aisling -->
+
+- [x] Review PRs #72 (server roles) and #73 (setup) and fix what the review found, each with tests: gala date and deadline changes move QR e-tickets and sponsor links; payment, pledge and comp forms save once on a double-click; no reload when sign-in refreshes; walk-ins and unnamed seats on the volunteer's list; full paging; a sponsor's full history; Node 22.18 or newer. Both merged Oct 8 — Aisling, Cornell <!-- new 2026-10-08 20:40 Aisling -->
+- [x] Audit after the merge: every test suite, the backend re-run on Aisling's test project (43 advisor warnings, all by design), 22 live role and cascade checks there, and the staff app clicked through in the browser — Aisling <!-- new 2026-10-08 20:40 Aisling -->
+- [ ] Fix four bugs the audit found, each with a test that fails on the old code (written; PR next): the Give Lively key could end up in a saved error message; removing a guest who had a QR invitation failed in the portal; guests pre-filled from Give Lively had no history entry; an offline check-in could be backdated to take over someone else's — Aisling <!-- new 2026-10-08 20:40 Aisling -->
+- [ ] Smaller audit findings: a Give Lively refund recomputes the payment status from that payment alone; clearing the gala's deadline leaves links on the old one; the portal's ticket-holder check uses the tier id; two changes aren't logged; check-ins don't check the gala — Aisling, Cornell <!-- new 2026-10-08 20:40 Aisling -->
+- [ ] Decide when sponsor links stop working: three options on the [PR review plan](https://claude.ai/artifact/M25oqGpKjoyXbZiUc1UFGB) (A at the deadline, today; B edit until the deadline, view until the day after the gala, recommended; C edit until after the gala). PR #75 waits on it — Natalie, then AAFE <!-- new 2026-10-08 20:40 Aisling -->
+- [ ] Split PR #76 (portal accessibility) into five small PRs, each with screenshots for Natalie: the "Open your guest list" button, error announcements, contrast, the shared dialog, small fixes — Aisling (Natalie approves) <!-- new 2026-10-08 20:40 Aisling -->
+- [ ] PR #77 ("N guests still need names"): small fixes and before/after screenshots, then Natalie's approval — Antonin <!-- new 2026-10-08 20:40 Aisling -->
+- [ ] Decide whether gala admins keep direct table edits on the gala, tiers, tables and staff list now that the staff app saves through server functions (one shared rule covers all four) — Aisling <!-- new 2026-10-08 20:40 Aisling -->
+
 ## Week of October 12
 
-- [ ] Connect staff app pages to the backend's pledges, payments, comps, and seats (with #9) — Backend pair <!-- modified 2026-10-06 06:12 Aisling -->
+- [x] Connect staff app pages to the backend's pledges, payments, comps, and seats (with #9; PR #72) — Backend pair <!-- modified 2026-10-08 20:40 Aisling -->
 - [x] Give Lively import: real export, free-text guest lists (import engine, PRs #23–#24) — Aisling <!-- modified 2026-10-05 22:58 Aisling -->
-- [ ] Connect the staff dashboard and guest grid to the backend — Frontend pair <!-- modified 2026-10-08 08:15 Aisling -->
+- [x] Connect the staff dashboard and guest grid to the backend: every page reads through the server's access rules when Supabase keys are set (PR #72) — Frontend pair <!-- modified 2026-10-08 20:40 Aisling -->
 - [ ] Prepare the Oct 15 prototype review with AAFE — Frontend pair <!-- modified 2026-10-08 08:15 Aisling -->
 
 ## Week of October 19
