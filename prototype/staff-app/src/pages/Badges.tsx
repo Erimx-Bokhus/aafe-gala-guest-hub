@@ -5,7 +5,7 @@ import { downloadCsv } from '@shared/ui'
 import type { Guest } from '@shared/types'
 import { PageHead } from '../App'
 import { QR } from '../qr'
-import { markPrinted, useStaff } from '../store'
+import { useStaff } from '../store'
 import { curOrders } from './Dashboard'
 
 // Badge template. Never prints: payment info, relationship owner/notes, email, dietary/accessibility.
@@ -35,7 +35,7 @@ function Badge({ g, sponsor, table, tpl, year }: { g: Guest; sponsor: string; ta
 }
 
 export default function Badges() {
-  const { db, update, user, toast } = useStaff()
+  const { db, api, act } = useStaff()
   const [tpl, setTpl] = useState<Tpl>({ title: true, org: true, sponsor: true, tableSeat: true, qr: false })
   const [filter, setFilter] = useState<'ready' | 'reprint_needed' | 'all'>('ready')
   const ids = new Set(curOrders(db).map((o) => o.id))
@@ -52,7 +52,7 @@ export default function Badges() {
         actions={<>
           <button className="btn-ghost" onClick={() => downloadCsv('aafe-badges-SYNTHETIC.csv', [['Capstone prototype — synthetic demonstration data only'], ['First', 'Last', 'Title', 'Organization', 'Table', 'Seat', 'Affiliation'], ...list.map((g) => [g.first_name, g.last_name, g.title, g.organization, tn(g), g.seat_number, g.guest_type === 'comp_relationship' ? 'Guest of AAFE' : sp(g)])])}><Download size={15} /> CSV for printer</button>
           <button className="btn-ghost" onClick={() => window.print()}><Printer size={15} /> Print sheet</button>
-          <button className="btn-primary" disabled={!list.length || filter === 'all'} onClick={() => { update((d) => markPrinted(d, user.name, list.map((g) => g.id))); toast(`${list.length} badges marked printed`) }}>Mark {list.length} printed</button>
+          <button className="btn-primary" disabled={!list.length || filter === 'all'} onClick={() => void act(api.markPrinted(list.map((g) => g.id)), `${list.length} badges marked printed`)}>Mark {list.length} printed</button>
         </>} />
       <div className="no-print mb-5 grid gap-4 lg:grid-cols-[1fr_auto]">
         <div className="card flex flex-wrap items-center gap-x-6 gap-y-2 p-4">

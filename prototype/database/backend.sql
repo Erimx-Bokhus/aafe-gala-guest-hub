@@ -1725,6 +1725,82 @@ begin
          else 'Sponsors can no longer see which of their guests have arrived.' end);
 end $$;
 
+-- Gala information page (gala admins): name, date, times, venue, dress code and the two deadlines.
+-- Only these fields; status, year and the synthetic flag stay out of reach. Logged with each change.
+create or replace function staff_update_gala_event(p_patch jsonb) returns void
+language plpgsql security definer set search_path = public as $$
+declare
+  me staff_users := require_staff(array['gala_admin']);
+  allowed text[] := array['name','event_date','doors_time','program_time','venue_name','venue_address','dress_code',
+                          'guest_list_deadline','program_ad_deadline'];
+  e gala_events; n gala_events; v_patch jsonb; v_changes jsonb; v_n int;
+begin
+  select * into e from gala_events where id = current_event_id() for update;
+  if e.id is null then raise exception 'not_found'; end if;
+  select coalesce(jsonb_object_agg(key, case when jsonb_typeof(value) = 'string' and trim(value #>> '{}') = '' then 'null'::jsonb else value end), '{}')
+    into v_patch from jsonb_each(coalesce(p_patch, '{}')) where key = any (allowed);
+  n := jsonb_populate_record(e, v_patch);
+  if coalesce(trim(n.name), '') = '' or n.event_date is null then
+    raise exception 'invalid_input: the gala needs a name and a date';
+  end if;
+  v_changes := audit_changes(to_jsonb(e), to_jsonb(n), allowed);
+  if v_changes is null then return; end if;
+  update gala_events set name = n.name, event_date = n.event_date, doors_time = n.doors_time, program_time = n.program_time,
+         venue_name = n.venue_name, venue_address = n.venue_address, dress_code = n.dress_code,
+         guest_list_deadline = n.guest_list_deadline, program_ad_deadline = n.program_ad_deadline
+   where id = e.id;
+  perform write_audit('staff', me.name, 'gala_event', e.id, null, 'event.updated', null, null, false,
+    'Gala information updated.', v_changes);
+
+  -- What was already sent takes its dates when it's created, so move it with the gala (hard rule 6).
+  -- A new gala date: QR e-tickets now expire the morning after the new date.
+  if n.event_date is distinct from e.event_date then
+    with moved as (
+      update seats s set qr_token_expires_at = qr_expiry(e.id), updated_at = now()
+        from orders o where o.id = s.order_id and o.event_id = e.id and s.qr_token_hash is not null and s.status <> 'cancelled'
+      returning s.id)
+    select count(*) into v_n from moved;
+    if v_n > 0 then
+      perform write_audit('staff', me.name, 'gala_event', e.id, null, 'event.qr_expiry_moved', null, null, false,
+        format('%s QR e-tickets now expire after the new gala date, %s.', v_n, to_char(n.event_date, 'FMMonth FMDD, YYYY')));
+    end if;
+  end if;
+  -- A new guest-list deadline: orders that took the gala's deadline follow it (a deadline set for one order stays),
+  -- and their sponsor links expire after the new deadline, as when the link was sent.
+  if n.guest_list_deadline is distinct from e.guest_list_deadline then
+    with moved as (
+      update orders set guest_list_deadline = n.guest_list_deadline,
+             portal_token_expires_at = case when portal_token is not null and n.guest_list_deadline is not null
+               then (n.guest_list_deadline + 1)::timestamp at time zone 'America/New_York' else portal_token_expires_at end,
+             updated_at = now()
+       where event_id = e.id and guest_list_deadline is not distinct from e.guest_list_deadline
+      returning id)
+    select count(*) into v_n from moved;
+    if v_n > 0 then
+      perform write_audit('staff', me.name, 'gala_event', e.id, null, 'event.deadline_moved', null, null, false,
+        format('%s sponsors'' guest-list deadlines and links moved to %s.', v_n, coalesce(to_char(n.guest_list_deadline, 'FMMonth FMDD, YYYY'), 'no deadline')));
+    end if;
+  end if;
+end $$;
+
+-- Sponsors page: a sponsor's logo or program ad status (pending / received / approved / not required).
+create or replace function staff_set_material_status(p_order_id text, p_material text, p_status text) returns void
+language plpgsql security definer set search_path = public as $$
+declare me staff_users := require_staff(array['gala_admin','relationship_manager']); o orders; v_old text;
+begin
+  -- `coalesce(... , false)`: a missing value must fail the check, not slip through it (NULL is neither in nor not in).
+  if not coalesce(p_material in ('logo','program_ad'), false) then raise exception 'invalid_input: material must be logo or program_ad'; end if;
+  if not coalesce(p_status in ('not_required','pending','received','approved'), false) then raise exception 'invalid_input: unknown status'; end if;
+  select * into o from orders where id = p_order_id and event_id = current_event_id() for update;
+  if o.id is null then raise exception 'not_found'; end if;
+  v_old := case when p_material = 'logo' then o.logo_status else o.program_ad_status end;
+  if v_old = p_status then return; end if;
+  if p_material = 'logo' then update orders set logo_status = p_status, updated_at = now() where id = o.id;
+  else update orders set program_ad_status = p_status, updated_at = now() where id = o.id; end if;
+  perform write_audit('staff', me.name, 'order', o.id, o.id, 'materials.updated', v_old, p_status, false,
+    format('%s marked %s.', case when p_material = 'logo' then 'Logo' else 'Program ad' end, replace(p_status, '_', ' ')));
+end $$;
+
 -- ---------------------------------------------------------------------
 -- 8. EXPORTS  (rows for the staff app to save as CSV; every export is logged)
 -- Columns are a first proposal until AAFE sends its badge and check-in templates.
@@ -1826,7 +1902,8 @@ begin
               'staff_export_badges','staff_export_checkin','staff_export_salesforce',
               'staff_queue_guest_list_reminders','staff_email_queue','staff_checkin_snapshot','staff_sync_check_ins','staff_undo_check_in',
               'pipeline_stage_label','pipeline_apply_order','orders_pipeline','staff_pipeline','staff_save_prospect',
-              'staff_set_prospect_stage','staff_set_sponsorship_goal','staff_set_sponsor_arrivals')
+              'staff_set_prospect_stage','staff_set_sponsorship_goal','staff_set_sponsor_arrivals',
+              'staff_update_gala_event','staff_set_material_status')
   loop
     execute format('revoke all on function %s from public, anon, authenticated', f);
   end loop;
@@ -1848,7 +1925,7 @@ grant execute on function
   checkin_list(), staff_check_in(text, text), staff_check_in_qr(text), staff_check_in_exception(text, text, text, text),
   staff_checkin_snapshot(), staff_sync_check_ins(jsonb), staff_undo_check_in(text),
   staff_pipeline(), staff_save_prospect(jsonb), staff_set_prospect_stage(text, text), staff_set_sponsorship_goal(numeric),
-  staff_set_sponsor_arrivals(boolean, text),
+  staff_set_sponsor_arrivals(boolean, text), staff_update_gala_event(jsonb), staff_set_material_status(text, text, text),
   staff_import_givelively(jsonb, jsonb), staff_set_tier_mapping(text, text), staff_set_gala_page(text),
   staff_resolve_import_review(text, text),
   staff_export_badges(boolean), staff_export_checkin(), staff_export_salesforce(),

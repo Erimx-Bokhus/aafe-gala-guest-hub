@@ -1,11 +1,18 @@
-// Staff-app actions. Each is a pure (db) => db function that ALSO appends an audit entry,
+// Staff-app actions on the in-browser demo data. Each is a pure (db) => db function that ALSO appends an audit entry,
 // so every change carries a date, time and actor (the "historical ledger").
-// PRODUCTION: each function becomes a Supabase insert/update (or RPC) — same names, same audit rule.
+// Pages don't call these directly: they go through StaffApi (api.ts), which runs these in demo mode and the matching
+// staff_* database function in live mode.
 import { createContext, useContext } from 'react'
 import { addAudit, newQrToken, nowIso, processorFee, secureToken, sponsorOf, tierOf, uid } from '@shared/data'
 import type { DB, Guest, PayMethod, StaffUser } from '@shared/types'
+import type { StaffApi } from './api'
 
-export interface Ctx { db: DB; update: (fn: (d: DB) => DB) => void; user: StaffUser; toast: (m: string) => void }
+/**
+ * What every page gets. `db` is what the signed-in role may read (a volunteer's has no emails, payments or notes).
+ * `act` runs a StaffApi action, then shows `done` or the server's reason it was refused.
+ * `demo` applies a simulated change in demo mode only (the Salesforce and Give Lively simulations); it is null when live.
+ */
+export interface Ctx { db: DB; api: StaffApi; user: StaffUser; toast: (m: string) => void; act: (p: Promise<unknown>, done?: string) => Promise<boolean>; demo: ((fn: (d: DB) => DB) => void) | null }
 export const StaffCtx = createContext<Ctx>(null as unknown as Ctx)
 export const useStaff = () => useContext(StaffCtx)
 
