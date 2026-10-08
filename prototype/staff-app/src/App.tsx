@@ -78,8 +78,8 @@ export default function App() {
   useEffect(() => setMenu(false), [path]) // close the phone menu after navigating
   useEffect(() => { const k = (e: KeyboardEvent) => e.key === 'Escape' && setMenu(false); window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k) }, [])
 
-  if (!authChecked) return <PrototypeBanner />
-  if (!user) return <><PrototypeBanner /><Login db={db} prefs={prefs} notice={notice} onLogin={(u) => { setUser(u); go(u.role === 'check_in_volunteer' ? '/checkin' : '/') }} /></>
+  if (!authChecked) return <PrototypeBanner dataSwitch />
+  if (!user) return <><PrototypeBanner dataSwitch /><Login db={db} prefs={prefs} notice={notice} onLogin={(u) => { setUser(u); go(u.role === 'check_in_volunteer' ? '/checkin' : '/') }} /></>
 
   const nav = NAV.filter((n) => n.roles.includes(user.role))
   const allowed = (p: string) => nav.some((n) => (n.to === '/' ? p === '/' : p.startsWith(n.to)))
@@ -127,7 +127,7 @@ export default function App() {
 
   return (
     <StaffCtx.Provider value={{ db, update, user, toast }}>
-      <PrototypeBanner />
+      <PrototypeBanner dataSwitch />
       <div className="flex min-h-[calc(100vh-28px)]">
         <aside className="no-print sticky top-0 hidden h-[calc(100vh-28px)] w-60 shrink-0 lg:block">{Side}</aside>
         {menu && <div className="no-print fixed inset-0 z-40 lg:hidden" onClick={() => setMenu(false)}><div className="h-full w-64" onClick={(e) => e.stopPropagation()}>{Side}</div><div className="absolute inset-0 -z-10 bg-black/50" /></div>}

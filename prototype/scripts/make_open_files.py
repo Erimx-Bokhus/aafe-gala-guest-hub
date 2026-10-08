@@ -7,7 +7,7 @@ import base64, os, re
 root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 pub = f'{root}/shared/public'
 for app, out in [('guest-portal', 'OPEN-Guest-Portal.html'), ('staff-app', 'OPEN-Staff-App.html')]:
-    s = open(f'{root}/{app}/dist/index.html').read()
+    s = open(f'{root}/{app}/dist/index.html', encoding='utf-8').read()
     for sub in ['photos', 'brand']:
         for f in os.listdir(f'{pub}/{sub}'):
             mime = 'image/jpeg' if f.endswith('.jpg') else 'image/png'
@@ -23,5 +23,5 @@ for app, out in [('guest-portal', 'OPEN-Guest-Portal.html'), ('staff-app', 'OPEN
     if re.search(r'https://[a-z0-9]+\.supabase\.co', s):
         raise SystemExit(f'{app} was built with a Supabase .env.local, so its demo file would carry the project address '
                          f'and key. Move {app}/.env.local aside, run npm run build again, then rerun this script.')
-    open(f'{root}/{out}', 'w').write(s)
+    open(f'{root}/{out}', 'w', encoding='utf-8', newline='\n').write(s)   # LF on every OS, so CI's drift check matches
     print('wrote', out, f'{len(s)/1e6:.1f} MB')
