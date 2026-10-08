@@ -9,7 +9,12 @@ import { execFileSync } from 'node:child_process'
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { SETS, buildLoadSql } from './demo-data.mjs'
+
+// The pinned Supabase CLI is a Node script, so run it with Node: no shell and no npx, the same on every OS
+// (a shell with an argument list is deprecated, DEP0190).
+const CLI = fileURLToPath(new URL('../node_modules/supabase/dist/supabase.js', import.meta.url))
 
 const set = process.argv[2]
 if (!SETS[set]) {
@@ -19,7 +24,7 @@ if (!SETS[set]) {
 const dir = mkdtempSync(path.join(tmpdir(), 'aafe-demo-'))
 const file = path.join(dir, `load-${set}.sql`)
 writeFileSync(file, buildLoadSql(set))
-const run = (f) => execFileSync('npx', ['supabase', 'db', 'query', '--linked', '-f', f], { stdio: 'inherit', shell: process.platform === 'win32' })
+const run = (f) => execFileSync(process.execPath, [CLI, 'db', 'query', '--linked', '-f', f], { stdio: 'inherit' })
 try {
   console.log(`Loading "${SETS[set].label}" into the linked Supabase project...`)
   run(file)
