@@ -7,13 +7,18 @@ Until the final PRDs (Natalie's and Pursuit's) arrive, this file plus the hub's 
 ## Must have (Demo Day)
 - **Commitments and seats.** Each purchase or pledge has a package level and a seat entitlement; seats are named or open. [call]
 - **Manual entry** for check, ACH, and verbal pledges, with payment method, date, and status label. [call]
-- **Give Lively import** by CSV with column mapping, duplicate detection, and source tracking; staff corrections survive re-import. [scope]
+- **Give Lively import** by CSV with column mapping, duplicate detection, and source tracking; staff corrections survive re-import. The export's free-text guest list is dropped, like phone numbers: sponsors enter every name through their link (Oct 7). [scope]
 - **Sponsor guest form** via private link: correct number of slots per package, editable until AAFE's deadline, no account. [call: #1 priority]
 - **Purchaser vs. attendee** kept separate. [intake]
 - **Relationship owner** on every guest; missing-information view grouped by owner. [intake]
 - **Relationship-owner review before printing** badges (titles, affiliations). [call: 2026 errors]
 - **Comps** tracked without payment; relationship managers can issue them. [call]
 - **Exports:** badge mail-merge CSV (incl. table number), check-in list, Salesforce-ready attendee export. [call]
+- **iPad check-in:** A to Z by last name, search by name, organization or sponsor, tick and check in, approved exceptions (walk-ins, unnamed sponsor seats), keeps working offline. Raised to must-have Oct 7. [call; Natalie's PRD]
+- **After-gala results:** expected, arrived and no-shows; each sponsor's seats, arrivals, committed, paid and balance. [Natalie's PRD, Oct 7]
+- **Give Lively fee analytics:** fees and net per sponsor and in total, from the payment records. [Natalie's PRD, Oct 7]
+- **Seating map, staff-controlled:** staff place guests and sponsor groups at tables themselves; nothing seats people automatically and guests don't choose. [Natalie's PRD, Oct 7; client: staff assign seats]
+- **Salesforce push, simulated:** the results go to a stand-in endpoint in the demo, never a real Salesforce org; the Salesforce-ready file stays the real deliverable. [Natalie's PRD, Oct 7]
 - **Logo / program materials status** per sponsor. [intake, call]
 - **Staff-approved follow-up emails** (draft, approve, send). [call]
 
@@ -21,18 +26,16 @@ Until the final PRDs (Natalie's and Pursuit's) arrive, this file plus the hub's 
 
 ## Should have
 - **QR-code e-tickets** emailed per guest; scan to check in on an iPad. [call: Sarah]
-- **Check-in app:** search by name or sponsor, mark arrived, handle walk-ins and unnamed sponsor seats, record attendance. [call]
 - **Blank sponsor name tags** for unnamed seats. [call]
 - **Multilingual sponsor form** (English, Chinese, Korean, Spanish; all four in the portal since PR #51, Oct 7; AAFE reviews the translations). [Natalie scope]
 - **Relationship guests** (comps for officials, board, partners) with personal QR invites. [prototype]
 - **Branding** matching aafe.org. [call]
 
 ## Later / out of scope
-- Seating chart builder (staff-assigned table numbers are enough for now). [call] The prototype's drag-and-seat chart is a later phase.
-- Processor-fee analytics ("net to AAFE"). Show amounts received; fee math is later. [prototype]
-- Automatic emails. Every send is staff-approved. [call]
+- Automatic seating (anything that places guests without staff). [call]
+- Automatic emails. Every send is staff-approved, as Sarah asked on the call; this changes only if Sarah asks. [call]
 - Automatic Give Lively sync (donation JSON feed / live attendee CSV) — stretch goal.
-- Direct Salesforce sync (a Salesforce-ready export file first; the prototype's sync screen is a later phase).
+- A live connection to a real Salesforce org (the demo's push is simulated).
 - Payments, checkout, Stripe, auctions, donor CRM.
 
 ## Required inputs before build
@@ -43,3 +46,4 @@ The full list, with what each unlocks, is on the hub's Discovery page ("Required
 - ~~**Seats per tier.**~~ Answered Oct 5 by AAFE's 2026 sponsorship flyer (`docs/decisions.md`). Only Champion and above guarantee a seat; Friend and Supporter tickets admit guests without a guaranteed table.
 - **Logo and photos.** Written approval to use AAFE's logo and event photos in the prototype and at Demo Day.
 - **Goals per category** for the dashboard (sponsorship dollars, tickets, attendance).
+- **Edits after the deadline.** Should sponsors be able to change names for a few days after the deadline? Until AAFE answers, links stop at the deadline and staff handle late swaps.
