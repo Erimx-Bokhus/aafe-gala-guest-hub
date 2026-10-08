@@ -202,9 +202,13 @@ language sql immutable set search_path = public as $$ select encode(sha256(conve
 create or replace function new_id(prefix text) returns text
 language sql volatile set search_path = public as $$ select prefix || '-' || left(replace(gen_random_uuid()::text, '-', ''), 12) $$;
 
--- 128 random bits (32 hex chars), used for QR codes.
+-- 128 random bits (32 hex chars), the same format send-emails mints for QR e-tickets. A random UUID
+-- has fixed version and variant digits (122 random bits), so the code is the first 32 hex characters of
+-- the SHA-256 of two of them (244 random bits in), which leaves all 128 bits random.
 create or replace function new_qr_token() returns text
-language sql volatile set search_path = public as $$ select 'AAFE-' || upper(left(replace(gen_random_uuid()::text, '-', '') || replace(gen_random_uuid()::text, '-', ''), 32)) $$;
+language sql volatile set search_path = public as $$
+  select 'AAFE-' || upper(left(encode(sha256(convert_to(gen_random_uuid()::text || gen_random_uuid()::text, 'UTF8')), 'hex'), 32))
+$$;
 
 -- When a QR e-ticket for this event stops working: 6 a.m. New York time the morning after gala night.
 create or replace function qr_expiry(p_event_id text) returns timestamptz
