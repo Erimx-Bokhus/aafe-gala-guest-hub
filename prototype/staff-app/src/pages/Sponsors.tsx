@@ -1,11 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ArrowLeft, Check, Copy, Mail, Plus, Search } from 'lucide-react'
-import { METHOD_LABEL, addAudit, orderMoney, seatStats, sponsorOf, staffName, tierOf } from '@shared/data'
+import { METHOD_LABEL, orderMoney, seatStats, sponsorOf, staffName, tierOf } from '@shared/data'
 import { Link, Pill, fmtDate, money } from '@shared/ui'
-import type { Material } from '@shared/types'
+import type { AuditEntry, Material } from '@shared/types'
 import { PageHead } from '../App'
 import { AddPledgeModal, GUEST_PORTAL_URL, RecordPaymentModal, SeatPill } from '../components'
-import { approveEmail, resendPortalLink, setSeatStatus, useStaff } from '../store'
+import { useStaff } from '../store'
 import { curOrders } from './Dashboard'
 
 const SRC: Record<string, string> = { givelively: 'Give Lively', check: 'Check', ach_direct: 'ACH (direct)', wire: 'Wire', comp: 'Complimentary', staff_entry: 'Staff entry' }
@@ -49,17 +49,26 @@ export default function Sponsors() {
 
 const MAT: Material[] = ['pending', 'received', 'approved']
 export function SponsorDetail({ id }: { id: string }) {
-  const { db, update, user, toast } = useStaff()
+  const { db, api, toast, act } = useStaff()
   const [pay, setPay] = useState(false)
+  // Live, the app holds only the newest 1,000 change-log entries, so this order's whole history comes from the server
+  // (again after each change, when `db` reloads). Demo data holds everything.
+  const [ownLog, setOwnLog] = useState<AuditEntry[] | null>(null)
+  useEffect(() => {
+    if (!api.live) return
+    let current = true
+    api.history(id).then((l) => { if (current) setOwnLog(l) }, () => {})
+    return () => { current = false }
+  }, [api, id, db])
   const o = db.orders.find((x) => x.id === id)
   if (!o) return <p>Order not found. <Link to="/sponsors" className="text-brand-600 underline">Back</Link></p>
   const sp = sponsorOf(db, o.sponsor_id), tier = tierOf(db, o.tier_id), m = orderMoney(db, o.id), st = seatStats(db, o.id)
   const seats = db.seats.filter((s) => s.order_id === o.id).sort((a, b) => a.slot_number - b.slot_number)
   const history = db.orders.filter((x) => x.sponsor_id === sp.id).sort((a, b) => b.event_id.localeCompare(a.event_id))
   const emails = db.email_log.filter((e) => e.order_id === o.id)
-  const log = db.audit_log.filter((a) => a.order_id === o.id).slice().reverse()
+  const log = (api.live && ownLog ? ownLog : db.audit_log.filter((a) => a.order_id === o.id)).slice().reverse()
   const link = o.portal_token ? `${GUEST_PORTAL_URL}#/s/${o.portal_token}` : null
-  const setMat = (k: 'logo_status' | 'program_ad_status', v: Material) => update((d) => addAudit({ ...d, orders: d.orders.map((x) => (x.id === o.id ? { ...x, [k]: v } : x)) }, { actor_type: 'staff', actor: user.name, entity: 'order', entity_id: o.id, order_id: o.id, action: 'materials.updated', from_state: o[k], to_state: v, guest_visible: false, summary: `${k === 'logo_status' ? 'Logo' : 'Program ad'} marked ${v}.` }))
+  const setMat = (k: 'logo_status' | 'program_ad_status', v: Material) => void act(api.setMaterialStatus(o.id, k === 'logo_status' ? 'logo' : 'program_ad', v))
 
   return (
     <div>
@@ -67,8 +76,8 @@ export function SponsorDetail({ id }: { id: string }) {
       <PageHead title={sp.organization_name} sub={`${tier.name} · ${sp.primary_contact_name} · ${sp.primary_contact_email} · Owner: ${staffName(db, sp.relationship_owner_id)}`}
         actions={<>
           {m.balance > 0 && o.source !== 'givelively' && <button className="btn-primary" onClick={() => setPay(true)}>Record payment</button>}
-          {link && <button className="btn-ghost" onClick={() => { update((d) => resendPortalLink(d, user, o.id)); toast('Guest-list link re-sent') }}><Mail size={15} /> Resend portal link</button>}
-          {link && <button className="btn-ghost" onClick={() => { navigator.clipboard?.writeText(link).catch(() => {}); toast('Portal link copied') }}><Copy size={15} /> Copy link</button>}
+          {link && <button className="btn-ghost" onClick={() => void act(api.resendPortalLink(o.id), 'Guest-list link re-sent')}><Mail size={15} /> Resend portal link</button>}
+          {link && !api.live && <button className="btn-ghost" onClick={() => { navigator.clipboard?.writeText(link).catch(() => {}); toast('Portal link copied') }}><Copy size={15} /> Copy link</button>}
         </>} />
       <div className="grid gap-6 xl:grid-cols-[1.5fr_1fr] [&>*]:min-w-0">
         <div className="space-y-6">
@@ -88,8 +97,8 @@ export function SponsorDetail({ id }: { id: string }) {
                         <td className="td text-xs">{[g?.dietary_needs, g?.accessibility_needs].filter(Boolean).join(' · ')}</td>
                         <td className="td"><SeatPill s={s.status} /></td>
                         <td className="td text-right">
-                          {g && s.status === 'submitted' && <button className="btn-ghost btn-sm" onClick={() => { update((d) => setSeatStatus(d, user.name, g.id, 'reviewed')); toast('Marked reviewed — guest sees “Confirmed by AAFE”') }}><Check size={14} /> Review</button>}
-                          {g && s.status === 'reviewed' && <button className="btn-ghost btn-sm" disabled={!g.table_id} title={g.table_id ? '' : 'Assign a table and seat first'} onClick={() => { update((d) => setSeatStatus(d, user.name, g.id, 'badge_ready')); toast('Badge ready') }}>Badge ready</button>}
+                          {g && s.status === 'submitted' && <button className="btn-ghost btn-sm" onClick={() => void act(api.setSeatStatus(g.id, 'reviewed'), 'Marked reviewed — guest sees “Confirmed by AAFE”')}><Check size={14} /> Review</button>}
+                          {g && s.status === 'reviewed' && <button className="btn-ghost btn-sm" disabled={!g.table_id} title={g.table_id ? '' : 'Assign a table and seat first'} onClick={() => void act(api.setSeatStatus(g.id, 'badge_ready'), 'Badge ready')}>Badge ready</button>}
                         </td>
                       </tr>
                     )
@@ -130,7 +139,7 @@ export function SponsorDetail({ id }: { id: string }) {
           </section>
           <section className="card p-4">
             <h2 className="font-semibold text-navy-900">Emails</h2>
-            <ul className="mt-2 space-y-1.5 text-sm">{emails.map((e) => <li key={e.id} className="flex justify-between gap-2"><span>{e.template.replace(/_/g, ' ')} <span className="text-xs text-navy-500">({e.trigger.replace(/_/g, ' ')})</span></span>{e.status === 'queued' ? <button className="btn-primary btn-sm" onClick={() => { update((d) => approveEmail(d, user, e.id)); toast(`Approved and sent to ${e.to_name} (simulated)`) }}>Approve and send</button> : <Pill tone={e.status === 'cancelled' ? 'gray' : 'green'}>{e.status}</Pill>}</li>)}{!emails.length && <li className="text-navy-500">None.</li>}</ul>
+            <ul className="mt-2 space-y-1.5 text-sm">{emails.map((e) => <li key={e.id} className="flex justify-between gap-2"><span>{e.template.replace(/_/g, ' ')} <span className="text-xs text-navy-500">({e.trigger.replace(/_/g, ' ')})</span></span>{e.status === 'queued' ? <button className="btn-primary btn-sm" onClick={() => void act(api.approveEmail(e.id), api.live ? `Approved: sending to ${e.to_name}` : `Approved and sent to ${e.to_name} (simulated)`)}>Approve and send</button> : <Pill tone={e.status === 'cancelled' ? 'gray' : 'green'}>{e.status}</Pill>}</li>)}{!emails.length && <li className="text-navy-500">None.</li>}</ul>
             {link && <p className="mt-3 break-all rounded bg-cream-100 p-2 font-mono text-xs text-navy-600">{link}</p>}
           </section>
           {o.internal_notes && <section className="card p-4"><h2 className="font-semibold text-navy-900">Internal notes</h2><p className="mt-1 text-sm text-navy-700">{o.internal_notes}</p></section>}
