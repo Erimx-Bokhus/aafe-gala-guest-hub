@@ -1733,7 +1733,7 @@ declare
   me staff_users := require_staff(array['gala_admin']);
   allowed text[] := array['name','event_date','doors_time','program_time','venue_name','venue_address','dress_code',
                           'guest_list_deadline','program_ad_deadline'];
-  e gala_events; n gala_events; v_patch jsonb; v_changes jsonb;
+  e gala_events; n gala_events; v_patch jsonb; v_changes jsonb; v_n int;
 begin
   select * into e from gala_events where id = current_event_id() for update;
   if e.id is null then raise exception 'not_found'; end if;
@@ -1751,6 +1751,36 @@ begin
    where id = e.id;
   perform write_audit('staff', me.name, 'gala_event', e.id, null, 'event.updated', null, null, false,
     'Gala information updated.', v_changes);
+
+  -- What was already sent takes its dates when it's created, so move it with the gala (hard rule 6).
+  -- A new gala date: QR e-tickets now expire the morning after the new date.
+  if n.event_date is distinct from e.event_date then
+    with moved as (
+      update seats s set qr_token_expires_at = qr_expiry(e.id), updated_at = now()
+        from orders o where o.id = s.order_id and o.event_id = e.id and s.qr_token_hash is not null and s.status <> 'cancelled'
+      returning s.id)
+    select count(*) into v_n from moved;
+    if v_n > 0 then
+      perform write_audit('staff', me.name, 'gala_event', e.id, null, 'event.qr_expiry_moved', null, null, false,
+        format('%s QR e-tickets now expire after the new gala date, %s.', v_n, to_char(n.event_date, 'FMMonth FMDD, YYYY')));
+    end if;
+  end if;
+  -- A new guest-list deadline: orders that took the gala's deadline follow it (a deadline set for one order stays),
+  -- and their sponsor links expire after the new deadline, as when the link was sent.
+  if n.guest_list_deadline is distinct from e.guest_list_deadline then
+    with moved as (
+      update orders set guest_list_deadline = n.guest_list_deadline,
+             portal_token_expires_at = case when portal_token is not null and n.guest_list_deadline is not null
+               then (n.guest_list_deadline + 1)::timestamp at time zone 'America/New_York' else portal_token_expires_at end,
+             updated_at = now()
+       where event_id = e.id and guest_list_deadline is not distinct from e.guest_list_deadline
+      returning id)
+    select count(*) into v_n from moved;
+    if v_n > 0 then
+      perform write_audit('staff', me.name, 'gala_event', e.id, null, 'event.deadline_moved', null, null, false,
+        format('%s sponsors'' guest-list deadlines and links moved to %s.', v_n, coalesce(to_char(n.guest_list_deadline, 'FMMonth FMDD, YYYY'), 'no deadline')));
+    end if;
+  end if;
 end $$;
 
 -- Sponsors page: a sponsor's logo or program ad status (pending / received / approved / not required).
@@ -1758,9 +1788,10 @@ create or replace function staff_set_material_status(p_order_id text, p_material
 language plpgsql security definer set search_path = public as $$
 declare me staff_users := require_staff(array['gala_admin','relationship_manager']); o orders; v_old text;
 begin
-  if p_material not in ('logo','program_ad') then raise exception 'invalid_input: material must be logo or program_ad'; end if;
-  if p_status not in ('not_required','pending','received','approved') then raise exception 'invalid_input: unknown status'; end if;
-  select * into o from orders where id = p_order_id for update;
+  -- `coalesce(... , false)`: a missing value must fail the check, not slip through it (NULL is neither in nor not in).
+  if not coalesce(p_material in ('logo','program_ad'), false) then raise exception 'invalid_input: material must be logo or program_ad'; end if;
+  if not coalesce(p_status in ('not_required','pending','received','approved'), false) then raise exception 'invalid_input: unknown status'; end if;
+  select * into o from orders where id = p_order_id and event_id = current_event_id() for update;
   if o.id is null then raise exception 'not_found'; end if;
   v_old := case when p_material = 'logo' then o.logo_status else o.program_ad_status end;
   if v_old = p_status then return; end if;

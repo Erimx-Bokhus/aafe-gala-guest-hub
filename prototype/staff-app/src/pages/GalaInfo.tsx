@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { fmtDate, money } from '@shared/ui'
-import type { GalaEvent } from '@shared/types'
+import type { GalaEvent, Seat } from '@shared/types'
 import { PageHead } from '../App'
 import { useStaff } from '../store'
 
@@ -21,6 +21,17 @@ export default function GalaInfo() {
   const set = (k: keyof GalaEvent) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.value })
   const canEdit = user.role === 'gala_admin'
   const past = db.gala_events.filter((e) => e.id !== ev.id).sort((a, b) => b.year - a.year)
+  // What saving moves (staff_update_gala_event): QR e-ticket expiry follows the date; sponsors on the gala's deadline
+  // follow the new deadline, with their links. Live seats carry the code's hash; demo data keeps codes on guests.
+  const orders = db.orders.filter((o) => o.event_id === ev.id)
+  const ids = new Set(orders.map((o) => o.id))
+  const qrCount = db.seats.filter((s) => ids.has(s.order_id) && s.status !== 'cancelled' && (s as Seat & { qr_token_hash?: string | null }).qr_token_hash).length
+    || db.guests.filter((g) => ids.has(g.order_id) && g.qr_token).length
+  const followers = orders.filter((o) => (o.guest_list_deadline ?? '') === (ev.guest_list_deadline ?? '')).length
+  const moves = [
+    f.event_date !== ev.event_date && qrCount > 0 && `${qrCount} QR e-ticket${qrCount === 1 ? '' : 's'} will expire the morning after the new date.`,
+    f.guest_list_deadline !== ev.guest_list_deadline && followers > 0 && `${followers} sponsor${followers === 1 ? '' : 's'} on the gala's deadline will move to the new one, with their links. Sponsors with their own deadline keep it.`,
+  ].filter(Boolean) as string[]
   return (
     <div>
       <PageHead title="Gala information" sub="The single source for date, venue and deadlines. Guest-portal pages and emails read from here." />
@@ -36,6 +47,7 @@ export default function GalaInfo() {
             <div><label className="label" htmlFor="gd">Guest names due</label><input id="gd" type="date" className="input" value={f.guest_list_deadline} onChange={set('guest_list_deadline')} disabled={!canEdit} /></div>
             <div><label className="label" htmlFor="ad">Logos & program ads due</label><input id="ad" type="date" className="input" value={f.program_ad_deadline} onChange={set('program_ad_deadline')} disabled={!canEdit} /></div>
           </div>
+          {canEdit && moves.length > 0 && <ul className="space-y-1 rounded-lg bg-amber-50 p-3 text-sm text-amber-900" role="status" data-testid="gala-moves">{moves.map((m) => <li key={m}>{m}</li>)}</ul>}
           {canEdit ? <button className="btn-primary">Save gala information</button> : <p className="text-xs text-navy-500">Only gala admins can edit.</p>}
         </form>
         <div className="space-y-6">
