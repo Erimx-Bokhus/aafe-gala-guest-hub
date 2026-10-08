@@ -9,6 +9,10 @@ export const OVERLAP_MS = 10 * 60 * 1000
 /** Where the next poll starts reading: null (everything) on the first run. */
 export const pollStart = (cursorMs: number | null | undefined) => (cursorMs ? cursorMs - OVERLAP_MS : null)
 
+/** An error message with the API key taken out: a network error can quote the request URL, which contains the key. */
+export const withoutKey = (message: string, key: string) =>
+  key ? message.replaceAll(encodeURIComponent(key), '***').replaceAll(key, '***') : message
+
 export interface ImportResult { created: number; updated: number; skipped: number; needs_review: number }
 export interface RawRecord {
   transaction_id: string; payload: unknown; last_seen_at: string; import_status: string; import_note: string | null

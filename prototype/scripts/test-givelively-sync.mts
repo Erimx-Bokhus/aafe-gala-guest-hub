@@ -1,6 +1,6 @@
 // Give Lively sync: what happens to each donation a poll returns (supabase/functions/_shared/givelively-sync.ts),
 // run against the real gl_import() in PGlite. Runs with npm run test:backend.
-import { pollStart, OVERLAP_MS, syncDonations, type SyncPorts } from '../supabase/functions/_shared/givelively-sync.ts'
+import { pollStart, OVERLAP_MS, syncDonations, withoutKey, type SyncPorts } from '../supabase/functions/_shared/givelively-sync.ts'
 // @ts-expect-error plain JavaScript helper
 import { counter, openTestDb } from './test-db.mjs'
 const { db } = await openTestDb()
@@ -85,6 +85,10 @@ ok(c7.not_gala === 1 && c7.created === 0, 'without a page name nothing imports')
 // ---- Where the next poll starts
 ok(pollStart(null) === null && pollStart(0) === null, 'first poll reads everything')
 ok(pollStart(1_800_000_000_000) === 1_800_000_000_000 - OVERLAP_MS && OVERLAP_MS === 600_000, 'later polls re-read the last 10 minutes')
+
+const KEY = 'k3y/with+chars'
+const netErr = `error sending request for url (https://secure.givelively.org/nonprofits/org/json_dataclips/${encodeURIComponent(KEY)}.json?start_time_ms=1): dns error`
+ok(!withoutKey(netErr, KEY).includes(encodeURIComponent(KEY)) && withoutKey(netErr, KEY).includes('***') && !withoutKey(`bad ${KEY}`, KEY).includes(KEY), 'a network error never carries the API key into the saved status')
 
 console.log(`givelively sync: ${count.pass} passed, ${count.fail} failed`)
 if (count.fail) process.exitCode = 1
