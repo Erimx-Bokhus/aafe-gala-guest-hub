@@ -156,6 +156,8 @@ Guest edits (`staff_update_guest`, and a sponsor editing a named guest through `
 | Sponsors → add or edit a prospect (new) | `staff_save_prospect(p)`: `{ id? , sponsor_id? or organization + contact_name, sector, ask_amount, ask_tier_id, follow_up_owner_id, notes, order_id? }` | admin, RM |
 | Sponsors → move a prospect (new) | `staff_set_prospect_stage(p_id, p_stage)` | admin, RM |
 | Sponsors → set the goal (new) | `staff_set_sponsorship_goal(p_amount)` | admin |
+| Gala info → save (new) | `staff_update_gala_event(p_patch)`: name, date, doors and program times, venue, address, dress code and the two deadlines; nothing else. Logged with the old and new value of each field | admin |
+| Sponsors → logo or program ad status (new) | `staff_set_material_status(p_order_id, p_material, p_status)`: `logo` or `program_ad`; `not_required`, `pending`, `received` or `approved` | admin, RM |
 | Gala info → sponsor arrivals on/off (new) | `staff_set_sponsor_arrivals(p_on, p_note)`: off by default; switching on needs a note recording AAFE's privacy approval (who and when). See "Gala-night arrivals" below | admin |
 | `importGiveLively` (CSV) | `staff_import_givelively(p_rows)` | admin |
 | Integrations "Pull now" | `functions.invoke('givelively-sync')` | admin |
@@ -218,9 +220,9 @@ Errors come back as the Postgres message: `forbidden`, `not_found`, `invalid_lin
 ## Not done yet
 
 - **Guest Portal is connected** when `guest-portal/.env.local` is set, and runs offline on the synthetic data when it isn't (the `OPEN-*.html` files). The landing page's demo cards still come from the built-in data. Their links work against the backend only if `seed.sql` was loaded.
-- **Staff App still uses in-memory data** after sign-in. Login is real when `staff-app/.env.local` is set (issue #8); the pages still read and write the synthetic data. To connect them (issue #9):
-  - Swap `staff-app/src/store.ts` to the calls above.
-  - Sponsors → "copy portal link" becomes "send new link", because tokens are stored hashed.
+- **Staff App is connected** when `staff-app/.env.local` is set (issues #8, #9). Every page action goes through `staff-app/src/api.ts`: one `staff_*` call from the table above, then a reload of what the role may read. Gala admins and relationship managers read the tables (RLS); a check-in volunteer loads only `staff_checkin_snapshot()`, with no emails, phones, payments, notes or QR codes. Without the env file the same actions run on the demo data with the same role rules.
+  - Live, Sponsors shows "Resend portal link" only (links are stored hashed, so there is nothing to copy), and relationship guests show their invitation status instead of a QR code.
+  - Still simulated in both modes: the Give Lively "Pull now" and CSV import on Integrations (live imports come with the import upload screen) and the Salesforce sync.
 - **QR e-tickets (hard rule 6).** A code is minted only when an approved `qr_invitation` email sends; the database keeps its SHA-256 hash on the guest's seat (`seats.qr_token_hash`), valid until 6 a.m. New York time the morning after gala night. Resending replaces the code; a different guest on the seat, a name or email change, or a cancelled seat voids it. Staff can't display a code, only resend it. The seed's QR codes are moved onto seats as hashes when `backend.sql` runs. The seed's demo sponsor links are short (8 characters), fine for the demo but below rule 6's 128 bits; real links are minted at 128 bits by `send-emails`.
 - **Email.** Templates (`_shared/emails.ts`) are in English: the guest-list link, guest-list reminders, payment confirmations, and QR invitations. The portal page itself has 中文, 한국어, and Español. Reminders are drafted when staff ask (`staff_queue_guest_list_reminders`), not on a schedule.
 - **Salesforce.** No direct sync (out of scope in the project scope doc). `staff_export_salesforce()` gives a file shaped for a Contact and Campaign Member import instead.
