@@ -3,7 +3,7 @@ import { Lock, Mail } from 'lucide-react'
 import { DisplayControls, type Prefs } from '@shared/ui'
 import { AafeLogo } from '@shared/Logo'
 import type { DB, StaffUser } from '@shared/types'
-import { sendSignInLink, supabase } from '../supabase'
+import { sendSignInLink, supabase } from '@shared/supabase'
 
 // LIVE (Supabase configured): staff get a one-time sign-in link by email; the role comes from staff_users via
 // staff_me() and is enforced by RLS. DEMO (no Supabase): picks a synthetic staff user, no real sign-in.

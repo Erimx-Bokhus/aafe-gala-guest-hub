@@ -44,6 +44,7 @@ const ACTIONS = [
   ['staff_check_in_qr', VOL, `select staff_check_in_qr('aafe-00000000000000000000000000test')`, 'checkin.arrived'],
   ['staff_check_in_exception', VOL, `select staff_check_in_exception('Walk-in Guest', 'ord-acme', 'walk_in', 'Took an unnamed seat')`, 'checkin.exception'],
   ['staff_sync_check_ins', VOL, `select staff_sync_check_ins('[{"client_id":"ipad1-0001","guest_id":"g-021","method":"search","device":"Door 2"}]')`, 'checkin.arrived'],
+  ['staff_undo_check_in', VOL, `select staff_undo_check_in('ipad1-0001')`, 'checkin.undone'],
   ['staff_save_prospect', RM, `select staff_save_prospect('{"organization":"Audit Prospect Co","contact_name":"Sam Rivera","ask_amount":5000}')`, 'prospect.created'],
   ['staff_set_prospect_stage', RM, `select staff_set_prospect_stage((select p.id from sponsor_prospects p join sponsors s on s.id = p.sponsor_id
      where s.organization_name = 'Audit Prospect Co'), 'reached_out')`, 'prospect.stage'],
