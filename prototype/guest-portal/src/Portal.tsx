@@ -146,7 +146,7 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
         {/* Seats */}
         <section id="seats" className="scroll-mt-20">
           <h2 className="type-h2 text-navy-900">{t.seatsTitle}</h2>
-          <p className="mt-1 max-w-3xl text-navy-600">{t.seatsHelp}</p>
+          <p className="type-lead mt-1 max-w-3xl text-navy-600">{t.seatsHelp}</p>
           <ul className="mt-5 grid gap-3 md:grid-cols-2">
             {view.seats.map((s) => {
               const named = !!s.guest
@@ -208,7 +208,7 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
           <img src="./photos/gala-guests-dinner.jpg" alt="Guests sharing a table at the AAFE gala" className="aspect-[4/3] w-full rounded-2xl object-cover" style={{ objectPosition: 'center 35%' }} loading="lazy" />
           <div>
             <h2 className="type-h2 text-navy-900">{t.thanksTitle}</h2>
-            <p className="mt-3 text-navy-600">{t.thanksBody}</p>
+            <p className="type-lead mt-3 text-navy-600">{t.thanksBody}</p>
             <div className="mt-6 rounded-xl bg-cream-100 p-4 text-sm">
               <div className="font-semibold text-navy-900">{t.help}</div>
               <a className="font-medium text-brand-600 underline underline-offset-2" href="mailto:gala-team@aafe-demo.example.org">{t.contact}</a>
