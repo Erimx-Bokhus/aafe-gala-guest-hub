@@ -5,9 +5,11 @@ import type { Guest } from '@shared/types'
 import { PageHead } from '../App'
 import { QR } from '../qr'
 import { useStaff } from '../store'
+import { useSave } from '../components'
 
 export default function Relationship() {
   const { db, api, act } = useStaff()
+  const { saving, save } = useSave()
   const [add, setAdd] = useState(false)
   const [preview, setPreview] = useState<Guest | null>(null)
   const [f, setF] = useState({ first_name: '', last_name: '', title: '', organization: '', email: '', relationship_note: '' })
@@ -42,7 +44,7 @@ export default function Relationship() {
       </ul>
 
       <Modal open={add} onClose={() => setAdd(false)} title="Add relationship guest">
-        <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); if (!ok) return; void act(api.addCompGuest(f), 'Guest added — QR code created').then((done) => { if (done) { setAdd(false); setF({ first_name: '', last_name: '', title: '', organization: '', email: '', relationship_note: '' }) } }) }}>
+        <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); if (!ok) return; void save(() => api.addCompGuest(f), api.live ? 'Guest added — send the QR invitation when ready' : 'Guest added — QR code created').then((done) => { if (done) { setAdd(false); setF({ first_name: '', last_name: '', title: '', organization: '', email: '', relationship_note: '' }) } }) }}>
           <div className="grid gap-3 sm:grid-cols-2">
             <Field id="cf" label="First name"><input id="cf" className="input" value={f.first_name} onChange={(e) => setF({ ...f, first_name: e.target.value })} /></Field>
             <Field id="cl" label="Last name"><input id="cl" className="input" value={f.last_name} onChange={(e) => setF({ ...f, last_name: e.target.value })} /></Field>
@@ -51,7 +53,7 @@ export default function Relationship() {
           <Field id="co" label="Organization"><input id="co" className="input" value={f.organization} onChange={(e) => setF({ ...f, organization: e.target.value })} /></Field>
           <Field id="ce" label="Email"><input id="ce" className="input" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></Field>
           <Field id="cn" label="Relationship (staff only)" hint="Never shown to the guest or printed"><input id="cn" className="input" value={f.relationship_note} onChange={(e) => setF({ ...f, relationship_note: e.target.value })} placeholder="e.g. Executive Director’s guest" /></Field>
-          <div className="flex justify-end gap-2 pt-1"><button type="button" className="btn-ghost" onClick={() => setAdd(false)}>Cancel</button><button className="btn-primary" disabled={!ok}>Add guest</button></div>
+          <div className="flex justify-end gap-2 pt-1"><button type="button" className="btn-ghost" onClick={() => setAdd(false)}>Cancel</button><button className="btn-primary" disabled={!ok || saving} data-testid="save-comp">{saving ? 'Saving…' : 'Add guest'}</button></div>
         </form>
       </Modal>
 
