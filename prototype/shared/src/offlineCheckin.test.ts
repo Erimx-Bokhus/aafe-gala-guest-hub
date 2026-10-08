@@ -181,6 +181,31 @@ describe('syncing', () => {
     expect(d.guests()).toEqual([])
   })
 
+  it('undoes a check-in that has not synced yet, and not one that already left', async () => {
+    const d = desk()
+    d.checkIn('g-2')
+    const [item] = d.pending()
+    expect(d.cancel(item.client_id)).toBe(true)
+    expect(d.pending()).toHaveLength(0)
+    expect(d.guests().find((g) => g.id === 'g-2')?.arrived).toBe(false)
+    d.checkIn('g-2')
+    const [sent] = d.pending()
+    await d.sync(answer('checked_in'))
+    expect(d.cancel(sent.client_id)).toBe(false)   // synced: the server undoes it (staff_undo_check_in)
+  })
+
+  it("keeps each signed-in person's list and queue apart on a shared iPad", () => {
+    const store = memoryStore()
+    const a = new CheckInDesk({ store, device: 'Door 1', staffName: 'Riley', prefix: 'aafe-checkin:st-a:' })
+    const b = new CheckInDesk({ store, device: 'Door 1', staffName: 'Kenji', prefix: 'aafe-checkin:st-b:' })
+    a.saveSnapshot(SNAP); b.saveSnapshot(SNAP)
+    a.checkIn('g-2')
+    expect(b.pending()).toHaveLength(0)
+    a.clear()
+    expect(a.snapshot).toBeNull()
+    expect(b.snapshot).not.toBeNull()
+  })
+
   it('says "already checked in" sensibly with missing details', () => {
     expect(alreadyMessage(null, null, null)).toBe('Already checked in')
     expect(alreadyMessage('2027-05-20T23:04:00Z', 'Kenji', null)).toBe('Already checked in at 7:04 PM by Kenji')

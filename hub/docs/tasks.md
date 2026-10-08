@@ -108,7 +108,8 @@ The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus),
 - [x] Check-in sync: Undo or Close while a check-in is sending no longer loses it, with tests (PR #60) — Aisling <!-- new 2026-10-08 01:50 Aisling -->
 - [x] QR code generator gives the full 128 random bits (PR #61) — Aisling <!-- new 2026-10-08 01:50 Aisling -->
 - [x] Door list: invented names in place of 12 real organizations; screenshots retaken (PR #62) — Aisling <!-- new 2026-10-08 01:50 Aisling -->
-- [ ] Connect the iPad app to the backend, following Natalie's "To connect" list in PR #56 (door list from the server, QR hash and expiry, `CheckInDesk` sync, staff sign-in, clear on sign-out, retire the demo sync server) — Aisling; staff sign-in with Cornell (#27) <!-- new 2026-10-08 01:50 Aisling -->
+- [x] Connect the iPad app to the backend, following Natalie's "To connect" list in PR #56: door list from the server, QR hash and expiry, `CheckInDesk` sync, staff sign-in, undo by the same person or an admin, clear on sign-out; the demo sync server stays for demo mode (PR #71) — Aisling <!-- modified 2026-10-08 09:40 Aisling -->
+- [ ] First live run of the iPad app on the real Supabase project, with the in-person sign-in test: add the iPad app's address to the redirect URLs, set `checkin-app/.env.local` — Aisling, Cornell <!-- new 2026-10-08 09:40 Aisling -->
 - [ ] iPad app: app manifest, opening offline, camera QR scanning on a real iPad — Natalie <!-- new 2026-10-08 01:50 Aisling -->
 - [x] Scripts to rebuild the iPad app's double-click file and retake its screenshots (PR #65) — Aisling <!-- new 2026-10-08 08:15 Aisling -->
 - [ ] Pick the demo's Supabase project and its owner — Team <!-- new 2026-10-08 08:15 Aisling -->

@@ -8,7 +8,7 @@ import { DisplayControls, go, Link, PrototypeBanner, Toast, useDisplayPrefs, use
 import type { DB, Role, StaffUser } from '@shared/types'
 import { StaffCtx } from './store'
 import Login from './pages/Login'
-import { currentStaff, signOut, supabase } from './supabase'
+import { currentStaff, signOut, supabase } from '@shared/supabase'
 import Dashboard from './pages/Dashboard'
 import GalaInfo from './pages/GalaInfo'
 import Sponsors, { SponsorDetail } from './pages/Sponsors'
