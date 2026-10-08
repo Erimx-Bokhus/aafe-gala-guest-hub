@@ -9,7 +9,7 @@ const signOut = vi.fn()
 
 async function renderApp(opts: { session: boolean; staff: StaffUser | null }) {
   vi.resetModules()
-  vi.doMock('./supabase', () => ({
+  vi.doMock('@shared/supabase', () => ({
     supabase: {
       auth: {
         getSession: vi.fn().mockResolvedValue({ data: { session: opts.session ? { access_token: 't' } : null } }),
@@ -24,7 +24,7 @@ async function renderApp(opts: { session: boolean; staff: StaffUser | null }) {
   return render(<App />)
 }
 
-afterEach(() => { cleanup(); signOut.mockReset(); unsubscribe.mockReset(); vi.doUnmock('./supabase'); history.replaceState(null, '', '/') })
+afterEach(() => { cleanup(); signOut.mockReset(); unsubscribe.mockReset(); vi.doUnmock('@shared/supabase'); history.replaceState(null, '', '/') })
 
 describe('staff app session (live mode)', () => {
   it('signs out a session whose email is not on the staff list, and says why', async () => {
