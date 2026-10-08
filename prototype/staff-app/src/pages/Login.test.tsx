@@ -10,7 +10,7 @@ const send = vi.fn()
 
 async function renderLogin(live: boolean, props: { notice?: string; onLogin?: (u: StaffUser) => void } = {}) {
   vi.resetModules()
-  vi.doMock('../supabase', () => ({ supabase: live ? {} : null, sendSignInLink: send }))
+  vi.doMock('@shared/supabase', () => ({ supabase: live ? {} : null, sendSignInLink: send }))
   const { default: Login } = await import('./Login')
   const db = loadDB()
   function Page() { return <Login db={db} prefs={useDisplayPrefs()} notice={props.notice} onLogin={props.onLogin ?? (() => {})} /> }
@@ -18,7 +18,7 @@ async function renderLogin(live: boolean, props: { notice?: string; onLogin?: (u
   return db
 }
 
-afterEach(() => { cleanup(); send.mockReset(); vi.doUnmock('../supabase') })
+afterEach(() => { cleanup(); send.mockReset(); vi.doUnmock('@shared/supabase') })
 
 describe('live sign-in (Supabase configured)', () => {
   it('asks only for an email: no password, no demo accounts', async () => {

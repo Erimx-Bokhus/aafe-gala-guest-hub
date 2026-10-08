@@ -1,5 +1,5 @@
-// Staff sign-in through Supabase Auth (issue #8).
-// LIVE (VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY set in staff-app/.env.local): staff sign in with a one-time
+// Staff sign-in through Supabase Auth (issue #8), shared by the staff app and the iPad check-in app.
+// LIVE (VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY set in the app's .env.local): staff sign in with a one-time
 //   email link, and their name and role come from staff_users through staff_me() (database/backend.sql).
 // DEMO (no env, e.g. OPEN-Staff-App.html): `supabase` is null and the login page offers the synthetic demo accounts.
 import { createClient } from '@supabase/supabase-js'
