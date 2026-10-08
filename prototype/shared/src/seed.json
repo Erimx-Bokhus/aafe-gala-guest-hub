@@ -288,9 +288,9 @@
   },
   {
    "id": "sp-bowery",
-   "organization_name": "Bowery Dental Group",
+   "organization_name": "Brindlemoor Dental Group",
    "primary_contact_name": "Dr. Sun Hee Cho",
-   "primary_contact_email": "scho@bowerydental.example.org",
+   "primary_contact_email": "scho@brindlemoordental.example.org",
    "phone": "(212) 555-0106",
    "relationship_owner_id": "st-priya",
    "salesforce_account_id": null,
@@ -298,9 +298,9 @@
   },
   {
    "id": "sp-queens",
-   "organization_name": "Queens Tech Collective",
+   "organization_name": "Quarrystone Tech Collective",
    "primary_contact_name": "Ravi Patel",
-   "primary_contact_email": "ravi@queenstech.example.org",
+   "primary_contact_email": "ravi@quarrystonetech.example.org",
    "phone": "(212) 555-0107",
    "relationship_owner_id": "st-daniel",
    "salesforce_account_id": null,
@@ -2154,7 +2154,7 @@
    "first_name": "Sun Hee",
    "last_name": "Cho",
    "title": "Owner & Dentist",
-   "organization": "Bowery Dental Group",
+   "organization": "Brindlemoor Dental Group",
    "email": "sunhee.cho@guest.example.org",
    "dietary_needs": null,
    "accessibility_needs": null,
@@ -2175,7 +2175,7 @@
    "first_name": "Ravi",
    "last_name": "Patel",
    "title": "Founder",
-   "organization": "Queens Tech Collective",
+   "organization": "Quarrystone Tech Collective",
    "email": "ravi.patel@guest.example.org",
    "dietary_needs": null,
    "accessibility_needs": null,
@@ -2217,7 +2217,7 @@
    "first_name": "Maria",
    "last_name": "Alvarez",
    "title": "Community Organizer",
-   "organization": "Lower East Side Tenants Union",
+   "organization": "Lowmere Tenants Union",
    "email": "maria.alvarez@guest.example.org",
    "dietary_needs": "Vegan",
    "accessibility_needs": null,
@@ -3122,7 +3122,7 @@
   {
    "id": "em-007",
    "template": "portal_link",
-   "to_email": "scho@bowerydental.example.org",
+   "to_email": "scho@brindlemoordental.example.org",
    "to_name": "Dr. Sun Hee Cho",
    "order_id": "ord-bowery",
    "guest_id": null,
@@ -3133,7 +3133,7 @@
   {
    "id": "em-008",
    "template": "portal_link",
-   "to_email": "ravi@queenstech.example.org",
+   "to_email": "ravi@quarrystonetech.example.org",
    "to_name": "Ravi Patel",
    "order_id": "ord-queens",
    "guest_id": null,
@@ -4134,7 +4134,7 @@
    "from_state": null,
    "to_state": "paid",
    "guest_visible": true,
-   "summary": "Friend Sponsor recorded for Bowery Dental Group (givelively).",
+   "summary": "Friend Sponsor recorded for Brindlemoor Dental Group (givelively).",
    "id": 60
   },
   {
@@ -4190,7 +4190,7 @@
    "from_state": null,
    "to_state": "paid",
    "guest_visible": true,
-   "summary": "Supporter Sponsor recorded for Queens Tech Collective (givelively).",
+   "summary": "Supporter Sponsor recorded for Quarrystone Tech Collective (givelively).",
    "id": 64
   },
   {
