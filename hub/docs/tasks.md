@@ -98,8 +98,18 @@ The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus),
 - [ ] PRD fixes before the client-facing PRD goes to AAFE: Oct 15, 21 tables, four languages, GreyBox Creative, the deadline question — Natalie <!-- new 2026-10-07 22:38 Aisling -->
 - [x] ~~Import: drop the Give Lively guest-list text, no pre-fill~~ Withdrawn: pre-fill stays; PR #58 closed unmerged — Aisling <!-- modified 2026-10-07 23:27 Aisling -->
 - [ ] Three labeled data sets (Small, Full as sent, Full fixed), one loaded at a time, after Natalie's seed PR — Aisling <!-- new 2026-10-07 22:38 Aisling -->
-- [ ] iPad check-in app PR — Natalie <!-- new 2026-10-07 22:38 Aisling -->
+- [x] iPad check-in app PR (PR #56, merged Oct 8) — Natalie <!-- modified 2026-10-08 01:50 Aisling -->
 - [ ] After-gala results, Give Lively fee analytics, a seating map that staff control, and a simulated Salesforce push — Natalie (screens), Aisling (backend) <!-- new 2026-10-07 22:38 Aisling -->
+
+## Added October 8
+<!-- new 2026-10-08 01:50 Aisling -->
+
+- [x] Review the iPad check-in app; it merged Oct 8 (PR #56) — Aisling <!-- new 2026-10-08 01:50 Aisling -->
+- [x] Check-in sync: Undo or Close while a check-in is sending no longer loses it, with tests (PR #60) — Aisling <!-- new 2026-10-08 01:50 Aisling -->
+- [x] QR code generator gives the full 128 random bits (PR #61) — Aisling <!-- new 2026-10-08 01:50 Aisling -->
+- [x] Door list: invented names in place of 12 real organizations; screenshots retaken (PR #62) — Aisling <!-- new 2026-10-08 01:50 Aisling -->
+- [ ] Connect the iPad app to the backend, following Natalie's "To connect" list in PR #56 (door list from the server, QR hash and expiry, `CheckInDesk` sync, staff sign-in, clear on sign-out, retire the demo sync server) — Aisling; staff sign-in with Cornell (#27) <!-- new 2026-10-08 01:50 Aisling -->
+- [ ] iPad app: app manifest, opening offline, camera QR scanning on a real iPad — Natalie <!-- new 2026-10-08 01:50 Aisling -->
 
 ## Week of October 12
 
