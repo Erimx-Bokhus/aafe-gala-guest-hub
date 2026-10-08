@@ -31,6 +31,23 @@ export interface SnapshotGuest {
   checked_in_at: string | null
   checked_in_by: string | null
   device: string | null
+  /** The sponsorship or ticket package, for the seat line ("Ticket · Community Ticket"). */
+  package?: string | null
+  /** The check-in's id and the iPad's client_id for it, so Undo can name it (staff_undo_check_in). */
+  checkin_id?: string | null
+  checkin_client_id?: string | null
+}
+
+/** A walk-in or other approved exception already on the server (notes stay off the iPad). */
+export interface SnapshotException {
+  id: string
+  client_id: string | null
+  name: string
+  type: string
+  order_id: string | null
+  checked_in_at: string
+  checked_in_by: string
+  device: string | null
 }
 
 export interface Snapshot {
@@ -39,6 +56,12 @@ export interface Snapshot {
   generated_at: string
   guests: SnapshotGuest[]
   unnamed_seats: { order_id: string; sponsor: string; count: number }[]
+  /** For the sign-in screen; 'closed' tells the iPad to clear its saved list. */
+  event_date?: string
+  doors_time?: string | null
+  venue_name?: string | null
+  status?: 'planning' | 'live' | 'closed'
+  exceptions?: SnapshotException[]
 }
 
 export type QueuedCheckIn =
@@ -78,7 +101,7 @@ export interface KeyValueStore {
   removeItem(key: string): void
 }
 
-const KEYS = { snapshot: 'aafe-checkin-snapshot', queue: 'aafe-checkin-queue', notices: 'aafe-checkin-notices' }
+const KEYS = { snapshot: 'snapshot', queue: 'queue', notices: 'notices' }
 /** Items per sync call; the database takes at most 1,000. */
 export const BATCH = 200
 
@@ -104,10 +127,13 @@ export class CheckInDesk {
   private readonly staffName: string
   private readonly now: () => Date
   private readonly newId: () => string
+  /** Storage keys start with this, so each signed-in person's list and queue stay apart on a shared iPad. */
+  private readonly prefix: string
   private syncing = false
 
-  constructor(opts: { store: KeyValueStore; device: string; staffName: string; now?: () => Date; newId?: () => string }) {
+  constructor(opts: { store: KeyValueStore; device: string; staffName: string; now?: () => Date; newId?: () => string; prefix?: string }) {
     this.store = opts.store
+    this.prefix = opts.prefix ?? 'aafe-checkin-'
     this.device = opts.device
     this.staffName = opts.staffName
     this.now = opts.now ?? (() => new Date())
@@ -176,6 +202,15 @@ export class CheckInDesk {
     }
     this.write(KEYS.queue, [...this.pending(), item])
     return item
+  }
+
+  /** Takes a check-in that hasn't synced yet off the queue (undo while offline). False if it already left. */
+  cancel(clientId: string): boolean {
+    const before = this.pending()
+    const after = before.filter((q) => q.client_id !== clientId)
+    if (after.length === before.length || this.syncing) return false
+    this.write(KEYS.queue, after)
+    return true
   }
 
   // ---- Sync
@@ -252,7 +287,7 @@ export class CheckInDesk {
 
   /** After gala night: remove the saved list, the queue and notices from the iPad. */
   clear() {
-    for (const k of Object.values(KEYS)) this.store.removeItem(k)
+    for (const k of Object.values(KEYS)) this.store.removeItem(this.prefix + k)
   }
 
   // ---- Internals
@@ -274,7 +309,7 @@ export class CheckInDesk {
 
   private read<T>(key: string, fallback: T): T {
     try {
-      const v = this.store.getItem(key)
+      const v = this.store.getItem(this.prefix + key)
       return v ? (JSON.parse(v) as T) : fallback
     } catch {
       return fallback
@@ -282,6 +317,6 @@ export class CheckInDesk {
   }
 
   private write(key: string, value: unknown) {
-    this.store.setItem(key, JSON.stringify(value))
+    this.store.setItem(this.prefix + key, JSON.stringify(value))
   }
 }
