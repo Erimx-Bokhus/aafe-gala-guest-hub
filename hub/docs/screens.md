@@ -1,16 +1,17 @@
-# Screens
-<!-- reviewed 2026-10-06 Aisling -->
+# Live build
+<!-- modified 2026-10-08 08:15 Aisling Split: the sketches moved to Early sketches; the iPad check-in app added -->
+<!-- reviewed 2026-10-08 Aisling -->
 
-Rough sketches of the three screens AAFE asked for, to agree on what each one shows. Layout and visual design belong to the frontend pair; Natalie's staff app and portal in `prototype/` are now the real designs (see The build so far below), and these sketches are kept for the questions at the end. All names are invented. <!-- modified 2026-10-06 05:50 Aisling -->
+The real apps in `prototype/`, running on invented demo data: Natalie's sponsor portal and staff app, and her iPad check-in app for the door. Layout and visual design belong to the frontend pair. The first sketches of the same screens are on [Early sketches](#sketches). All names are invented. <!-- modified 2026-10-08 08:15 Aisling -->
 
 ## The build so far
 <!-- new 2026-10-06 05:45 Aisling -->
 
-Screens from Natalie's staff app and sponsor portal in `prototype/`, running on invented demo data, captured October 6. AAFE's logo and event photos are swapped for grey placeholders until AAFE approves them for public use in writing (hard rule 8).
+Screens from Natalie's staff app and sponsor portal, captured October 6, before staff sign-in (PR #27), Korean in the portal (PR #51), and the demo data picker (PR #66). AAFE's logo and event photos are swapped for grey placeholders until AAFE approves them for public use in writing (hard rule 8). <!-- modified 2026-10-08 08:15 Aisling -->
 
 <video controls muted playsinline preload="metadata" poster="img/portal-welcome.jpg" src="img/build-walkthrough.mp4" aria-label="25-second walkthrough: the sponsor portal, the staff app, and check-in"></video>
 
-*A 25-second walkthrough: a sponsor names a guest, staff see it, badges fill in, and the guest checks in.*
+*A 25-second walkthrough: a sponsor names a guest, staff see it, badges fill in, and the guest checks in on the staff app's check-in screen.* <!-- modified 2026-10-08 08:15 Aisling -->
 
 ### Sponsor portal
 
@@ -40,45 +41,37 @@ Badges fill in from the guest list, with table and seat.
 
 ![Badge previews for invented guests, each with title, organization, table and seat, and sponsor line](img/staff-badges.jpg)
 
-### Check-in
+### Check-in in the staff app
 
-Search a name or sponsor at the door and mark the guest arrived.
+Staff can search a name or sponsor and mark the guest arrived. At the door, volunteers use the iPad app below. <!-- modified 2026-10-08 08:15 Aisling -->
 
 ![Animation: staff search "Acme" on the check-in screen and mark an invented guest, Jordan Lee, as arrived at table 5](img/check-in.gif)
 
-## Staff dashboard
-<!-- modified 2026-10-05 16:51 Aisling -->
+## iPad check-in app
+<!-- new 2026-10-08 08:15 Aisling -->
 
-Answers the intake form's three questions: who is coming and what's missing, who owns each guest, and how we're tracking to goal.
+Natalie's app for volunteers at the door (`prototype/checkin-app/`, PR #56), on the Full gala's 553 invented guests, captured October 8. Volunteers sign in with a check-in-only role; the app shows tonight's gala only, keeps working offline, and syncs later. AAFE's logo mark is a grey placeholder (hard rule 8).
 
-```wireframe dashboard
-```
+The guest list, A to Z by last name, with each guest's category, seat, and table.
 
-```notes
-Every number on this screen comes from one query: open seats grouped by relationship owner. The goal bars are placeholders until AAFE shares targets.
-```
+![iPad check-in app: the guest list for AAFE's 53rd Annual Gala, 1 of 553 checked in, with category tabs, search, Scan and Exception buttons, and invented guests from Abbott to Acosta](img/ipad-guest-list.jpg)
 
-## Sponsor guest form
-<!-- modified 2026-10-05 16:51 Aisling -->
+Several guests checked in at once, with the count and each category's progress updated.
 
-Opened from a private link on a phone or laptop. Shows exactly as many slots as the package includes, and stays editable until AAFE's deadline.
+![iPad check-in app after checking in several invented guests at 9:37 PM, with the counts updated](img/ipad-checked-in.jpg)
 
-```wireframe sponsor
-```
+Scanning a QR e-ticket. When the camera isn't allowed, the volunteer types the code printed under the QR.
 
-## Check-in
+![The Scan QR code window with an invented code typed in and a Check in button](img/ipad-qr.jpg)
 
-On an iPad at the door. Search by guest or sponsor, mark arrivals, and handle walk-ins and unnamed sponsor seats.
+The same ticket scanned twice: the app says who checked it in, when, and by whom.
 
-```wireframe checkin
-```
+![The Scan QR code window warning that an invented guest, Eddie Chan, was already checked in at 9:38 PM by Kenji Abe](img/ipad-repeat-scan.jpg)
 
-```notes
-This replaces the printed spreadsheet and the slow line. It has to keep working if the venue's internet drops.
-```
+Exceptions, such as a walk-in, are recorded with a note and listed for the check-in lead.
 
-## Open questions for the sketches
+![The exceptions list with an invented walk-in](img/ipad-exceptions.jpg)
 
-- What goals does AAFE track per category: sponsorship dollars, tickets sold, attendance?
-- Does the sponsor form need logo upload, or does logo collection stay in email?
-- Confirm with AAFE that volunteers work check-in (the backend has a limited volunteer role that sees the check-in list, not the full guest list). <!-- modified 2026-10-06 06:12 Aisling -->
+The same app held upright.
+
+![iPad check-in app in portrait, 12 of 553 checked in](img/ipad-portrait.jpg)

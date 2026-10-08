@@ -1,5 +1,5 @@
 # Hosting
-<!-- reviewed 2026-10-07 Aisling -->
+<!-- reviewed 2026-10-08 Aisling -->
 
 We are building a capstone prototype, not choosing AAFE's production infrastructure. The team delivers a working, AAFE-branded prototype with invented data, plus code and documentation that any qualified partner can pick up. **Production hosting is intentionally not selected during this project.** AAFE decides that, if it adopts the tool, after reviewing the finished prototype.
 
@@ -53,9 +53,8 @@ Whoever runs a production version should be able to say yes to each of these, wh
 
 Aisling's test Supabase project, in her own account, is loaded with the schema, seed, and backend (Oct 6); `npm run db:backend` in `prototype/` re-applies it. It is for testing: which Supabase project the demo and the handoff use, and who owns it, is still to agree (Decisions, Pending). <!-- modified 2026-10-07 20:23 Aisling -->
 
-- The demo runs under a team account with invented data, on Supabase's free plan (decided Oct 5). The web apps are previewed on Vercel's free plan (decided Oct 6): two projects, rooted at `prototype/staff-app` and `prototype/guest-portal`, with only the Supabase URL and public (anon) key set in Vercel's settings, never in the repo. Vercel's free plan is meant for personal, non-commercial projects: fine for the team's demo, not for AAFE's production. <!-- modified 2026-10-07 13:45 Aisling -->
-- A free Supabase project pauses after a week without activity. Wake it before any demo, or rebuild it from the seed data. <!-- modified 2026-10-05 16:51 Aisling -->
-- Free web services can sleep when idle; wake the preview before any demo.
+- The demo uses invented data on Supabase's free plan (decided Oct 5), in Aisling's test project until the team agrees on the demo's project and owner (above). The web apps are previewed on Vercel's free plan (decided Oct 6): three projects, rooted at `prototype/staff-app`, `prototype/guest-portal` and `prototype/checkin-app`, with only the Supabase URL and public (anon) key set in Vercel's settings, never in the repo. The iPad app's demo sync server runs on one computer only, so the hosted iPad app syncs once it's connected to Supabase. Vercel's free plan is meant for personal, non-commercial projects: fine for the team's demo, not for AAFE's production. <!-- modified 2026-10-08 08:15 Aisling -->
+- A free Supabase project pauses after a week without activity. Wake it before any demo, or rebuild it from the seed data. <!-- modified 2026-10-05 16:51 Aisling --> <!-- removed 2026-10-08 08:15 Aisling "Free web services can sleep when idle": Vercel's static sites don't sleep; Supabase does, as this line says -->
 
 ## Future hosting paths, for the handoff notes
 <!-- team -->

@@ -1,12 +1,12 @@
 # Architecture
-<!-- reviewed 2026-10-06 Aisling -->
+<!-- reviewed 2026-10-08 Aisling -->
 
-One standard web app and one database. A small import-and-matching module sits between Give Lively and the database, and every screen reads from the same tables. The stack was decided October 5: React and TypeScript on Supabase. <!-- modified 2026-10-05 16:51 Aisling -->
+Three small web apps (staff, sponsor portal, iPad check-in) on one database. A small import-and-matching module sits between Give Lively and the database, and every screen reads from the same tables. The stack was decided October 5: React and TypeScript on Supabase. <!-- modified 2026-10-08 08:15 Aisling -->
 
 ```layers
 Sources | Give Lively attendee export — CSV, or the live link; Give Lively donation feed — read-only JSON; Staff entry — checks, ACH, comps; Legacy spreadsheet — one-time migration
 Import and matching | Parse and validate — columns found by name, clear errors; Match and dedupe — purchase key, then email and last name, then name; Review queue — staff confirm close calls
-Shared data | Postgres — guests, seats, sources, history; Staff sign-in — emailed link (Supabase Auth), Google later; AI helper — optional, off by default
+Shared data | Postgres — guests, seats, sources, history; Staff sign-in — emailed link (Supabase Auth), Google later; No AI in the first version
 Screens | Staff dashboard — gaps by owner, goals; Sponsor form — private link, no account; Check-in — iPad, works offline
 Outputs | Badge file — mail merge with table number; Follow-up drafts — staff approve and send; Salesforce file — who actually attended
 ```
@@ -14,20 +14,27 @@ Outputs | Badge file — mail merge with table number; Follow-up drafts — staf
 ## What's built
 <!-- new 2026-10-05 22:58 Aisling -->
 
-As of October 6, in the team repo. The build follows Natalie's Supabase schema; the data model below is the target it converges on. <!-- new 2026-10-05 22:58 Aisling -->
+As of October 8, in the team repo. The build follows Natalie's Supabase schema. Test counts are kept in [Build plan](#build-plan.where-each-component-stands), C11. <!-- modified 2026-10-08 08:15 Aisling -->
 
 | Part | Where | What it does <!-- new 2026-10-05 22:58 Aisling --> |
 | --- | --- | --- |
-| Import engine | `import-engine/` | Reads AAFE's Give Lively export, converts times to UTC, splits free-text guest lists, matches buyers and guests, builds the import report. Plain TypeScript, no screens, 94 tests <!-- new 2026-10-05 22:58 Aisling --> |
+| Import engine | `import-engine/` | Reads AAFE's Give Lively export, converts times to UTC, splits free-text guest lists, matches buyers and guests, builds the import report. Plain TypeScript, no screens, 116 tests <!-- modified 2026-10-08 08:15 Aisling --> |
 | Database and server functions | `prototype/database/` | Natalie's schema and seed, plus the import tables (`import_runs`, `import_review`, `tier_mappings`). Every staff action goes through a function that writes the history <!-- new 2026-10-05 22:58 Aisling --> |
+| Email approval queue | `prototype/database/backend.sql` | Portal links, QR invitations, guest-list reminders and payment confirmations wait as drafts until a staff member approves each one, with its sponsor, seats and payment shown (PR #44) <!-- new 2026-10-08 08:15 Aisling --> |
+| Offline check-in | `prototype/shared/src/offlineCheckin.ts`, `checkinSync.ts` | The iPad keeps its door list, queues check-ins while offline, and sends them later; the first arrival wins (PRs #46, #60) <!-- new 2026-10-08 08:15 Aisling --> |
+| Sponsor pipeline | `prototype/database/backend.sql` | AAFE's stages from reached out to payment received, the ask against the commitment, and the last two galas' giving (PR #48) <!-- new 2026-10-08 08:15 Aisling --> |
+| Sponsor arrivals | `prototype/database/backend.sql` | Sponsors can see which of their guests have arrived (arrived or not, never a time); switched off until AAFE approves (PR #49) <!-- new 2026-10-08 08:15 Aisling --> |
+| Translation sheet | `prototype/docs/translations/` | Every phrase in English, 中文, 한국어 and Español for AAFE to review; no silent fallback to English (PR #50) <!-- new 2026-10-08 08:15 Aisling --> |
+| Demo data sets | `prototype/database/generate_full_seed.py`, `prototype/scripts/load-demo-data.mjs` | Small, Full as sent, and Full fixed, one at a time: a picker in the staff app and portal, `npm run db:load` for Supabase (PR #66) <!-- new 2026-10-08 08:15 Aisling --> |
 | Server jobs | `prototype/supabase/functions/` | Give Lively sync (this gala's page only) and the email sender (staff-approved only) <!-- new 2026-10-05 22:58 Aisling --> |
 | Exports | `prototype/database/backend.sql` | Badge file, printed check-in list, and Salesforce attendee file: role-checked, logged, and returned as rows for the staff app's CSV download (PR #34) <!-- updated 2026-10-06 20:41 Aisling --> |
-| Key protection | `prototype/shared/vite/`, `prototype/scripts/make_open_files.py`, `.gitleaks.toml` | A build stops if a secret key would reach the browser; demo files can't carry the project address; the secret scan knows Supabase's keys. Where every key lives: `docs/keys-and-secrets.md` (PR #36) <!-- updated 2026-10-06 20:56 Aisling --> |
+| Key protection | `prototype/shared/vite/`, `prototype/scripts/make_open_files.py`, `.gitleaks.toml` | A build stops if a secret key would reach the browser; demo files can't carry the project address; the secret scan knows Supabase's keys. Where every key lives: `docs/keys-and-secrets.md` (PR #36). Covers the staff app and portal; the iPad app doesn't have it yet <!-- modified 2026-10-08 08:15 Aisling --> |
 | Staff app | `prototype/staff-app/` | Natalie's staff workspace; real sign-in merged (Cornell, PR #27): an emailed link when Supabase keys are set, demo accounts otherwise; pages still on demo data <!-- modified 2026-10-07 19:15 Aisling --> |
 | Sponsor portal | `prototype/guest-portal/` | Natalie's guest-name form on a private link; English, 中文, 한국어 (Antonin, PR #51), Español. Antonin's design prototype (his branch) is the reference for tier layout and gala-night arrivals <!-- modified 2026-10-07 19:15 Aisling --> |
-| Checks on pull requests | `.github/workflows/` | All six run on every PR and are required on `main`: secret scan, real-data guard, backend tests, import engine tests, app tests and build, and server function type-check (PR #40). Tests: import engine 94, backend 119 (in-memory Postgres), app 8 <!-- modified 2026-10-06 21:33 Aisling --> |
+| iPad check-in app | `prototype/checkin-app/` | Natalie's door app for volunteers: tonight's gala only, A to Z, search, check in several at once with undo, QR scan, approved exceptions, offline queue (PR #56; sync fix #60; invented organizations #62). Runs on demo data with a local sync server until it's connected to Supabase <!-- new 2026-10-08 08:15 Aisling --> |
+| Checks on pull requests | `.github/workflows/` | All six run on every PR and are required on `main`: secret scan, real-data guard, backend tests, import engine tests, app tests and build, and server function type-check (PR #40). Test counts: [Build plan](#build-plan.where-each-component-stands), C11 <!-- modified 2026-10-08 08:15 Aisling --> |
 
-**Secrets are stored as hashes.** Sponsor links and QR e-tickets are random, shown only in the email that carries them, and stored only as hashes. A QR code belongs to one seat and stops working the morning after the gala, or as soon as the seat gets a different guest. <!-- new 2026-10-05 22:58 Aisling -->
+**Secrets are stored as hashes.** Sponsor links and QR e-tickets are random, shown only in the email that carries them, and stored only as hashes. A QR code belongs to one seat and stops working the morning after the gala, or as soon as the seat gets a different guest. Fingerprints are SHA-256; QR codes carry 128 random bits, sponsor links 192 (Oct 8). <!-- updated 2026-10-08 08:15 Aisling -->
 
 ## Stack
 <!-- modified 2026-10-05 16:51 Aisling -->
@@ -38,24 +45,12 @@ As of October 6, in the team repo. The build follows Natalie's Supabase schema; 
 | Backend | Supabase: Postgres, sign-in, and server functions (Give Lively sync, email sending) | One managed service; free plan for the demo <!-- modified 2026-10-05 16:51 Aisling --> |
 | Database | Postgres, hosted by Supabase | Standard, portable, and fits the record structure <!-- modified 2026-10-05 16:51 Aisling --> |
 | Sign-in | Supabase Auth with staff roles: an emailed sign-in link (PR #27, merged Oct 7); demo accounts when no Supabase keys are set | AAFE's Google accounts can plug in if the tool is adopted <!-- modified 2026-10-07 19:15 Aisling --> |
-| Demo preview | A free or low-cost tier on a team account | Production hosting is AAFE's decision after Demo Day; see [Hosting](#hosting) |
+| Demo preview | Vercel's free plan (three projects) and Supabase's free plan; for now the backend runs in Aisling's test project, and the demo's project and owner are still to agree | Production hosting is AAFE's decision after Demo Day; see [Hosting](#hosting) <!-- modified 2026-10-08 08:15 Aisling --> |
 | Repo | Team GitHub organization on GitHub Team, with `main` protected | Handed to AAFE, or the partner it chooses, at handoff <!-- modified 2026-10-05 16:51 Aisling --> |
 
 ## How matching works
 
-Each incoming row goes through the same checks, in order. The first check that answers yes decides what happens.
-
-```decision
-start: A row arrives from Give Lively, the sponsor form, or staff entry
-!Has a name and a source? | Rejected, with the reason in the import report | reject
-Same purchase as one already imported (email + purchase time)? | Update that purchase, never its guests | update
-Same email and same last name? | Update that guest | update
-Same name and same organization? | Update that guest | update
-Close but not certain (shared email, names swapped, other organization)? | Review queue: staff confirm or keep separate | review
-else | Create a new guest | new
-```
-
-"Wei Chen" and "Chen Wei" at the same organization is a close match: it waits for a person instead of merging. Full rules, the review queue, and the test cases: [Import and matching](#import). <!-- modified 2026-10-03 11:56 Aisling -->
+Every incoming row goes through the same plain checks, in order, and a close call waits in a review queue for a person instead of merging. The checks, the review queue, and the test cases are on [Import and matching](#import). <!-- removed 2026-10-08 08:15 Aisling The matching tree: it differed from Import's, which is the one kept -->
 
 ```notes
 Matching is deliberately boring: plain rules anyone can audit, no AI deciding who is who. That matters because AAFE's draft AI policy keeps names out of AI tools.
@@ -65,6 +60,8 @@ Nothing merges on a guess. Every import ends with a report such as "12 new, 3 up
 
 ## Data model
 <!-- updated 2026-10-05 16:51 Aisling -->
+
+**Early design, Oct 3.** The build follows Natalie's schema instead, with different table names: `guests`, `orders`, `sponsorship_tiers`, `seats`, `payments`, `event_tables`, `check_ins`, `email_log`, `audit_log`, plus `import_runs`, `import_review`, `tier_mappings` and `sponsor_prospects` (`prototype/database/schema.sql` and `backend.sql`; merge notes in `docs/data-model.md`). The ideas below carried over: one seat per guest slot, sources kept on every record, corrections that survive the next import, and hashed links. <!-- modified 2026-10-08 08:15 Aisling -->
 
 AAFE's real spreadsheet (received Oct 5) adds three fields to plan for: a guest category, whether a seat is guaranteed or admittance only, and a sponsor's pipeline stage. Arrows point from a field to the table it refers to. <!-- modified 2026-10-05 16:51 Aisling -->
 

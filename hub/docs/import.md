@@ -1,6 +1,6 @@
 # Import and matching
 <!-- modified 2026-10-05 21:28 Aisling -->
-<!-- reviewed 2026-10-06 Aisling -->
+<!-- reviewed 2026-10-08 Aisling -->
 
 How a Give Lively export becomes guests, orders, and seats without duplicates, and why a staff correction is never lost. Plain rules, no AI. Full spec: `docs/import-matching-spec.md` in the repo.
 
@@ -36,10 +36,10 @@ One import is all-or-nothing: if anything fails partway, nothing is applied and 
 
 The import works end to end in code: a file in AAFE's export format goes through the import engine and into the database in one step that either fully succeeds or changes nothing. What's left is the staff app's upload screen (frontend pair). <!-- new 2026-10-05 22:58 Aisling -->
 
-- **Import engine** (`import-engine/`): reads the file, converts times to UTC, splits guest lists, matches buyers and guests, builds the report. 94 automated tests. <!-- new 2026-10-05 22:58 Aisling -->
-- **Database side** (`prototype/database/backend.sql`): skips purchases it has seen, never overwrites a name a sponsor or staff entered, keeps a run record for every upload, and puts close calls in the review queue. 119 backend tests in all, including a sample file run all the way through. <!-- modified 2026-10-06 06:30 Aisling -->
+- **Import engine** (`import-engine/`): reads the file, converts times to UTC, splits guest lists, matches buyers and guests, builds the report. 116 automated tests. <!-- modified 2026-10-08 08:15 Aisling -->
+- **Database side** (`prototype/database/backend.sql`): skips purchases it has seen, never overwrites a name a sponsor or staff entered, keeps a run record for every upload, and puts close calls in the review queue. Tested with a sample file run all the way through; counts in [Build plan](#build-plan.where-each-component-stands), C11. <!-- modified 2026-10-08 08:15 Aisling -->
 
-Three choices settled while building (Oct 5; Natalie reviewing in Slack): <!-- modified 2026-10-06 06:12 Aisling -->
+Three choices settled while building (Oct 5; pre-fill reaffirmed Oct 7, PR #58 closed): <!-- modified 2026-10-08 08:15 Aisling -->
 
 | Question | Decision <!-- new 2026-10-05 22:58 Aisling --> |
 | --- | --- |
@@ -104,52 +104,10 @@ Nothing is deleted automatically. Refunded seats are cancelled, not removed, and
 - **Page name:** "AAFE's 52nd Annual Gala", so the import filters on each gala's page name, not a fixed "AAFE Gala 2027" setting (Oct 6). <!-- modified 2026-10-05 21:28 Aisling -->
 - **Refunds:** yes, an "Amount Refunded" column and a "Status" column. <!-- modified 2026-10-05 16:51 Aisling -->
 - **Column headers and formats:** received. Dates look like `2026-02-05 05:14:46 PM EST`; amounts like `$1,000.00`; the donor-covered fee is its own column. <!-- modified 2026-10-05 16:51 Aisling -->
-- **Guest names:** one free-text answer per purchase ("Please list the name(s) and email address(es) of all guests…"). The sample has one row, so we don't yet know how messy real answers are. <!-- modified 2026-10-05 16:51 Aisling -->
+- **Guest names:** one free-text answer per purchase ("Please list the name(s) and email address(es) of all guests…"). The sample has one row, so we don't yet know how messy real answers are. A 553-guest invented gala with messy guest lists now runs end to end in the tests (PR #50); real rows from AAFE are still needed. <!-- updated 2026-10-08 08:15 Aisling -->
 - **Still open:** whether sponsorships bought on Give Lively appear in the same export (the "Tier Category" column suggests they do). <!-- modified 2026-10-05 16:51 Aisling -->
 
-Done: the spec's test cases (section 11) now use the purchase key and cover free-text guest lists; the table below is the original list. <!-- modified 2026-10-06 05:50 Aisling -->
-
-## Earlier questions
-<!-- team -->
-
-Answered Oct 5; see "What AAFE's export answered" above. <!-- updated 2026-10-06 05:50 Aisling -->
-
-- Does the attendee export carry a **per-ticket ID**? Without one, rows are identified by their position in the transaction, which breaks if Give Lively reorders them.
-- Does it show **refunds**, or are they only in another report?
-- Exact column headers, date format, and whether amounts include the donor-covered fee.
-- Are Give Lively sponsorships in the same report as tickets?
-- **Which report.** Give Lively's "Line Items (All)" purchase report has the transaction ID (Natalie's prototype imports it); the attendee report has guest names. Likely both, joined on transaction ID. <!-- updated 2026-10-03 12:36 Aisling -->
-
-## Test cases
-<!-- team -->
-<!-- modified 2026-10-05 22:58 Aisling -->
-
-The original 22 cases, kept for reference. The spec now has 38 numbered cases, 41 with 10b, 16b, and 37b (`docs/import-matching-spec.md`, section 11), written for the real export's purchase key instead of ticket IDs; nearly all are automated tests, each labelled with its case number. <!-- modified 2026-10-06 05:50 Aisling -->
-
-| # | Case | Expected |
-| --- | --- | --- |
-| 1 | New ticket, buyer attends | 1 guest, 1 order, 1 named seat |
-| 2 | Coordinator buys 2 for colleagues | Buyer unseated; colleagues seated, coordinator's email not copied to them |
-| 3 | Same file imported twice | Nothing changes |
-| 4 | Same ticket ID twice in one file | 1 seat; second row rejected |
-| 5 | Email with different case and spaces | Matched |
-| 6 | "Dr. Grace  Kim", "Lotus Bank, Inc." | Matched to Grace Kim, Lotus Bank |
-| 7 | "Chen Wei" vs "Wei Chen", same organization | Review |
-| 8 | Same name, other organization | Review |
-| 9 | Shared inbox, different person | Review, not merged |
-| 10 | Guest named by two sponsors | Review; on both until resolved |
-| 11 | Sponsorship with 3 of 10 names | 10 seats, 7 open, sponsor link and draft email queued |
-| 12 | Refund | Order refunded, seat cancelled, review |
-| 13 | Name changed, no correction | Updated |
-| 14 | Title changed, staff corrected it | Correction kept; change held in report |
-| 15 | Sponsor named a seat, Give Lively blank | Sponsor's name kept |
-| 16 | Row with no transaction ID | Rejected; rest imports |
-| 17 | Unknown ticket type | Review; nothing created |
-| 18 | 3 names for 2 seats | 2 filled; review holds the third |
-| 19 | Order missing from later export | Review; nothing deleted |
-| 20 | Check pledge, then a Give Lively ticket, same email | Same person, separate orders |
-| 21 | Amount drops $500 → $250 | Updated, listed in report |
-| 22 | Import fails partway | Nothing applied; run marked failed |
+Done: the spec's test cases now use the purchase key and cover free-text guest lists: 38 numbered cases, 41 with 10b, 16b, and 37b (`docs/import-matching-spec.md`, section 11), nearly all automated tests labelled with their case number. <!-- modified 2026-10-08 08:15 Aisling --> <!-- removed 2026-10-08 08:15 Aisling Earlier questions (answered by AAFE's export, above) and the original 22 test cases (replaced by the spec's, linked above) -->
 
 ## Seed data the tests need
 <!-- team -->
@@ -162,4 +120,4 @@ Export 1 | Every match case — variants, swaps, shared inbox, second sponsor; E
 Export 2 | The same report later — a refund, a name change, a title change under a correction, a missing order, a lower amount
 ```
 
-For the demo itself: about 300 seated guests, 25 sponsors, 150 single tickets, mixed payment methods, and at least a third of sponsor seats still unnamed so the reminders have work to do.
+For the demo itself, three labeled data sets, one loaded at a time (PR #66): Small (48 guests), and two Full sets built around the iPad door list's 553 guests and 21 tables, Full as sent (Natalie's packages, readable links, emails sent with no approval record) and Full fixed (the 2026 flyer's tiers, random links, an approval on every email). The import's own 553-guest test gala (PR #50) is separate and used only in the tests. <!-- modified 2026-10-08 08:15 Aisling -->

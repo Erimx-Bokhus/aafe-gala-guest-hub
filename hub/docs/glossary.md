@@ -1,6 +1,6 @@
 # Glossary
 <!-- updated 2026-10-05 22:58 Aisling -->
-<!-- reviewed 2026-10-06 Aisling -->
+<!-- reviewed 2026-10-08 Aisling -->
 
 Terms used across this hub, in plain language.
 
@@ -22,7 +22,7 @@ Supabase | The hosted service the prototype runs on: a Postgres database, staff 
 Anon key | The Supabase key that ships inside the apps. Public by design: it can only do what the access rules allow. <!-- new 2026-10-06 20:41 Aisling -->
 Service role key | The Supabase key that bypasses every access rule. It stays in Supabase's encrypted secret store and never goes in an app, a file, or a chat. <!-- new 2026-10-06 20:41 Aisling -->
 Edge Function secrets | Supabase's encrypted store for server-side keys (email, Give Lively, the service role key). Only the server functions can read them. <!-- new 2026-10-06 20:41 Aisling -->
-Build guard | A check in both apps' build settings that stops the build if a secret key would end up in the browser. <!-- new 2026-10-06 20:56 Aisling -->
+Build guard | A check in the staff app's and sponsor portal's build settings that stops the build if a secret key would end up in the browser. The iPad app gets one before it's hosted. <!-- modified 2026-10-08 08:15 Aisling -->
 Guest category | What kind of guest someone is: sponsor guest, ticket holder, comp, AAFE staff, volunteer, event staff, or government/VIP. <!-- modified 2026-10-05 16:51 Aisling -->
 Seated | A guest with a guaranteed table, which comes with Champion-level sponsorship and above. Other guests are admitted without one. <!-- modified 2026-10-05 16:51 Aisling -->
 Pipeline stage | Where a sponsor prospect stands: not started, reached out, in conversation, closed won, payment received, or lost. <!-- modified 2026-10-05 16:51 Aisling -->
@@ -33,7 +33,7 @@ Package | A sponsorship or ticket tier and how many seats it includes, such as S
 Postgres | The database the prototype uses, hosted by Supabase: standard, free, and offered by every major host. <!-- modified 2026-10-06 05:50 Aisling -->
 Relationship owner | The AAFE staff member responsible for a guest or sponsor, and the one who follows up.
 Render | A hosting company. One option a future partner could consider, at an estimated base of about $13 a month.
-Demo preview | The temporary copy of the prototype the team runs for Demo Day, with invented data only. Not a production system.
+Demo preview | The temporary copy of the prototype the team runs for Demo Day, with invented data only: three projects on Vercel's free plan and the database on Supabase's free plan. Not a production system. <!-- modified 2026-10-08 08:15 Aisling -->
 Exception (check-in) | Someone admitted who isn't on the list as named, such as a walk-in for a sponsor's unnamed seat. Recorded with a note and the staff member who approved it. <!-- updated 2026-10-03 12:36 Aisling -->
 Gitleaks | A scanner that checks every pull request (and `main` after each merge) for passwords and keys; it must pass before anything merges. <!-- modified 2026-10-06 05:50 Aisling -->
 Production-readiness notes | The handoff section listing what a future partner must settle before real data is used: hosting, backups, access, support, and gala-night fallback.
@@ -46,7 +46,15 @@ Import engine | The part of the code that reads a Give Lively file and decides w
 Salesforce file | An export of who actually attended, shaped for AAFE's Salesforce, live for the 2027 gala.
 Seat | One place at the gala, tied to a commitment. Moves from unnamed to submitted, reviewed, badge-ready, and printed. <!-- modified 2026-10-03 12:36 Aisling -->
 Sponsor link | A private, expiring web address where one sponsor names and edits their guests. No account needed.
-Stretch | Work we do only if the must-haves are finished, such as automatic Give Lively sync. <!-- modified 2026-10-06 06:12 Aisling -->
+Stretch | Work we do only if the must-haves are finished, such as a scrambler AAFE could run on its own Give Lively export. <!-- modified 2026-10-08 08:15 Aisling -->
 Synthetic data | Invented names and organizations used for building and the public demo. The prototype never holds real guest data.
 Walk-in | A guest who arrives without being on the list. The check-in lead decides, and the tool records it.
+iPad check-in app | Natalie's app for volunteers at the door (`prototype/checkin-app/`): tonight's gala only, A to Z, search, QR scan, and it keeps working offline. <!-- new 2026-10-08 08:15 Aisling -->
+Door list | What the iPad app holds: only the fields a door volunteer needs (name, organization, sponsor, table, QR code); never emails, payments, or dietary details. <!-- new 2026-10-08 08:15 Aisling -->
+Offline queue | Check-ins the iPad saved while the internet was down, sent once it's back; the first arrival wins. <!-- new 2026-10-08 08:15 Aisling -->
+Approval queue | Emails waiting for a staff member to approve them; nothing sends without that approval. <!-- new 2026-10-08 08:15 Aisling -->
+Pre-fill | Clearly readable names from a Give Lively guest list, placed in the sponsor's seats for the sponsor to confirm. <!-- new 2026-10-08 08:15 Aisling -->
+Fingerprint | The stored, scrambled copy (a SHA-256 hash) of a sponsor link or QR code; the database never keeps the working code itself. <!-- new 2026-10-08 08:15 Aisling -->
+Vercel | The host for the demo's web apps, on its free plan; the database stays on Supabase. <!-- new 2026-10-08 08:15 Aisling -->
+Labeled data sets | The three invented demo data sets, one loaded at a time: Small, Full as sent, and Full fixed. <!-- new 2026-10-08 08:15 Aisling -->
 ```

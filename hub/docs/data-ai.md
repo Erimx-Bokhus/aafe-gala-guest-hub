@@ -1,5 +1,5 @@
 # Data and AI
-<!-- reviewed 2026-10-06 Aisling -->
+<!-- reviewed 2026-10-08 Aisling -->
 
 The prototype uses invented data only. This page sets out what a production version would store and how it would treat AI, so AAFE can review it with its AI policy; the policies themselves are AAFE's decisions.
 
@@ -20,19 +20,16 @@ The prototype uses invented data only. This page sets out what a production vers
 | Table number, badge status, check-in time | |
 | Source of each record (Give Lively, staff entry, sponsor link, or check-in desk) and a history of every change | <!-- modified 2026-10-03 11:56 Aisling --> |
 
-**Optional, if AAFE chooses:** dietary and accessibility needs, shown only to staff who need them and deleted after the event.
+**Optional, if AAFE chooses:** dietary and accessibility needs, shown only to staff who need them and deleted within 60 days after the gala with the other contact details (our proposal). <!-- modified 2026-10-08 08:15 Aisling -->
 
-## AI
+## AI ideas for later (not in the first version)
+<!-- modified 2026-10-08 08:15 Aisling -->
 
-- **Where it could help:** drafting follow-up emails, and explaining why two records look like the same person.
-- **What it never receives:** email addresses, phone numbers, or payment information.
-- **Matching works without AI.** The rules are plain and auditable; AI explanations sit behind an admin switch, off by default.
+- **Matching works without AI, and the first version has none** (proposed to AAFE Oct 7). <!-- modified 2026-10-08 08:15 Aisling -->
+- **What AI would never receive:** email addresses, phone numbers, or payment information.
 - **Provider terms:** a paid service that doesn't train on submitted data, confirmed in writing before any real data is used.
 
-## AI features for Demo Day
-<!-- new 2026-10-05 16:51 Aisling -->
-
-Settled Oct 7: no AI features in the first version, proposed to AAFE. <!-- modified 2026-10-07 22:38 Aisling --> Antonin flagged on Oct 3 that AI Native Demo Day may expect two or three real AI features. The ideas stay here for later; candidates that fit the rules above (off by default, staff approve everything, no emails, phone numbers, or payment details sent to AI): <!-- new 2026-10-05 16:51 Aisling -->
+Antonin flagged on Oct 3 that AI Native Demo Day may expect two or three real AI features. The ideas stay here for later; candidates that fit the rules above (off by default, staff approve everything, no emails, phone numbers, or payment details sent to AI): <!-- modified 2026-10-08 08:15 Aisling -->
 
 1. **Split the free-text guest list** from Give Lively into names; emails are removed before the text goes to AI, and staff confirm the result. (Today plain rules do this without AI.) <!-- modified 2026-10-07 23:27 Aisling -->
 2. **Flag likely badge errors**, such as a title or organization that differs from earlier records, for the relationship owner to review. <!-- new 2026-10-05 16:51 Aisling -->
@@ -41,7 +38,7 @@ Settled Oct 7: no AI features in the first version, proposed to AAFE. <!-- modif
 
 ## Access
 
-- The prototype uses demo accounts with three roles: gala admin, relationship manager, and check-in volunteer. A production version would use AAFE's Google accounts with MFA. <!-- modified 2026-10-06 05:50 Aisling -->
+- Staff sign in with an emailed link (demo accounts when no keys are set); three roles: gala admin, relationship manager, and check-in volunteer. A production version would use AAFE's Google accounts with MFA. <!-- modified 2026-10-08 08:15 Aisling -->
 - Sponsors can see their own guests' gala-night arrivals: arrived or not, never a time. It's built switched off until AAFE approves it. <!-- modified 2026-10-07 22:38 Aisling -->
 - Keys: only the project address and the public anon key ever go in an app. Keys that can bypass the access rules stay in Supabase's encrypted secret store; the build refuses to ship one to the browser. Details: `docs/keys-and-secrets.md`. <!-- updated 2026-10-06 20:56 Aisling -->
 - Sponsor links open only that sponsor's purchase and expire at AAFE's deadline. QR e-tickets open only one seat and expire after gala night. Both are random, and only a scrambled (hashed) copy is stored, so a database leak doesn't reveal working links. <!-- modified 2026-10-03 11:56 Aisling -->
@@ -51,7 +48,7 @@ Settled Oct 7: no AI features in the first version, proposed to AAFE. <!-- modif
 
 ## Decisions for AAFE, if the tool is adopted
 
-- [ ] AI on or off
+- [ ] Confirm: no AI in the first version (our proposal) <!-- modified 2026-10-08 08:15 Aisling -->
 - [ ] Delete contact details, dietary and accessibility details included, 60 days after the gala (our proposal), or keep them <!-- modified 2026-10-07 22:38 Aisling -->
 - [ ] Collect dietary needs in the tool, or not
 - [ ] Who holds admin access
