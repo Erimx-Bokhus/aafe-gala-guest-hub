@@ -228,9 +228,14 @@ $$;
 -- A QR code admits whoever holds the seat, so it stops working when the seat gets a different guest,
 -- or when the guest on it becomes a different person (name or email edited). Staff send a new one.
 create or replace function seats_void_qr() returns trigger
-language plpgsql set search_path = public as $$
+language plpgsql security definer set search_path = public as $$
 begin
   if new.guest_id is distinct from old.guest_id or new.status = 'cancelled' then
+    if old.qr_token_hash is not null then
+      perform write_audit('system', 'QR e-ticket', 'seat', new.id, new.order_id, 'qr.voided', 'valid', 'void', false,
+        format('QR e-ticket for seat %s stopped working: %s.', new.slot_number,
+               case when new.status = 'cancelled' then 'the seat was cancelled' else 'the seat has a different guest' end));
+    end if;
     new.qr_token_hash := null; new.qr_token_expires_at := null;
   end if;
   return new;
@@ -240,9 +245,15 @@ create trigger seats_void_qr before update of guest_id, status on seats for each
 
 create or replace function guests_void_qr() returns trigger
 language plpgsql security definer set search_path = public as $$
+declare s record;
 begin
   if (new.first_name, new.last_name, new.email) is distinct from (old.first_name, old.last_name, old.email) then
-    update seats set qr_token_hash = null, qr_token_expires_at = null where guest_id = new.id and qr_token_hash is not null;
+    for s in with v as (update seats set qr_token_hash = null, qr_token_expires_at = null
+                         where guest_id = new.id and qr_token_hash is not null returning id, order_id, slot_number)
+             select * from v loop
+      perform write_audit('system', 'QR e-ticket', 'seat', s.id, s.order_id, 'qr.voided', 'valid', 'void', false,
+        format('QR e-ticket for seat %s stopped working: the guest''s name or email changed.', s.slot_number));
+    end loop;
   end if;
   return new;
 end $$;
@@ -254,6 +265,15 @@ create or replace function current_event_id() returns text
 language sql stable security definer set search_path = public as $$
   select id from gala_events where status <> 'closed' order by year desc limit 1
 $$;
+
+-- An order on the gala being run now; null passes (a walk-in with no sponsor).
+create or replace function require_gala_order(p_order_id text) returns void
+language plpgsql stable security definer set search_path = public as $$
+begin
+  if p_order_id is not null and not exists (select 1 from orders where id = p_order_id and event_id = current_event_id()) then
+    raise exception 'not_found: no such order on this gala';
+  end if;
+end $$;
 
 -- Logged-in staff member, matched by the verified email on the Supabase Auth JWT.
 create or replace function current_staff() returns staff_users
@@ -475,7 +495,8 @@ begin
     insert into guests (id, order_id, first_name, last_name, title, organization, email, dietary_needs, accessibility_needs,
                         guest_type, last_updated_by)
     values (new_id('g'), o.id, v_first, v_last, f_title, f_org, f_email, f_diet, f_acc,
-            case when o.tier_id like '%ticket' then 'ticket_holder' else 'sponsor_guest' end, 'guest_portal')
+            case when (select tier_category from sponsorship_tiers where id = o.tier_id) = 'ticket' then 'ticket_holder' else 'sponsor_guest' end,
+            'guest_portal')
     returning * into g;
   end if;
 
@@ -777,8 +798,9 @@ language plpgsql security definer set search_path = public as $$
 declare me staff_users := require_staff(array['gala_admin','relationship_manager','check_in_volunteer']); g guests; v_id text := new_id('ci');
 begin
   if p_method not in ('qr','search') then raise exception 'invalid_input: method must be qr or search'; end if;
-  select * into g from guests where id = p_guest_id for update;
-  if g.id is null then raise exception 'not_found'; end if;
+  select gg.* into g from guests gg join orders o on o.id = gg.order_id
+   where gg.id = p_guest_id and o.event_id = current_event_id() and o.status <> 'cancelled' for update of gg;
+  if g.id is null then raise exception 'not_found: guest is not on this gala''s list'; end if;
   if g.attendance_status = 'checked_in' then return false; end if;
   insert into check_ins (id, event_id, guest_id, order_id, method, type, checked_in_by, note, staff_id, seat_status_before)
   values (v_id, current_event_id(), g.id, g.order_id, p_method, 'standard', me.name, '', me.id,
@@ -811,6 +833,7 @@ language plpgsql security definer set search_path = public as $$
 declare me staff_users := require_staff(array['gala_admin','relationship_manager','check_in_volunteer']); v_id text := new_id('ci');
 begin
   if coalesce(trim(p_name), '') = '' or coalesce(trim(p_type), '') = '' then raise exception 'invalid_input: name and type are required'; end if;
+  perform require_gala_order(p_order_id);
   insert into check_ins (id, event_id, order_id, arrival_name, method, type, checked_in_by, note, staff_id)
   values (v_id, current_event_id(), p_order_id, trim(p_name), 'exception', p_type, me.name, coalesce(p_note, ''), me.id);
   perform write_audit('staff', me.name, 'check_in', v_id, p_order_id, 'checkin.exception', null, 'checked_in', false,
@@ -937,6 +960,7 @@ begin
         if coalesce(btrim(it ->> 'name'), '') = '' or coalesce(btrim(it ->> 'type'), '') = '' then
           raise exception 'invalid_input: name and type are required';
         end if;
+        perform require_gala_order(nullif(it ->> 'order_id', ''));
         insert into check_ins (id, event_id, order_id, arrival_name, method, type, checked_in_by, note, checked_in_at, client_id, device, staff_id)
         values (new_id('ci'), current_event_id(), nullif(it ->> 'order_id', ''), btrim(it ->> 'name'), 'exception', btrim(it ->> 'type'),
                 me.name, coalesce(it ->> 'note', ''), v_at, v_cid, v_dev, me.id);
@@ -1073,7 +1097,7 @@ declare
   v_at timestamptz; v_original numeric; v_gross numeric; v_fee numeric; v_refunded numeric; v_text text;
   v_cancel boolean; v_changed boolean; v_named int; v_conflict text[]; f jsonb;
   v_created int := 0; v_updated int := 0; v_skipped int := 0; v_flagged int := 0; v_unknown int := 0;
-  v_prefilled int := 0; v_reviews int := 0;
+  v_prefilled int := 0; v_reviews int := 0; v_applied numeric;
 begin
   select * into e from gala_events where id = current_event_id();
   if e.id is null then raise exception 'not_found: no open gala event'; end if;
@@ -1108,8 +1132,6 @@ begin
                reconciliation_status = 'needs_review' where id = p.id;
         perform write_audit('system', p_actor, 'payment', p.id, p.order_id, 'payment.refund_updated',
           p.refunded_amount::text, v_refunded::text, false, format('Give Lively refund updated: %s refunded.', money_fmt(v_refunded)));
-        update orders set status = case when p.original_amount - v_refunded + 0.005 >= commitment_amount then 'paid' else 'partially_paid' end,
-               updated_at = now() where id = o.id and status in ('paid','partially_paid');
         v_changed := true;
       end if;
       if p.gross_amount is distinct from v_gross then
@@ -1118,6 +1140,12 @@ begin
         perform write_audit('system', p_actor, 'payment', p.id, p.order_id, 'payment.amount_updated',
           p.gross_amount::text, v_gross::text, false, format('Give Lively amount changed to %s.', money_fmt(v_gross)));
         v_changed := true;
+      end if;
+      -- A refund or amount change: paid or partly paid from everything received, checks and wires included.
+      if v_changed and o.status in ('paid','partially_paid') then
+        select sum(original_amount - refunded_amount) into v_applied from payments where order_id = o.id;
+        update orders set status = case when v_applied + 0.005 >= commitment_amount then 'paid' else 'partially_paid' end,
+               updated_at = now() where id = o.id;
       end if;
       if v_cancel and o.status <> 'cancelled' then
         update orders set status = 'cancelled', updated_at = now() where id = o.id;
@@ -1248,6 +1276,8 @@ begin
     if v_cancel then
       update orders set status = 'cancelled', updated_at = now() where id = v_order;
       update seats set status = 'cancelled', updated_at = now() where order_id = v_order;
+      perform write_audit('system', p_actor, 'order', v_order, v_order, 'order.cancelled', 'paid', 'cancelled', false,
+        'Already refunded or failed in Give Lively when imported; seats cancelled.');
       if add_import_review(p_run_id, v_key, v_order, 'refund', jsonb_build_object('status', r ->> 'status', 'refunded', v_refunded)) then
         v_reviews := v_reviews + 1;
       end if;
@@ -1772,20 +1802,31 @@ begin
         format('%s QR e-tickets now expire after the new gala date, %s.', v_n, to_char(n.event_date, 'FMMonth FMDD, YYYY')));
     end if;
   end if;
-  -- A new guest-list deadline: orders that took the gala's deadline follow it (a deadline set for one order stays),
-  -- and their sponsor links expire after the new deadline, as when the link was sent.
+  -- A new guest-list deadline: orders that took the gala's deadline follow it (a deadline set for one order stays).
   if n.guest_list_deadline is distinct from e.guest_list_deadline then
     with moved as (
-      update orders set guest_list_deadline = n.guest_list_deadline,
-             portal_token_expires_at = case when portal_token is not null and n.guest_list_deadline is not null
-               then (n.guest_list_deadline + 1)::timestamp at time zone 'America/New_York' else portal_token_expires_at end,
-             updated_at = now()
+      update orders set guest_list_deadline = n.guest_list_deadline, updated_at = now()
        where event_id = e.id and guest_list_deadline is not distinct from e.guest_list_deadline
       returning id)
     select count(*) into v_n from moved;
     if v_n > 0 then
       perform write_audit('staff', me.name, 'gala_event', e.id, null, 'event.deadline_moved', null, null, false,
-        format('%s sponsors'' guest-list deadlines and links moved to %s.', v_n, coalesce(to_char(n.guest_list_deadline, 'FMMonth FMDD, YYYY'), 'no deadline')));
+        format('%s sponsors'' guest-list deadlines moved to %s.', v_n, coalesce(to_char(n.guest_list_deadline, 'FMMonth FMDD, YYYY'), 'no deadline')));
+    end if;
+  end if;
+  -- Sponsor links expire after the order's deadline, else the gala's, else the gala date, as when the link was sent
+  -- (email_mark_sent). Recomputed for every link, so orders without a deadline of their own move too.
+  if n.guest_list_deadline is distinct from e.guest_list_deadline or n.event_date is distinct from e.event_date then
+    with moved as (
+      update orders set portal_token_expires_at = (coalesce(guest_list_deadline, n.guest_list_deadline, n.event_date) + 1)::timestamp at time zone 'America/New_York',
+             updated_at = now()
+       where event_id = e.id and portal_token is not null
+         and portal_token_expires_at is distinct from (coalesce(guest_list_deadline, n.guest_list_deadline, n.event_date) + 1)::timestamp at time zone 'America/New_York'
+      returning id)
+    select count(*) into v_n from moved;
+    if v_n > 0 then
+      perform write_audit('staff', me.name, 'gala_event', e.id, null, 'event.links_moved', null, null, false,
+        format('%s sponsor links now expire after the new deadline.', v_n));
     end if;
   end if;
 end $$;
@@ -1905,7 +1946,7 @@ begin
               'staff_send_qr_invite','staff_resend_portal_link','staff_approve_email','staff_cancel_email','checkin_list','staff_check_in','staff_check_in_qr',
               'staff_check_in_exception','gl_import','staff_import_givelively','email_mark_sent','email_mark_failed',
               'purchase_key','name_key','add_import_review','import_fill_guests','staff_set_tier_mapping','staff_set_gala_page',
-              'staff_resolve_import_review','seats_void_qr','guests_void_qr',
+              'staff_resolve_import_review','seats_void_qr','guests_void_qr','require_gala_order',
               'staff_export_badges','staff_export_checkin','staff_export_salesforce',
               'staff_queue_guest_list_reminders','staff_email_queue','staff_checkin_snapshot','staff_sync_check_ins','staff_undo_check_in',
               'pipeline_stage_label','pipeline_apply_order','orders_pipeline','staff_pipeline','staff_save_prospect',

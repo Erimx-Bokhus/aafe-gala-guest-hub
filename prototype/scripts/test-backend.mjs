@@ -29,6 +29,14 @@ const invite = (await as('authenticated', RM, `select staff_send_qr_invite($1) i
 ok(v4 && (await err('anon', null, `select portal_release_seat('ac-6w9k3p5d', $1)`, [slot])) === null, 'a guest with a QR invitation can be removed in the portal')
 const invRow = (await db.query(`select status, guest_id from email_log where id = $1`, [invite])).rows[0]
 ok(invRow.guest_id === null && (invRow.status === 'cancelled' || invRow.status === 'sent'), 'and the invitation is unlinked (discarded if unsent): ' + JSON.stringify(invRow))
+// Whether a portal guest is a ticket holder comes from the tier's category, not its id (audit of Oct 8).
+await db.exec(`insert into sponsorship_tiers (id, name, contribution_amount, included_seat_count, tier_category) values ('gala_seat', 'Gala Seat', 300, 1, 'ticket')`)
+const acmeTier = (await db.query(`select tier_id from orders where id = 'ord-acme'`)).rows[0].tier_id
+await db.query(`update orders set tier_id = 'gala_seat' where id = 'ord-acme'`)
+await as('anon', null, `select portal_save_guest('ac-6w9k3p5d', $1, $2)`, [slot, { first_name: 'Ticket', last_name: 'Holder' }])
+ok((await db.query(`select guest_type from guests where first_name = 'Ticket' and last_name = 'Holder'`)).rows[0]?.guest_type === 'ticket_holder', "a ticket tier's guest is a ticket holder whatever the tier is called")
+await as('anon', null, `select portal_release_seat('ac-6w9k3p5d', $1)`, [slot])
+await db.query(`update orders set tier_id = $1 where id = 'ord-acme'`, [acmeTier])
 ok(await err('anon', null, `select staff_add_pledge('a','b','c','gold','check')`) !== null, 'anon cannot call staff functions')
 ok(await err('anon', null, `select gl_import('[]', 'x')`) !== null, 'anon cannot call gl_import')
 
@@ -207,6 +215,19 @@ await upload([refundRow])
 res = await upload([{ ...refundRow, refunded: 1000, status: 'refunded' }])
 const ro = (await db.query(`select o.status, (select array_agg(distinct status) from seats where order_id=o.id) s from payments p join orders o on o.id=p.order_id where p.purchase_key=(select purchase_key('bo.han@example.org','2027-02-07T15:00:00Z'))`)).rows[0]
 ok(ro.status === 'cancelled' && ro.s.length === 1 && ro.s[0] === 'cancelled' && (await reviews('refund')).length >= 1, 'case 18: refund cancels order and seats, review raised')
+
+// Audit of Oct 8: an order that arrives already refunded is logged as cancelled...
+await upload([csv({ date: '2027-02-07T16:00:00Z', email: 'al.ready@example.org', first: 'Al', last: 'Ready', guest_text: '', refunded: 1000, status: 'refunded' })])
+ok((await db.query(`select count(*)::int n from audit_log a join payments p on p.order_id = a.order_id where a.action = 'order.cancelled'
+                    and p.purchase_key = (select purchase_key('al.ready@example.org', '2027-02-07T16:00:00Z'))`)).rows[0].n === 1, 'an order that arrives already refunded is logged as cancelled')
+// ...and a partial Give Lively refund counts the checks staff recorded on the same order.
+const mixRow = csv({ date: '2027-02-07T17:00:00Z', email: 'mia.fold@example.org', first: 'Mia', last: 'Fold', guest_text: '' })
+await upload([mixRow])
+const mixOrder = (await db.query(`select order_id from payments where purchase_key = (select purchase_key('mia.fold@example.org', '2027-02-07T17:00:00Z'))`)).rows[0].order_id
+await db.query(`update orders set commitment_amount = 1000 where id = $1`, [mixOrder])
+await as('authenticated', RM, `select staff_record_payment($1, 'check', 100, '2027-02-08', '5001')`, [mixOrder])
+await upload([{ ...mixRow, refunded: 100 }])
+ok((await db.query(`select status from orders where id = $1`, [mixOrder])).rows[0].status === 'paid', 'a partial Give Lively refund still counts the check staff recorded')
 
 // Case 14: shared inbox -> new sponsor + review.
 await upload([csv({ date: '2027-02-08T15:00:00Z', email: 'grace.kim@example.org', first: 'Mark', last: 'Lee' })])
