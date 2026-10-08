@@ -36,10 +36,10 @@ One import is all-or-nothing: if anything fails partway, nothing is applied and 
 
 The import works end to end in code: a file in AAFE's export format goes through the import engine and into the database in one step that either fully succeeds or changes nothing. What's left is the staff app's upload screen (frontend pair). <!-- new 2026-10-05 22:58 Aisling -->
 
-- **Import engine** (`import-engine/`): reads the file, converts times to UTC, splits guest lists, matches buyers and guests, builds the report. 116 automated tests. <!-- modified 2026-10-08 08:15 Aisling -->
-- **Database side** (`prototype/database/backend.sql`): skips purchases it has seen, never overwrites a name a sponsor or staff entered, keeps a run record for every upload, and puts close calls in the review queue. Tested with a sample file run all the way through; counts in [Build plan](#build-plan.where-each-component-stands), C11. <!-- modified 2026-10-08 08:15 Aisling -->
+- **Import engine** (`import-engine/`): reads the file, converts times to UTC, splits guest lists, matches buyers and guests, builds the report. 116 automated tests. <!-- modified 2026-10-08 04:15 Aisling -->
+- **Database side** (`prototype/database/backend.sql`): skips purchases it has seen, never overwrites a name a sponsor or staff entered, keeps a run record for every upload, and puts close calls in the review queue. Tested with a sample file run all the way through; counts in [Build plan](#build-plan.where-each-component-stands), C11. <!-- modified 2026-10-08 04:15 Aisling -->
 
-Three choices settled while building (Oct 5; pre-fill reaffirmed Oct 7, PR #58 closed): <!-- modified 2026-10-08 08:15 Aisling -->
+Three choices settled while building (Oct 5; pre-fill reaffirmed Oct 7, PR #58 closed): <!-- modified 2026-10-08 04:15 Aisling -->
 
 | Question | Decision <!-- new 2026-10-05 22:58 Aisling --> |
 | --- | --- |
@@ -104,10 +104,10 @@ Nothing is deleted automatically. Refunded seats are cancelled, not removed, and
 - **Page name:** "AAFE's 52nd Annual Gala", so the import filters on each gala's page name, not a fixed "AAFE Gala 2027" setting (Oct 6). <!-- modified 2026-10-05 21:28 Aisling -->
 - **Refunds:** yes, an "Amount Refunded" column and a "Status" column. <!-- modified 2026-10-05 16:51 Aisling -->
 - **Column headers and formats:** received. Dates look like `2026-02-05 05:14:46 PM EST`; amounts like `$1,000.00`; the donor-covered fee is its own column. <!-- modified 2026-10-05 16:51 Aisling -->
-- **Guest names:** one free-text answer per purchase ("Please list the name(s) and email address(es) of all guests…"). The sample has one row, so we don't yet know how messy real answers are. A 553-guest invented gala with messy guest lists now runs end to end in the tests (PR #50); real rows from AAFE are still needed. <!-- updated 2026-10-08 08:15 Aisling -->
+- **Guest names:** one free-text answer per purchase ("Please list the name(s) and email address(es) of all guests…"). The sample has one row, so we don't yet know how messy real answers are. A 553-guest invented gala with messy guest lists now runs end to end in the tests (PR #50); real rows from AAFE are still needed. <!-- updated 2026-10-08 04:15 Aisling -->
 - **Still open:** whether sponsorships bought on Give Lively appear in the same export (the "Tier Category" column suggests they do). <!-- modified 2026-10-05 16:51 Aisling -->
 
-Done: the spec's test cases now use the purchase key and cover free-text guest lists: 38 numbered cases, 41 with 10b, 16b, and 37b (`docs/import-matching-spec.md`, section 11), nearly all automated tests labelled with their case number. <!-- modified 2026-10-08 08:15 Aisling --> <!-- removed 2026-10-08 08:15 Aisling Earlier questions (answered by AAFE's export, above) and the original 22 test cases (replaced by the spec's, linked above) -->
+Done: the spec's test cases now use the purchase key and cover free-text guest lists: 38 numbered cases, 41 with 10b, 16b, and 37b (`docs/import-matching-spec.md`, section 11), nearly all automated tests labelled with their case number. <!-- modified 2026-10-08 04:15 Aisling --> <!-- removed 2026-10-08 04:15 Aisling Earlier questions (answered by AAFE's export, above) and the original 22 test cases (replaced by the spec's, linked above) -->
 
 ## Seed data the tests need
 <!-- team -->
@@ -120,4 +120,4 @@ Export 1 | Every match case — variants, swaps, shared inbox, second sponsor; E
 Export 2 | The same report later — a refund, a name change, a title change under a correction, a missing order, a lower amount
 ```
 
-For the demo itself, three labeled data sets, one loaded at a time (PR #66): Small (48 guests), and two Full sets built around the iPad door list's 553 guests and 21 tables, Full as sent (Natalie's packages, readable links, emails sent with no approval record) and Full fixed (the 2026 flyer's tiers, random links, an approval on every email). The import's own 553-guest test gala (PR #50) is separate and used only in the tests. <!-- modified 2026-10-08 08:15 Aisling -->
+For the demo itself, three labeled data sets, one loaded at a time (PR #66): Small (48 guests), and two Full sets built around the iPad door list's 553 guests and 21 tables, Full as sent (Natalie's packages, readable links, emails sent with no approval record) and Full fixed (the 2026 flyer's tiers, random links, an approval on every email). The import's own 553-guest test gala (PR #50) is separate and used only in the tests. <!-- modified 2026-10-08 04:15 Aisling -->

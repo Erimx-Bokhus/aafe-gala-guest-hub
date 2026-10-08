@@ -19,7 +19,7 @@ await db.exec(`update seats set qr_token_hash = hash_token('AAFE-000000000000000
                       portal_token = coalesce(portal_token, encode(sha256(convert_to(id, 'UTF8')), 'hex')),
                       portal_token_expires_at = ((select guest_list_deadline from gala_events where id = current_event_id()) + 1)::timestamp at time zone 'America/New_York'
                 where event_id = current_event_id();
-               update orders set guest_list_deadline = '2027-04-01' where id = 'ord-acme';`)
+               update orders set guest_list_deadline = '2027-04-01', portal_token_expires_at = '2027-04-02'::timestamp at time zone 'America/New_York' where id = 'ord-acme';`)
 const acmeBefore = await one(`select guest_list_deadline::text dl, portal_token_expires_at t from orders where id = 'ord-acme'`)
 const qrSeats = (await one(`select count(*)::int n from seats s join orders o on o.id = s.order_id where o.event_id = current_event_id() and s.qr_token_hash is not null and s.status <> 'cancelled'`)).n
 
@@ -54,6 +54,37 @@ ok((await setMat('ord-acme', 'logo', null))?.startsWith('invalid_input'), 'a mis
 const past = (await one(`select id from orders where event_id <> current_event_id() limit 1`)).id
 ok((await setMat(past, 'logo', 'received'))?.startsWith('not_found'), "another gala's order is refused")
 ok((await setMat('ord-acme', 'logo', 'received')) === null, 'a valid change still works')
+
+// Audit of Oct 8: links on orders with no deadline of their own follow the gala too, and clearing the gala's
+// deadline puts links on the day after the gala, as a newly sent link would get (email_mark_sent).
+await db.exec(`update orders set guest_list_deadline = null where id = 'ord-meridian'`)
+await update({ guest_list_deadline: '2027-05-08' })
+const mer = await one(`select portal_token_expires_at t from orders where id = 'ord-meridian'`)
+ok(new Date(mer.t).toISOString() === '2027-05-09T04:00:00.000Z', "a link on an order with no deadline of its own follows the gala's new deadline")
+await update({ guest_list_deadline: '' })
+const cleared = await one(`select count(*) filter (where portal_token_expires_at = '2027-06-04 04:00:00+00')::int n, count(*)::int total
+                            from orders where event_id = current_event_id() and id <> 'ord-acme' and portal_token is not null`)
+ok(cleared.total > 0 && cleared.n === cleared.total, `clearing the gala's deadline puts links on the day after the gala (${cleared.n} of ${cleared.total})`)
+ok((await one(`select count(*)::int n from audit_log where action = 'event.links_moved'`)).n >= 2, 'link moves are logged')
+
+// Audit of Oct 8: a QR e-ticket that stops working leaves a history entry.
+const qs = await one(`select s.id, s.guest_id from seats s join orders o on o.id = s.order_id
+                      where o.event_id = current_event_id() and s.qr_token_hash is not null and s.status <> 'cancelled' limit 1`)
+await as('authenticated', RM.email, `select staff_update_guest($1, $2)`, [qs.guest_id, JSON.stringify({ first_name: 'Renamed' })])
+ok((await one(`select qr_token_hash from seats where id = $1`, [qs.id])).qr_token_hash === null
+   && (await one(`select count(*)::int n from audit_log where action = 'qr.voided' and entity_id = $1`, [qs.id])).n === 1,
+   'a QR e-ticket voided by a name change is logged')
+
+// Audit of Oct 8: check-ins are for this gala only.
+await db.query(`insert into guests (id, order_id, first_name, last_name, display_name, guest_type, last_updated_by)
+                values ('g-past-gala', $1, 'Past', 'Guest', 'Past Guest', 'sponsor_guest', 'staff')`, [past])
+ok((await err('authenticated', ADMIN.email, `select staff_check_in('g-past-gala')`))?.startsWith('not_found'), "another gala's guest can't be checked in")
+ok((await err('authenticated', ADMIN.email, `select staff_check_in_exception('Walk In', $1, 'walk_in', '')`, [past]))?.startsWith('not_found'),
+   "a walk-in can't be put on another gala's order")
+ok((await err('authenticated', ADMIN.email, `select staff_check_in_exception('Walk In', null, 'walk_in', '')`)) === null, 'a walk-in with no sponsor still works')
+const synced = (await as('authenticated', ADMIN.email, `select staff_sync_check_ins($1) r`,
+  [JSON.stringify([{ client_id: 'past-walkin', kind: 'exception', name: 'Walk In', type: 'walk_in', order_id: past }])]))[0].r
+ok(synced[0].status === 'error' && synced[0].error.startsWith('not_found'), "an offline walk-in can't be put on another gala's order")
 
 console.log(`gala event: ${count.pass} passed, ${count.fail} failed`)
 if (count.fail) process.exitCode = 1
