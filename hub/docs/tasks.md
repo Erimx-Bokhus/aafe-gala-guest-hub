@@ -88,7 +88,7 @@ The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus),
 - [ ] Pipeline board and prospect form in the staff app — Frontend pair <!-- new 2026-10-07 13:45 Aisling -->
 - [ ] Portal: show arrivals when a gala admin switches them on — Antonin <!-- new 2026-10-07 13:45 Aisling -->
 - [ ] AAFE reviews the translations on the review sheet (`prototype/docs/translations/`) — Natalie <!-- new 2026-10-07 13:45 Aisling -->
-- [x] ~~Decide whether a name written in Chinese or Korean script without a space counts as a full name in the import~~ No longer needed: the import stops reading guest names — Team <!-- modified 2026-10-07 22:38 Aisling -->
+- [ ] Decide whether a name written in Chinese or Korean script without a space (陳美玲) counts as a full name in the import; today it's left for the sponsor — Team <!-- modified 2026-10-07 23:27 Aisling -->
 
 ## Added October 7 (night)
 <!-- new 2026-10-07 22:38 Aisling -->
@@ -96,7 +96,7 @@ The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus),
 - [x] Fix `WORKFLOW.md`: portal-link emails and reminders wait for staff approval (PR #54) — Aisling <!-- new 2026-10-07 22:38 Aisling -->
 - [x] Go through Natalie's two PRDs and record the decisions (this page, Decisions, Requirements) — Aisling <!-- new 2026-10-07 22:38 Aisling -->
 - [ ] PRD fixes before the client-facing PRD goes to AAFE: Oct 15, 21 tables, four languages, GreyBox Creative, the deadline question — Natalie <!-- new 2026-10-07 22:38 Aisling -->
-- [ ] Import: drop the Give Lively guest-list text, no pre-fill — Aisling <!-- new 2026-10-07 22:38 Aisling -->
+- [x] ~~Import: drop the Give Lively guest-list text, no pre-fill~~ Withdrawn: pre-fill stays; PR #58 closed unmerged — Aisling <!-- modified 2026-10-07 23:27 Aisling -->
 - [ ] Three labeled data sets (Small, Full as sent, Full fixed), one loaded at a time, after Natalie's seed PR — Aisling <!-- new 2026-10-07 22:38 Aisling -->
 - [ ] iPad check-in app PR — Natalie <!-- new 2026-10-07 22:38 Aisling -->
 - [ ] After-gala results, Give Lively fee analytics, a seating map that staff control, and a simulated Salesforce push — Natalie (screens), Aisling (backend) <!-- new 2026-10-07 22:38 Aisling -->
