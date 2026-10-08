@@ -2,7 +2,6 @@
 // shared/src/seed.json currently has the 48-guest demo, so don't run it until the team decides which demo data to use.
 // Builds checkin-app/src/doorlist.json from shared/src/seed.json with ONLY the fields a door volunteer may see.
 // No emails, payments, amounts, relationship owners, internal notes, dietary or accessibility data ever reach the iPad bundle.
-// Runs automatically before `npm run build -w checkin-app` / `npm run dev -w checkin-app`.
 // PRODUCTION: replace with a Supabase view/RPC (`v_door_list`) restricted to the check_in_volunteer role.
 import fs from 'node:fs'
 import path from 'node:path'
@@ -41,11 +40,12 @@ const out = {
     }
   }),
   // Seed check-ins without notes (notes are internal); the live list comes from the sync server.
-  check_ins: db.check_ins.map((c) => ({ ...c, note: '' })),
+  // Only the fields the door needs; anything added to seed check-ins later stays off the iPad.
+  check_ins: db.check_ins.map((c) => ({ id: c.id, event_id: c.event_id, guest_id: c.guest_id, order_id: c.order_id, arrival_name: c.arrival_name, method: c.method, type: c.type, checked_in_by: c.checked_in_by, note: '', checked_in_at: c.checked_in_at })),
 }
 const dest = path.join(root, 'checkin-app/src/doorlist.json')
 fs.writeFileSync(dest, JSON.stringify(out, null, 1))
-const banned = ['email', 'amount', 'dietary', 'accessibility', 'internal_notes', 'relationship_owner', 'relationship_note', 'payment']
+const banned = ['email', 'phone', 'amount', 'dietary', 'accessibility', 'internal_notes', 'notes', 'relationship_owner', 'relationship_note', 'payment', 'card', 'bank', 'routing', 'ach']
 const text = JSON.stringify(out)
 for (const b of banned) if (text.includes(`"${b}`)) throw new Error(`door list leaked field: ${b}`)
 console.log(`door list: ${out.guests.length} guests, ${out.events.length} galas -> checkin-app/src/doorlist.json`)

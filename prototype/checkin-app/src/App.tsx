@@ -2,7 +2,7 @@
 // One gala only: the current (53rd) gala. Past galas have already happened, so there is no gala picker.
 // The door list is every guest on AAFE's list (553, in AAFE's seven categories), sorted A–Z by LAST name,
 // with an A–Z bar to jump to a letter. Tick one or more names, tap "Checked in", and each row shows the time.
-// Every check-in goes to the sync server (server/, port 8787), which the staff app polls — so staff see live attendance.
+// Every check-in goes to the demo sync server (sync-server/, port 8787) so every iPad at the door sees it; production uses Supabase.
 // Shows ONLY: name, title, organization, category, seat type, table. Never payments, emails, notes, dietary or accessibility data.
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowLeft, Camera, CheckCircle2, CloudOff, LogOut, QrCode, RefreshCw, Search, Undo2, UserPlus, Wifi, X } from 'lucide-react'
@@ -20,8 +20,8 @@ const GALA: Gala = door.events.find((e) => e.id === door.current_event_id) ?? do
 const CATS = ['Sponsor guest', 'Ticket holder', 'Comped', 'AAFE staff', 'Event volunteer', 'Event staff', 'Government or VIP']
 const CAT_TONE: Record<string, string> = {
   'Sponsor guest': 'bg-brand-50 text-brand-700 ring-brand-200', 'Ticket holder': 'bg-cream-100 text-navy-800 ring-navy-100',
-  Comped: 'bg-amber-50 text-amber-800 ring-amber-200', 'AAFE staff': 'bg-white text-brand-700 ring-brand-300',
-  'Event volunteer': 'bg-white text-navy-700 ring-navy-200', 'Event staff': 'bg-white text-navy-700 ring-navy-200',
+  Comped: 'bg-amber-50 text-amber-800 ring-amber-200', 'AAFE staff': 'bg-surface text-brand-700 ring-brand-300',
+  'Event volunteer': 'bg-surface text-navy-700 ring-navy-200', 'Event staff': 'bg-surface text-navy-700 ring-navy-200',
   'Government or VIP': 'bg-brand-600 text-white ring-brand-600',
 }
 const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
@@ -85,30 +85,35 @@ function Door({ vol, prefs, onExit }: { vol: Volunteer; prefs: ReturnType<typeof
   const [show, setShow] = useState<'all' | 'waiting' | 'in'>('all')
   const [sel, setSel] = useState<Set<string>>(new Set())
   const [msg, setMsg] = useState<string | null>(null)
-  const [undo, setUndo] = useState<{ ids: string[]; label: string; until: number } | null>(null)
+  const [undo, setUndo] = useState<{ ids: string[]; guestIds: string[]; label: string; until: number } | null>(null)
   const [confirmUndo, setConfirmUndo] = useState<{ g: DoorGuest; ci: CheckIn } | null>(null)
   const [scan, setScan] = useState(false)
   const [exc, setExc] = useState(false)
+  const [excList, setExcList] = useState(false)
+  const [focused, setFocused] = useState(false)
   const listRef = useRef<HTMLDivElement>(null)
 
   const cis = view.check_ins.filter((c) => c.event_id === GALA.id)
   const byGuest = new Map(cis.filter((c) => c.guest_id).map((c) => [c.guest_id as string, c]))
   const arrived = ALL.filter((g) => byGuest.has(g.id)).length
-  const exceptions = cis.filter((c) => !c.guest_id).length
+  const excRows = cis.filter((c) => !c.guest_id).sort((a, b) => b.checked_in_at.localeCompare(a.checked_in_at))
+  const exceptions = excRows.length
+  // While searching (keyboard up), hide the progress bar, category chips and A–Z bar so the list has room.
+  const compact = focused || q.trim().length > 0
   const pct = ALL.length ? Math.round((arrived / ALL.length) * 100) : 0
 
   const rows = useMemo(() => {
     const words = norm(q.trim()).split(/\s+/).filter(Boolean)
     return ALL.filter((g) => (cat === 'all' || g.category === cat)
       && (show === 'all' || (show === 'in' ? byGuest.has(g.id) : !byGuest.has(g.id)))
-      && (!words.length || words.every((w) => norm(`${g.first_name} ${g.last_name} ${g.organization} ${g.sponsor}`).includes(w))))
+      && (!words.length || words.every((w) => (' ' + norm(`${g.first_name} ${g.last_name} ${g.organization} ${g.sponsor}`).replace(/[^a-z0-9 ]/g, ' ')).includes(' ' + w))))
   }, [q, cat, show, view]) // eslint-disable-line react-hooks/exhaustive-deps
   const groups = useMemo(() => { const m = new Map<string, DoorGuest[]>(); for (const g of rows) { const l = letterOf(g); if (!m.has(l)) m.set(l, []); m.get(l)!.push(g) } return m }, [rows])
 
   useEffect(() => { if (!undo) return; const t = setTimeout(() => setUndo(null), Math.max(0, undo.until - Date.now())); return () => clearTimeout(t) }, [undo])
 
   const jump = (l: string) => { const el = listRef.current?.querySelector<HTMLElement>(`[data-letter="${l}"]`); if (el && listRef.current) listRef.current.scrollTo({ top: el.offsetTop, behavior: 'auto' }) }
-  const toggle = (id: string) => setSel((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n })
+  const toggle = (id: string) => { setUndo(null); setSel((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n }) }
 
   const checkIn = (ids: string[], method: 'search' | 'qr' = 'search') => {
     const now = new Date().toISOString(); const made: string[] = []
@@ -117,23 +122,36 @@ function Door({ vol, prefs, onExit }: { vol: Volunteer; prefs: ReturnType<typeof
       const ci: CheckIn = { id: newCheckinId(), event_id: GALA.id, guest_id: g.id, order_id: g.order_id, arrival_name: null, method, type: 'standard', checked_in_by: vol.name, note: '', checked_in_at: now }
       sync.add(ci); made.push(ci.id)
     }
-    setSel(new Set())
+    setSel(new Set()); setQ('')
     if (made.length) {
       const first = ALL.find((x) => x.id === ids[0])
-      setUndo({ ids: made, label: made.length === 1 && first ? `${first.first_name} ${first.last_name} · ${first.table ? `Table ${first.table}` : 'no assigned table'} · ${time(now)}` : `${made.length} guests · ${time(now)}`, until: Date.now() + 10000 })
+      setUndo({ ids: made, guestIds: ids.filter((id) => !byGuest.has(id)), label: made.length === 1 && first ? `${first.first_name} ${first.last_name} · ${first.table ? `Table ${first.table}` : 'no assigned table'} · ${time(now)}` : `${made.length} guests · ${time(now)}`, until: Date.now() + 10000 })
     }
   }
-  const doUndo = () => { if (!undo) return; undo.ids.forEach((id) => sync.remove(id)); setMsg('Undone — back to not checked in'); setUndo(null) }
-  const byCode = (code: string) => {
+  const doUndo = () => {
+    if (!undo) return
+    const others: CheckIn[] = []
+    if (!undo.guestIds.length) undo.ids.forEach((id) => sync.remove(id)) // exception: no guest row
+    for (const gid of undo.guestIds) {
+      const ci = byGuest.get(gid); if (!ci) continue
+      if (undo.ids.includes(ci.id)) sync.remove(ci.id); else others.push(ci) // another door checked them in first
+    }
+    setMsg(others.length ? `Not undone: already checked in by ${others[0].checked_in_by.replace(' (volunteer)', '')} at ${time(others[0].checked_in_at)}` : 'Undone — back to not checked in')
+    setUndo(null)
+  }
+  /** Returns null when the guest was checked in, otherwise a message to show in the scanner. */
+  const byCode = (code: string): string | null => {
     const g = ALL.find((x) => x.qr_token && x.qr_token.toLowerCase() === code.trim().toLowerCase())
-    if (!g) return false
-    checkIn([g.id], 'qr'); setScan(false); return true
+    if (!g) return `No guest found for code “${code.trim()}”.`
+    const ci = byGuest.get(g.id)
+    if (ci) return `Already checked in: ${g.first_name} ${g.last_name} at ${time(ci.checked_in_at)} by ${ci.checked_in_by.replace(' (volunteer)', '')}. Don't admit this ticket twice.`
+    checkIn([g.id], 'qr'); setScan(false); return null
   }
   const catCount = (c: string) => ALL.filter((g) => g.category === c)
   const selCount = sel.size
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-cream-50">
+    <div className="checkin flex h-screen flex-col overflow-hidden bg-cream-50 supports-[height:100dvh]:h-dvh">
       <PrototypeBanner />
       <header className="shrink-0 border-b border-navy-100 bg-surface">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-2.5">
@@ -144,8 +162,8 @@ function Door({ vol, prefs, onExit }: { vol: Volunteer; prefs: ReturnType<typeof
               <div className="text-sm text-navy-600">Guest check-in · {vol.name.replace(' (volunteer)', '')}</div>
             </div>
           </div>
-          <div className="order-last min-w-0 basis-full lg:order-none lg:basis-0 lg:flex-1">
-            <div className="flex items-baseline justify-between gap-2 text-navy-900" data-testid="counter"><span><strong className="text-2xl tabular-nums text-brand-600">{arrived}</strong> of <strong className="tabular-nums">{ALL.length}</strong> checked in</span><span className="whitespace-nowrap text-sm text-navy-600"><span className="tabular-nums">{pct}%</span>{exceptions > 0 && <> · <span data-testid="exc-count">+{exceptions} exception{exceptions === 1 ? '' : 's'}</span></>}</span></div>
+          <div className={`order-last min-w-0 basis-full lg:order-none lg:basis-0 lg:flex-1 ${compact ? 'hidden' : ''}`}>
+            <div className="flex items-baseline justify-between gap-2 text-navy-900" data-testid="counter"><span><strong className="text-2xl tabular-nums text-brand-600">{arrived}</strong> of <strong className="tabular-nums">{ALL.length}</strong> checked in</span><span className="whitespace-nowrap text-sm text-navy-600"><span className="tabular-nums">{pct}%</span>{exceptions > 0 && <> · <button className="underline underline-offset-2" onClick={() => setExcList(true)} data-testid="exc-count">+{exceptions} exception{exceptions === 1 ? '' : 's'}</button></>}</span></div>
             <div className="mt-1 h-2 overflow-hidden rounded-full bg-cream-100" aria-hidden><div className="h-full rounded-full bg-brand-500 transition-all" style={{ width: `${pct}%` }} /></div>
           </div>
           <div className="ml-auto flex shrink-0 items-center gap-2">
@@ -154,14 +172,14 @@ function Door({ vol, prefs, onExit }: { vol: Volunteer; prefs: ReturnType<typeof
             <button className="btn-ghost tap h-11" onClick={onExit} data-testid="sign-out"><LogOut size={18} /> Switch</button>
           </div>
         </div>
-        <div className="flex gap-2 overflow-x-auto border-t border-navy-100 px-5 py-2" role="tablist" aria-label="Guest category">
+        <div className={`flex gap-2 overflow-x-auto border-t border-navy-100 px-5 py-2 ${compact ? 'hidden' : ''}`} role="tablist" aria-label="Guest category">
           <CatChip label="All guests" n={ALL.length} inN={arrived} on={cat === 'all'} onClick={() => setCat('all')} testid="cat-all" />
-          {CATS.map((c) => { const gs = catCount(c); return <CatChip key={c} label={c} n={gs.length} inN={gs.filter((g) => byGuest.has(g.id)).length} on={cat === c} onClick={() => setCat(c)} testid={`cat-${c.split(' ')[0].toLowerCase()}`} /> })}
+          {CATS.map((c) => { const gs = catCount(c); return <CatChip key={c} label={c} n={gs.length} inN={gs.filter((g) => byGuest.has(g.id)).length} on={cat === c} onClick={() => setCat(c)} testid={`cat-${c.toLowerCase().replace(/[^a-z]+/g, '-')}`} /> })}
         </div>
         <div className="flex flex-wrap items-center gap-2 border-t border-navy-100 px-5 py-2.5">
           <div className="relative min-w-[200px] flex-1">
             <Search size={22} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-navy-500" aria-hidden />
-            <input value={q} onChange={(e) => setQ(e.target.value)} autoComplete="off" autoCorrect="off" spellCheck={false} placeholder="Search name, organization or sponsor" aria-label="Search guests" data-testid="search"
+            <input value={q} onChange={(e) => { setQ(e.target.value); if (e.target.value) setUndo(null) }} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} autoComplete="off" autoCorrect="off" spellCheck={false} placeholder="Name, organization, sponsor" aria-label="Search guests" data-testid="search"
               className="h-14 w-full rounded-xl border-2 border-navy-100 bg-surface pl-12 pr-12 text-lg text-navy-900 placeholder:text-navy-500 focus:border-brand-500 focus:outline-none" />
             {q && <button className="tap absolute right-1 top-1/2 flex -translate-y-1/2 items-center justify-center rounded-full text-navy-600" onClick={() => setQ('')} aria-label="Clear search"><X size={22} /></button>}
           </div>
@@ -170,8 +188,8 @@ function Door({ vol, prefs, onExit }: { vol: Volunteer; prefs: ReturnType<typeof
               <button key={k} onClick={() => setShow(k)} aria-pressed={show === k} data-testid={`show-${k}`} className={`tap h-[52px] px-4 text-base font-medium ${show === k ? 'bg-brand-500 text-white' : 'bg-surface text-navy-800'}`}>{l}</button>
             ))}
           </div>
-          <button className="btn-ghost tap h-14 rounded-xl px-4 text-base" onClick={() => setScan(true)} data-testid="open-scan" aria-label="Scan QR code"><QrCode size={20} /><span className="hidden lg:inline">Scan</span></button>
-          <button className="btn-ghost tap h-14 rounded-xl px-4 text-base" onClick={() => setExc(true)} data-testid="open-exception" aria-label="Add approved exception"><UserPlus size={20} /><span className="hidden lg:inline">Exception</span></button>
+          <button className="btn-ghost tap h-14 rounded-xl px-4 text-base" onClick={() => setScan(true)} data-testid="open-scan" aria-label="Scan QR code"><QrCode size={20} /><span className="hidden sm:inline">Scan</span></button>
+          <button className="btn-ghost tap h-14 rounded-xl px-4 text-base" onClick={() => setExc(true)} data-testid="open-exception" aria-label="Add approved exception"><UserPlus size={20} /><span className="hidden sm:inline">Exception</span></button>
         </div>
       </header>
 
@@ -194,7 +212,7 @@ function Door({ vol, prefs, onExit }: { vol: Volunteer; prefs: ReturnType<typeof
                     <li key={g.id}>
                       <button type="button" data-testid={`row-${g.id}`} aria-pressed={ci ? undefined : on}
                         onClick={() => (ci ? setConfirmUndo({ g, ci }) : toggle(g.id))}
-                        className={`grid w-full grid-cols-[44px_minmax(0,1fr)_auto] items-center gap-x-4 px-5 py-3 text-left ${ci ? 'bg-emerald-50/60' : on ? 'bg-brand-50' : ''}`}>
+                        className={`grid w-full grid-cols-[44px_minmax(0,1fr)_auto] items-center gap-x-4 px-5 py-3 text-left ${ci ? 'bg-emerald-50' : on ? 'bg-brand-50' : ''}`}>
                         <span aria-hidden className={`flex h-9 w-9 items-center justify-center rounded-lg border-2 ${ci ? 'border-emerald-600 bg-emerald-600 text-white' : on ? 'border-brand-500 bg-brand-500 text-white' : 'border-navy-300 bg-surface'}`}>{(ci || on) && <CheckCircle2 size={22} />}</span>
                         <span className="min-w-0">
                           <span className="block truncate text-xl font-semibold text-navy-900"><span>{g.last_name}</span>, <span className="font-medium">{g.first_name}</span></span>
@@ -219,7 +237,7 @@ function Door({ vol, prefs, onExit }: { vol: Volunteer; prefs: ReturnType<typeof
           ))}
         </div>
 
-        <nav aria-label="Jump to last name letter" className="absolute inset-y-0 right-0 z-20 flex w-12 flex-col items-stretch justify-between border-l border-navy-100 bg-surface py-1" data-testid="az-bar">
+        <nav aria-label="Jump to last name letter" className={`absolute inset-y-0 right-0 z-20 w-12 flex-col items-stretch justify-between border-l border-navy-100 bg-surface py-1 ${q.trim() ? 'hidden' : 'flex'}`} data-testid="az-bar">
           {LETTERS.map((l) => {
             const has = groups.has(l)
             return <button key={l} onClick={() => has && jump(l)} disabled={!has} aria-label={`Jump to ${l}`} data-testid={`az-${l}`}
@@ -228,7 +246,7 @@ function Door({ vol, prefs, onExit }: { vol: Volunteer; prefs: ReturnType<typeof
         </nav>
       </div>
 
-      {selCount > 0 && !undo && (
+      {selCount > 0 && (
         <div className="fixed inset-x-0 bottom-0 z-40 border-t border-navy-100 bg-surface px-5 py-3 shadow-2xl" data-testid="action-bar">
           <div className="mx-auto flex max-w-3xl items-center gap-3">
             <div className="flex-1 text-lg text-navy-900"><strong className="tabular-nums">{selCount}</strong> selected</div>
@@ -261,11 +279,24 @@ function Door({ vol, prefs, onExit }: { vol: Volunteer; prefs: ReturnType<typeof
         </Modal>
       )}
 
+      {excList && (
+        <Modal open onClose={() => setExcList(false)} title="Exceptions tonight" wide>
+          <ul className="divide-y divide-navy-100" data-testid="exc-list">
+            {excRows.map((c) => (
+              <li key={c.id} className="flex items-center gap-4 py-3">
+                <div className="min-w-0 flex-1"><div className="text-lg font-semibold text-navy-900">{c.arrival_name}</div><div className="text-sm text-navy-700">{c.type} · {time(c.checked_in_at)} · {c.checked_in_by.replace(' (volunteer)', '')}</div></div>
+                <button className="btn-ghost tap h-12 px-4" onClick={() => { sync.remove(c.id); setMsg(`Removed ${c.arrival_name}`) }}><Undo2 size={18} /> Undo</button>
+              </li>
+            ))}
+            {!excRows.length && <li className="py-3 text-navy-600">No exceptions yet.</li>}
+          </ul>
+        </Modal>
+      )}
       {scan && <ScanModal onClose={() => setScan(false)} onCode={byCode} />}
       {exc && <ExceptionModal gala={GALA} prefill={q} onClose={() => setExc(false)} onSave={(p) => {
         const ci: CheckIn = { id: newCheckinId(), event_id: GALA.id, guest_id: null, order_id: p.orderId || null, arrival_name: p.name, method: 'exception', type: p.type, checked_in_by: vol.name, note: p.note, checked_in_at: new Date().toISOString() }
         sync.add(ci); setExc(false); setQ('')
-        setUndo({ ids: [ci.id], label: `${p.name} · ${p.type}`, until: Date.now() + 10000 })
+        setUndo({ ids: [ci.id], guestIds: [], label: `${p.name} · ${p.type}`, until: Date.now() + 10000 })
       }} />}
       <Toast msg={msg} onDone={() => setMsg(null)} />
     </div>
@@ -283,14 +314,14 @@ function CatChip({ label, n, inN, on, onClick, testid }: { label: string; n: num
 
 function SyncPill({ s }: { s: SyncStatus }) {
   const base = 'inline-flex h-11 items-center gap-2 rounded-full px-4 text-sm font-semibold'
-  if (s.online === false) return <span className={`${base} bg-amber-50 text-amber-800 ring-1 ring-amber-200`} data-testid="sync-status"><CloudOff size={18} /> Offline – {s.pending} waiting to sync</span>
+  if (s.online === false) return <span className={`${base} bg-amber-50 text-amber-800 ring-1 ring-amber-200`} data-testid="sync-status"><CloudOff size={18} /> {s.pending ? `Offline – ${s.pending} waiting to sync` : 'Offline – check-ins save on this iPad'}</span>
   if (s.pending > 0) return <span className={`${base} bg-cream-100 text-navy-800`} data-testid="sync-status"><RefreshCw size={18} className="animate-spin" /> Syncing {s.pending}…</span>
   if (s.online === null) return <span className={`${base} bg-cream-100 text-navy-700`} data-testid="sync-status"><RefreshCw size={18} /> Connecting…</span>
   return <span className={`${base} bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200`} data-testid="sync-status"><Wifi size={18} /> Synced · live</span>
 }
 
 type Detector = { detect: (v: HTMLVideoElement) => Promise<{ rawValue: string }[]> }
-function ScanModal({ onClose, onCode }: { onClose: () => void; onCode: (c: string) => boolean }) {
+function ScanModal({ onClose, onCode }: { onClose: () => void; onCode: (c: string) => string | null }) {
   const video = useRef<HTMLVideoElement>(null)
   const [code, setCode] = useState('')
   const [err, setErr] = useState('')
@@ -306,7 +337,7 @@ function ScanModal({ onClose, onCode }: { onClose: () => void; onCode: (c: strin
       video.current.srcObject = s; void video.current.play(); setCamState('on')
       const loop = async () => {
         if (stop || !video.current) return
-        try { const r = await det.detect(video.current); if (r[0]) { if (onCodeRef.current(r[0].rawValue)) return; setErr(`No guest found for code “${r[0].rawValue}”.`) } } catch { /* keep scanning */ }
+        try { const r = await det.detect(video.current); if (r[0]) { const e = onCodeRef.current(r[0].rawValue); if (!e) return; setErr(e) } } catch { /* keep scanning */ }
         raf = requestAnimationFrame(() => setTimeout(loop, 250) as unknown as void)
       }
       void loop()
@@ -318,7 +349,7 @@ function ScanModal({ onClose, onCode }: { onClose: () => void; onCode: (c: strin
       {camState === 'on' || camState === 'starting'
         ? <div className="relative overflow-hidden rounded-xl bg-cream-100"><video ref={video} className="aspect-video w-full object-cover" muted playsInline /><div className="pointer-events-none absolute inset-[18%] rounded-2xl border-4 border-brand-500/80" />{camState === 'starting' && <div className="absolute inset-0 flex items-center justify-center text-navy-700"><Camera size={22} className="mr-2" /> Starting camera…</div>}</div>
         : <div className="rounded-xl bg-cream-100 p-5 text-navy-800"><Camera size={22} className="mb-1 text-brand-600" />{camState === 'unsupported' ? 'Camera scanning isn’t available in this browser.' : 'Camera permission was not given.'} Type the code printed under the guest’s QR instead.</div>}
-      <form className="mt-4 flex flex-wrap gap-3" onSubmit={(e) => { e.preventDefault(); if (!code.trim()) return; if (!onCodeRef.current(code)) setErr(`No guest found for code “${code.trim()}”.`) }}>
+      <form className="mt-4 flex flex-wrap gap-3" onSubmit={(ev) => { ev.preventDefault(); if (!code.trim()) return; const msg = onCodeRef.current(code); if (msg) setErr(msg) }}>
         <label htmlFor="qr" className="sr-only">QR code</label>
         <input id="qr" value={code} onChange={(e) => { setCode(e.target.value); setErr('') }} placeholder="e.g. AAFE-3F9C…" autoCapitalize="characters" autoComplete="off" data-testid="qr-input"
           className="h-16 min-w-0 flex-1 rounded-xl border-2 border-navy-100 bg-surface px-4 text-xl uppercase tracking-wide text-navy-900 placeholder:normal-case placeholder:tracking-normal placeholder:text-navy-500 focus:border-brand-500 focus:outline-none" />
@@ -354,7 +385,7 @@ function ExceptionModal({ gala, prefill, onClose, onSave }: { gala: Gala; prefil
           <select id="xs" className="input h-14 text-base" value={f.orderId} onChange={(e) => setF({ ...f, orderId: e.target.value })}><option value="">No sponsor / not sure</option>{sponsors.map((s) => <option key={s.order_id} value={s.order_id}>{s.name}</option>)}</select>
         </div>
         <div>
-          <label htmlFor="xo" className="mb-1 block text-base font-medium text-navy-800">Note <span className="font-normal text-navy-500">(optional — e.g. who approved)</span></label>
+          <label htmlFor="xo" className="mb-1 block text-base font-medium text-navy-800">Note <span className="font-normal text-navy-500">(optional — who approved; no health or contact details)</span></label>
           <input id="xo" className="input h-14 text-base" value={f.note} onChange={(e) => setF({ ...f, note: e.target.value })} data-testid="exc-note" />
         </div>
         <div className="flex flex-wrap justify-end gap-3">

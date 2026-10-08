@@ -11,5 +11,6 @@ export default defineConfig({
   resolve: { alias: { '@shared': path.resolve(__dirname, '../shared/src') } },
   // Older Safari support; IIFE so the inlined script runs as a classic <script> (no module loading on file://).
   build: { target: ['safari13', 'es2019'], rollupOptions: { output: { format: 'iife' } } },
-  server: { fs: { allow: ['..'] } },
+  // /api goes to the demo sync server on this computer, so iPads on the same Wi-Fi reach it through Vite.
+  server: { fs: { allow: ['..'] }, proxy: { '/api': 'http://127.0.0.1:8787' } },
 })

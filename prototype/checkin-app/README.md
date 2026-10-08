@@ -12,21 +12,23 @@ staff working the door see check-in and nothing else: no sponsors, payments, or 
   ticket holders, comped, AAFE staff, event volunteers, event staff, government or VIP). The demo list
   has 553 invented guests, the size and shape of AAFE's 2026 gala.
 - Search by first or last name, organization, or sponsor; results appear as you type.
-- Scan a guest's QR code with the iPad camera.
-- Add an approved exception (walk-ins, unnamed sponsor seats).
+- Scan a guest's QR code with the iPad camera. A ticket that was already used shows a warning with who checked it in and when.
+- Add an approved exception (walk-ins, unnamed sponsor seats). Tap "+N exceptions" to see them all and undo a mistake.
 - Tick one or more names and tap **Checked in**; each row shows the time; tap again to undo.
-- Live "N of M checked in" bar, recent arrivals, and an offline banner with arrivals waiting to sync.
+- Live "N of M checked in" bar and an offline banner with arrivals waiting to sync. While searching, the header shrinks so the list stays visible above the iPad keyboard.
 - Install on the iPad from Safari: Share → **Add to Home Screen**. It opens full screen like an app.
   No App Store or Apple developer account needed.
 
 ## Run it
 ```
 cd prototype/checkin-app
-npm run dev            # http://localhost:5175 (uses prototype/node_modules; run npm install in prototype/ first)
-npm run sync-server    # optional demo sync server on port 8787; arrivals sync between iPads
+npm run sync-server    # demo sync server, this computer only (127.0.0.1:8787)
+npm run dev:ipad       # the app on http://localhost:5175 and on your Wi-Fi address
 ```
-Or double-click `prototype/OPEN-CheckIn-App.html`. On an iPad on the same Wi-Fi, open
-`http://<this computer's address>:5175` in Safari, then Share → Add to Home Screen.
+(Run `npm install` in `prototype/` first.) On an iPad on the same Wi-Fi, open the "Network" address Vite prints
+(e.g. `http://192.168.x.x:5175`) in Safari, then Share → **Add to Home Screen**. The app reaches the sync
+server through Vite's `/api` proxy, so several iPads share check-ins. Or double-click
+`prototype/OPEN-CheckIn-App.html` to try it alone on one computer.
 
 ## Files
 | Path | What |
@@ -35,7 +37,7 @@ Or double-click `prototype/OPEN-CheckIn-App.html`. On an iPad on the same Wi-Fi,
 | `src/doorlist.json` | The door list: 553 invented guests, only door-safe fields (no email, phone, payment, dietary or notes) |
 | `make_door_list.mjs` | Rebuilds the door list from `shared/src/seed.json` (read the caution at the top first) |
 | `../shared/src/checkinSync.ts` | Sync client with the offline queue (demo: talks to `sync-server/`) |
-| `sync-server/server.mjs` | Demo-only sync server (plain Node, port 8787); replaced by Supabase in production |
+| `sync-server/server.mjs` | Demo-only sync server (plain Node, 127.0.0.1:8787, no sign-in); replaced by Supabase in production. `POST /api/reset` works only with `DEMO_RESET=1` |
 | `../OPEN-CheckIn-App.html` | Double-click copy with logo and photos built in |
 
 ## Status and next steps
