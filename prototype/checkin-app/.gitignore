@@ -1,0 +1,4 @@
+dist/
+sync-server/data.json
+sync-server/*.tmp
+sync-server/server.log
