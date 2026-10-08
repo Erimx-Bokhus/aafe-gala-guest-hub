@@ -86,8 +86,8 @@ sponsors = [
     S('sp-northgate', 'Northgate Health Collective', 'Ingrid Larsen', 'ilarsen@northgate.example.org', 'st-daniel'),
     S('sp-lotus', 'Lotus Lane Design Studio', 'Vivian Tran', 'vivian@lotuslane.example.org', 'st-grace', '001DEMO0000LOTU'),
     S('sp-pacific', 'Pacific Rim Builders', 'Marco Delgado', 'mdelgado@pacificrim.example.org', 'st-grace'),
-    S('sp-bowery', 'Bowery Dental Group', 'Dr. Sun Hee Cho', 'scho@bowerydental.example.org', 'st-priya'),
-    S('sp-queens', 'Queens Tech Collective', 'Ravi Patel', 'ravi@queenstech.example.org', 'st-daniel'),
+    S('sp-bowery', 'Brindlemoor Dental Group', 'Dr. Sun Hee Cho', 'scho@brindlemoordental.example.org', 'st-priya'),
+    S('sp-queens', 'Quarrystone Tech Collective', 'Ravi Patel', 'ravi@quarrystonetech.example.org', 'st-daniel'),
     S('sp-dumpling', 'Golden Dumpling Co.', 'Henry Lau', 'henry@goldendumpling.example.org', 'st-priya'),
     S('sp-okafor', 'Chidi Okafor', 'Chidi Okafor', 'c.okafor@riversidelegal.example.org', 'st-grace'),
     S('sp-alvarez', 'Maria Alvarez', 'Maria Alvarez', 'maria.alvarez@mail.example.org', 'st-grace'),
@@ -235,10 +235,10 @@ for i, (f, l, t) in enumerate(pr, 1):
     add_guest('ord-pacific', i, f, l, t, 'Pacific Rim Builders', 'reviewed' if i <= 4 else 'submitted', 6 if i <= 4 else None, i if i <= 4 else None, by='guest_portal', updated='2026-09-29T13:00:00Z')
 for i in range(7, 9): unnamed('ord-pacific', i)
 
-add_guest('ord-bowery', 1, 'Sun Hee', 'Cho', 'Owner & Dentist', 'Bowery Dental Group', 'submitted', by='guest_portal', updated='2026-09-24T13:00:00Z')
-add_guest('ord-queens', 1, 'Ravi', 'Patel', 'Founder', 'Queens Tech Collective', 'badge_ready', 8, 1)
+add_guest('ord-bowery', 1, 'Sun Hee', 'Cho', 'Owner & Dentist', 'Brindlemoor Dental Group', 'submitted', by='guest_portal', updated='2026-09-24T13:00:00Z')
+add_guest('ord-queens', 1, 'Ravi', 'Patel', 'Founder', 'Quarrystone Tech Collective', 'badge_ready', 8, 1)
 add_guest('ord-okafor', 1, 'Chidi', 'Okafor', 'Staff Attorney', 'Riverside Legal Aid', 'badge_ready', 8, 2, gtype='ticket_holder')
-add_guest('ord-alvarez', 1, 'Maria', 'Alvarez', 'Community Organizer', 'Lower East Side Tenants Union', 'reviewed', 8, 3, gtype='ticket_holder', dietary='Vegan')
+add_guest('ord-alvarez', 1, 'Maria', 'Alvarez', 'Community Organizer', 'Lowmere Tenants Union', 'reviewed', 8, 3, gtype='ticket_holder', dietary='Vegan')
 add_guest('ord-kimfam', 1, 'Joyce', 'Kim', 'Trustee', 'Kim Family Fund', 'badge_ready', 8, 4, gtype='ticket_holder')
 add_guest('ord-kimfam', 2, 'Daniel', 'Kim', 'Trustee', 'Kim Family Fund', 'badge_ready', 8, 5, gtype='ticket_holder')
 add_guest('ord-tanaka', 1, 'Ken', 'Tanaka', 'Architect', 'Tanaka Studio', 'submitted', gtype='ticket_holder', by='guest_portal', updated='2026-09-28T00:10:00Z')
