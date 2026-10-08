@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ArrowLeft, Check, Copy, Mail, Plus, Search } from 'lucide-react'
 import { METHOD_LABEL, orderMoney, seatStats, sponsorOf, staffName, tierOf } from '@shared/data'
 import { Link, Pill, fmtDate, money } from '@shared/ui'
-import type { Material } from '@shared/types'
+import type { AuditEntry, Material } from '@shared/types'
 import { PageHead } from '../App'
 import { AddPledgeModal, GUEST_PORTAL_URL, RecordPaymentModal, SeatPill } from '../components'
 import { useStaff } from '../store'
@@ -51,13 +51,22 @@ const MAT: Material[] = ['pending', 'received', 'approved']
 export function SponsorDetail({ id }: { id: string }) {
   const { db, api, toast, act } = useStaff()
   const [pay, setPay] = useState(false)
+  // Live, the app holds only the newest 1,000 change-log entries, so this order's whole history comes from the server
+  // (again after each change, when `db` reloads). Demo data holds everything.
+  const [ownLog, setOwnLog] = useState<AuditEntry[] | null>(null)
+  useEffect(() => {
+    if (!api.live) return
+    let current = true
+    api.history(id).then((l) => { if (current) setOwnLog(l) }, () => {})
+    return () => { current = false }
+  }, [api, id, db])
   const o = db.orders.find((x) => x.id === id)
   if (!o) return <p>Order not found. <Link to="/sponsors" className="text-brand-600 underline">Back</Link></p>
   const sp = sponsorOf(db, o.sponsor_id), tier = tierOf(db, o.tier_id), m = orderMoney(db, o.id), st = seatStats(db, o.id)
   const seats = db.seats.filter((s) => s.order_id === o.id).sort((a, b) => a.slot_number - b.slot_number)
   const history = db.orders.filter((x) => x.sponsor_id === sp.id).sort((a, b) => b.event_id.localeCompare(a.event_id))
   const emails = db.email_log.filter((e) => e.order_id === o.id)
-  const log = db.audit_log.filter((a) => a.order_id === o.id).slice().reverse()
+  const log = (api.live && ownLog ? ownLog : db.audit_log.filter((a) => a.order_id === o.id)).slice().reverse()
   const link = o.portal_token ? `${GUEST_PORTAL_URL}#/s/${o.portal_token}` : null
   const setMat = (k: 'logo_status' | 'program_ad_status', v: Material) => void act(api.setMaterialStatus(o.id, k === 'logo_status' ? 'logo' : 'program_ad', v))
 
