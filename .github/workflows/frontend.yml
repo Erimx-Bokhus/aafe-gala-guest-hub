@@ -32,14 +32,16 @@ jobs:
       - run: npm test
       # Demo data comes from generate_seed.py. Regenerate it first: the apps bundle seed.json.
       - run: npm run seed
-      # Type-checks and builds the guest portal and the staff app.
+      # Type-checks and builds the guest portal, the staff app and the iPad check-in app, each behind the
+      # build guard that stops a secret key from reaching the browser.
       - run: npm run build
       - run: python3 scripts/make_open_files.py
+      - run: python3 checkin-app/scripts/make_open_file.py
       # seed.sql, seed.json and the OPEN-*.html files must be exactly what the generator and build
       # produce, so a hand edit can't drift from the generator or ship stale demo files.
       - name: Check generated files are up to date
         run: |
-          if ! git diff --exit-code --stat -- database/seed.sql shared/src/seed.json database/seed.full-as-sent.sql database/seed.full-fixed.sql shared/src/seed.full-as-sent.json shared/src/seed.full-fixed.json OPEN-Guest-Portal.html OPEN-Staff-App.html; then
-            echo "::error::Generated demo files are out of date. In prototype/, run: npm run seed && npm run build && python3 scripts/make_open_files.py, then commit the result. Change demo data in database/generate_seed.py and generate_full_seed.py, not in the seed files."
+          if ! git diff --exit-code --stat -- database/seed.sql shared/src/seed.json database/seed.full-as-sent.sql database/seed.full-fixed.sql shared/src/seed.full-as-sent.json shared/src/seed.full-fixed.json OPEN-Guest-Portal.html OPEN-Staff-App.html OPEN-CheckIn-App.html; then
+            echo "::error::Generated demo files are out of date. In prototype/, run: npm run seed && npm run build && python3 scripts/make_open_files.py && python3 checkin-app/scripts/make_open_file.py, then commit the result. Change demo data in database/generate_seed.py and generate_full_seed.py, not in the seed files."
             exit 1
           fi
