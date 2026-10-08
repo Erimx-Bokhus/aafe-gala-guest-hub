@@ -34,7 +34,7 @@ export default function Hero({ lang, eyebrow, title, body, children }: { lang: L
           <div className="mb-5 h-1 w-16 rounded-full bg-brand-500" aria-hidden />
           <p className="type-nav text-brand-600">{eyebrow}</p>
           <h1 className="type-display mt-3 text-navy-900">{title}</h1>
-          <p className="type-body mt-4 max-w-xl text-navy-600">{body}</p>
+          <p className="type-lead mt-4 max-w-xl text-navy-600">{body}</p>
           {children}
         </div>
         <div className="relative">
@@ -74,7 +74,7 @@ export function MissionStrip({ lang }: { lang: Lang }) {
   return (
     <section className="border-y border-cream-200 bg-cream-100">
       <div className="mx-auto max-w-6xl px-5 py-10">
-        <p className="type-h6 max-w-3xl text-navy-800">{t.mission}</p>
+        <p className="type-lead max-w-3xl text-navy-800">{t.mission}</p>
         <div className="mt-6 grid grid-cols-3 gap-2 sm:gap-4">
           {photos.map((p) => (
             <img key={p.src} src={p.src} alt={p.alt} loading="lazy" className="aspect-[4/5] w-full rounded-xl object-cover" style={{ objectPosition: p.pos }} />
