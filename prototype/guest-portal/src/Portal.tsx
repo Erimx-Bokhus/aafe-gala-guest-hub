@@ -129,7 +129,7 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
 
       <div className="mx-auto max-w-6xl space-y-8 px-5 py-10">
         {/* Seats */}
-        <section id="seats" className="scroll-mt-20" aria-labelledby="seats-h">
+        <section id="seats" className="scroll-mt-32 sm:scroll-mt-20" aria-labelledby="seats-h">
           <h2 id="seats-h" tabIndex={-1} className="type-h2 text-navy-900">{t.seatsTitle}</h2>
           {closed ? (
             <div role="status" className="mt-3 flex max-w-3xl items-start gap-3 rounded-xl border border-cream-200 bg-cream-100 p-4" data-testid="list-closed">
@@ -143,7 +143,7 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
           ) : <p className="type-lead mt-1 max-w-3xl text-navy-600">{t.seatsHelp}</p>}
           <div className="card mt-5 p-5">
             <h2 className="type-h6 text-navy-900">{t.seats}</h2>
-            <div className="type-number mt-2 text-4xl tabular-nums text-navy-900">{view.stats.named}<span className="text-2xl text-navy-300"> / {view.stats.total}</span></div>
+            <div className="type-number mt-2 text-4xl tabular-nums text-navy-900">{view.stats.named}<span className="text-2xl text-navy-500"> / {view.stats.total}</span></div>
             <div className="text-sm text-navy-500">{t.progress(view.stats.named, view.stats.total)}</div>
             <div className="mt-3 h-2 overflow-hidden rounded-full bg-navy-50" role="progressbar" aria-label={t.seats} aria-valuemin={0} aria-valuemax={view.stats.total} aria-valuenow={view.stats.named} aria-valuetext={t.progress(view.stats.named, view.stats.total)}><div className="h-full rounded-full bg-brand-500" style={{ width: `${pct}%` }} /></div>
             {namesLeft > 0 && <div className="text-sm text-amber-800">{t.namesLeft(namesLeft, view.deadline ? fmtDate(view.deadline, loc) : undefined)}</div>}
