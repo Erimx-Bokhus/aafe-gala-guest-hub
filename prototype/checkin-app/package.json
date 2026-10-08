@@ -1,0 +1,2 @@
+{ "name": "checkin-app", "private": true, "version": "0.1.0", "type": "module",
+  "scripts": { "doorlist": "node make_door_list.mjs", "sync-server": "node sync-server/server.mjs", "dev": "vite --port 5175", "dev:ipad": "vite --port 5175 --host", "build": "tsc --noEmit -p . && vite build", "preview": "vite preview" } }
