@@ -5,7 +5,7 @@
 // Secrets: GIVELIVELY_ORG_ID, GIVELIVELY_API_KEY (Nonprofit Admin Portal -> Zapier API key), CRON_SECRET.
 // Which donations are gala sales: the current gala's Give Lively page name (gala_events.givelively_page_name,
 // e.g. "AAFE's 52nd Annual Gala"), set by staff in the staff app. Not set -> the sync does nothing and says so. Demo: GIVELIVELY_BASE_URL points at the givelively-mock function instead of Give Lively.
-import { pollStart, syncDonations } from '../_shared/givelively-sync.ts'
+import { pollStart, syncDonations, withoutKey } from '../_shared/givelively-sync.ts'
 import { admin, caller, cors, env, json } from '../_shared/supabase.ts'
 
 Deno.serve(async (req) => {
@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
     const body = await res.json()
     donations = Array.isArray(body) ? body : Array.isArray(body?.data) ? body.data : []
   } catch (e) {
-    return await fail(`Could not reach Give Lively: ${(e as Error).message}`)
+    return await fail(`Could not reach Give Lively: ${withoutKey((e as Error).message, key)}`)
   }
 
   const actor = who === 'schedule' ? 'Give Lively sync' : `Give Lively sync (${who})`

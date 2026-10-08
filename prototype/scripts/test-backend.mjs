@@ -22,6 +22,13 @@ ok(v2.activity[0].summary.includes('Test Person added'), 'guest activity logged'
 ok((await err('anon', null, `select portal_save_guest('ac-6w9k3p5d', $1, $2)`, [slot, { first_name: '' }]))?.startsWith('invalid_input'), 'empty name rejected')
 const v3 = (await as('anon', null, `select portal_release_seat('ac-6w9k3p5d', $1) v`, [slot]))[0].v
 ok(v3.seats.find((s) => s.slot === slot).status === 'unnamed', 'seat released')
+// A guest with a QR invitation can still be removed: the unsent invitation is discarded (audit of Oct 8).
+const v4 = (await as('anon', null, `select portal_save_guest('ac-6w9k3p5d', $1, $2) v`, [slot, { first_name: 'Invited', last_name: 'Guest', email: 'invited.guest@example.org' }]))[0].v
+const invited = (await db.query(`select guest_id from seats s join orders o on o.id = s.order_id where s.slot_number = $1 and s.guest_id is not null and exists (select 1 from guests g where g.id = s.guest_id and g.last_name = 'Guest' and g.first_name = 'Invited')`, [slot])).rows[0].guest_id
+const invite = (await as('authenticated', RM, `select staff_send_qr_invite($1) id`, [invited]))[0].id
+ok(v4 && (await err('anon', null, `select portal_release_seat('ac-6w9k3p5d', $1)`, [slot])) === null, 'a guest with a QR invitation can be removed in the portal')
+const invRow = (await db.query(`select status, guest_id from email_log where id = $1`, [invite])).rows[0]
+ok(invRow.guest_id === null && (invRow.status === 'cancelled' || invRow.status === 'sent'), 'and the invitation is unlinked (discarded if unsent): ' + JSON.stringify(invRow))
 ok(await err('anon', null, `select staff_add_pledge('a','b','c','gold','check')`) !== null, 'anon cannot call staff functions')
 ok(await err('anon', null, `select gl_import('[]', 'x')`) !== null, 'anon cannot call gl_import')
 
@@ -170,6 +177,7 @@ ok(res.created === 1 && res.unknown_tier === 0 && res.names_prefilled === 1 && r
 const g1 = (await db.query(`select o.id, o.tier_id, o.imported_guest_text t, g.display_name, g.last_updated_by u, s.status from payments p join orders o on o.id=p.order_id join seats s on s.order_id=o.id join guests g on g.id=s.guest_id where p.purchase_key=$1`, [sqlKey])).rows
 ok(g1.length === 1 && g1[0].tier_id === 'community_ticket' && g1[0].t === 'me' && g1[0].display_name === 'Grace Kim' && g1[0].u === 'givelively_sync' && g1[0].status === 'submitted', 'pre-filled guest is "submitted", marked as from Give Lively')
 ok((await db.query(`select status, counts from import_runs where id=$1`, [res.run_id])).rows[0].status === 'succeeded', 'import run recorded')
+ok((await db.query(`select count(*)::int n from audit_log where action = 'guest.imported' and order_id = $1 and summary like 'Grace Kim added to seat 1 from the Give Lively guest list.'`, [g1[0].id])).rows[0].n === 1, 'the history says the pre-filled guest came from Give Lively (hard rule 7)')
 
 // Case 3: same file twice changes nothing.
 res = await upload([csv({ guest_text: 'me', guests: [{ display_name: 'Grace Kim', email: 'grace.kim@example.org', is_buyer: true }] })])

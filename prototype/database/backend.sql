@@ -499,6 +499,8 @@ begin
   if g.id is null then return portal_get_view(p_token); end if;
 
   update seats set guest_id = null, status = 'unnamed', updated_at = now() where id = st.id;
+  -- Emails about this guest (a QR invitation): an unsent one is discarded; sent ones stay in the log, unlinked.
+  update email_log set status = case when status = 'queued' then 'cancelled' else status end, guest_id = null where guest_id = g.id;
   delete from guests where id = g.id;
   perform write_audit('guest_portal', 'Guest portal', 'guest', g.id, o.id, 'guest.removed', st.status, 'unnamed', true,
     format('%s %s removed from seat %s.', g.first_name, g.last_name, p_slot));
@@ -918,6 +920,8 @@ begin
       v_dev := nullif(left(btrim(coalesce(it ->> 'device', '')), 40), '');
       v_by := me.name || coalesce(' (' || v_dev || ')', '');
       v_at := least(coalesce(nullif(it ->> 'at', '')::timestamptz, now()), now());   -- the iPad's clock, never in the future
+      -- ...nor more than a day old: an older time could claim "came first" over a real check-in and take it over.
+      if v_at < now() - interval '24 hours' then raise exception 'invalid_input: check-in time is more than a day old'; end if;
       c := null;
 
       if exists (select 1 from check_ins where client_id = v_cid) then
@@ -1052,6 +1056,9 @@ begin
     insert into guests (id, order_id, first_name, last_name, display_name, email, guest_type, last_updated_by)
     values (v_id, p_order_id, v_first, v_last, v_display, nullif(lower(btrim(g ->> 'email')), ''), p_guest_type, 'givelively_sync');
     update seats set guest_id = v_id, status = 'submitted', updated_at = now() where id = st.id;
+    -- The history keeps where the name came from, after staff or the sponsor edit it (hard rule 7).
+    perform write_audit('system', 'Give Lively import', 'guest', v_id, p_order_id, 'guest.imported', null, 'submitted', true,
+      format('%s added to seat %s from the Give Lively guest list.', v_display, st.slot_number));
     v_n := v_n + 1;
   end loop;
   return v_n;
