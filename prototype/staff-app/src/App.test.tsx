@@ -13,6 +13,7 @@ const rpc = vi.fn(async (fn: string) => {
   return fn === 'staff_checkin_snapshot' ? { data: demoSnapshot(loadDB()), error: null } : { data: null, error: { message: 'not mocked' } }
 })
 const tableRead = vi.fn()
+let authEvent: (event: string) => void = () => {}
 
 async function renderApp(opts: { session: boolean; staff: StaffUser | null }) {
   vi.resetModules()
@@ -20,12 +21,13 @@ async function renderApp(opts: { session: boolean; staff: StaffUser | null }) {
     supabase: {
       auth: {
         getSession: vi.fn().mockResolvedValue({ data: { session: opts.session ? { access_token: 't' } : null } }),
-        onAuthStateChange: vi.fn(() => ({ data: { subscription: { unsubscribe } } })),
+        onAuthStateChange: vi.fn((cb: (event: string) => void) => { authEvent = cb; return { data: { subscription: { unsubscribe } } } }),
       },
       rpc,
       from: tableRead,
     },
-    currentStaff: vi.fn().mockResolvedValue(opts.staff),
+    // A fresh object on every call, as Supabase gives: the app must key on who it is, not on the object.
+    currentStaff: vi.fn(async () => (opts.staff ? { ...opts.staff } : null)),
     signOut,
     sendSignInLink: vi.fn(),
   }))
@@ -56,6 +58,16 @@ describe('staff app session (live mode)', () => {
     expect(await screen.findByText('Kenji Abe')).toBeTruthy()
     expect(rpc).toHaveBeenCalledWith('staff_checkin_snapshot')
     expect(tableRead).not.toHaveBeenCalled()
+  })
+
+  it("doesn't reload the gala when Supabase says \"signed in\" again for the same person (e.g. the tab regains focus)", async () => {
+    await renderApp({ session: true, staff: { id: 'st-9', name: 'Kenji Abe', email: 'kenji.abe@aafe-demo.example.org', role: 'check_in_volunteer' } as StaffUser })
+    expect(await screen.findByText('Kenji Abe')).toBeTruthy()
+    const loads = rpc.mock.calls.filter(([fn]) => fn === 'staff_checkin_snapshot').length
+    authEvent('SIGNED_IN')
+    await new Promise((r) => setTimeout(r, 50))
+    expect(rpc.mock.calls.filter(([fn]) => fn === 'staff_checkin_snapshot').length).toBe(loads)
+    expect(screen.queryByText('Loading the gala…')).toBeNull()
   })
 
   it('stops listening for sign-in changes when the app closes', async () => {
