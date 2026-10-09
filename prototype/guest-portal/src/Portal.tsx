@@ -3,6 +3,7 @@ import { CalendarDays, CheckCircle2, Clock, History, Lock, MapPin, Pencil, Plus,
 import { Field, Modal, Toast, fmtDate, money } from '@shared/ui'
 import type { DB } from '@shared/types'
 import { DICT, LOCALE, type Lang } from './i18n'
+import { namesLeftText } from './namesLeft'
 import { LIVE, fetchPortalView, getPortalView, removeAttendee, removeAttendeeLive, saveAttendee, saveAttendeeLive, type AttendeeInput, type PortalView } from './portalApi'
 import Hero, { MissionStrip } from './Hero'
 
@@ -89,6 +90,7 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
   const seat = editing != null ? view.seats.find((s) => s.slot === editing)! : null
   const pct = view.stats.total ? Math.round((view.stats.named / view.stats.total) * 100) : 0
   const namesLeft = view.stats.total - view.stats.named
+  const namesLeftMessage = namesLeftText(namesLeft, view.deadline ? fmtDate(view.deadline, loc) : undefined, t.namesLeft)
   const statusText = { paid: t.stPaid, partial: t.stPartial, pledged: t.stPledged, comp: t.stComp }[view.money.status]
   const statusCls = { paid: 'bg-emerald-50 text-emerald-800', partial: 'bg-amber-50 text-amber-800', pledged: 'bg-amber-50 text-amber-800', comp: 'bg-brand-50 text-brand-600' }[view.money.status]
 
@@ -130,7 +132,7 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
             <div className="mt-2 font-serif text-4xl text-navy-900">{view.stats.named}<span className="text-2xl text-navy-300"> / {view.stats.total}</span></div>
             <div className="text-sm text-navy-500">{t.progress(view.stats.named, view.stats.total)}</div>
             <div className="mt-3 h-2 overflow-hidden rounded-full bg-navy-50"><div className="h-full rounded-full bg-brand-500" style={{ width: `${pct}%` }} /></div>
-            {namesLeft > 0 && <div className="text-sm text-amber-800">{t.namesLeft(namesLeft, view.deadline ? fmtDate(view.deadline, loc) : undefined)}</div>}
+            {namesLeftMessage && <div className="text-sm text-amber-800">{namesLeftMessage}</div>}
             <dl className="mt-4 space-y-2 border-t border-navy-100 pt-4 text-sm">
               {view.deadline && <div className="flex items-center gap-2 text-navy-700"><Clock size={15} className="text-brand-500" /> {t.deadline}: <strong className="text-navy-900">{fmtDate(view.deadline, loc)}</strong></div>}
               <div className="flex items-center gap-2 text-navy-700"><CalendarDays size={15} className="text-brand-500" /> {fmtDate(view.event.date, loc)} · {view.event.doors}</div>
