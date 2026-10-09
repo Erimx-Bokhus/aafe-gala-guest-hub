@@ -5,6 +5,10 @@ Every change to this hub, newest first. Open it while signed in to claude.ai and
 Each change has a kind, shown the same way on every page next to the exact line that changed: **✦ New** (didn't exist before), **+ Updated** (rows, tasks, or terms added), **✎ Modified** (wording, numbers, or a rule changed), **− Removed** (taken out), and **! Important** (everyone should act on it). Hover an icon for the date, time (New York), and who made the change; click it to mark it read.
 
 ```changes
+2026-10-09 00:45 | updated | Aisling | codemap.the-map | Click any part of the code map to see what it's for and read its code, with the whole file one click away
+2026-10-09 00:45 | new | Aisling | codemap.what-stands-out | The code map now draws the links into the database: which app calls each database function, the tables each one uses, the 4 access rules and the 3 triggers. It found 14 database functions no screen calls yet
+2026-10-09 00:45 | modified | Aisling | codemap.what-the-map-doesn-t-show | Corrected: triggers don't write the change log; database functions do
+2026-10-09 00:45 | updated | Aisling | tasks | Code map task done; new task to wire the 14 unused database functions to the staff app
 2026-10-09 00:05 | modified | Aisling | tasks | Oct 8 night: PRs #81 and #82 (iPad layout), the review of Antonin's #75–#77 sent to Natalie, the PRD in Pathfinder, and the Saturday sign-in test at 12 PM; the code map task shows what's built and what's left
 2026-10-09 00:05 | modified | Natalie | screens.ipad-check-in-app | iPad screenshots retaken: the larger logo mark (still a grey placeholder) and the portrait filter on its own row (PRs #81, #82)
 2026-10-09 00:05 | modified | Aisling | build-plan.where-each-component-stands | Check-in app: the larger mark and portrait layout (PRs #81, #82); sponsor form: Antonin's #75–#77 reviewed, waiting on Natalie
