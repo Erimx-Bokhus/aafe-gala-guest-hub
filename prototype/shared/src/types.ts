@@ -11,7 +11,7 @@ export type BadgeStatus = 'needs_review' | 'ready' | 'printed' | 'reprint_needed
 // AAFE's seven guest categories (requirements); the Full demo data sets use all of them.
 export type GuestType = 'sponsor_guest' | 'ticket_holder' | 'comp_relationship' | 'government_vip' | 'aafe_staff' | 'event_volunteer' | 'event_staff'
 
-export interface GalaEvent { id: string; year: number; name: string; event_date: string; doors_time: string; program_time: string; venue_name: string; venue_address: string; dress_code: string; guest_list_deadline: string; program_ad_deadline: string; status: 'planning' | 'live' | 'closed'; is_synthetic: boolean }
+export interface GalaEvent { id: string; year: number; name: string; event_date: string; doors_time: string; program_time: string; venue_name: string; venue_address: string; dress_code: string; guest_list_deadline: string; program_ad_deadline: string; status: 'planning' | 'live' | 'closed'; is_synthetic: boolean; /** Sponsors see which of their guests have arrived (off until AAFE approves). */ sponsor_arrivals_visible?: boolean; /** Who at AAFE approved it, and when. */ sponsor_arrivals_note?: string | null }
 export interface StaffUser { id: string; name: string; email: string; role: Role }
 export interface Tier { id: string; name: string; contribution_amount: number; included_seat_count: number; tier_category: 'sponsorship' | 'ticket' | 'advertising_only' | 'complimentary'; required_materials: string[] }
 export interface Sponsor { id: string; organization_name: string; primary_contact_name: string; primary_contact_email: string; phone: string; relationship_owner_id: string; salesforce_account_id: string | null; created_at: string }
