@@ -86,6 +86,30 @@ export function approveEmail(db: DB, user: StaffUser, emailId: string): DB {
   const d = { ...db, email_log: db.email_log.map((x) => (x.id === emailId && x.status === 'queued' ? { ...x, status: 'sent' as const, sent_at: at, approved_by: user.name } : x)) }
   return logSent(d, emailId, user.name)
 }
+/**
+ * Like staff_queue_guest_list_reminders: one DRAFT per sponsor of this gala who still has unnamed seats, already got a
+ * link, and whose deadline hasn't passed (New York date); skips a sponsor with an unsent link or reminder, or one sent
+ * in the last `minDays` days. Staff approve each draft (hard rule 4).
+ */
+export function queueGuestListReminders(db: DB, user: StaffUser, minDays = 7): { db: DB; n: number } {
+  const ev = db.gala_events.find((e) => e.id === db.meta.current_event_id)!
+  const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'America/New_York' })
+  const since = Date.now() - Math.max(minDays, 0) * 864e5
+  const due = db.orders.filter((o) => o.event_id === ev.id && o.status !== 'cancelled' && o.portal_link_sent_at
+    && (o.guest_list_deadline ?? ev.guest_list_deadline) >= today
+    && db.seats.some((s) => s.order_id === o.id && s.status === 'unnamed')
+    && !db.email_log.some((m) => m.order_id === o.id && (m.template === 'portal_link' || m.template === 'guest_list_reminder')
+      && (m.status === 'queued' || (m.sent_at && Date.parse(m.sent_at) > since))))
+    .sort((a, b) => a.id.localeCompare(b.id))
+  let d = db
+  for (const o of due) {
+    const sp = d.sponsors.find((s) => s.id === o.sponsor_id)!
+    d = sendEmail(d, 'guest_list_reminder', sp.primary_contact_email, sp.primary_contact_name, o.id, null, 'staff_manual')
+  }
+  if (due.length) d = addAudit(d, { actor_type: 'staff', actor: user.name, entity: 'email', entity_id: 'guest_list_reminder', order_id: null, action: 'email.reminders_drafted', from_state: null, to_state: 'draft', guest_visible: false, summary: `${due.length} guest-list reminder${due.length === 1 ? '' : 's'} drafted for review.` })
+  return { db: d, n: due.length }
+}
+
 /** Staff discard a draft email; nothing is sent. */
 export function cancelEmail(db: DB, user: StaffUser, emailId: string): DB {
   const e = db.email_log.find((x) => x.id === emailId)!
