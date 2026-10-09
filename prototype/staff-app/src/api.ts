@@ -6,7 +6,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { addAudit, loadDB } from '@shared/data'
 import type { Snapshot } from '@shared/offlineCheckin'
-import type { AuditEntry, DB, GalaEvent, Guest, Material, PayMethod, Role, StaffUser } from '@shared/types'
+import type { AuditEntry, DB, EmailLog, GalaEvent, Guest, Material, PayMethod, Role, StaffUser } from '@shared/types'
 import * as store from './store'
 import { demoBadgeRows, demoCheckinRows, demoSalesforceRows, type BadgeRow, type CheckinRow, type SalesforceRow } from './exports'
 
@@ -16,6 +16,16 @@ export interface PledgeInput { org: string; contact: string; email: string; tier
 export interface CompGuestInput { first_name: string; last_name: string; title: string; organization: string; email: string; relationship_note: string }
 export interface ExceptionInput { name: string; orderId: string | null; type: string; note: string }
 export type GuestPatch = Partial<Pick<Guest, 'first_name' | 'last_name' | 'title' | 'organization' | 'email' | 'dietary_needs' | 'accessibility_needs' | 'relationship_note'>>
+/** One unsent email as staff_email_queue() returns it: what staff need to judge a draft before approving it. */
+export interface QueuedEmail {
+  id: string; template: EmailLog['template']; to_name: string; to_email: string; trigger: string; created_at: string | null
+  approved_by: string | null; attempts: number; last_error: string | null
+  /** draft: waiting for approval. approved: waiting for the sender. failed: the sender stopped after 5 tries. */
+  state: 'draft' | 'approved' | 'failed'
+  order_id: string | null; organization: string | null; tier: string | null; deadline: string | null
+  seats_unnamed: number; seats_total: number; guest: string | null
+  payment: { amount: number; method: PayMethod; received_at: string; check_number: string | null } | null
+}
 export type GalaPatch = Partial<Pick<GalaEvent, 'name' | 'event_date' | 'doors_time' | 'program_time' | 'venue_name' | 'venue_address' | 'dress_code' | 'guest_list_deadline' | 'program_ad_deadline'>>
 
 export interface StaffApi {
@@ -44,6 +54,10 @@ export interface StaffApi {
   exportBadges(includePrinted: boolean): Promise<BadgeRow[]>
   exportCheckin(): Promise<CheckinRow[]>
   exportSalesforce(): Promise<SalesforceRow[]>
+  /** Every unsent email, drafts first, with its sponsor, seats and payment. */
+  emailQueue(): Promise<QueuedEmail[]>
+  /** Draft a guest-list reminder for each sponsor who needs one; returns how many. Drafts only: staff approve each. */
+  queueReminders(minDays?: number): Promise<number>
 }
 
 // Who may do what. Mirrors require_staff(...) in each staff_* function, and scripts/test-access.mjs checks the server side.
@@ -57,6 +71,7 @@ export const ROLES: Record<Exclude<keyof StaffApi, 'live'>, Role[]> = {
   checkIn: ALL, checkInByCode: ALL, checkInException: ALL,
   updateGalaEvent: ADMIN, history: MANAGERS,
   exportBadges: MANAGERS, exportCheckin: ALL, exportSalesforce: ADMIN,
+  emailQueue: MANAGERS, queueReminders: MANAGERS,
 }
 export const canDo = (role: Role, action: keyof typeof ROLES) => ROLES[action].includes(role)
 
@@ -135,6 +150,13 @@ export function demoApi(user: StaffUser, update: (fn: (d: DB) => DB) => void, fu
     exportBadges: (inc) => exported('exportBadges', 'badges', demoBadgeRows(full(), inc), (n) => `Badge file exported: ${n} badge(s)${inc ? ', including printed' : ''}.`),
     exportCheckin: () => exported('exportCheckin', 'checkin', demoCheckinRows(full()), (n) => `Check-in list exported: ${n} row(s).`),
     exportSalesforce: () => exported('exportSalesforce', 'salesforce', demoSalesforceRows(full()), (n) => `Salesforce attendee file exported: ${n} attendee(s).`),
+    emailQueue: async () => (may('emailQueue') ? demoEmailQueue(full()) : forbidden()),
+    queueReminders: async (minDays = 7) => {
+      if (!may('queueReminders')) return forbidden()
+      let n = 0
+      update((d) => { const r = store.queueGuestListReminders(d, user, minDays); n = r.n; return r.db })
+      return n
+    },
   }
   // Like the staff_export_* functions: refused for the wrong role, otherwise logged with the row count.
   function exported<T>(a: keyof typeof ROLES, what: string, rows: T[], summary: (n: number) => string): Promise<T[]> {
@@ -186,6 +208,8 @@ export function liveApi(client: SupabaseClient, reload: () => Promise<void>): St
     exportBadges: (inc) => call<BadgeRow[]>('staff_export_badges', { p_include_printed: inc }),
     exportCheckin: () => call<CheckinRow[]>('staff_export_checkin', {}),
     exportSalesforce: () => call<SalesforceRow[]>('staff_export_salesforce', {}),
+    emailQueue: () => call<QueuedEmail[]>('staff_email_queue', {}),
+    queueReminders: async (minDays = 7) => { const n = await call<number>('staff_queue_guest_list_reminders', { p_min_days: minDays }); await reload(); return n },
   }
 }
 
@@ -196,6 +220,26 @@ export function liveApi(client: SupabaseClient, reload: () => Promise<void>): St
  * data. One type with the iPad app (shared/src/offlineCheckin.ts), so the staff app reads what the database really returns.
  */
 export type CheckinSnapshot = Snapshot
+
+/** The approval list from the demo data, in staff_email_queue()'s shape and order (drafts first). Demo approval sends at once,
+ *  so there are no approved-but-unsent or failed emails here; demo emails carry no payment link. */
+export function demoEmailQueue(db: DB): QueuedEmail[] {
+  const ev = db.gala_events.find((e) => e.id === db.meta.current_event_id)
+  return db.email_log.filter((m) => m.status === 'queued').map((m) => {
+    const o = db.orders.find((x) => x.id === m.order_id)
+    const seats = db.seats.filter((x) => x.order_id === m.order_id)
+    const g = db.guests.find((x) => x.id === m.guest_id)
+    return {
+      id: m.id, template: m.template, to_name: m.to_name, to_email: m.to_email, trigger: m.trigger, created_at: null,
+      approved_by: m.approved_by ?? null, attempts: 0, last_error: null, state: m.approved_at ? 'approved' as const : 'draft' as const,
+      order_id: m.order_id, organization: o ? db.sponsors.find((x) => x.id === o.sponsor_id)?.organization_name ?? null : null,
+      tier: o ? db.sponsorship_tiers.find((t) => t.id === o.tier_id)?.name ?? null : null,
+      deadline: o ? o.guest_list_deadline ?? (ev?.guest_list_deadline || null) : null,
+      seats_unnamed: seats.filter((x) => x.status === 'unnamed').length, seats_total: seats.filter((x) => x.status !== 'cancelled').length,
+      guest: g ? `${g.first_name} ${g.last_name}` : null, payment: null,
+    }
+  }).sort((a, b) => (a.state === 'draft' ? 0 : 1) - (b.state === 'draft' ? 0 : 1) || a.id.localeCompare(b.id))
+}
 
 /** The demo data cut down to what staff_checkin_snapshot() returns, so a demo volunteer sees no more than a real one. */
 export function demoSnapshot(db: DB): CheckinSnapshot {
