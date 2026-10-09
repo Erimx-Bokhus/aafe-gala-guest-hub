@@ -1323,7 +1323,7 @@ function renderCodemap(el, d){
       <div class="cm-zoom"><button class="btn" type="button" data-zoom="1.4" aria-label="Zoom in">+</button><button class="btn" type="button" data-zoom="0.7" aria-label="Zoom out">−</button></div>
       <p class="cm-hint">Drag to move · pinch, Ctrl + scroll or + − to zoom · click a dot for details</p></div>
       <div class="cm-info" aria-live="polite"></div></div>
-    <section class="cm-code" hidden aria-label="Code preview"><div class="cm-code-head"><code class="cm-where"></code>
+    <section class="cm-code" data-team hidden aria-label="Code preview"><div class="cm-code-head"><code class="cm-where"></code>
       <span class="cm-code-tools"><button class="btn" type="button" data-whole aria-pressed="false">Whole file</button>
       <a class="btn" data-team data-gh target="_blank" rel="noopener" title="The repository is private: team members only">Open on GitHub</a></span></div>
       <div class="cm-code-body" tabindex="0" aria-label="Code"><div class="cm-lines"></div></div></section>
@@ -1419,7 +1419,7 @@ function renderCodemap(el, d){
   function showInfo(){
     if (sel < 0){
       const top = N.filter(vis).sort((a, b) => b.deg - a.deg).slice(0, 12);
-      info.innerHTML = `<p>Each dot is a file, function, type, database table, access rule or trigger; each line means one uses another. Color shows the area. Click a dot, a name below, or search above to see what it does and its code.</p>
+      info.innerHTML = `<p>Each dot is a file, function, type, database table, access rule or trigger; each line means one uses another. Color shows the area. Click a dot, a name below, or search above to see what it does${client ? '' : ' and its code'}.</p>
         <div class="cm-kinds"><span><i class="sq"></i>File</span><span><i class="dia"></i>Table</span><span><i class="tri"></i>Access rule</span><span><i class="ring"></i>Trigger</span><span><i></i>Function, type or value</span></div>
         <h5>Most connected</h5>${list(top.map(n => [n, `${n.deg} links`]))}`;
       return;
@@ -1434,7 +1434,7 @@ function renderCodemap(el, d){
       ${n.kind === 'file' ? (d.about[n.fi] ? `<p class="cm-about">${esc(d.about[n.fi])}</p>` : '')
         : (n.doc ? `<p class="cm-about">${esc(n.doc)}</p>` : '') + (d.about[n.fi] ? `<p class="cm-in"><b>In ${esc(n.file.split('/').pop())}:</b> ${esc(firstSentence(d.about[n.fi]))}</p>` : '')}
       <p><code>${esc(n.file)}${n.line > 1 ? `:${n.line}` : ''}</code></p>
-      <button type="button" class="cm-back" data-goto-code>Show the code ↓</button>
+      <button type="button" class="cm-back" data-team data-goto-code>Show the code ↓</button>
       ${hidden ? `<p>${hidden} of its links go to areas that are switched off.</p>` : ''}
       ${[...groups].map(([k, arr]) => `<h5>${esc(k)} · ${arr.length}</h5>${list(arr.sort((a, b) => b.deg - a.deg || a.label.localeCompare(b.label)).map(m => [m, m.file === n.file ? '' : m.file.split('/').pop()]), k.toLowerCase())}`).join('')}`;
   }
@@ -1445,9 +1445,9 @@ function renderCodemap(el, d){
     showInfo(); showCode(); draw();
     if (focusMap) stage.focus({preventScroll: true});
   }
-  // the code preview under the map: the selected node's lines, or its whole file with those lines marked
+  // the code preview under the map (team view only): the selected node's lines, or its whole file with those lines marked
   function showCode(){
-    if (sel < 0){ code.hidden = true; return; }
+    if (sel < 0 || client){ code.hidden = true; return; }   // client view: no code preview, and the source isn't downloaded
     const n = N[sel], lineRange = n.kind !== 'file' && n.end > n.line;
     code.hidden = false; code.querySelector('[data-whole]').setAttribute('aria-pressed', whole);
     code.querySelector('.cm-where').textContent = n.file + (whole ? '' : n.kind === 'file' ? ` · first ${n.end} lines` : lineRange ? `:${n.line}–${n.end}` : `:${n.line}`);
