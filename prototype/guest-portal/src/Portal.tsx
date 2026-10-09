@@ -3,6 +3,7 @@ import { CalendarDays, CheckCircle2, Clock, History, Lock, MapPin, Pencil, Plus,
 import { Field, Modal, Toast, fmtDate, money } from '@shared/ui'
 import type { DB } from '@shared/types'
 import { DICT, LOCALE, type Lang } from './i18n'
+import { isPastDeadline } from './deadline'
 import { LIVE, fetchPortalView, getPortalView, removeAttendee, removeAttendeeLive, saveAttendee, saveAttendeeLive, type AttendeeInput, type PortalView } from './portalApi'
 import Hero, { MissionStrip } from './Hero'
 
@@ -57,15 +58,6 @@ function activityText(lang: Lang, a: PortalView['activity'][number]) {
   }
 }
 
-// B9: after the guest-name deadline the page is read-only (AAFE time, end of the deadline day).
-// Demo only (offline mode): add ?demoToday=YYYY-MM-DD before the # to preview, e.g. ?demoToday=2027-05-01
-function isPastDeadline(deadline: string | null) {
-  if (!deadline) return false
-  const demo = LIVE ? null : new URLSearchParams(window.location.search).get('demoToday')
-  const today = demo && /^\d{4}-\d{2}-\d{2}$/.test(demo) ? demo : new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
-  return today > deadline.slice(0, 10)
-}
-
 export default function Portal({ db, update, token, lang }: { db: DB; update: (fn: (d: DB) => DB) => void; token: string; lang: Lang }) {
   const t = DICT[lang]
   const loc = LOCALE[lang]
@@ -95,7 +87,7 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
     </main>
   )
 
-  const closed = isPastDeadline(view.deadline)
+  const closed = isPastDeadline(view.deadline, { live: LIVE, search: window.location.search })
   const seat = !closed && editing != null ? view.seats.find((s) => s.slot === editing)! : null
   const pct = view.stats.total ? Math.round((view.stats.named / view.stats.total) * 100) : 0
   const statusText = { paid: t.stPaid, partial: t.stPartial, pledged: t.stPledged, comp: t.stComp }[view.money.status]
