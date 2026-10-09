@@ -1,0 +1,10 @@
+# Code owners: who must approve changes to each area before a pull request can merge.
+# Takes effect when "Require review from Code Owners" is on in main's branch protection.
+# Later lines win over earlier ones for the same file. Docs:
+# https://docs.github.com/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Natalie Walker (product lead, UI/UX): the three apps' screens and the design system
+/prototype/guest-portal/   @wsvdesign
+/prototype/staff-app/      @wsvdesign
+/prototype/checkin-app/    @wsvdesign
+/docs/design.md            @wsvdesign
