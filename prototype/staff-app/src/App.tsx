@@ -1,7 +1,7 @@
 // AAFE STAFF APP (the "client app": AAFE's gala team)
 // Reads everything the guest portal writes (same database), plus Give Lively + Salesforce data.
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { Activity, Armchair, BadgeCheck, CalendarDays, ClipboardList, CreditCard, Heart, LayoutDashboard, LogOut, Menu, Plug, ScanLine, Table2, X } from 'lucide-react'
+import { Activity, Armchair, BadgeCheck, CalendarDays, ClipboardList, CreditCard, FileUp, Heart, LayoutDashboard, LogOut, Menu, Plug, ScanLine, Table2, X } from 'lucide-react'
 import { loadDB } from '@shared/data'
 import { AafeLogo } from '@shared/Logo'
 import { DisplayControls, go, Link, PrototypeBanner, Toast, useDisplayPrefs, useRoute } from '@shared/ui'
@@ -20,6 +20,7 @@ import Relationship from './pages/Relationship'
 import Badges from './pages/Badges'
 import CheckIn from './pages/CheckIn'
 import Integrations from './pages/Integrations'
+import Import from './pages/Import'
 import AuditLog from './pages/AuditLog'
 
 const NAV: { to: string; label: string; icon: typeof LayoutDashboard; roles: Role[] }[] = [
@@ -32,6 +33,7 @@ const NAV: { to: string; label: string; icon: typeof LayoutDashboard; roles: Rol
   { to: '/relationship', label: 'Relationship guests', icon: Heart, roles: ['gala_admin', 'relationship_manager'] },
   { to: '/badges', label: 'Badges', icon: BadgeCheck, roles: ['gala_admin', 'relationship_manager'] },
   { to: '/checkin', label: 'iPad check-in', icon: ScanLine, roles: ['gala_admin', 'relationship_manager', 'check_in_volunteer'] },
+  { to: '/import', label: 'Give Lively import', icon: FileUp, roles: ['gala_admin', 'relationship_manager'] },
   { to: '/integrations', label: 'Integrations & email', icon: Plug, roles: ['gala_admin'] },
   { to: '/activity', label: 'Activity log', icon: Activity, roles: ['gala_admin', 'relationship_manager'] },
 ]
@@ -124,6 +126,7 @@ export default function App() {
   else if (p === '/relationship') page = <Relationship />
   else if (p === '/badges') page = <Badges />
   else if (p === '/checkin') page = <CheckIn />
+  else if (p === '/import') page = <Import />
   else if (p === '/integrations') page = <Integrations />
   else if (p === '/activity') page = <AuditLog />
   else page = <Dashboard />
