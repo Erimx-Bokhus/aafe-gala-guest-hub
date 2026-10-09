@@ -250,6 +250,15 @@ function DoorScreen({ api, who, prefs, exitLabel, onExit }: { api: Door; who: st
     return m
   }
   const catCount = (c: string) => ALL.filter((g) => g.category === c)
+  // All / Not checked in / Checked in. Landscape: in the toolbar row after search. Portrait: its own full row under
+  // Scan and Exception. Rendered in both places with only one shown, so Tab follows what's on screen in both.
+  const showFilter = (layout: string) => (
+    <div className={`${layout} overflow-hidden rounded-xl border-2 border-navy-100`} role="group" aria-label="Show">
+      {([['all', 'All'], ['waiting', 'Not checked in'], ['in', 'Checked in']] as const).map(([k, l]) => (
+        <button key={k} onClick={() => setShow(k)} aria-pressed={show === k} data-testid={`show-${k}`} className={`tap h-[52px] px-4 text-base font-medium ${show === k ? 'bg-brand-500 text-white' : 'bg-surface text-navy-800'}`}>{l}</button>
+      ))}
+    </div>
+  )
   const selCount = sel.size
 
   return (
@@ -258,7 +267,7 @@ function DoorScreen({ api, who, prefs, exitLabel, onExit }: { api: Door; who: st
       <header className="shrink-0 border-b border-navy-100 bg-surface">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-2.5">
           <div className="flex min-w-0 shrink-0 items-center gap-3">
-            <img src="./brand/aafe-mark-orange.png" alt="AAFE" className="h-16 w-16 shrink-0 object-contain" />
+            <img src="./brand/aafe-mark-orange.png" alt="AAFE" className={`${compact ? 'h-10 w-10' : 'h-16 w-16'} shrink-0 object-contain`} />
             <div className="min-w-0">
               <div className="truncate text-lg font-semibold text-navy-900" data-testid="gala-title">{GALA.name.replace(' (demo)', '')}</div>
               <div className="text-sm text-navy-600">Guest check-in · {who}</div>
@@ -285,13 +294,10 @@ function DoorScreen({ api, who, prefs, exitLabel, onExit }: { api: Door; who: st
               className="h-14 w-full rounded-xl border-2 border-navy-100 bg-surface pl-12 pr-12 text-lg text-navy-900 placeholder:text-navy-500 focus:border-brand-500 focus:outline-none" />
             {q && <button className="tap absolute right-1 top-1/2 flex -translate-y-1/2 items-center justify-center rounded-full text-navy-600" onClick={() => setQ('')} aria-label="Clear search"><X size={22} /></button>}
           </div>
-          <div className="order-last flex basis-full overflow-hidden rounded-xl border-2 border-navy-100 [&>button]:flex-1 lg:order-none lg:basis-auto lg:[&>button]:flex-none" role="group" aria-label="Show">
-            {([['all', 'All'], ['waiting', 'Not checked in'], ['in', 'Checked in']] as const).map(([k, l]) => (
-              <button key={k} onClick={() => setShow(k)} aria-pressed={show === k} data-testid={`show-${k}`} className={`tap h-[52px] px-4 text-base font-medium ${show === k ? 'bg-brand-500 text-white' : 'bg-surface text-navy-800'}`}>{l}</button>
-            ))}
-          </div>
+          {showFilter('hidden lg:flex')}
           <button className="btn-ghost tap h-14 rounded-xl px-4 text-base" onClick={() => setScan(true)} data-testid="open-scan" aria-label="Scan QR code"><QrCode size={20} /><span className="hidden sm:inline">Scan</span></button>
           <button className="btn-ghost tap h-14 rounded-xl px-4 text-base" onClick={() => setExc(true)} data-testid="open-exception" aria-label="Add approved exception"><UserPlus size={20} /><span className="hidden sm:inline">Exception</span></button>
+          {showFilter('flex basis-full lg:hidden [&>button]:flex-1')}
         </div>
         {notices.length > 0 && (
           <ul className="border-t border-amber-200 bg-amber-50 px-5 py-2" aria-label="Check-ins not counted" data-testid="notices">
