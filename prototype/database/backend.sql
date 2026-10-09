@@ -1896,7 +1896,7 @@ begin
       from seats s join orders o on o.id = s.order_id join sponsors sp on sp.id = o.sponsor_id
       where o.event_id = current_event_id() and o.status <> 'cancelled' and s.guest_id is null and s.status <> 'cancelled'
     ) x
-    order by (x.guest_type = 'unnamed_seat'), x.last_name, x.first_name nulls last, x.organization_name;
+    order by (x.guest_type = 'unnamed_seat'), x.last_name, x.first_name nulls last, x.organization_name, x.seat_number;
   get diagnostics v_n = row_count;
   perform write_audit('staff', me.name, 'export', 'checkin', null, 'export.checkin', null, null, false,
     format('Check-in list exported: %s row(s).', v_n));
