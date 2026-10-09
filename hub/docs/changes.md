@@ -5,6 +5,23 @@ Every change to this hub, newest first. Open it while signed in to claude.ai and
 Each change has a kind, shown the same way on every page next to the exact line that changed: **✦ New** (didn't exist before), **+ Updated** (rows, tasks, or terms added), **✎ Modified** (wording, numbers, or a rule changed), **− Removed** (taken out), and **! Important** (everyone should act on it). Hover an icon for the date, time (New York), and who made the change; click it to mark it read.
 
 ```changes
+2026-10-09 06:10 | important | Aisling | decisions.team-and-build-decisions | Client view now hides everything internal: team decisions, team risks, team documents, who builds what, and how the hub works. Show AAFE the hub in Client view, and don't send them the link itself (Client view hides, it doesn't lock)
+2026-10-09 06:10 | new | Aisling | screens.walkthrough-videos | Two walkthrough videos of the whole path: about three minutes narrated, and 90 seconds with captions; AAFE's logo and photos as grey placeholders
+2026-10-09 06:10 | updated | Aisling | screens.the-build-so-far | Screenshots of the three export buttons (PR #87); the 25-second walkthrough from Oct 6 is replaced by the new videos
+2026-10-09 06:10 | modified | Aisling | decisions | Product decisions stay for AAFE; 21 team and build decisions and 3 team questions moved to a team-only section; new questions for AAFE on name fields and approving reminders
+2026-10-09 06:10 | modified | Aisling | risks.team-risks | Five internal risks moved to Team risks; new team risk: six portal PRs edit the same file
+2026-10-09 06:10 | modified | Aisling | overview | Status in plain language; who builds what and how the hub works are team-only
+2026-10-09 06:10 | modified | Aisling | build-plan.where-each-component-stands | Exports connected to the staff app (C8, PR #87); approval list in review (C7, PR #89); Unix line endings (PR #88); about 1,250 automated checks
+2026-10-09 06:10 | updated | Aisling | tasks.added-october-9 | Oct 9: the five slices for the unwired database functions, the AAFE check-in prep, the hub audit, and two follow-ups (Code map rebuild, re-record after #89)
+2026-10-09 06:10 | modified | Aisling | architecture.what-s-built | The iPad app is connected to the backend (it said it wasn't); the staff app's export buttons and approval list
+2026-10-09 06:10 | modified | Aisling | data-ai | The Demo Day AI note moved to a team section; sponsor links stop after the deadline day
+2026-10-09 06:10 | updated | Aisling | documents.team-documents | Internal documents moved to Team documents, with the Oct 9 check-in prep; the export screenshots in the repo list
+2026-10-09 06:10 | updated | Aisling | discovery.still-to-ask | Two new questions for AAFE: one name field or first and last; approving reminders one at a time
+2026-10-09 06:10 | modified | Aisling | codemap.what-stands-out | Map rebuilt from today's code: the three exports now show as connected, leaving 11 database functions to wire
+2026-10-09 06:10 | modified | Aisling | glossary | Door list: the iPad holds each QR code's fingerprint, never the code; approval queue: where staff find it
+2026-10-09 06:10 | modified | Aisling | import.built-and-tested | The upload screen is next on the Build plan
+2026-10-09 06:10 | modified | Aisling | requirements.working-prd | About 1,250 automated checks; PR detail trimmed
+2026-10-09 06:10 | modified | Aisling | hosting.demo-preview-team-notes | The hosted iPad app syncs through Supabase
 2026-10-09 00:55 | modified | Aisling | codemap.the-map | The code preview shows in Team view only; Client view hides it
 2026-10-09 00:45 | updated | Aisling | codemap.the-map | Click any part of the code map to see what it's for and read its code, with the whole file one click away
 2026-10-09 00:45 | new | Aisling | codemap.what-stands-out | The code map now draws the links into the database: which app calls each database function, the tables each one uses, the 4 access rules and the 3 triggers. It found 14 database functions no screen calls yet
