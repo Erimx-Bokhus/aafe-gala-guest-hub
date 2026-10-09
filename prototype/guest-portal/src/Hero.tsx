@@ -16,16 +16,29 @@ export function useReducedMotion() {
   return r
 }
 
-export default function Hero({ lang, eyebrow, title, body, children }: { lang: Lang; eyebrow: string; title: string; body: string; children?: ReactNode }) {
+export default function Hero({ lang, eyebrow, title, body, children, compact }: { lang: Lang; eyebrow: string; title: string; body: string; children?: ReactNode; compact?: boolean }) {
   const t = DICT[lang]
   const reduced = useReducedMotion()
   const [i, setI] = useState(0)
-  const [playing, setPlaying] = useState(!reduced)
+  const [playing, setPlaying] = useState(!reduced && !compact)
   useEffect(() => {
     if (!playing) return
     const id = setInterval(() => setI((x) => (x + 1) % SLIDES.length), 6000)
     return () => clearInterval(id)
   }, [playing])
+
+  // Compact hero (sponsor page): the guest task must be visible without scrolling, so no slideshow here.
+  if (compact) return (
+    <section className="border-b border-cream-200 bg-cream-100">
+      <div className="mx-auto max-w-6xl px-5 py-8 md:py-10">
+        <div className="mb-4 h-1 w-16 rounded-full bg-brand-500" aria-hidden />
+        <p className="type-nav text-brand-600">{eyebrow}</p>
+        <h1 className="type-display mt-2 text-navy-900">{title}</h1>
+        {body && <p className="mt-3 max-w-2xl text-navy-600">{body}</p>}
+        {children}
+      </div>
+    </section>
+  )
 
   return (
     <section className="border-b border-cream-200 bg-cream-100">

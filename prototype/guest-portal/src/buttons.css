@@ -6,7 +6,7 @@
   font-size: 16px;
   font-weight: 600;
   line-height: 24px;
-  text-transform: uppercase;
+  text-transform: none; /* no ALL CAPS: Chinese and Korean have no capitals, and caps are harder to read */
 }
 
 .brand-warm :where(.btn-primary, .btn-navy) {
@@ -16,3 +16,28 @@
 .brand-warm .btn-ghost {
   border-width: 2px;
 }
+
+/* Redesign v2 proposal ---------------------------------------------------- */
+/* Destructive action as a quiet red text button (still 44px tall to tap) */
+.brand-warm .link-danger {
+  display: inline-flex; align-items: center; min-height: 44px; padding: 0 12px;
+  border-radius: 50px; color: #BE123C; font-weight: 600; text-decoration: underline; text-underline-offset: 4px;
+}
+.brand-warm .link-danger:hover { background: rgb(190 18 60 / 0.06); }
+.brand-warm .btn-danger-outline {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  border: 2px solid #BE123C; border-radius: 50px; padding: 8px 24px;
+  color: #BE123C; background: transparent; font-size: 16px; font-weight: 600; line-height: 24px;
+}
+.brand-warm .btn-danger-outline:hover { background: #BE123C; color: #fff; }
+.dark .brand-warm .link-danger, .brand-warm.dark .link-danger, .brand-warm.dark .btn-danger-outline { color: rgb(253 164 175); border-color: rgb(253 164 175); }
+.brand-warm.dark .btn-danger-outline:hover { background: rgb(253 164 175); color: #1a1715; }
+/* Inputs: visible borders for older eyes (WCAG 1.4.11, 3:1). Guest portal only; the staff app keeps its own. */
+.brand-warm .input { border-color: #707070; }
+.brand-warm.dark .input { border-color: rgb(170 160 150); }
+/* Dialog close button: 44px hit area */
+.brand-warm [role="dialog"] > div:first-child > button { min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+/* Activity summary: a clear disclosure marker */
+.brand-warm details > summary { list-style: none; }
+.brand-warm details > summary::before { content: "▸"; margin-right: 10px; color: #C64C28; transition: transform .15s; display: inline-block; }
+.brand-warm details[open] > summary::before { transform: rotate(90deg); }
