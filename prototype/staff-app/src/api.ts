@@ -8,6 +8,7 @@ import { addAudit, loadDB } from '@shared/data'
 import type { Snapshot } from '@shared/offlineCheckin'
 import type { AuditEntry, DB, GalaEvent, Guest, Material, PayMethod, Role, StaffUser } from '@shared/types'
 import * as store from './store'
+import { demoBadgeRows, demoCheckinRows, demoSalesforceRows, type BadgeRow, type CheckinRow, type SalesforceRow } from './exports'
 
 export type OfflineMethod = Extract<PayMethod, 'check' | 'ach_direct' | 'wire'>
 export interface PaymentInput { method: OfflineMethod; amount: number; received: string; check_number?: string }
@@ -39,6 +40,10 @@ export interface StaffApi {
   setMaterialStatus(orderId: string, material: 'logo' | 'program_ad', status: Material): Promise<void>
   /** One order's whole change log, oldest first. Live, the app holds only the newest 1,000 entries, so a sponsor's page asks for its own. */
   history(orderId: string): Promise<AuditEntry[]>
+  /** The export files (exports.ts). Each is role-checked and logged, live and demo alike. */
+  exportBadges(includePrinted: boolean): Promise<BadgeRow[]>
+  exportCheckin(): Promise<CheckinRow[]>
+  exportSalesforce(): Promise<SalesforceRow[]>
 }
 
 // Who may do what. Mirrors require_staff(...) in each staff_* function, and scripts/test-access.mjs checks the server side.
@@ -51,6 +56,7 @@ export const ROLES: Record<Exclude<keyof StaffApi, 'live'>, Role[]> = {
   approveEmail: MANAGERS, cancelEmail: MANAGERS, setMaterialStatus: MANAGERS,
   checkIn: ALL, checkInByCode: ALL, checkInException: ALL,
   updateGalaEvent: ADMIN, history: MANAGERS,
+  exportBadges: MANAGERS, exportCheckin: ALL, exportSalesforce: ADMIN,
 }
 export const canDo = (role: Role, action: keyof typeof ROLES) => ROLES[action].includes(role)
 
@@ -126,6 +132,15 @@ export function demoApi(user: StaffUser, update: (fn: (d: DB) => DB) => void, fu
         { actor_type: 'staff', actor: user.name, entity: 'order', entity_id: o, order_id: o, action: 'materials.updated', from_state: order[k], to_state: status, guest_visible: false, summary: `${material === 'logo' ? 'Logo' : 'Program ad'} marked ${status.replace(/_/g, ' ')}.` })
     }),
     history: async (o) => (may('history') ? full().audit_log.filter((a) => a.order_id === o) : forbidden()),
+    exportBadges: (inc) => exported('exportBadges', 'badges', demoBadgeRows(full(), inc), (n) => `Badge file exported: ${n} badge(s)${inc ? ', including printed' : ''}.`),
+    exportCheckin: () => exported('exportCheckin', 'checkin', demoCheckinRows(full()), (n) => `Check-in list exported: ${n} row(s).`),
+    exportSalesforce: () => exported('exportSalesforce', 'salesforce', demoSalesforceRows(full()), (n) => `Salesforce attendee file exported: ${n} attendee(s).`),
+  }
+  // Like the staff_export_* functions: refused for the wrong role, otherwise logged with the row count.
+  function exported<T>(a: keyof typeof ROLES, what: string, rows: T[], summary: (n: number) => string): Promise<T[]> {
+    if (!may(a)) return forbidden()
+    update((d) => addAudit(d, { actor_type: 'staff', actor: user.name, entity: 'export', entity_id: what, order_id: null, action: `export.${what}`, from_state: null, to_state: null, guest_visible: false, summary: summary(rows.length) }))
+    return Promise.resolve(rows)
   }
 }
 
@@ -167,6 +182,10 @@ export function liveApi(client: SupabaseClient, reload: () => Promise<void>): St
       if (error) throw new Error(error.message)
       return data as AuditEntry[]
     },
+    // Reads that also write a change-log entry; no reload: nothing on screen changes.
+    exportBadges: (inc) => call<BadgeRow[]>('staff_export_badges', { p_include_printed: inc }),
+    exportCheckin: () => call<CheckinRow[]>('staff_export_checkin', {}),
+    exportSalesforce: () => call<SalesforceRow[]>('staff_export_salesforce', {}),
   }
 }
 
