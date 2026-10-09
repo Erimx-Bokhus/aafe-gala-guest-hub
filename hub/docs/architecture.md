@@ -14,7 +14,7 @@ Outputs | Badge file — mail merge with table number; Follow-up drafts — staf
 ## What's built
 <!-- new 2026-10-05 22:58 Aisling -->
 
-As of October 8, in the team repo. The build follows Natalie's Supabase schema. Test counts are kept in [Build plan](#build-plan.where-each-component-stands), C11. <!-- modified 2026-10-08 04:15 Aisling -->
+As of October 9, in the team repo. The build follows Natalie's Supabase schema. Test counts are kept in [Build plan](#build-plan.where-each-component-stands), C11. To see every file, function and table and how they connect, open the [Code map](#codemap). <!-- modified 2026-10-09 00:05 Aisling -->
 
 | Part | Where | What it does <!-- new 2026-10-05 22:58 Aisling --> |
 | --- | --- | --- |
