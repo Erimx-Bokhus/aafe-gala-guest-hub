@@ -58,6 +58,8 @@ export interface StaffApi {
   emailQueue(): Promise<QueuedEmail[]>
   /** Draft a guest-list reminder for each sponsor who needs one; returns how many. Drafts only: staff approve each. */
   queueReminders(minDays?: number): Promise<number>
+  /** Let sponsors see which of their guests have arrived (arrived or not, never a time). Switching on needs a note of AAFE's privacy approval. */
+  setSponsorArrivals(on: boolean, note: string): Promise<void>
 }
 
 // Who may do what. Mirrors require_staff(...) in each staff_* function, and scripts/test-access.mjs checks the server side.
@@ -71,7 +73,7 @@ export const ROLES: Record<Exclude<keyof StaffApi, 'live'>, Role[]> = {
   checkIn: ALL, checkInByCode: ALL, checkInException: ALL,
   updateGalaEvent: ADMIN, history: MANAGERS,
   exportBadges: MANAGERS, exportCheckin: ALL, exportSalesforce: ADMIN,
-  emailQueue: MANAGERS, queueReminders: MANAGERS,
+  emailQueue: MANAGERS, queueReminders: MANAGERS, setSponsorArrivals: ADMIN,
 }
 export const canDo = (role: Role, action: keyof typeof ROLES) => ROLES[action].includes(role)
 
@@ -157,6 +159,18 @@ export function demoApi(user: StaffUser, update: (fn: (d: DB) => DB) => void, fu
       update((d) => { const r = store.queueGuestListReminders(d, user, minDays); n = r.n; return r.db })
       return n
     },
+    // Like staff_set_sponsor_arrivals: on needs AAFE's approval noted; off needs nothing; both logged, a repeat does nothing.
+    setSponsorArrivals: (on, note) => {
+      const why = note.trim()
+      if (on && !why) return Promise.reject(new Error("invalid_input: record AAFE's privacy approval (who and when) to switch arrivals on"))
+      return run('setSponsorArrivals', (d) => {
+        const ev = d.gala_events.find((x) => x.id === d.meta.current_event_id)!
+        if (!!ev.sponsor_arrivals_visible === on) return d
+        return addAudit({ ...d, gala_events: d.gala_events.map((x) => (x.id === ev.id ? { ...x, sponsor_arrivals_visible: on, sponsor_arrivals_note: on ? why : x.sponsor_arrivals_note ?? null } : x)) },
+          { actor_type: 'staff', actor: user.name, entity: 'gala_event', entity_id: ev.id, order_id: null, action: 'gala.sponsor_arrivals', from_state: String(!!ev.sponsor_arrivals_visible), to_state: String(on), guest_visible: false,
+            summary: on ? `Sponsors can now see which of their guests have arrived (approval: ${why}).` : 'Sponsors can no longer see which of their guests have arrived.' })
+      })
+    },
   }
   // Like the staff_export_* functions: refused for the wrong role, otherwise logged with the row count.
   function exported<T>(a: keyof typeof ROLES, what: string, rows: T[], summary: (n: number) => string): Promise<T[]> {
@@ -210,6 +224,7 @@ export function liveApi(client: SupabaseClient, reload: () => Promise<void>): St
     exportSalesforce: () => call<SalesforceRow[]>('staff_export_salesforce', {}),
     emailQueue: () => call<QueuedEmail[]>('staff_email_queue', {}),
     queueReminders: async (minDays = 7) => { const n = await call<number>('staff_queue_guest_list_reminders', { p_min_days: minDays }); await reload(); return n },
+    setSponsorArrivals: (on, note) => write('staff_set_sponsor_arrivals', { p_on: on, p_note: note.trim() || null }),
   }
 }
 
