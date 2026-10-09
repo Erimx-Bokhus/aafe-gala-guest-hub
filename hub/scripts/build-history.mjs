@@ -32,7 +32,7 @@ const commits = [];
 for (const row of git('log', '--no-merges', '--format=%H%x09%at%x09%an%x09%s', '--', 'hub/docs').trim().split('\n').filter(Boolean)) {
   const [sha, at, author, msg] = row.split('\t');
   const changes = [];
-  const diff = git('show', '-U0', '--format=', sha, '--', 'hub/docs');
+  const diff = git('show', '-U0', '--ignore-cr-at-eol', '--format=', sha, '--', 'hub/docs');   // a line-ending-only change isn't an edit
   for (const file of diff.split(/^diff --git /m).slice(1)) {
     const path = (file.match(/^a\/(\S+)/) || [])[1]; if (!path || !path.endsWith('.md')) continue;
     const page = path.split('/').pop().replace(/\.md$/, '');
