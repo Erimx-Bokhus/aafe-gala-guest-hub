@@ -5,6 +5,15 @@ Every change to this hub, newest first. Open it while signed in to claude.ai and
 Each change has a kind, shown the same way on every page next to the exact line that changed: **✦ New** (didn't exist before), **+ Updated** (rows, tasks, or terms added), **✎ Modified** (wording, numbers, or a rule changed), **− Removed** (taken out), and **! Important** (everyone should act on it). Hover an icon for the date, time (New York), and who made the change; click it to mark it read.
 
 ```changes
+2026-10-09 00:05 | modified | Aisling | tasks | Oct 8 night: PRs #81 and #82 (iPad layout), the review of Antonin's #75–#77 sent to Natalie, the PRD in Pathfinder, and the Saturday sign-in test at 12 PM; the code map task shows what's built and what's left
+2026-10-09 00:05 | modified | Natalie | screens.ipad-check-in-app | iPad screenshots retaken: the larger logo mark (still a grey placeholder) and the portrait filter on its own row (PRs #81, #82)
+2026-10-09 00:05 | modified | Aisling | build-plan.where-each-component-stands | Check-in app: the larger mark and portrait layout (PRs #81, #82); sponsor form: Antonin's #75–#77 reviewed, waiting on Natalie
+2026-10-09 00:05 | modified | Aisling | decisions.pending | When sponsor links stop: with option A, live sponsors never see #75's "list is closed" card, because their link stops at the same moment
+2026-10-09 00:05 | modified | Aisling | documents | The PR review plan's status, and Natalie's enterprise PRD approved by Pursuit and in Pathfinder
+2026-10-09 00:05 | modified | Aisling | overview | Status: the iPad app connected, the backend audit fixed, Antonin's portal PRs in review
+2026-10-09 00:05 | modified | Aisling | risks | The sign-in test is Saturday at 12 PM at the Pursuit building, once Cornell confirms
+2026-10-09 00:05 | updated | Aisling | glossary | Two new terms: Code map and graphify
+2026-10-08 23:55 | new | Aisling | codemap | New page: Code map, an interactive map of every file, function and table in the prototype and how they connect; search, filter by area, click for details
 2026-10-08 17:10 | modified | Aisling | tasks | The four audit bugs and the five smaller findings are fixed with tests in one PR (#78); next: a full audit of the whole system and a code map in the hub
 2026-10-08 17:10 | modified | Aisling | decisions | Supabase advisor warnings down from 43 to 1: the functions the apps call moved to a private schema behind same-name wrappers (PR #78)
 2026-10-08 17:10 | modified | Aisling | build-plan.where-each-component-stands | About 1,250 automated checks; nine audit bugs fixed with tests (PR #78)

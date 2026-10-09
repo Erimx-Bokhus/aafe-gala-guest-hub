@@ -24,7 +24,7 @@ The demo preview's free tier lapses before Demo Day | 2 | 2 | Stay on free plans
 Two sponsor portals drift apart | 2 | 2 | One portal (`prototype/guest-portal`); ideas from Antonin's prototype come in as small PRs that Natalie approves | Natalie, Antonin
 A secret key reaches the browser or the repo | 1 | 3 | Keys that bypass the access rules live only in Supabase's secret store; build and demo-file guards (PR #36); secret scan on every PR; rotate every key at handoff | Aisling
 The demo backend sits in one person's Supabase account | 2 | 2 | Agree on the demo's project and owner; the seed data and `npm run db:load` rebuild it anywhere; rotate keys at handoff | Aisling
-The staff app hasn't yet run against Supabase with real sign-in | 2 | 2 | Live role checks on Aisling's test project pass (Oct 8); in-person sign-in test on Saturday, Oct 10 | Aisling, Cornell
+The staff app hasn't yet run against Supabase with real sign-in | 2 | 2 | Live role checks on Aisling's test project pass (Oct 8); in-person sign-in test on Saturday, Oct 10, 12 PM at the Pursuit building (Cornell to confirm) | Aisling, Cornell
 The Oct 7 scope additions crowd out the full path due Oct 30 | 2 | 3 | Hold to P0: the full path works end to end first; the Demo Day additions (C13) follow | Natalie, Aisling
 ```
 

@@ -50,7 +50,7 @@ Staff can search a name or sponsor and mark the guest arrived. At the door, volu
 ## iPad check-in app
 <!-- new 2026-10-08 04:15 Aisling -->
 
-Natalie's app for volunteers at the door (`prototype/checkin-app/`, PR #56), on the Full gala's 553 invented guests, captured October 8. Volunteers sign in with a check-in-only role; the app shows tonight's gala only, keeps working offline, and syncs later. AAFE's logo mark is a grey placeholder (hard rule 8).
+Natalie's app for volunteers at the door (`prototype/checkin-app/`, PR #56), on the Full gala's 553 invented guests, retaken October 9 with the larger logo mark (PR #81) and, in portrait, the All / Not checked in / Checked in filter on its own row (PRs #81, #82). Volunteers sign in with a check-in-only role; the app shows tonight's gala only, keeps working offline, and syncs later. AAFE's logo mark is a grey placeholder (hard rule 8). <!-- modified 2026-10-09 00:05 Aisling -->
 
 The guest list, A to Z by last name, with each guest's category, seat, and table.
 
@@ -72,6 +72,6 @@ Exceptions, such as a walk-in, are recorded with a note and listed for the check
 
 ![The exceptions list with an invented walk-in](img/ipad-exceptions.jpg)
 
-The same app held upright.
+The same app held upright. The filter moves to its own row, and Tab follows the screen from top to bottom (PR #82). <!-- modified 2026-10-09 00:05 Aisling -->
 
-![iPad check-in app in portrait, 12 of 553 checked in](img/ipad-portrait.jpg)
+![iPad check-in app in portrait, 12 of 553 checked in, with the filter on its own row under search, Scan and Exception](img/ipad-portrait.jpg)

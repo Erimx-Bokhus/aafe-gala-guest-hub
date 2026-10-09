@@ -54,6 +54,8 @@ Door list | What the iPad app holds: only the fields a door volunteer needs (nam
 Offline queue | Check-ins the iPad saved while the internet was down, sent once it's back; the first arrival wins. <!-- new 2026-10-08 04:15 Aisling -->
 Approval queue | Emails waiting for a staff member to approve them; nothing sends without that approval. <!-- new 2026-10-08 04:15 Aisling -->
 Pre-fill | Clearly readable names from a Give Lively guest list, placed in the sponsor's seats for the sponsor to confirm. <!-- new 2026-10-08 04:15 Aisling -->
+Code map | The hub page that draws every file, function and database table in the prototype and how they connect, built from the code by graphify. <!-- new 2026-10-09 00:05 Aisling -->
+graphify | An open-source tool that reads code and maps what uses what, with no AI and nothing sent anywhere; it builds the Code map. <!-- new 2026-10-09 00:05 Aisling -->
 Fingerprint | The stored, scrambled copy (a SHA-256 hash) of a sponsor link or QR code; the database never keeps the working code itself. <!-- new 2026-10-08 04:15 Aisling -->
 Vercel | The host for the demo's web apps, on its free plan; the database stays on Supabase. <!-- new 2026-10-08 04:15 Aisling -->
 Labeled data sets | The three invented demo data sets, one loaded at a time: Small, Full as sent, and Full fixed. <!-- new 2026-10-08 04:15 Aisling -->

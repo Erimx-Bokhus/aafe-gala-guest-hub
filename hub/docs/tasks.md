@@ -125,12 +125,24 @@ The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus),
 - [x] Smaller audit findings, fixed with tests in the same PR (#78): a Give Lively refund recomputes the payment status from that payment alone; clearing the gala's deadline leaves links on the old one; the portal's ticket-holder check uses the tier id; two changes aren't logged; check-ins don't check the gala — Aisling <!-- modified 2026-10-08 17:10 Aisling -->
 - [x] Supabase advisor warnings from 43 to 1: the functions the apps call moved to a private schema behind same-name wrappers, Supabase's recommended fix; checked live on Aisling's test project (PR #78) — Aisling <!-- new 2026-10-08 17:10 Aisling -->
 - [x] What's new: six of Oct 8's timestamps were written in UTC; corrected to New York time (read status is kept) — Aisling <!-- new 2026-10-08 17:10 Aisling -->
-- [ ] Full audit of the whole system, frontend and backend, once PR #78 merges — Aisling <!-- new 2026-10-08 17:10 Aisling -->
-- [ ] A code map in the hub: every file as a node with what it does and which files it works with; click one to see its purpose, its code and its connections — Aisling <!-- new 2026-10-08 17:10 Aisling -->
-- [ ] Decide when sponsor links stop working: three options on the [PR review plan](https://claude.ai/artifact/M25oqGpKjoyXbZiUc1UFGB) (A at the deadline, today; B edit until the deadline, view until the day after the gala, recommended; C edit until after the gala). PR #75 waits on it — Natalie, then AAFE <!-- new 2026-10-08 16:40 Aisling -->
-- [ ] Split PR #76 (portal accessibility) into five small PRs, each with screenshots for Natalie: the "Open your guest list" button, error announcements, contrast, the shared dialog, small fixes — Aisling (Natalie approves) <!-- new 2026-10-08 16:40 Aisling -->
-- [ ] PR #77 ("N guests still need names"): small fixes and before/after screenshots, then Natalie's approval — Antonin <!-- new 2026-10-08 16:40 Aisling -->
+- [ ] Full audit of the whole system, frontend and backend, now that PR #78 is merged (Oct 8) — Aisling <!-- modified 2026-10-09 00:05 Aisling -->
+- [ ] A code map in the hub: every file as a node with what it does and which files it works with; click one to see its purpose, its code and its connections. Built: the [Code map](#codemap) page, with every file, function and table, search, and each one's file, line and connections. Still to add: a one-line purpose for each file and a look at its code — Aisling <!-- modified 2026-10-09 00:05 Aisling -->
+- [ ] Decide when sponsor links stop working: three options on the [PR review plan](https://claude.ai/artifact/M25oqGpKjoyXbZiUc1UFGB) (A at the deadline, today; B edit until the deadline, view until the day after the gala, recommended; C edit until after the gala). PR #75 waits on it: with option A, live sponsors never see its "list is closed" card, because their link stops at the same moment — Natalie, then AAFE <!-- modified 2026-10-09 00:05 Aisling -->
+- [ ] PR #76 (portal accessibility): split into five small PRs with screenshots, or merge it whole once its two double-click files are rebuilt, as the Oct 8 review suggests. It also changes the shared dialog and form fields the staff and iPad apps use, so Natalie checks those apps too; fields without an id get duplicate ids — Aisling (Natalie decides) <!-- modified 2026-10-09 00:05 Aisling -->
+- [ ] PR #77 ("N guests still need names"): hide the line after the deadline once #75 is in, a little more space under the progress bar, then Natalie's approval — Antonin <!-- modified 2026-10-09 00:05 Aisling -->
 - [ ] Decide whether gala admins keep direct table edits on the gala, tiers, tables and staff list now that the staff app saves through server functions (one shared rule covers all four) — Aisling <!-- new 2026-10-08 16:40 Aisling -->
+
+## Added October 8 (night)
+<!-- new 2026-10-09 00:05 Aisling -->
+
+- [x] iPad check-in: a larger AAFE mark and a tidier search row in portrait, screenshots retaken (PR #81) — Natalie <!-- new 2026-10-09 00:05 Aisling -->
+- [x] iPad follow-ups: the mark goes back to its small size while searching, so the list keeps its room above the keyboard; Tab follows the screen in portrait; checked at four iPad sizes (PR #82) — Aisling <!-- new 2026-10-09 00:05 Aisling -->
+- [x] Review Antonin's portal PRs #75–#77, each tested merged with `main` (90 tests, build, translation and real-data checks pass), and send the findings to Natalie first, since the portal is hers. Suggested order: #77, then #75 with a hide check, then #76 once its files are rebuilt — Aisling <!-- new 2026-10-09 00:05 Aisling -->
+- [ ] Natalie's take on the #75–#77 review, then the notes go on the PRs for Antonin. His questions for Natalie: Poppins for the portal, a darker input border, full name or first and last (maybe for AAFE on Oct 15), and the PRD still saying Korean is dropped — Natalie, then Aisling <!-- new 2026-10-09 00:05 Aisling -->
+- [x] Natalie's enterprise PRD approved by Pursuit and submitted in Pathfinder under Build — Natalie, Aisling <!-- new 2026-10-09 00:05 Aisling -->
+- [ ] Submit Natalie's enterprise PRD in Pathfinder under Build, for the team's PRD milestone — Cornell, Antonin <!-- new 2026-10-09 00:05 Aisling -->
+- [ ] Confirm the in-person sign-in test: Saturday, Oct 10, 12 PM, at the Pursuit building — Cornell <!-- new 2026-10-09 00:05 Aisling -->
+- [x] Code map page in the hub, built from the code with graphify; iPad screenshots on Live build retaken with #81 and #82 — Aisling <!-- new 2026-10-09 00:05 Aisling -->
 
 ## Week of October 12
 
