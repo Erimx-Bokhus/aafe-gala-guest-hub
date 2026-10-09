@@ -8,6 +8,7 @@ import { addAudit, loadDB } from '@shared/data'
 import type { Snapshot } from '@shared/offlineCheckin'
 import type { AuditEntry, DB, EmailLog, GalaEvent, Guest, Material, PayMethod, Role, StaffUser } from '@shared/types'
 import * as store from './store'
+import type { GlImportRow, GlImportRun, ImportResult } from './importer'
 import { demoBadgeRows, demoCheckinRows, demoSalesforceRows, type BadgeRow, type CheckinRow, type SalesforceRow } from './exports'
 
 export type OfflineMethod = Extract<PayMethod, 'check' | 'ach_direct' | 'wire'>
@@ -60,6 +61,14 @@ export interface StaffApi {
   queueReminders(minDays?: number): Promise<number>
   /** Let sponsors see which of their guests have arrived (arrived or not, never a time). Switching on needs a note of AAFE's privacy approval. */
   setSponsorArrivals(on: boolean, note: string): Promise<void>
+  /** Write a prepared Give Lively upload (importer.ts): all of it, or nothing. Gala admins only. */
+  importGiveLively(rows: GlImportRow[], run: GlImportRun): Promise<ImportResult>
+  /** This gala's Give Lively page name, chosen once from the pages in an upload. */
+  setGalaPage(pageName: string): Promise<void>
+  /** Link a Give Lively tier name ("Ticket") to one of AAFE's packages for this gala. */
+  setTierMapping(givelivelyName: string, tierId: string): Promise<void>
+  /** Close an import review item with what staff decided. */
+  resolveImportReview(id: string, resolution: string): Promise<void>
 }
 
 // Who may do what. Mirrors require_staff(...) in each staff_* function, and scripts/test-access.mjs checks the server side.
@@ -74,6 +83,7 @@ export const ROLES: Record<Exclude<keyof StaffApi, 'live'>, Role[]> = {
   updateGalaEvent: ADMIN, history: MANAGERS,
   exportBadges: MANAGERS, exportCheckin: ALL, exportSalesforce: ADMIN,
   emailQueue: MANAGERS, queueReminders: MANAGERS, setSponsorArrivals: ADMIN,
+  importGiveLively: ADMIN, setGalaPage: ADMIN, setTierMapping: ADMIN, resolveImportReview: MANAGERS,
 }
 export const canDo = (role: Role, action: keyof typeof ROLES) => ROLES[action].includes(role)
 
@@ -171,6 +181,21 @@ export function demoApi(user: StaffUser, update: (fn: (d: DB) => DB) => void, fu
             summary: on ? `Sponsors can now see which of their guests have arrived (approval: ${why}).` : 'Sponsors can no longer see which of their guests have arrived.' })
       })
     },
+    importGiveLively: async (rows, run) => {
+      if (!may('importGiveLively')) return forbidden()
+      let result: ImportResult | null = null
+      update((d) => { const r = store.demoImport(d, user, rows, run); result = r.result; return r.db })
+      return result!
+    },
+    setGalaPage: (page) => (page.trim() ? run('setGalaPage', (d) => store.setGalaPage(d, user, page)) : Promise.reject(new Error('invalid_input: page name is required'))),
+    setTierMapping: (name, tierId) => (!name.trim() ? Promise.reject(new Error('invalid_input: tier name is required'))
+      : !full().sponsorship_tiers.some((t) => t.id === tierId) ? Promise.reject(new Error('not_found: tier'))
+      : run('setTierMapping', (d) => store.setTierMapping(d, user, name, tierId))),
+    resolveImportReview: (id, resolution) => {
+      if (!may('resolveImportReview')) return forbidden()
+      if (!(full().import_review ?? []).some((v) => v.id === id && v.status === 'open')) return Promise.reject(new Error('not_found'))
+      update((d) => store.resolveImportReview(d, user, id, resolution)); return Promise.resolve()
+    },
   }
   // Like the staff_export_* functions: refused for the wrong role, otherwise logged with the row count.
   function exported<T>(a: keyof typeof ROLES, what: string, rows: T[], summary: (n: number) => string): Promise<T[]> {
@@ -225,6 +250,10 @@ export function liveApi(client: SupabaseClient, reload: () => Promise<void>): St
     emailQueue: () => call<QueuedEmail[]>('staff_email_queue', {}),
     queueReminders: async (minDays = 7) => { const n = await call<number>('staff_queue_guest_list_reminders', { p_min_days: minDays }); await reload(); return n },
     setSponsorArrivals: (on, note) => write('staff_set_sponsor_arrivals', { p_on: on, p_note: note.trim() || null }),
+    importGiveLively: async (rows, run) => { const r = await call<ImportResult>('staff_import_givelively', { p_rows: rows, p_run: run }); await reload(); return r },
+    setGalaPage: (page) => write('staff_set_gala_page', { p_page_name: page }),
+    setTierMapping: (name, tierId) => write('staff_set_tier_mapping', { p_givelively_name: name, p_tier_id: tierId }),
+    resolveImportReview: (id, resolution) => write('staff_resolve_import_review', { p_id: id, p_resolution: resolution }),
   }
 }
 
@@ -316,7 +345,7 @@ export function volunteerDb(snap: CheckinSnapshot, user: StaffUser): DB {
   }
 }
 
-const TABLES = ['gala_events', 'staff_users', 'sponsorship_tiers', 'sponsors', 'orders', 'payments', 'event_tables', 'guests', 'seats', 'check_ins', 'email_log', 'salesforce_sync'] as const
+const TABLES = ['gala_events', 'staff_users', 'sponsorship_tiers', 'sponsors', 'orders', 'payments', 'event_tables', 'guests', 'seats', 'check_ins', 'email_log', 'salesforce_sync', 'import_runs', 'import_review', 'tier_mappings'] as const
 const PAGE = 1000 // Supabase returns at most 1,000 rows per request
 
 export async function selectAll(client: SupabaseClient, table: string): Promise<unknown[]> {
