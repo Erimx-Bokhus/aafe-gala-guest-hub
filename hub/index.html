@@ -521,8 +521,29 @@ mark{background:var(--mark);color:inherit;border-radius:2px;padding:0 1px}
 .cm-info code{font-size:12px;overflow-wrap:anywhere}
 .cm-kinds{display:flex;flex-wrap:wrap;gap:4px 12px;font:500 12px/1.4 var(--f-ui)}
 .cm-kinds span{display:inline-flex;align-items:center;gap:5px}
-.cm-kinds i{width:9px;height:9px;border:1.5px solid var(--soft);border-radius:50%}
+.cm-kinds i{width:9px;height:9px;background:var(--soft);border-radius:50%}
 .cm-kinds i.sq{border-radius:2px}.cm-kinds i.dia{border-radius:1px;transform:rotate(45deg) scale(.85)}
+.cm-kinds i.tri,.cm-dot.tri{border-radius:0;clip-path:polygon(50% 0,100% 100%,0 100%)}
+.cm-kinds i.ring{background:none;border:2px solid var(--soft)}
+.cm-dot.ring{background:none;border:2px solid var(--c)}
+.doc .cm-info .cm-about{color:var(--ink);font:400 13.5px/1.55 var(--f-body)}
+.doc .cm-info .cm-in{font-size:12.5px}
+.cm-in b{font-weight:600;color:var(--soft)}
+.cm-code{border-top:1px solid var(--rule)}
+.cm-code-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px;padding:10px 12px;border-bottom:1px solid var(--rule)}
+.cm-where{font-size:12.5px;overflow-wrap:anywhere;min-width:0}
+.cm-code-tools{display:flex;gap:6px;flex-wrap:wrap}
+.cm-code-tools .btn{padding:7px 11px;font-size:12px;text-decoration:none;color:var(--ink)}
+.cm-code-tools [aria-pressed="true"]{border-color:var(--accent);color:var(--accent-text);background:var(--accent-wash)}
+.cm-code-body{max-height:460px;overflow:auto;background:var(--bg);outline:none}
+.cm-code-body:focus-visible{box-shadow:inset 0 0 0 2px var(--accent)}
+.cm-lines{font:400 12.5px/1.6 var(--f-mono);padding:8px 0;min-width:max-content}
+.cm-lines .cl{display:grid;grid-template-columns:52px auto}
+.cm-lines .no{color:var(--faint);text-align:right;padding-right:14px;user-select:none;font-variant-numeric:tabular-nums}
+.cm-lines .tx{white-space:pre;color:var(--ink);padding-right:16px}
+.cm-lines .hl{background:var(--accent-wash)}
+.cm-lines .hl .no{color:var(--accent-text);box-shadow:inset 3px 0 0 var(--accent)}
+.cm-lines .loading,.cm-lines .ch-empty,.cm-more-code{margin:8px 14px;font:400 12.5px/1.5 var(--f-ui);color:var(--faint);white-space:normal}
 .doc .cm-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
 .cm-more > summary{font:600 12px/1.4 var(--f-ui)!important;color:var(--accent-text)!important;padding:4px 8px!important}
 .cm-back{font:600 12px/1 var(--f-ui);color:var(--accent-text);background:none;border:0;padding:0;margin:0 0 10px;cursor:pointer}
@@ -1270,8 +1291,14 @@ const CM_RELS = {contains: ['Contains', 'Inside'], calls: ['Calls', 'Called by']
   imports_from: ['Imports', 'Imported by'], reads_from: ['Reads', 'Read by'], references: ['Refers to', 'Referred to by'],
   method: ['Has method', 'Method of'], re_exports: ['Re-exports', 'Re-exported by'], indirect_call: ['Calls', 'Called by'],
   dynamic_import: ['Imports', 'Imported by'], indexes: ['Indexes', 'Indexed by'], executes: ['Runs', 'Run by'],
-  triggers: ['Triggers', 'Triggered by'], inherits: ['Extends', 'Extended by']};
-const CM_KIND = {file: 'File', function: 'Function', type: 'Type or class', table: 'Database table or index', value: 'Value'};
+  triggers: ['Triggers', 'Triggered by'], inherits: ['Extends', 'Extended by'],
+  calls_db: ['Calls in the database', 'Called from'], uses_table: ['Uses table', 'Used by'], guards: ['Guards', 'Guarded by']};
+const CM_KIND = {file: 'File', function: 'Function', type: 'Type or class', table: 'Database table or index', value: 'Value',
+  rule: 'Access rule', trigger: 'Trigger'};
+// Each file's source, for the code preview: about 900 KB, so it loads the first time someone opens one
+let cmSrcP = null;
+const cmSource = () => (cmSrcP ||= fetch('docs/codemap-source.json', {cache: 'no-cache'})
+  .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); }).catch(e => { cmSrcP = null; throw e; }));
 function fenceCodemap(){ return '<div class="cm" data-cm><p class="loading" style="padding:16px">Loading the code map…</p></div>'; }
 function mountCodemap(el){
   (cmP ||= fetch('docs/codemap.json', {cache: 'no-cache'}).then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); }))
@@ -1280,24 +1307,30 @@ function mountCodemap(el){
 }
 function renderCodemap(el, d){
   const TESTS = d.areas.length - 1;
-  const N = d.nodes.map(([label, area, file, line, kind, x, y, deg], i) => ({i, label, area, file: d.files[file], line, kind: d.kinds[kind], x, y, deg, out: [], inn: []}));
+  const N = d.nodes.map(([label, area, file, line, kind, x, y, deg, end, doc], i) => ({i, label, area, fi: file, file: d.files[file], line, end, doc, kind: d.kinds[kind], x, y, deg, out: [], inn: []}));
+  const fileNode = new Map(N.filter(n => n.kind === 'file').map(n => [n.fi, n]));
   d.edges.forEach(([a, b, r]) => { const rel = d.rels[r]; N[a].out.push([b, rel]); N[b].inn.push([a, rel]); });
   const count = d.areas.map((_, a) => N.filter(n => n.area === a).length);
   const on = new Set(store.get('aafe-hub-cm-areas', d.areas.map((_, a) => a).filter(a => a !== TESTS)));
-  let sel = -1, hov = -1, view = null, moved = false, raf = 0;
-  const dotCls = n => n.kind === 'file' || n.kind === 'table' ? 'cm-dot sq' : 'cm-dot';
+  let sel = -1, hov = -1, view = null, moved = false, raf = 0, whole = false;
+  const dotCls = n => 'cm-dot' + ({file: ' sq', table: ' sq', rule: ' tri', trigger: ' ring'}[n.kind] || '');
   const pick = (n, extra = '') => `<button type="button" class="cm-pick" data-n="${n.i}"><i class="${dotCls(n)}" style="--c:var(--a${n.area})"></i><span>${esc(n.label)}</span><small>${esc(extra || d.areas[n.area])}</small></button>`;
 
-  el.innerHTML = `<div class="cm-bar"><div class="cm-find"><input type="search" placeholder="Find a file, function or table" aria-label="Find a file, function or table in the code map" autocomplete="off"><ul class="cm-hits" hidden></ul></div>
+  el.innerHTML = `<div class="cm-bar"><div class="cm-find"><input type="search" placeholder="Find a file, function, table or rule" aria-label="Find a file, function, table or access rule in the code map" autocomplete="off"><ul class="cm-hits" hidden></ul></div>
       <button class="btn" type="button" data-cm-fit>Show all</button></div>
     <div class="cm-areas" role="group" aria-label="Areas to show">${d.areas.map((a, i) => `<button type="button" class="cm-chip" data-area="${i}" aria-pressed="${on.has(i)}" style="--c:var(--a${i})"><i></i>${esc(a)} <b>${count[i]}</b></button>`).join('')}</div>
     <div class="cm-body"><div class="cm-stage" tabindex="0" role="img" aria-label="Map of the code: ${N.length} files, functions and tables, grouped by area. Use the search box or the lists beside it to explore by keyboard."><canvas></canvas>
       <div class="cm-zoom"><button class="btn" type="button" data-zoom="1.4" aria-label="Zoom in">+</button><button class="btn" type="button" data-zoom="0.7" aria-label="Zoom out">−</button></div>
       <p class="cm-hint">Drag to move · pinch, Ctrl + scroll or + − to zoom · click a dot for details</p></div>
       <div class="cm-info" aria-live="polite"></div></div>
-    <p class="cm-foot">Built ${esc(d.generated)} ET from commit <code>${esc(d.commit)}</code> with ${esc(d.tool.trim())}: ${N.length.toLocaleString('en-US')} files, functions and tables, ${d.edges.length.toLocaleString('en-US')} links, ${d.files.length} source files.</p>`;
+    <section class="cm-code" hidden aria-label="Code preview"><div class="cm-code-head"><code class="cm-where"></code>
+      <span class="cm-code-tools"><button class="btn" type="button" data-whole aria-pressed="false">Whole file</button>
+      <a class="btn" data-team data-gh target="_blank" rel="noopener" title="The repository is private: team members only">Open on GitHub</a></span></div>
+      <div class="cm-code-body" tabindex="0" aria-label="Code"><div class="cm-lines"></div></div></section>
+    <p class="cm-foot">Built ${esc(d.generated)} ET from commit <code>${esc(d.commit)}</code> with ${esc(d.tool.trim())} and the hub's own database links: ${N.length.toLocaleString('en-US')} files, functions, tables, access rules and triggers, ${d.edges.length.toLocaleString('en-US')} links, ${d.files.length} source files.</p>`;
   const stage = el.querySelector('.cm-stage'), cv = stage.querySelector('canvas'), ctx = cv.getContext('2d');
   const info = el.querySelector('.cm-info'), input = el.querySelector('.cm-find input'), hits = el.querySelector('.cm-hits');
+  const code = el.querySelector('.cm-code'), codeBody = code.querySelector('.cm-code-body'), codeLines = code.querySelector('.cm-lines');
   const vis = n => on.has(n.area);
   const neighbors = i => new Set([...N[i].out, ...N[i].inn].map(([j]) => j));
 
@@ -1327,15 +1360,19 @@ function renderCodemap(el, d){
     ctx.stroke(); ctx.globalAlpha = 1;
     if (near){ ctx.lineWidth = 1.5;
       for (const j of near){ const p = N[sel], q = N[j]; if (!vis(q)) continue; ctx.strokeStyle = col(q.area); ctx.beginPath(); ctx.moveTo(sx(p), sy(p)); ctx.lineTo(sx(q), sy(q)); ctx.stroke(); } }
-    // nodes: squares for files, diamonds for tables, circles for the rest; a ring in the background color separates overlaps
+    // nodes: squares for files, diamonds for tables, triangles for access rules, rings for triggers, circles for the rest;
+    // a ring in the background color separates overlaps
     const shape = (n, r) => { const x = sx(n), y = sy(n); ctx.beginPath();
       if (n.kind === 'file') ctx.rect(x - r, y - r, 2 * r, 2 * r);
       else if (n.kind === 'table'){ ctx.moveTo(x, y - r * 1.25); ctx.lineTo(x + r * 1.25, y); ctx.lineTo(x, y + r * 1.25); ctx.lineTo(x - r * 1.25, y); ctx.closePath(); }
+      else if (n.kind === 'rule'){ ctx.moveTo(x, y - r * 1.35); ctx.lineTo(x + r * 1.2, y + r * 0.85); ctx.lineTo(x - r * 1.2, y + r * 0.85); ctx.closePath(); }
       else ctx.arc(x, y, r, 0, 2 * Math.PI); };
     ctx.lineWidth = 1.5; ctx.strokeStyle = bg;
     const order = N.filter(vis).sort((a, b) => a.deg - b.deg);
     for (const n of order){ const x = sx(n), y = sy(n); if (x < -20 || y < -20 || x > w + 20 || y > h + 20) continue;
-      ctx.globalAlpha = near && n.i !== sel && !near.has(n.i) ? 0.16 : 1; ctx.fillStyle = col(n.area); shape(n, rad(n)); ctx.fill(); ctx.stroke(); }
+      ctx.globalAlpha = near && n.i !== sel && !near.has(n.i) ? 0.16 : 1;
+      if (n.kind === 'trigger'){ ctx.fillStyle = bg; shape(n, rad(n)); ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = col(n.area); ctx.stroke(); ctx.lineWidth = 1.5; ctx.strokeStyle = bg; continue; }
+      ctx.fillStyle = col(n.area); shape(n, rad(n)); ctx.fill(); ctx.stroke(); }
     ctx.globalAlpha = 1;
     if (sel >= 0 && vis(N[sel])){ ctx.lineWidth = 2.5; ctx.strokeStyle = ink; shape(N[sel], rad(N[sel]) + 3); ctx.stroke(); }
     if (hov >= 0 && hov !== sel){ ctx.lineWidth = 2; ctx.strokeStyle = ink; shape(N[hov], rad(N[hov]) + 2); ctx.stroke(); }
@@ -1372,6 +1409,8 @@ function renderCodemap(el, d){
     view = {s, tx: px - (px - view.tx) * f, ty: py - (py - view.ty) * f}; draw(); }
   function center(n){ const s = Math.max(view.s, 1.3); view = {s, tx: stage.clientWidth / 2 - n.x * s, ty: stage.clientHeight / 2 - n.y * s}; }
 
+  // a file's note, cut to its first sentence (at most about 220 characters) for the line under a function
+  const firstSentence = t => { const m = t.match(/^.{20,}?[.!?](?=\s|$)/); const f = m ? m[0] : t; return f.length > 220 ? f.slice(0, 220).replace(/\s\S*$/, '') + '…' : f; };
   function list(items, more){
     const rows = items.map(([n, extra]) => `<li>${pick(n, extra)}</li>`);
     if (rows.length <= 12) return `<ul class="cm-list">${rows.join('')}</ul>`;
@@ -1380,8 +1419,8 @@ function renderCodemap(el, d){
   function showInfo(){
     if (sel < 0){
       const top = N.filter(vis).sort((a, b) => b.deg - a.deg).slice(0, 12);
-      info.innerHTML = `<p>Each dot is a file, function, type or database table; each line means one uses another. Color shows the area. Click a dot, a name below, or search above.</p>
-        <div class="cm-kinds"><span><i class="sq"></i>File</span><span><i class="dia"></i>Table</span><span><i></i>Function, type or value</span></div>
+      info.innerHTML = `<p>Each dot is a file, function, type, database table, access rule or trigger; each line means one uses another. Color shows the area. Click a dot, a name below, or search above to see what it does and its code.</p>
+        <div class="cm-kinds"><span><i class="sq"></i>File</span><span><i class="dia"></i>Table</span><span><i class="tri"></i>Access rule</span><span><i class="ring"></i>Trigger</span><span><i></i>Function, type or value</span></div>
         <h5>Most connected</h5>${list(top.map(n => [n, `${n.deg} links`]))}`;
       return;
     }
@@ -1392,7 +1431,10 @@ function renderCodemap(el, d){
     info.innerHTML = `<button type="button" class="cm-back" data-clear>← Most connected</button>
       <h4>${esc(n.label)}</h4>
       <p>${CM_KIND[n.kind]} · <span style="color:var(--a${n.area})">●</span> ${esc(d.areas[n.area])}</p>
+      ${n.kind === 'file' ? (d.about[n.fi] ? `<p class="cm-about">${esc(d.about[n.fi])}</p>` : '')
+        : (n.doc ? `<p class="cm-about">${esc(n.doc)}</p>` : '') + (d.about[n.fi] ? `<p class="cm-in"><b>In ${esc(n.file.split('/').pop())}:</b> ${esc(firstSentence(d.about[n.fi]))}</p>` : '')}
       <p><code>${esc(n.file)}${n.line > 1 ? `:${n.line}` : ''}</code></p>
+      <button type="button" class="cm-back" data-goto-code>Show the code ↓</button>
       ${hidden ? `<p>${hidden} of its links go to areas that are switched off.</p>` : ''}
       ${[...groups].map(([k, arr]) => `<h5>${esc(k)} · ${arr.length}</h5>${list(arr.sort((a, b) => b.deg - a.deg || a.label.localeCompare(b.label)).map(m => [m, m.file === n.file ? '' : m.file.split('/').pop()]), k.toLowerCase())}`).join('')}`;
   }
@@ -1400,8 +1442,26 @@ function renderCodemap(el, d){
     sel = i;
     if (i >= 0 && !on.has(N[i].area)){ on.add(N[i].area); syncChips(); }
     if (i >= 0 && recenter) center(N[i]);
-    showInfo(); draw();
+    showInfo(); showCode(); draw();
     if (focusMap) stage.focus({preventScroll: true});
+  }
+  // the code preview under the map: the selected node's lines, or its whole file with those lines marked
+  function showCode(){
+    if (sel < 0){ code.hidden = true; return; }
+    const n = N[sel], lineRange = n.kind !== 'file' && n.end > n.line;
+    code.hidden = false; code.querySelector('[data-whole]').setAttribute('aria-pressed', whole);
+    code.querySelector('.cm-where').textContent = n.file + (whole ? '' : n.kind === 'file' ? ` · first ${n.end} lines` : lineRange ? `:${n.line}–${n.end}` : `:${n.line}`);
+    code.querySelector('[data-gh]').href = `${d.repo}/blob/${d.commit}/${n.file}#L${n.line}${lineRange ? `-L${n.end}` : ''}`;
+    codeLines.innerHTML = '<p class="loading">Loading the code…</p>';
+    cmSource().then(s => {
+      if (N[sel] !== n) return;
+      const L = s.files[n.fi], a = whole ? 1 : n.line, b = whole ? L.length : Math.min(L.length, n.end);
+      const mark = k => whole && n.kind !== 'file' && k >= n.line && k <= n.end;
+      codeLines.innerHTML = L.slice(a - 1, b).map((t, k) => `<div class="cl${mark(a + k) ? ' hl' : ''}"><span class="no">${a + k}</span><span class="tx">${esc(t) || ' '}</span></div>`).join('')
+        + (!whole && n.kind !== 'file' && b - a >= 119 ? '<p class="cm-more-code">Only the first 120 lines are shown. Choose Whole file for the rest.</p>' : '')
+        + (!whole && n.kind === 'file' && L.length > b ? `<p class="cm-more-code">The first ${b} of ${L.length} lines. Choose Whole file for the rest.</p>` : '');
+      const first = codeLines.querySelector('.hl'); codeBody.scrollTop = first ? first.offsetTop - 24 : 0; codeBody.scrollLeft = 0;
+    }).catch(e => { codeLines.innerHTML = `<p class="ch-empty">The code couldn't load (${esc(e.message || e)}).</p>`; });
   }
   function syncChips(){ el.querySelectorAll('[data-area]').forEach(b => b.setAttribute('aria-pressed', on.has(+b.dataset.area))); store.set('aafe-hub-cm-areas', [...on]); }
 
@@ -1434,6 +1494,8 @@ function renderCodemap(el, d){
     const z = e.target.closest('[data-zoom]'); if (z){ zoomAt(+z.dataset.zoom); return; }
     if (e.target.closest('[data-cm-fit]')){ fit(); draw(); return; }
     if (e.target.closest('[data-clear]')){ select(-1); return; }
+    if (e.target.closest('[data-whole]')){ whole = !whole; showCode(); return; }
+    if (e.target.closest('[data-goto-code]')){ code.scrollIntoView({behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'nearest'}); codeBody.focus({preventScroll: true}); return; }
     const c = e.target.closest('[data-area]');
     if (c){ const a = +c.dataset.area; on.has(a) ? on.delete(a) : on.add(a); syncChips(); if (sel >= 0 && !on.has(N[sel].area)) sel = -1; showInfo(); draw(); return; }
     const p = e.target.closest('[data-n]');

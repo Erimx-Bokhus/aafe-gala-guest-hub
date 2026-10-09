@@ -75,7 +75,7 @@ The Code map page reads `docs/codemap.json`, built from the code by [graphify](h
     graphify update . --force             # writes graphify-out/, which git ignores
     node hub/scripts/build-codemap.mjs
 
-Commit `hub/docs/codemap.json` and publish. The script keeps source code only, puts each file in an area, and lays the map out ahead of time, so the same code always gives the same picture.
+Commit `hub/docs/codemap.json` and `hub/docs/codemap-source.json` (the code previews, loaded only when someone opens one), then publish both with the hub. The script keeps source code only, puts each file in an area, and lays the map out ahead of time, so the same code always gives the same picture. It also adds what graphify can't see: app calls to database functions by name, table use, a database function calling another, the access rules (written as a loop in `backend.sql`) and the triggers. A file's purpose is its opening comment, or its line in `scripts/codemap-purposes.json`.
 
 ## Custom blocks
 
