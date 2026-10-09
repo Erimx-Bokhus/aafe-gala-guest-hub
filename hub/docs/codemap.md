@@ -12,7 +12,7 @@ Every file, function, type, database table, access rule and trigger in the proto
 
 Tests are switched off at first because they connect to almost everything; switch them on with the Tests chip. Your choice of areas is remembered in your browser.
 
-Clicking a dot shows what it's for beside the map: a file's own opening note, or the comment above a function; a function with neither shows its file's note. Below the map is its code, with line numbers. **Whole file** shows the rest of the file with those lines marked, and **Open on GitHub** opens the same lines in the repository, for the team only. Anyone with the hub's link can read the code shown here. It holds no secrets or real data: the secret scan and the real-data guard check every pull request. <!-- new 2026-10-09 00:45 Aisling -->
+Clicking a dot shows what it's for beside the map: a file's own opening note, or the comment above a function; a function with neither shows its file's note. In Team view, its code appears below the map, with line numbers. **Whole file** shows the rest of the file with those lines marked, and **Open on GitHub** opens the same lines in the repository, for the team only. Client view hides the code preview. Like everything in Client view, it's hidden, not locked: the code holds no secrets or real data, and the secret scan and the real-data guard check every pull request. <!-- modified 2026-10-09 00:55 Aisling Code preview hidden in Client view -->
 
 ## The areas
 <!-- new 2026-10-08 23:55 Aisling -->
