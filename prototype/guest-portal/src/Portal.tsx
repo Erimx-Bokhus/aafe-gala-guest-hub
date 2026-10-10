@@ -90,7 +90,7 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
   const seat = editing != null ? view.seats.find((s) => s.slot === editing)! : null
   const pct = view.stats.total ? Math.round((view.stats.named / view.stats.total) * 100) : 0
   const namesLeft = view.stats.total - view.stats.named
-  const namesLeftMessage = namesLeftText(namesLeft, view.deadline ? fmtDate(view.deadline, loc) : undefined, t.namesLeft)
+  const namesLeftMessage = namesLeftText(namesLeft, t.namesLeft)
   const statusText = { paid: t.stPaid, partial: t.stPartial, pledged: t.stPledged, comp: t.stComp }[view.money.status]
   const statusCls = { paid: 'bg-emerald-50 text-emerald-800', partial: 'bg-amber-50 text-amber-800', pledged: 'bg-amber-50 text-amber-800', comp: 'bg-brand-50 text-brand-600' }[view.money.status]
 

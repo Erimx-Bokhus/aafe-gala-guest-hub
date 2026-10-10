@@ -22,7 +22,7 @@ export const REVIEW_LANGS = [
 /** Example values for phrases that fill something in, so reviewers read a real sentence. */
 export const SAMPLES: Record<string, unknown[]> = {
   progress: [3, 10],
-  namesLeft: [3, 'May 11'],
+  namesLeft: [3],
   actAdded: ['Ana Díaz', '4'],
   actUpdated: ['Ana Díaz', '4'],
   actRemoved: ['Ana Díaz', '4'],
