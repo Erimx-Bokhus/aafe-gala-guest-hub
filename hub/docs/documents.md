@@ -1,5 +1,5 @@
 # Documents
-<!-- reviewed 2026-10-08 Aisling -->
+<!-- reviewed 2026-10-09 Aisling -->
 
 Everything the team has produced or collected, in one place. Living documents are linked; the markdown copies in the repo's `docs/` folder are the version Claude Code reads.
 
@@ -9,12 +9,20 @@ Everything the team has produced or collected, in one place. Living documents ar
 | Document | What it is | Status |
 | --- | --- | --- |
 | [AAFE Gala Project Hub](https://claude.ai/artifact/QVViUNx6SWRBZYKCfrAmp6) | This hub: plan, tasks, decisions, What's new, History, and the build so far | Live tracker, with Trello for day-to-day tasks <!-- updated 2026-10-06 06:12 Aisling --> |
+| [Guest Data and AI Handling](https://claude.ai/code/artifact/1d0571f4-d854-4e4a-90df-b60a62de28ce) | What the tool stores, what it never stores, and how AI is used | Draft for AAFE |
+| [Hosting Options Brief](https://claude.ai/code/artifact/3f4edb1b-c918-4ff4-b95e-9c61dd904cd0) | Two-page brief for Pursuit and AAFE: three options, rough costs, timeline; no recommendation | Shared with Avni <!-- modified 2026-10-05 16:51 Aisling --> |
+
+## Team documents
+<!-- team -->
+<!-- new 2026-10-09 06:10 Aisling Internal documents moved here from Living documents -->
+
+| Document | What it is | Status |
+| --- | --- | --- |
+| AAFE check-in prep, Oct 9 ([team channel](https://pursuit-core.slack.com/archives/C0C4HRLSQE7/p1791539970407959)) | A one-page sheet (agenda, demo path, 13 questions, concerns) and two backup recordings of the demo, 1:30 with captions and 3:20 narrated. They show AAFE's real logo and photos, so they stay with the team and AAFE | Posted Oct 9 <!-- new 2026-10-09 06:10 Aisling --> |
 | [PR Review Plan, Oct 8](https://claude.ai/artifact/M25oqGpKjoyXbZiUc1UFGB) | Review of PRs #72–#77: what each needed, the fixes with screenshots, the three options for when sponsor links stop, and the merge order | Shared with the team in Slack, Oct 8; #72 and #73 merged; #75–#77 reviewed and tested Oct 8, findings with Natalie <!-- modified 2026-10-09 00:05 Aisling --> |
 | [Findings, Build Plan, and Tasks](https://claude.ai/code/artifact/25db30ba-7c5a-42dc-8e25-4c2b5dc47d2c) | Overview of findings, the component plan with estimates, the task tracker, and the decision log | Superseded by this hub (Oct 5) <!-- modified 2026-10-06 06:12 Aisling --> |
 | [Discovery Guide v2](https://claude.ai/code/artifact/eedd8e14-cc7b-403e-9f92-4a5a6f96ea78) | Questions in decision order for the October 1 call | Used |
-| [Guest Data and AI Handling](https://claude.ai/code/artifact/1d0571f4-d854-4e4a-90df-b60a62de28ce) | What the tool stores, what it never stores, and how AI is used | Draft for AAFE |
 | [Future Hosting Notes](https://claude.ai/code/artifact/f74b0de5-c123-40b4-a9fd-c60be5297c41) | Engineering notes on future hosting paths, revised after Natalie's critique; rechecked Oct 3 | Internal <!-- modified 2026-10-05 16:51 Aisling --> |
-| [Hosting Options Brief](https://claude.ai/code/artifact/3f4edb1b-c918-4ff4-b95e-9c61dd904cd0) | Two-page brief for Pursuit and AAFE: three options, rough costs, timeline; no recommendation | Shared with Avni <!-- modified 2026-10-05 16:51 Aisling --> |
 
 ## Research by Natalie Walker
 
@@ -64,6 +72,7 @@ The starter files for the code repository: `CLAUDE.md` (project rules for Claude
 | `prototype/` | Natalie's staff app, guest portal, the iPad check-in app (`prototype/checkin-app/`, PR #56), and the Supabase backend (PRs #7, #25, #26; later #28–#66). `prototype/docs/BACKEND.md` covers setup and every server function <!-- modified 2026-10-08 04:15 Aisling --> |
 | `prototype/docs/WORKFLOW.md` | How the staff app and sponsor portal work together on one database, including which emails wait for staff approval (PR #54) <!-- new 2026-10-08 04:15 Aisling --> |
 | `prototype/docs/translations/` | The translation review sheet: every portal phrase in English, 中文, 한국어 and Español for AAFE to sign off (PR #50) <!-- new 2026-10-08 04:15 Aisling --> |
+| `docs/screenshots/staff-exports/` | Before-and-after screenshots of the three export buttons (PR #87), with AAFE's mark as a grey placeholder <!-- new 2026-10-09 06:10 Aisling --> |
 | `docs/screenshots/ipad-checkin/` | 13 screenshots of the iPad check-in app with invented names (PRs #56, #62) <!-- new 2026-10-08 04:15 Aisling --> |
 | `import-engine/` | The Give Lively import rules as a tested TypeScript module (PRs #23, #24); its README explains how it feeds the database <!-- modified 2026-10-05 22:58 Aisling --> |
 | `design/sponsor-portal-prototype/` on the `antonin` branch | Antonin's Figma Make design prototype of the sponsor portal: the reference for tier layout and gala-night arrivals (Korean is in the portal, PR #51); not merged <!-- modified 2026-10-08 04:15 Aisling --> |
