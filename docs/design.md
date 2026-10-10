@@ -26,6 +26,7 @@ Dates and times are New York time (ET). Full details are in [Appendix A](#append
 | 2.2 | Oct 10, 2026, 1:27 PM | Natalie Walker | Button shapes: pill, radius 50px, padding 8px 24px, min height 44px, 2px border; primary turns white with orange text on hover; secondary white with gray border; ALL CAPS only for short calls to action (SIGN IN) |
 | 2.3 | Oct 10, 2026, 2:04 PM | Natalie Walker | Fixes from the staff-app QA pass: no brown in dark mode, tabs, toggles and icon buttons follow the button spec, no monospace, small table buttons are the one documented exception |
 | 2.4 | Oct 10, 2026, 2:52 PM | Natalie Walker | Scope notes match what shipped: the staff app is done in PR #96; the guest portal's serif headings and type scale are still to do |
+| 2.5 | Oct 10, 2026, 2:54 PM | Natalie Walker | From Aisling's review of #96: table headers use `#4D4C4C` on gray; Inter no longer loaded anywhere; the shared styles' effect on the portal and iPad stated |
 
 ## Principles
 1. **White first, orange for meaning.** Pages are white or light gray. Orange marks the one main action on a screen, the brand mark, and focus. If everything is orange, nothing stands out.
@@ -109,7 +110,7 @@ Optional; only the staff workspace and check-in need it (dim ballroom).
 | Role | Font | Notes |
 | --- | --- | --- |
 | Everything | **Poppins** 400 / 600 / 700 | aafe.org loads only these weights |
-| ~~Body, tables, forms~~ | ~~Inter 400/500~~ | **No longer used:** replaced by Poppins (v2.0). The staff app no longer loads Inter (PR #96); the guest portal still to do |
+| ~~Body, tables, forms~~ | ~~Inter 400/500~~ | **No longer used:** replaced by Poppins (v2.0). **No app loads Inter** (staff app, guest portal and iPad, PR #96). ✏️ *v2.5* |
 | ~~Display~~ | ~~Fraunces (serif)~~ | **No longer used.** No serif in AAFE's brand. **Removed from the staff app** (PR #96); **guest portal still to do** (its headings are still serif). ✏️ *v2.4* |
 | Chinese | Noto Sans TC, line height **~1.7** | Sponsor form; the official Chinese logo. 🆕 Line height *v2.1* |
 | Korean | Noto Sans KR, line height **~1.7** | Sponsor form; the official Korean logo. 🆕 Line height *v2.1* |
@@ -160,7 +161,7 @@ Section headings are never larger than the page title, and a card's title is nev
 | Link | `brand-500`, underlined on hover |
 | Focus ring | 2px `#C64C28`, 2px offset, on every interactive element |
 | Sidebar (staff) | Orange `#C64C28` background, white text (4.7:1), logo on white at the top, active page = white tab with `brand-700` text |
-| Table | White rows, `#EBEBEB` dividers, **hover and selected row `#F4F4F6`** (~~cream~~, ~~peach `#FCF3EE`~~), header in `ink-muted` uppercase. ✏️ *v2.1* |
+| Table | White rows, `#EBEBEB` dividers, **hover and selected row `#F4F4F6`** (~~cream~~, ~~peach `#FCF3EE`~~), header text `ink-muted` `#4D4C4C` uppercase on the gray header row (7.8:1; ~~`#707070`~~ was 4.51:1 on gray). ✏️ *v2.1, v2.5* |
 | Status pill | Status colors above, rounded, with a label |
 | Top bar | White with logo on the left; a thin 4px `brand-500` stripe at the top is the main brand accent |
 | Prototype banner | Orange on the portal and iPad app; **black** on the staff app (~~charcoal `#313131`~~). ✏️ *v2.1* |
@@ -221,6 +222,15 @@ In the prototype's code (`prototype/shared/src/theme.css`), the older class name
 
 ## Appendix A: Change log
 All times are New York time (ET). Earlier entries are kept as written, even when a later version replaced them.
+
+### Version 2.5: Oct 10, 2026, 2:54 PM ET, by Natalie Walker
+**Why:** Aisling's review of PR #96.
+
+| # | Section | Before | After |
+|---|---|---|---|
+| 1 | Tables | Header text `#707070` on the gray header row (4.51:1, just passing) | `#4D4C4C` (7.8:1) |
+| 2 | Typography | Guest portal and iPad still loaded Inter, unused | No app loads Inter |
+| 3 | Scope | — | PR #96 changes the shared styles, so the **guest portal and iPad app** also get the cool grays, Poppins body text, pill buttons and 44px icon circles. The guest portal's **serif headings** and **type scale** are still to do. |
 
 ### Version 2.4: Oct 10, 2026, 2:52 PM ET, by Natalie Walker
 **Why:** the staff-app changes went to Aisling as their own PR (#96), and the guest portal was left for later. The notes now say exactly what is applied where.
