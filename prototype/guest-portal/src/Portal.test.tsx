@@ -34,3 +34,18 @@ describe('guest form with nullable seed fields', () => {
     expect(savedGuest).toMatchObject({ first_name: `${guest.first_name} ${guest.last_name}`.trim(), last_name: '', display_name: `${guest.first_name} ${guest.last_name}`.trim() })
   })
 })
+
+describe('hero contact button', () => {
+  it('scrolls to the help heading and moves focus there', () => {
+    const db = loadDB()
+    const headingScroll = { behavior: '', block: '' }
+    render(<PortalHarness initialDb={db} onDbChange={() => undefined} />)
+
+    const heading = screen.getByRole('heading', { name: 'Questions or changes?' })
+    Object.defineProperty(heading, 'scrollIntoView', { configurable: true, value: (options: ScrollIntoViewOptions) => Object.assign(headingScroll, options) })
+    fireEvent.click(screen.getByTestId('hero-contact'))
+
+    expect(headingScroll).toEqual({ behavior: 'smooth', block: 'start' })
+    expect(document.activeElement).toBe(heading)
+  })
+})
