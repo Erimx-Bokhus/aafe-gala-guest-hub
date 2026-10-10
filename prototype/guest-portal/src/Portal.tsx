@@ -3,43 +3,23 @@ import { Award, CheckCircle2, CircleDashed, Clock, Facebook, Instagram, Linkedin
 import { Field, Modal, Toast, fmtDate, money } from '@shared/ui'
 import type { DB } from '@shared/types'
 import { DICT, LOCALE, type Lang } from './i18n'
+import { parseAccessibilityNeeds, parseDietaryNeeds, serializeAccessibilityNeeds, serializeDietaryNeeds, type AccessibilityOption, type DietaryOption } from './guestNeeds'
 import { LIVE, fetchPortalView, getPortalView, removeAttendee, removeAttendeeLive, saveAttendee, saveAttendeeLive, type AttendeeInput, type PortalView } from './portalApi'
 import Hero, { MissionStrip } from './Hero'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const EMPTY: AttendeeInput = { first_name: '', last_name: '', title: '', organization: '', email: '', dietary_needs: '', accessibility_needs: '' }
-const DIETARY_VALUES = ['Vegetarian', 'Vegan', 'Halal', 'Kosher', 'Gluten-free', 'No pork', 'No beef', 'No shellfish', 'Nut allergy'] as const
-const ACCESS_VALUES = ['Wheelchair access', 'Step-free seating', 'Hearing support', 'Visual support'] as const
-type AccessValue = typeof ACCESS_VALUES[number] | 'Other'
-
-function parseAccessibility(value: string): { enabled: boolean; choices: AccessValue[]; details: string } {
-  const raw = value.trim()
-  if (!raw || raw === 'No') return { enabled: false, choices: [], details: '' }
-  const parts = raw.split(/\s*;\s*/).filter(Boolean)
-  const choices = ACCESS_VALUES.filter((choice) => parts.includes(choice)) as AccessValue[]
-  const other = parts.find((part) => part === 'Other' || part.startsWith('Other:'))
-  if (other) choices.push('Other')
-  const details = parts.flatMap((part) => {
-    if (ACCESS_VALUES.includes(part as typeof ACCESS_VALUES[number]) || part === 'Yes' || part === 'Other') return []
-    if (part.startsWith('Other:')) return [part.slice('Other:'.length).trim()]
-    if (part.startsWith('Details:')) return [part.slice('Details:'.length).trim()]
-    return [part]
-  }).filter(Boolean).join('; ')
-  return { enabled: true, choices, details }
-}
-
 function AttendeeForm({ lang, initial, onSave, onCancel }: { lang: Lang; initial: AttendeeInput; onSave: (v: AttendeeInput) => void; onCancel: () => void }) {
   const t = DICT[lang]
   const familyFirst = lang === 'zh' || lang === 'ko'
   const [v, setV] = useState(initial)
-  const initialDietary = initial.dietary_needs.trim()
-  const dietaryChoice = DIETARY_VALUES.find((choice) => choice === initialDietary) ?? (initialDietary ? 'Other' : 'None')
-  const [dietarySelection, setDietarySelection] = useState<string>(dietaryChoice)
-  const [dietaryOther, setDietaryOther] = useState(initialDietary.startsWith('Other:') ? initialDietary.slice('Other:'.length).trim() : dietaryChoice === 'Other' && initialDietary !== 'Other' ? initialDietary : '')
-  const initialAccess = parseAccessibility(initial.accessibility_needs)
-  const [accessEnabled, setAccessEnabled] = useState(initialAccess.enabled)
-  const [accessChoices, setAccessChoices] = useState<AccessValue[]>(initialAccess.choices)
-  const [accessDetails, setAccessDetails] = useState(initialAccess.details)
+  const initialDietary = parseDietaryNeeds(initial.dietary_needs)
+  const [dietaryChoices, setDietaryChoices] = useState<DietaryOption[]>(initialDietary.selected)
+  const [dietaryOther, setDietaryOther] = useState(initialDietary.otherDetails)
+  const initialAccess = parseAccessibilityNeeds(initial.accessibility_needs)
+  const [accessEnabled, setAccessEnabled] = useState(initial.accessibility_needs.trim() !== '' && initial.accessibility_needs.trim() !== 'No')
+  const [accessChoices, setAccessChoices] = useState<AccessibilityOption[]>(initialAccess.selected)
+  const [accessDetails, setAccessDetails] = useState(initialAccess.otherDetails)
   const [touched, setTouched] = useState(false)
   const IDS = { first_name: 'fn', last_name: 'ln', title: 'ti', organization: 'or', email: 'em' } as const
   const errs: Partial<Record<keyof AttendeeInput, string>> = {}
@@ -55,11 +35,8 @@ function AttendeeForm({ lang, initial, onSave, onCancel }: { lang: Lang; initial
   const givenField = <Field key="fn" id="fn" label={t.firstName} error={err('first_name')}><input id="fn" className="input min-h-[44px]" value={v.first_name} onChange={set('first_name')} autoFocus={!familyFirst} autoComplete="off" {...a11y('first_name')} /></Field>
   const familyField = <Field key="ln" id="ln" label={t.lastName} error={err('last_name')}><input id="ln" className="input min-h-[44px]" value={v.last_name} onChange={set('last_name')} autoFocus={familyFirst} autoComplete="off" {...a11y('last_name')} /></Field>
   const trimmed = Object.fromEntries(Object.entries(v).map(([k, x]) => [k, x.trim()])) as unknown as AttendeeInput
-  const dietaryValue = dietarySelection === 'None' ? '' : dietarySelection === 'Other' ? (dietaryOther.trim() ? `Other: ${dietaryOther.trim()}` : 'Other') : dietarySelection
-  const accessParts: string[] = accessChoices.filter((choice) => choice !== 'Other')
-  if (accessChoices.includes('Other')) accessParts.push(accessDetails.trim() ? `Other: ${accessDetails.trim()}` : 'Other')
-  else if (accessDetails.trim()) accessParts.push(`Details: ${accessDetails.trim()}`)
-  const accessibilityValue = !accessEnabled ? '' : accessParts.length ? accessParts.join('; ') : 'Yes'
+  const dietaryValue = serializeDietaryNeeds(dietaryChoices, dietaryOther)
+  const accessibilityValue = accessEnabled ? serializeAccessibilityNeeds(accessChoices, accessDetails) : ''
   return (
     <form noValidate className="space-y-4" onSubmit={(e) => {
       e.preventDefault(); setTouched(true)
@@ -76,47 +53,62 @@ function AttendeeForm({ lang, initial, onSave, onCancel }: { lang: Lang; initial
       <Field id="or" label={t.organization} hint={t.titleHint} error={err('organization')}><input id="or" className="input min-h-[44px]" value={v.organization} onChange={set('organization')} {...a11y('organization', true)} /></Field>
       <Field id="em" label={t.email} error={err('email')}><input id="em" type="email" className="input min-h-[44px]" value={v.email} onChange={set('email')} {...a11y('email')} /></Field>
       <div className="grid gap-4">
-        <Field id="di" label={t.dietary}>
-          <select id="di" className="input min-h-[44px]" value={dietarySelection} onChange={(e) => setDietarySelection(e.target.value)}>
-            <option value="None">{t.dietaryNone}</option>
-            <option value="Vegetarian">{t.dietaryVegetarian}</option>
-            <option value="Vegan">{t.dietaryVegan}</option>
-            <option value="Halal">{t.dietaryHalal}</option>
-            <option value="Kosher">{t.dietaryKosher}</option>
-            <option value="Gluten-free">{t.dietaryGlutenFree}</option>
-            <option value="No pork">{t.dietaryNoPork}</option>
-            <option value="No beef">{t.dietaryNoBeef}</option>
-            <option value="No shellfish">{t.dietaryNoShellfish}</option>
-            <option value="Nut allergy">{t.dietaryNutAllergy}</option>
-            <option value="Other">{t.otherOption}</option>
-          </select>
-        </Field>
-        {dietarySelection === 'Other' && <Field id="di-other" label={t.pleaseDescribe}>
-          <input id="di-other" className="input min-h-[44px]" value={dietaryOther} onChange={(e) => setDietaryOther(e.target.value)} />
-        </Field>}
-        <Field id="ac" label={t.accessQuestion}>
-          <select id="ac" className="input min-h-[44px]" value={accessEnabled ? 'yes' : 'no'} onChange={(e) => setAccessEnabled(e.target.value === 'yes')}>
-            <option value="no">{t.accessNo}</option>
-            <option value="yes">{t.accessYes}</option>
-          </select>
-        </Field>
-        {accessEnabled && <>
-          <fieldset className="space-y-1">
-            <legend className="mb-1 text-sm font-medium text-navy-800">{t.accessNeedsPrompt}</legend>
+        <fieldset className="space-y-1" id="di">
+          <legend className="mb-1 text-sm font-medium text-navy-800">{t.dietary}</legend>
+          <div className="grid gap-1 sm:grid-cols-2">
             {([
-              ['Wheelchair access', t.accessWheelchair], ['Step-free seating', t.accessStepFree], ['Hearing support', t.accessHearing],
-              ['Visual support', t.accessVisual], ['Other', t.otherOption],
-            ] as [AccessValue, string][]).map(([value, label]) => (
-              <label key={value} className="flex min-h-[44px] cursor-pointer items-center gap-3 rounded-md px-2 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand-500">
-                <input type="checkbox" className="h-5 w-5 accent-brand-600" checked={accessChoices.includes(value)} onChange={(e) => setAccessChoices((current) => e.target.checked ? [...current, value] : current.filter((choice) => choice !== value))} />
+              ['Vegetarian', t.dietaryVegetarian], ['Vegan', t.dietaryVegan], ['Halal', t.dietaryHalal], ['Kosher', t.dietaryKosher],
+              ['Gluten-free', t.dietaryGlutenFree], ['No pork', t.dietaryNoPork], ['No beef', t.dietaryNoBeef], ['No shellfish', t.dietaryNoShellfish],
+              ['Nut allergy', t.dietaryNutAllergy], ['Other', t.otherOption],
+            ] as [DietaryOption, string][]).map(([value, label]) => (
+              <label key={value} className={`flex min-h-[44px] cursor-pointer items-center gap-3 rounded-md border border-[#707070] px-3 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand-500 ${value === 'Other' ? 'sm:col-span-2' : ''}`}>
+                <input type="checkbox" className="h-5 w-5 accent-brand-500" checked={dietaryChoices.includes(value)} onChange={(e) => {
+                  setDietaryChoices((current) => e.target.checked ? [...current, value] : current.filter((choice) => choice !== value))
+                  if (!e.target.checked && value === 'Other') setDietaryOther('')
+                }} />
                 <span>{label}</span>
               </label>
             ))}
-          </fieldset>
-          <Field id="ac-details" label={t.accessDetails}>
-            <input id="ac-details" className="input min-h-[44px]" value={accessDetails} onChange={(e) => setAccessDetails(e.target.value)} />
-          </Field>
-        </>}
+          </div>
+          {dietaryChoices.includes('Other') && <Field id="di-other" label={t.pleaseDescribe}>
+            <input id="di-other" className="input min-h-[44px]" value={dietaryOther} onChange={(e) => setDietaryOther(e.target.value)} />
+          </Field>}
+        </fieldset>
+        <fieldset className="space-y-1" id="ac">
+          <legend className="mb-1 text-sm font-medium text-navy-800">{t.accessQuestion}</legend>
+          <div className="grid gap-1 sm:grid-cols-2">
+            {([['no', t.accessNo], ['yes', t.accessYes]] as const).map(([value, label]) => (
+              <label key={value} className="flex min-h-[44px] cursor-pointer items-center gap-3 rounded-md border border-[#707070] px-3 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand-500">
+                <input type="radio" name="accessibility-support" className="h-5 w-5 accent-brand-500" checked={accessEnabled === (value === 'yes')} onChange={() => {
+                  const enabled = value === 'yes'
+                  setAccessEnabled(enabled)
+                  if (!enabled) { setAccessChoices([]); setAccessDetails('') }
+                }} />
+                <span>{label}</span>
+              </label>
+            ))}
+          </div>
+          {accessEnabled && <fieldset className="space-y-1 pt-2">
+            <legend className="mb-1 text-sm font-medium text-navy-800">{t.accessNeedsPrompt}</legend>
+            <div className="grid gap-1 sm:grid-cols-2">
+              {([
+                ['Wheelchair access', t.accessWheelchair], ['Step-free seating', t.accessStepFree], ['Hearing support', t.accessHearing],
+                ['Visual support', t.accessVisual], ['Other', t.otherOption],
+              ] as [AccessibilityOption, string][]).map(([value, label]) => (
+                <label key={value} className={`flex min-h-[44px] cursor-pointer items-center gap-3 rounded-md border border-[#707070] px-3 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand-500 ${value === 'Other' ? 'sm:col-span-2' : ''}`}>
+                  <input type="checkbox" className="h-5 w-5 accent-brand-500" checked={accessChoices.includes(value)} onChange={(e) => {
+                    setAccessChoices((current) => e.target.checked ? [...current, value] : current.filter((choice) => choice !== value))
+                    if (!e.target.checked && value === 'Other') setAccessDetails('')
+                  }} />
+                  <span>{label}</span>
+                </label>
+              ))}
+            </div>
+            {accessChoices.includes('Other') && <Field id="ac-details" label={t.pleaseDescribe}>
+              <input id="ac-details" className="input min-h-[44px]" value={accessDetails} onChange={(e) => setAccessDetails(e.target.value)} />
+            </Field>}
+          </fieldset>}
+        </fieldset>
       </div>
       <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
         <button type="button" onClick={onCancel} className="btn-ghost">{t.cancel}</button>
