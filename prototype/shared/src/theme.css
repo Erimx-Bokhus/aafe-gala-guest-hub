@@ -50,6 +50,14 @@
 /* Chinese and Korean text needs more line height (brand spec ~1.7). */
 :where([lang^="zh"], [lang^="ko"]) { line-height: 1.7; }
 
+/* design.md v2.5: small meta gray #707070 is for white backgrounds only. On the light gray (#F4F4F6) it is
+   only 4.51:1, so text-navy-500 inside or on a gray surface uses #4D4C4C (7.8:1). */
+.bg-cream-100 .text-navy-500, .bg-cream-100.text-navy-500,
+.bg-navy-50 .text-navy-500, .bg-navy-50.text-navy-500,
+.bg-brand-50 .text-navy-500, .bg-brand-50.text-navy-500,
+.hover\:bg-navy-50:hover .text-navy-500,
+.brand-warm footer.text-navy-500 { color: rgb(var(--n600)); }
+
 /* Rotating AAFE logo name (mirrors the animated logo on aafe.org) */
 .logo-name { display: grid; }
 .logo-name > span { grid-area: 1 / 1; opacity: 0; transition: opacity .6s ease; }
@@ -62,7 +70,7 @@
   :focus-visible { outline: 2px solid #C64C28; outline-offset: 2px; }
 }
 @layer components {
-  /* Buttons (design.md v2.2, AAFE / aafe.org): pill, radius 50px, padding 8px 24px, min height 44px, 2px border. */
+  /* Buttons (design.md v2.5, AAFE / aafe.org): pill, radius 50px, padding 8px 24px, min height 44px, 2px border. */
   .btn { @apply inline-flex min-h-[44px] items-center justify-center gap-2 whitespace-nowrap rounded-[50px] border-2 px-6 py-2 text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed; }
   /* Primary: orange fill, white text. Hover: white fill, orange text (the orange border keeps the shape). */
   .btn-primary { @apply btn border-brand-500 bg-brand-500 text-white hover:bg-white hover:text-brand-500 disabled:hover:bg-brand-500 disabled:hover:text-white; }

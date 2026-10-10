@@ -230,6 +230,7 @@ All times are New York time (ET). Earlier entries are kept as written, even when
 |---|---|---|---|
 | 1 | Tables | Header text `#707070` on the gray header row (4.51:1, just passing) | `#4D4C4C` (7.8:1) |
 | 2 | Typography | Guest portal and iPad still loaded Inter, unused | No app loads Inter |
+| 4 | Text on gray | `#707070` small text on the gray `#F4F4F6` in 19 places (portal footer; staff Integrations stats and email list, Seating table counts, hovered guest-list rows) | `#4D4C4C` wherever small gray text sits on a gray surface (one shared rule in `theme.css`); `#707070` stays on white only |
 | 3 | Scope | — | PR #96 changes the shared styles, so the **guest portal and iPad app** also get the cool grays, Poppins body text, pill buttons and 44px icon circles. The guest portal's **serif headings** and **type scale** are still to do. |
 
 ### Version 2.4: Oct 10, 2026, 2:52 PM ET, by Natalie Walker
