@@ -1,6 +1,6 @@
 # Overview
 <!-- modified 2026-10-05 16:51 Aisling -->
-<!-- reviewed 2026-10-08 Aisling -->
+<!-- reviewed 2026-10-09 Aisling -->
 
 AAFE runs one gala a year for 500–600 guests, and its guest list lives in a single spreadsheet that staff rebuild by hand from Give Lively purchases, emailed sponsorship pledges, checks, and comps. We are building one reliable guest list on top of Give Lively that sponsors can update themselves and staff can trust from first purchase to gala-night check-in.
 
@@ -46,7 +46,7 @@ This is the demo in miniature. Pause on step 4: the sponsor fixes their own list
 | Target event | AAFE's 2027 gala |
 | Discovery call | October 1, 2026 |
 | Demo Day | November 10, 2026 |
-| Status | Building. Import engine and its database side done and tested; exports built; Natalie's staff app, sponsor portal, and Supabase backend in `main`; Supabase backend loaded in Aisling's test project; staff sign-in merged (PR #27) and roles checked on the server for every staff action (PR #72); Korean in the portal (PR #51); email follow-ups, offline check-in, sponsor pipeline, and sponsor arrivals (off) built in the backend; Natalie's iPad check-in app in `main` (PR #56, Oct 8); three labeled demo data sets (PR #66); first prototype review with AAFE on Oct 15 <!-- modified 2026-10-08 16:40 Aisling --> |
+| Status | Building, on invented data. Working today: the sponsor portal in four languages; the staff app, connected to the backend, with every staff action checked against the person's role and logged; the iPad check-in app for the door, which keeps working offline; the Give Lively import; badge, check-in and Salesforce files; and emails that wait for staff approval. Next: AAFE's first prototype review on Oct 15, and the full path working end to end by Oct 30 <!-- modified 2026-10-09 06:10 Aisling Plain-language status; PR detail is on the Build plan --> |
 
 ## Team
 <!-- updated 2026-10-05 20:37 Aisling pairs -->
@@ -58,7 +58,13 @@ This is the demo in miniature. Pause on step 4: the sponsor fixes their own list
 | Aisling Leiva-Davila | Backend | Backend, repo admin | nessaisling-lab / aislingld-pursuit <!-- modified 2026-10-08 04:15 Aisling --> |
 | Cornell Robertson | Backend | Backend, staff sign-in | CodeToTheCore <!-- modified 2026-10-08 04:15 Aisling --> |
 
-Build work is split into two areas (Oct 5): **Frontend: Natalie + Antonin** (staff app, sponsor portal, check-in, branding) and **Backend: Aisling + Cornell** (Supabase backend, import, sign-in and roles, secure links, exports, emails). Who is building each part (Oct 7): Aisling (Supabase backend, import, secure links, exports, emails, offline check-in, pipeline), Cornell (staff sign-in), Natalie (product lead and client contact; sponsor portal, staff app, iPad check-in app, PRDs), and Antonin (portal ideas, Korean). Component status is on the [Build plan](#build-plan). <!-- modified 2026-10-08 04:15 Aisling -->
+Build work is split into two areas (Oct 5): **Frontend: Natalie + Antonin** (staff app, sponsor portal, check-in, branding) and **Backend: Aisling + Cornell** (Supabase backend, import, sign-in and roles, secure links, exports, emails). Component status is on the [Build plan](#build-plan). <!-- modified 2026-10-09 06:10 Aisling Who builds each part moved to a team section -->
+
+## Who builds what
+<!-- team -->
+<!-- new 2026-10-09 06:10 Aisling Moved from Team -->
+
+Who is building each part (Oct 7): Aisling (Supabase backend, import, secure links, exports, emails, offline check-in, pipeline), Cornell (staff sign-in), Natalie (product lead and client contact; sponsor portal, staff app, iPad check-in app, PRDs), and Antonin (portal ideas, Korean). Since Oct 9, Aisling also connects the remaining database functions to the staff app, slice by slice (Tasks). <!-- new 2026-10-09 06:10 Aisling -->
 
 ## What we will not build
 
@@ -68,5 +74,7 @@ Build work is split into two areas (Oct 5): **Frontend: Natalie + Antonin** (sta
 - Production hosting. We deliver a portable prototype with invented data; AAFE, with the partner it chooses, decides whether and where it runs.
 
 ## How this hub works
+<!-- team -->
+<!-- modified 2026-10-09 06:10 Aisling Team only: how the hub is built -->
 
 Each page is a markdown file in `hub/docs/`. Edit the file, and the page updates. The same files sit in the code repository, so the team and Claude Code read from one source.
