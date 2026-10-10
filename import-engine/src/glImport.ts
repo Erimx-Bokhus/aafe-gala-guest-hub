@@ -1,6 +1,7 @@
 // What the staff app sends to the database after prepareUpload (spec section 9):
 // `staff_import_givelively(p_rows, p_run)` in prototype/database/backend.sql.
 
+import { fromFullName, fromParts } from './names.ts'
 import type { PreparedRow, PreparedUpload } from './prepareUpload.ts'
 import type { PurchaseRow } from './readExport.ts'
 
@@ -24,7 +25,8 @@ export interface GlImportRow {
   gross: number
   refunded: number | null
   guest_text: string | null
-  guests?: { display_name: string; email: string | null; is_buyer: boolean }[]
+  /** first_name and last_name come from the name engine (the buyer's own from Give Lively's columns); gl_import stores them for sorting. */
+  guests?: { display_name: string; first_name: string; last_name: string; email: string | null; is_buyer: boolean }[]
   findings?: { reason: string; details: Record<string, unknown> }[]
   cancelled?: boolean
 }
@@ -64,7 +66,10 @@ function baseRow(r: PurchaseRow): GlImportRow {
 function preparedRow(r: PreparedRow): GlImportRow {
   const row: GlImportRow = { ...baseRow(r), tier_id: r.tierId, seats: r.seatCount, cancelled: r.cancelled }
   if (r.guestList.kind === 'names') {
-    row.guests = r.guestList.guests.map((g) => ({ display_name: g.displayName, email: g.email, is_buyer: g.isBuyer }))
+    row.guests = r.guestList.guests.map((g) => {
+      const n = g.isBuyer && g.displayName === `${r.buyer.first} ${r.buyer.last}`.trim() ? fromParts(r.buyer.first, r.buyer.last) : fromFullName(g.displayName)
+      return { display_name: g.displayName, first_name: n.first, last_name: n.last, email: g.email, is_buyer: g.isBuyer }
+    })
   }
   const findings = r.guestFindings.flatMap((f, i) => {
     if (!f || r.guestList.kind !== 'names') return []
