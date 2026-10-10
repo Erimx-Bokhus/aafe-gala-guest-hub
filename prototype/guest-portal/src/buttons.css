@@ -76,10 +76,18 @@
 .brand-warm.dark .aafe-field { background: rgb(46 41 37); color: #fff; border-color: rgb(120 110 102); }
 
 /* "Donate" button measured from the aafe.org header: 15px bold uppercase, 22px side padding, 30px radius.
-   Height raised from 38px to 44px so it is easy to tap and lines up with "Open your guest list". */
+   Height raised from 38px to 44px for an accessible touch target. */
 .brand-warm .aafe-donate {
   display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 22px;
   background: #C64C28; color: #fff; border: 2px solid #C64C28; border-radius: 30px;
   font-size: 15px; font-weight: 700; text-transform: uppercase; line-height: 1;
 }
 .brand-warm .aafe-donate:hover { background: #fff; color: #C64C28; }
+
+.brand-warm .aafe-contact {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 22px;
+  background: transparent; color: #000; border: 1px solid #000; border-radius: 30px;
+  font-size: 15px; font-weight: 700; text-transform: uppercase; line-height: 1;
+}
+.brand-warm .aafe-contact:hover { background: #000; color: #fff; }
+.brand-warm .aafe-contact:focus-visible { outline: 2px solid #C64C28; outline-offset: 2px; }

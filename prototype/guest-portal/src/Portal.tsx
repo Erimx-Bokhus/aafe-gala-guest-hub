@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ChangeEvent } from 'react'
+import { useEffect, useMemo, useState, type ChangeEvent, type MouseEvent } from 'react'
 import { Award, CheckCircle2, CircleDashed, Clock, Facebook, Instagram, Linkedin, Lock, MapPin, Pencil, Phone, Plus, Twitter, Youtube } from 'lucide-react'
 import { Field, Modal, Toast, fmtDate, money } from '@shared/ui'
 import type { DB } from '@shared/types'
@@ -10,6 +10,15 @@ import Hero, { MissionStrip } from './Hero'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const EMPTY: AttendeeInput = { first_name: '', last_name: '', title: '', organization: '', email: '', dietary_needs: '', accessibility_needs: '' }
+
+function scrollToContact(event: MouseEvent<HTMLButtonElement>) {
+  const doc = event.currentTarget.ownerDocument
+  const heading = doc.getElementById('contact')
+  const prefersReducedMotion = doc.defaultView?.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+  heading?.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'start' })
+  heading?.focus({ preventScroll: true })
+}
+
 function AttendeeForm({ lang, initial, onSave, onCancel }: { lang: Lang; initial: AttendeeInput & { display_name?: string | null }; onSave: (v: AttendeeInput) => void; onCancel: () => void }) {
   const t = DICT[lang]
   const familyFirst = lang === 'zh' || lang === 'ko'
@@ -280,9 +289,10 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
             </div>
           </li>
         </ul>
-        <div className="mt-5 flex items-center">
+        <div className="mt-5 flex flex-wrap items-center gap-3">
           {/* Same Donate button as the aafe.org header; goes to AAFE's donate page (Give Lively) */}
           <a href="https://www.aafe.org/donate/" target="_blank" rel="noopener noreferrer" className="aafe-donate" data-testid="donate">{t.donate}</a>
+          <button type="button" className="aafe-contact" onClick={scrollToContact} data-testid="hero-contact">{t.contact}</button>
         </div>
       </Hero>
 
@@ -378,9 +388,9 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
         )}
 
         {/* 3. Help, right after the task */}
-        <section className="card grid gap-5 border-[#EBEBEB] p-5 sm:grid-cols-2" aria-labelledby="help-h">
+        <section className="card grid gap-5 border-[#EBEBEB] p-5 sm:grid-cols-2" aria-labelledby="contact">
           <div>
-            <h2 id="help-h" className="type-h6 text-navy-900">{t.help}</h2>
+            <h2 id="contact" tabIndex={-1} className="type-h6 scroll-mt-32 text-navy-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 sm:scroll-mt-20">{t.help}</h2>
             <button type="button" className="btn-ghost mt-3" onClick={() => setContactOpen(true)} data-testid="open-contact">{t.contact}</button>
             <a href="tel:+12125550100" className="mt-3 flex w-fit items-center gap-2 text-sm text-navy-700 underline underline-offset-2">
               <Phone size={16} aria-hidden /> (212) 555-0100
