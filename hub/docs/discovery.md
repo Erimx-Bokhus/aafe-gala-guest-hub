@@ -1,5 +1,5 @@
 # Discovery
-<!-- reviewed 2026-10-08 Aisling -->
+<!-- reviewed 2026-10-09 Aisling -->
 
 What AAFE told us on the October 1 call, in their words where it matters. Sarah ran the guest list for the 2026 gala while Janelle was on leave.
 
@@ -99,3 +99,5 @@ Janelle sent the guest-list notes, the 2026 sponsorship flyer, a Give Lively tic
 - Confirm our proposal: no AI in the first version <!-- updated 2026-10-08 04:15 Aisling -->
 - Confirm our proposal: delete guest contact details, dietary and accessibility details included, within 60 days after the gala <!-- updated 2026-10-08 04:15 Aisling -->
 - Whether a guest email is required, or optional <!-- updated 2026-10-08 04:15 Aisling -->
+- Guest names as one full-name field, or first and last name separately <!-- new 2026-10-09 06:10 Aisling -->
+- Whether approving every email one at a time works for staff (one click can draft dozens of reminders), or whether an "approve all reminders" option would help; it would still count as staff approval <!-- new 2026-10-09 06:10 Aisling -->
