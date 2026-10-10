@@ -20,7 +20,7 @@ export default function AuditLog() {
               <tr key={a.id}>
                 <td className="td whitespace-nowrap text-xs">{fmtDate(a.at, 'en-US', true)}</td>
                 <td className="td"><Pill tone={a.actor_type === 'guest_portal' ? 'blue' : a.actor_type === 'staff' ? 'gray' : 'brand'}>{a.actor_type.replace('_', ' ')}</Pill><div className="mt-0.5 text-xs text-navy-500">{a.actor}</div></td>
-                <td className="td font-mono text-xs">{a.action}</td>
+                <td className="td font-sans tabular-nums text-xs">{a.action}</td>
                 <td className="td whitespace-nowrap text-xs text-navy-600">{a.from_state || a.to_state ? `${a.from_state ?? '∅'} → ${a.to_state ?? '∅'}` : ''}</td>
                 <td className="td">{a.summary}</td>
               </tr>
