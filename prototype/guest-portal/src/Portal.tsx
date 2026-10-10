@@ -447,9 +447,8 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
 
       {/* Thank you */}
       <section className="bg-surface">
-        <div className="mx-auto grid max-w-6xl items-center gap-8 px-5 py-12 md:grid-cols-2">
-          <img src="./photos/gala-guests-dinner.jpg" alt="Guests sharing a table at the AAFE gala" className="aspect-[4/3] w-full rounded-2xl object-cover" style={{ objectPosition: 'center 35%' }} loading="lazy" />
-          <div>
+        <div className="mx-auto max-w-6xl px-5 py-12">
+          <div className="max-w-2xl">
             <h2 className="type-h2 text-navy-900">{t.thanksTitle}</h2>
             <p className="type-lead mt-3 text-navy-600">{t.thanksBody}</p>
           </div>
