@@ -76,7 +76,7 @@ export default function Integrations() {
           <div className="flex items-start justify-between gap-3"><div><h2 className="text-lg font-semibold text-navy-900">Give Lively</h2><p className="text-sm text-navy-600">Ticket and sponsorship purchases → orders, payments, per-ticket fees, and a draft guest-list email for staff approval.</p></div><Pill tone="amber">Simulated</Pill></div>
           <ol className="mt-4 list-decimal space-y-1 pl-5 text-sm text-navy-700">
             <li>AAFE admin creates a Zapier API key in the Give Lively Nonprofit Admin Portal.</li>
-            <li>Backend stores it as a secret and polls the JSON endpoint every 10–15 min with <code className="rounded bg-navy-50 px-1 text-xs">?start_time_ms=</code>.</li>
+            <li>Backend stores it as a secret and polls the JSON endpoint every 10–15 min with <code className="rounded bg-navy-50 px-1 font-sans text-xs">?start_time_ms=</code>.</li>
             <li>New donation → order + payment (Original, Covered fee, Gross, Transaction fee, Net) → seats → draft portal-link email (staff approve before it sends).</li>
             <li>Backup: upload the “Line Items (All)” CSV export below. Duplicates are skipped by transaction ID.</li>
           </ol>
