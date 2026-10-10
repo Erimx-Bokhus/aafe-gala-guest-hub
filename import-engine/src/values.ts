@@ -13,6 +13,14 @@ export function parseAmount(raw: string | null | undefined): number | null {
   return m[1] || m[2] ? -value : value
 }
 
+/**
+ * "Transaction Fee Covered": a dollar amount, or TRUE/FALSE (yes/no) in exports that only say whether the
+ * donor covered the fee. A yes/no gives no amount, so → null, like a blank cell, instead of rejecting the row.
+ */
+export function parseCoveredFee(raw: string | null | undefined): number | null {
+  return /^\s*(true|false|yes|no)\s*$/i.test(raw ?? '') ? null : parseAmount(raw)
+}
+
 /** A whole number of tickets or seats. Blank → null. */
 export function parseCount(raw: string | null | undefined): number | null {
   const s = (raw ?? '').trim()
