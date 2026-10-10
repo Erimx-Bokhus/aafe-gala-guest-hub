@@ -270,20 +270,20 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
           <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-500 text-white"><Award size={16} aria-hidden /></span>
           <span className="font-semibold text-navy-900">{view.tierName}</span>
         </div>
-        <ul className="mt-5 flex flex-wrap gap-x-10 gap-y-3" aria-label={t.eventWhen}>
-          <li className="flex items-center gap-3">
+        <ul className="mt-5 flex min-w-0 flex-wrap gap-x-10 gap-y-3" aria-label={t.eventWhen}>
+          <li className="flex min-w-0 items-center gap-3">
             <span className="flex h-11 w-11 shrink-0 flex-col overflow-hidden rounded-lg border border-navy-100 bg-surface text-center" aria-hidden>
               <span className="bg-cream-100 text-[10px] font-semibold uppercase leading-4 text-navy-600">{eventDate.toLocaleDateString(loc, { month: 'short' })}</span>
               <span className="flex-1 text-base font-bold leading-6 text-navy-900">{eventDate.getDate()}</span>
             </span>
-            <div>
+            <div className="min-w-0">
               <div className="font-semibold text-navy-900">{eventDate.toLocaleDateString(loc, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</div>
               {view.event.doors && <div className="text-navy-600">{t.doorsAt(view.event.doors)}</div>}
             </div>
           </li>
-          <li className="flex items-center gap-3">
+          <li className="flex min-w-0 items-center gap-3">
             <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-navy-100 bg-surface text-navy-700" aria-hidden><MapPin size={20} /></span>
-            <div>
+            <div className="min-w-0">
               <div className="font-semibold text-navy-900">{venueName}</div>
               {venueCity && <div className="text-navy-600">{venueCity}</div>}
             </div>

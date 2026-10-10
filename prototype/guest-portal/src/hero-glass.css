@@ -1,6 +1,9 @@
 /* Compact sponsor hero glass treatment. Guest portal only; all motion is CSS. */
 .brand-warm .hero-glass-hero {
   isolation: isolate;
+  overflow: hidden;
+  overflow-x: clip;
+  overflow-y: clip;
   background: #fff;
 }
 
