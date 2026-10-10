@@ -35,6 +35,7 @@ export const SAMPLES: Record<string, unknown[]> = {
   removeTitle: ['Ana Díaz', 3],
   activityCount: [7],
   balanceOf: ['$15,000', '$25,000'],
+  doorsAt: ['6:00 PM'],
 }
 
 type Entry = string | ((...args: never[]) => string)
