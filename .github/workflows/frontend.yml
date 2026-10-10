@@ -8,6 +8,11 @@ on:
   # a path filter would leave PRs that don't touch these folders waiting forever.
   pull_request:
 
+# A newer push to the same pull request cancels the older run still in progress (saves Actions minutes).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 permissions:
   contents: read
 
