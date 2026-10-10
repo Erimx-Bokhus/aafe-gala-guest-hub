@@ -4,7 +4,7 @@
 // DEMO (no Supabase): the same actions run on the in-browser demo data (store.ts), with the same role rules, so the
 //   demo behaves like the real app, including what a check-in volunteer can and can't see.
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { addAudit, loadDB } from '@shared/data'
+import { addAudit, displayName, loadDB } from '@shared/data'
 import type { Snapshot } from '@shared/offlineCheckin'
 import type { AuditEntry, DB, EmailLog, GalaEvent, Guest, Material, PayMethod, Role, StaffUser } from '@shared/types'
 import * as store from './store'
@@ -16,7 +16,7 @@ export interface PaymentInput { method: OfflineMethod; amount: number; received:
 export interface PledgeInput { org: string; contact: string; email: string; tierId: string; source: OfflineMethod }
 export interface CompGuestInput { first_name: string; last_name: string; title: string; organization: string; email: string; relationship_note: string }
 export interface ExceptionInput { name: string; orderId: string | null; type: string; note: string }
-export type GuestPatch = Partial<Pick<Guest, 'first_name' | 'last_name' | 'title' | 'organization' | 'email' | 'dietary_needs' | 'accessibility_needs' | 'relationship_note'>>
+export type GuestPatch = Partial<Pick<Guest, 'first_name' | 'last_name' | 'display_name' | 'title' | 'organization' | 'email' | 'dietary_needs' | 'accessibility_needs' | 'relationship_note'>>
 /** One unsent email as staff_email_queue() returns it: what staff need to judge a draft before approving it. */
 export interface QueuedEmail {
   id: string; template: EmailLog['template']; to_name: string; to_email: string; trigger: string; created_at: string | null
@@ -283,7 +283,7 @@ export function demoSnapshot(db: DB): CheckinSnapshot {
     guests: db.guests.filter((g) => orders.has(g.order_id)).map((g) => {
       const ci = db.check_ins.find((c) => c.guest_id === g.id && c.event_id === ev.id)
       return {
-        id: g.id, order_id: g.order_id, first_name: g.first_name, last_name: g.last_name, title: g.title, organization: g.organization,
+        id: g.id, order_id: g.order_id, first_name: g.first_name, last_name: g.last_name, display_name: displayName(g), title: g.title, organization: g.organization,
         sponsor: sponsorOf(g.order_id), package: db.sponsorship_tiers.find((t) => t.id === orders.get(g.order_id)!.tier_id)?.name ?? null,
         guest_type: g.guest_type, table_number: db.event_tables.find((t) => t.id === g.table_id)?.number ?? null, seat_number: g.seat_number,
         accessibility_needs: g.accessibility_needs, qr_hash: null, qr_expires_at: null,
@@ -319,7 +319,7 @@ export function volunteerDb(snap: CheckinSnapshot, user: StaffUser): DB {
     orders: orderIds.map((o) => ({ id: o, event_id: snap.event_id, sponsor_id: `sp-${o}`, tier_id: '', source: 'staff_entry' as const, commitment_amount: 0, status: 'pledged' as const, portal_token: null, portal_token_expires_at: null, portal_link_sent_at: null, guest_list_deadline: null, logo_status: 'not_required' as const, program_ad_status: 'not_required' as const, givelively_order_ref: null, salesforce_opportunity_id: null, internal_notes: '', created_at: at, updated_at: at })),
     payments: [],
     event_tables: [...new Set(snap.guests.map((g) => g.table_number).filter((n): n is number => n != null))].map((n) => ({ id: tableId(n)!, event_id: snap.event_id, number: n, label: null, capacity: 0, pos_x: 0, pos_y: 0 })),
-    guests: snap.guests.map((g) => ({ id: g.id, order_id: g.order_id, first_name: g.first_name, last_name: g.last_name, title: g.title ?? '', organization: g.organization ?? '', email: '', dietary_needs: null, accessibility_needs: g.accessibility_needs, guest_type: g.guest_type as Guest['guest_type'], relationship_note: null, table_id: tableId(g.table_number), seat_number: g.seat_number, badge_status: 'ready' as const, attendance_status: g.arrived ? 'checked_in' as const : 'expected' as const, qr_token: null, last_updated_by: 'staff' as const, created_at: at, updated_at: at })),
+    guests: snap.guests.map((g) => ({ id: g.id, order_id: g.order_id, first_name: g.first_name, last_name: g.last_name, display_name: g.display_name ?? null, title: g.title ?? '', organization: g.organization ?? '', email: '', dietary_needs: null, accessibility_needs: g.accessibility_needs, guest_type: g.guest_type as Guest['guest_type'], relationship_note: null, table_id: tableId(g.table_number), seat_number: g.seat_number, badge_status: 'ready' as const, attendance_status: g.arrived ? 'checked_in' as const : 'expected' as const, qr_token: null, last_updated_by: 'staff' as const, created_at: at, updated_at: at })),
     seats: [],
     check_ins: [
       ...snap.guests.filter((g) => g.arrived).map((g) => ({ id: g.checkin_id ?? `ci-${g.id}`, event_id: snap.event_id, guest_id: g.id, order_id: g.order_id, arrival_name: null, method: 'search' as const, type: 'standard', checked_in_by: g.checked_in_by ?? '', note: '', checked_in_at: g.checked_in_at ?? at })),

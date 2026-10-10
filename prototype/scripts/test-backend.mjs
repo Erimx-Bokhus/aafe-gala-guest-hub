@@ -336,7 +336,7 @@ const badges = await as('authenticated', RM, `select * from staff_export_badges(
 const expectBadges = (await db.query(`select count(*)::int n from guests g join orders o on o.id = g.order_id
   where o.event_id = ${cur} and o.status <> 'cancelled' and g.badge_status in ('ready','reprint_needed')`)).rows[0].n
 ok(badges.length === expectBadges && badges.length > 0, `badge file has every ready or reprint badge (${badges.length})`)
-ok(Object.keys(badges[0]).join() === 'first_name,last_name,title,organization,table_number,seat_number,sponsor,guest_type,badge_status',
+ok(Object.keys(badges[0]).join() === 'display_name,first_name,last_name,title,organization,table_number,seat_number,sponsor,guest_type,badge_status',
   'badge file carries only badge fields (no email, dietary, payment, notes)')
 const tables = badges.map(b => b.table_number).filter(n => n !== null)
 const firstUnseated = badges.findIndex(b => b.table_number === null)
