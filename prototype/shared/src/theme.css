@@ -3,20 +3,20 @@
 @tailwind utilities;
 
 :root {
-  /* AAFE brand: orange + white, charcoal text (#313131 from aafe.org). No navy. */
-  --page: 255 255 255; --surface: 255 255 255; --muted: 251 247 240; --line: 234 223 207;
-  --brand-50: 252 243 238; --brand-100: 248 227 216;
-  --n50: 251 247 240; --n100: 234 223 207; --n300: 181 170 160; --n500: 122 112 106; --n600: 94 86 80;
-  --n700: 74 67 62; --n800: 61 56 53; --n900: 49 49 49;
-  --ink: 49 49 49; --ink2: 61 56 53;
+  /* AAFE brand (Greybox / aafe.org): orange, white, black, cool grays only. No cream, no navy. */
+  --page: 255 255 255; --surface: 255 255 255; --muted: 244 244 246; --line: 235 235 235;
+  --brand-50: 244 244 246; --brand-100: 248 227 216;
+  --n50: 244 244 246; --n100: 235 235 235; --n300: 154 154 154; --n500: 112 112 112; --n600: 77 76 76;
+  --n700: 58 58 58; --n800: 38 38 38; --n900: 0 0 0;
+  --ink: 0 0 0; --ink2: 38 38 38;
   color-scheme: light;
 }
 .dark {
-  --page: 26 23 21; --surface: 37 33 30; --muted: 46 41 37; --line: 66 59 53;
-  --brand-50: 70 35 22; --brand-100: 92 44 26;
-  --n50: 46 41 37; --n100: 72 64 58; --n300: 120 110 102; --n500: 170 160 150; --n600: 196 187 176;
-  --n700: 216 208 198; --n800: 234 228 220; --n900: 250 246 240;
-  --ink: 20 18 16; --ink2: 37 33 30;
+  --page: 18 18 18; --surface: 30 30 30; --muted: 38 38 38; --line: 58 58 58;
+  --brand-50: 38 38 38; --brand-100: 58 58 58;
+  --n50: 38 38 38; --n100: 58 58 58; --n300: 138 138 138; --n500: 163 163 163; --n600: 190 190 190;
+  --n700: 214 214 214; --n800: 232 232 232; --n900: 245 245 245;
+  --ink: 0 0 0; --ink2: 30 30 30;
   color-scheme: dark;
 }
 .dark .bg-emerald-50 { background-color: rgb(6 78 59 / .35); } .dark .text-emerald-800, .dark .text-emerald-700 { color: rgb(110 231 183); }
@@ -26,25 +26,29 @@
 .dark .ring-emerald-200, .dark .ring-amber-200, .dark .ring-rose-200, .dark .ring-sky-200 { --tw-ring-color: rgb(255 255 255 / .12); }
 .dark .border-emerald-100, .dark .border-emerald-200 { border-color: rgb(16 185 129 / .3); }
 
-/* GUEST PORTAL = AAFE brand: orange + cream + white, charcoal text (#313131 from aafe.org). No navy. */
+/* GUEST PORTAL and iPAD = AAFE brand: orange, white, black, cool grays (Greybox / aafe.org). */
 .brand-warm {
-  --page: 251 247 240; --surface: 255 255 255; --muted: 246 238 226; --line: 234 223 207;
-  --brand-50: 252 241 235; --brand-100: 248 224 212;
-  --n50: 245 239 230; --n100: 232 223 211; --n300: 181 170 160; --n500: 122 112 106; --n600: 94 86 80;
-  --n700: 74 67 62; --n800: 61 56 53; --n900: 49 49 49;
-  --ink: 49 49 49; --ink2: 61 56 53;
+  /* Portal and iPad app: same AAFE palette, with the light gray #F4F4F6 as the page background. */
+  --page: 244 244 246; --surface: 255 255 255; --muted: 244 244 246; --line: 235 235 235;
+  --brand-50: 244 244 246; --brand-100: 248 227 216;
+  --n50: 244 244 246; --n100: 235 235 235; --n300: 154 154 154; --n500: 112 112 112; --n600: 77 76 76;
+  --n700: 58 58 58; --n800: 38 38 38; --n900: 0 0 0;
+  --ink: 0 0 0; --ink2: 38 38 38;
 }
 .brand-warm.dark {
-  --page: 26 23 21; --surface: 37 33 30; --muted: 46 41 37; --line: 66 59 53;
-  --brand-50: 70 35 22; --brand-100: 92 44 26;
-  --n50: 46 41 37; --n100: 72 64 58; --n300: 120 110 102; --n500: 170 160 150; --n600: 196 187 176;
-  --n700: 216 208 198; --n800: 234 228 220; --n900: 250 246 240;
-  --ink: 20 18 16; --ink2: 37 33 30;
+  --page: 18 18 18; --surface: 30 30 30; --muted: 38 38 38; --line: 58 58 58;
+  --brand-50: 38 38 38; --brand-100: 58 58 58;
+  --n50: 38 38 38; --n100: 58 58 58; --n300: 138 138 138; --n500: 163 163 163; --n600: 190 190 190;
+  --n700: 214 214 214; --n800: 232 232 232; --n900: 245 245 245;
+  --ink: 0 0 0; --ink2: 30 30 30;
 }
 /* Dark mode: orange text needs a lighter shade to stay readable (6.8:1 on cards). Light mode unchanged. */
 .dark .text-brand-600, .dark .text-brand-700 { color: #E8956F; }
 .proto-banner { background: rgb(var(--ink)); color: #fff; }
 .brand-warm .proto-banner { background: #C64C28; }
+
+/* Chinese and Korean text needs more line height (brand spec ~1.7). */
+:where([lang^="zh"], [lang^="ko"]) { line-height: 1.7; }
 
 /* Rotating AAFE logo name (mirrors the animated logo on aafe.org) */
 .logo-name { display: grid; }
@@ -58,17 +62,20 @@
   :focus-visible { outline: 2px solid #C64C28; outline-offset: 2px; }
 }
 @layer components {
-  .btn { @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed; }
-  .btn-primary { @apply btn bg-brand-500 text-white hover:bg-brand-600; }
-  .btn-navy { @apply btn bg-ink text-white hover:bg-ink-2 dark:bg-navy-100 dark:hover:bg-navy-300; }
-  .btn-ghost { @apply btn border border-navy-100 bg-surface text-navy-800 hover:bg-navy-50; }
-  .btn-sm { @apply px-3 py-1.5 text-xs; }
+  /* Buttons (design.md v2.2, AAFE / aafe.org): pill, radius 50px, padding 8px 24px, min height 44px, 2px border. */
+  .btn { @apply inline-flex min-h-[44px] items-center justify-center gap-2 whitespace-nowrap rounded-[50px] border-2 px-6 py-2 text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed; }
+  /* Primary: orange fill, white text. Hover: white fill, orange text (the orange border keeps the shape). */
+  .btn-primary { @apply btn border-brand-500 bg-brand-500 text-white hover:bg-white hover:text-brand-500 disabled:hover:bg-brand-500 disabled:hover:text-white; }
+  .btn-navy { @apply btn border-ink bg-ink text-white hover:bg-ink-2 dark:border-navy-100 dark:bg-navy-100 dark:hover:bg-[#4A4A4A]; }
+  /* Secondary: white fill, grey border. */
+  .btn-ghost { @apply btn border-navy-500 bg-surface text-navy-800 hover:bg-navy-50; }
+  .btn-sm { @apply px-4 py-1 text-xs; }
   .card { @apply rounded-xl border border-navy-100 bg-surface; }
   .label { @apply block text-xs font-semibold uppercase tracking-wide text-navy-500 mb-1; }
-  .input { @apply w-full rounded-md border border-navy-100 bg-surface px-3 py-2 text-sm text-navy-900 placeholder:text-navy-300 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100; }
+  .input { @apply w-full rounded-md border border-navy-500 bg-surface px-3 py-2 text-sm text-navy-900 placeholder:text-navy-500 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100; }
   .th { @apply px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-navy-500 whitespace-nowrap; }
   .td { @apply px-3 py-2.5 text-sm text-navy-800 align-top; }
-  .icon-btn { @apply inline-flex h-9 w-9 items-center justify-center rounded-md border border-navy-100 bg-surface text-navy-700 hover:bg-navy-50 disabled:opacity-40; }
+  .icon-btn { @apply inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 border-navy-500 bg-surface text-navy-700 hover:bg-navy-50 disabled:opacity-40; }
 }
 @media print {
   .no-print { display: none !important; }
