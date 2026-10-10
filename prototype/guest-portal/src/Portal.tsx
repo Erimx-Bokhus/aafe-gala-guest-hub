@@ -252,12 +252,6 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
   const eventDate = new Date(view.event.date.length === 10 ? view.event.date + 'T12:00:00' : view.event.date)
   const statusText = { paid: t.stPaid, partial: t.stPartial, pledged: t.stPledged, comp: t.stComp }[view.money.status]
   const statusCls = { paid: 'bg-emerald-50 text-emerald-800', partial: 'bg-amber-50 text-amber-800', pledged: 'bg-amber-50 text-amber-800', comp: 'bg-brand-50 text-brand-600' }[view.money.status]
-  const goToSeats = () => {
-    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-    document.getElementById('seats')?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' })
-    document.getElementById('seats-h')?.focus({ preventScroll: true })
-  }
-
   return (
     <main>
       {/* 1. Short hero: who this is for, the package, and the gala date. The task starts right below it. */}
@@ -286,8 +280,7 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
             </div>
           </li>
         </ul>
-        <div className="mt-5 flex flex-wrap items-center gap-3">
-          <button type="button" className="btn-ghost" onClick={goToSeats}>{t.openList}</button>
+        <div className="mt-5 flex items-center">
           {/* Same Donate button as the aafe.org header; goes to AAFE's donate page (Give Lively) */}
           <a href="https://www.aafe.org/donate/" target="_blank" rel="noopener noreferrer" className="aafe-donate" data-testid="donate">{t.donate}</a>
         </div>
