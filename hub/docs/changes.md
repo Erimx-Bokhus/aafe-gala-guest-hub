@@ -5,6 +5,37 @@ Every change to this hub, newest first. Open it while signed in to claude.ai and
 Each change has a kind, shown the same way on every page next to the exact line that changed: **✦ New** (didn't exist before), **+ Updated** (rows, tasks, or terms added), **✎ Modified** (wording, numbers, or a rule changed), **− Removed** (taken out), and **! Important** (everyone should act on it). Hover an icon for the date, time (New York), and who made the change; click it to mark it read.
 
 ```changes
+2026-10-09 06:10 | important | Aisling | decisions.team-and-build-decisions | Client view now hides everything internal: team decisions, team risks, team documents, who builds what, and how the hub works. Show AAFE the hub in Client view, and don't send them the link itself (Client view hides, it doesn't lock)
+2026-10-09 06:10 | new | Aisling | screens.walkthrough-videos | Two walkthrough videos of the whole path: about three minutes narrated, and 90 seconds with captions; AAFE's logo and photos as grey placeholders
+2026-10-09 06:10 | updated | Aisling | screens.the-build-so-far | Screenshots of the three export buttons (PR #87); the 25-second walkthrough from Oct 6 is replaced by the new videos
+2026-10-09 06:10 | modified | Aisling | decisions | Product decisions stay for AAFE; 21 team and build decisions and 3 team questions moved to a team-only section; new questions for AAFE on name fields and approving reminders
+2026-10-09 06:10 | modified | Aisling | risks.team-risks | Five internal risks moved to Team risks; new team risk: six portal PRs edit the same file
+2026-10-09 06:10 | modified | Aisling | overview | Status in plain language; who builds what and how the hub works are team-only
+2026-10-09 06:10 | modified | Aisling | build-plan.where-each-component-stands | Exports connected to the staff app (C8, PR #87); approval list in review (C7, PR #89); Unix line endings (PR #88); about 1,250 automated checks
+2026-10-09 06:10 | updated | Aisling | tasks.added-october-9 | Oct 9: the five slices for the unwired database functions, the AAFE check-in prep, the hub audit, and two follow-ups (Code map rebuild, re-record after #89)
+2026-10-09 06:10 | modified | Aisling | architecture.what-s-built | The iPad app is connected to the backend (it said it wasn't); the staff app's export buttons and approval list
+2026-10-09 06:10 | modified | Aisling | data-ai | The Demo Day AI note moved to a team section; sponsor links stop after the deadline day
+2026-10-09 06:10 | updated | Aisling | documents.team-documents | Internal documents moved to Team documents, with the Oct 9 check-in prep; the export screenshots in the repo list
+2026-10-09 06:10 | updated | Aisling | discovery.still-to-ask | Two new questions for AAFE: one name field or first and last; approving reminders one at a time
+2026-10-09 06:10 | modified | Aisling | codemap.what-stands-out | Map rebuilt from today's code: the three exports now show as connected, leaving 11 database functions to wire
+2026-10-09 06:10 | modified | Aisling | glossary | Door list: the iPad holds each QR code's fingerprint, never the code; approval queue: where staff find it
+2026-10-09 06:10 | modified | Aisling | import.built-and-tested | The upload screen is next on the Build plan
+2026-10-09 06:10 | modified | Aisling | requirements.working-prd | About 1,250 automated checks; PR detail trimmed
+2026-10-09 06:10 | modified | Aisling | hosting.demo-preview-team-notes | The hosted iPad app syncs through Supabase
+2026-10-09 00:55 | modified | Aisling | codemap.the-map | The code preview shows in Team view only; Client view hides it
+2026-10-09 00:45 | updated | Aisling | codemap.the-map | Click any part of the code map to see what it's for and read its code, with the whole file one click away
+2026-10-09 00:45 | new | Aisling | codemap.what-stands-out | The code map now draws the links into the database: which app calls each database function, the tables each one uses, the 4 access rules and the 3 triggers. It found 14 database functions no screen calls yet
+2026-10-09 00:45 | modified | Aisling | codemap.what-the-map-doesn-t-show | Corrected: triggers don't write the change log; database functions do
+2026-10-09 00:45 | updated | Aisling | tasks | Code map task done; new task to wire the 14 unused database functions to the staff app
+2026-10-09 00:05 | modified | Aisling | tasks | Oct 8 night: PRs #81 and #82 (iPad layout), the review of Antonin's #75–#77 sent to Natalie, the PRD in Pathfinder, and the Saturday sign-in test at 12 PM; the code map task shows what's built and what's left
+2026-10-09 00:05 | modified | Natalie | screens.ipad-check-in-app | iPad screenshots retaken: the larger logo mark (still a grey placeholder) and the portrait filter on its own row (PRs #81, #82)
+2026-10-09 00:05 | modified | Aisling | build-plan.where-each-component-stands | Check-in app: the larger mark and portrait layout (PRs #81, #82); sponsor form: Antonin's #75–#77 reviewed, waiting on Natalie
+2026-10-09 00:05 | modified | Aisling | decisions.pending | When sponsor links stop: with option A, live sponsors never see #75's "list is closed" card, because their link stops at the same moment
+2026-10-09 00:05 | modified | Aisling | documents | The PR review plan's status, and Natalie's enterprise PRD approved by Pursuit and in Pathfinder
+2026-10-09 00:05 | modified | Aisling | overview | Status: the iPad app connected, the backend audit fixed, Antonin's portal PRs in review
+2026-10-09 00:05 | modified | Aisling | risks | The sign-in test is Saturday at 12 PM at the Pursuit building, once Cornell confirms
+2026-10-09 00:05 | updated | Aisling | glossary | Two new terms: Code map and graphify
+2026-10-08 23:55 | new | Aisling | codemap | New page: Code map, an interactive map of every file, function and table in the prototype and how they connect; search, filter by area, click for details
 2026-10-08 17:10 | modified | Aisling | tasks | The four audit bugs and the five smaller findings are fixed with tests in one PR (#78); next: a full audit of the whole system and a code map in the hub
 2026-10-08 17:10 | modified | Aisling | decisions | Supabase advisor warnings down from 43 to 1: the functions the apps call moved to a private schema behind same-name wrappers (PR #78)
 2026-10-08 17:10 | modified | Aisling | build-plan.where-each-component-stands | About 1,250 automated checks; nine audit bugs fixed with tests (PR #78)
