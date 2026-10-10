@@ -91,3 +91,38 @@
 }
 .brand-warm .aafe-contact:hover { background: #000; color: #fff; }
 .brand-warm .aafe-contact:focus-visible { outline: 2px solid #C64C28; outline-offset: 2px; }
+
+/* Flat container proposal measured against aafe.org. Keep actions and social
+   icons rounded, and leave focus indicators untouched. Guest portal only. */
+.brand-warm :where([class*="rounded"]:not(button):not(.btn-primary):not(.btn-navy):not(.btn-ghost):not(.btn-danger-outline):not(.aafe-donate):not(.aafe-contact)) {
+  border-radius: 0;
+}
+
+.brand-warm [data-testid="follow-us"] a {
+  border-radius: 9999px;
+}
+
+html.brand-warm [class*="shadow"]:not(:focus):not(:focus-visible) {
+  box-shadow: none;
+}
+
+.brand-warm :where(.card, [data-testid^="seat-"], [role="dialog"], .input, select, input[type="text"], input[type="email"], input[type="tel"], textarea) {
+  border-radius: 0;
+  border-color: #EBEBEB;
+}
+
+.brand-warm:not(.dark) :where(.input, .aafe-field, input[type="text"], input[type="email"], input[type="tel"], select, textarea) {
+  border-color: #B5B5B5;
+  background-color: #F4F4F6;
+  color: #000;
+}
+
+.brand-warm:not(.dark) form label:has(input[type="checkbox"]),
+.brand-warm:not(.dark) form label:has(input[type="radio"]) {
+  border-color: #B5B5B5;
+  background-color: #F4F4F6;
+}
+
+.brand-warm:not(.dark) :where([data-testid^="seat-"] .bg-surface) {
+  background-color: #F4F4F6;
+}
