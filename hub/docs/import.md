@@ -1,6 +1,6 @@
 # Import and matching
 <!-- modified 2026-10-05 21:28 Aisling -->
-<!-- reviewed 2026-10-08 Aisling -->
+<!-- reviewed 2026-10-09 Aisling -->
 
 How a Give Lively export becomes guests, orders, and seats without duplicates, and why a staff correction is never lost. Plain rules, no AI. Full spec: `docs/import-matching-spec.md` in the repo.
 
@@ -34,12 +34,12 @@ One import is all-or-nothing: if anything fails partway, nothing is applied and 
 ## Built and tested
 <!-- new 2026-10-05 22:58 Aisling -->
 
-The import works end to end in code: a file in AAFE's export format goes through the import engine and into the database in one step that either fully succeeds or changes nothing. What's left is the staff app's upload screen (frontend pair). <!-- new 2026-10-05 22:58 Aisling -->
+The import works end to end in code: a file in AAFE's export format goes through the import engine and into the database in one step that either fully succeeds or changes nothing. What's left is the upload screen in the staff app: the upload, the gala-page and tier pickers, and the review queue, connected to these database functions (next on the [Build plan](#build-plan.where-each-component-stands)). <!-- modified 2026-10-09 06:10 Aisling -->
 
 - **Import engine** (`import-engine/`): reads the file, converts times to UTC, splits guest lists, matches buyers and guests, builds the report. 116 automated tests. <!-- modified 2026-10-08 04:15 Aisling -->
 - **Database side** (`prototype/database/backend.sql`): skips purchases it has seen, never overwrites a name a sponsor or staff entered, keeps a run record for every upload, and puts close calls in the review queue. Tested with a sample file run all the way through; counts in [Build plan](#build-plan.where-each-component-stands), C11. <!-- modified 2026-10-08 04:15 Aisling -->
 
-Three choices settled while building (Oct 5; pre-fill reaffirmed Oct 7, PR #58 closed): <!-- modified 2026-10-08 04:15 Aisling -->
+Three choices settled while building (Oct 5; pre-fill reaffirmed Oct 7): <!-- modified 2026-10-09 06:10 Aisling -->
 
 | Question | Decision <!-- new 2026-10-05 22:58 Aisling --> |
 | --- | --- |
