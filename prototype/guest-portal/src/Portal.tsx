@@ -8,11 +8,38 @@ import Hero, { MissionStrip } from './Hero'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const EMPTY: AttendeeInput = { first_name: '', last_name: '', title: '', organization: '', email: '', dietary_needs: '', accessibility_needs: '' }
+const DIETARY_VALUES = ['Vegetarian', 'Vegan', 'Halal', 'Kosher', 'Gluten-free', 'No pork', 'No beef', 'No shellfish', 'Nut allergy'] as const
+const ACCESS_VALUES = ['Wheelchair access', 'Step-free seating', 'Hearing support', 'Visual support'] as const
+type AccessValue = typeof ACCESS_VALUES[number] | 'Other'
+
+function parseAccessibility(value: string): { enabled: boolean; choices: AccessValue[]; details: string } {
+  const raw = value.trim()
+  if (!raw || raw === 'No') return { enabled: false, choices: [], details: '' }
+  const parts = raw.split(/\s*;\s*/).filter(Boolean)
+  const choices = ACCESS_VALUES.filter((choice) => parts.includes(choice)) as AccessValue[]
+  const other = parts.find((part) => part === 'Other' || part.startsWith('Other:'))
+  if (other) choices.push('Other')
+  const details = parts.flatMap((part) => {
+    if (ACCESS_VALUES.includes(part as typeof ACCESS_VALUES[number]) || part === 'Yes' || part === 'Other') return []
+    if (part.startsWith('Other:')) return [part.slice('Other:'.length).trim()]
+    if (part.startsWith('Details:')) return [part.slice('Details:'.length).trim()]
+    return [part]
+  }).filter(Boolean).join('; ')
+  return { enabled: true, choices, details }
+}
 
 function AttendeeForm({ lang, initial, onSave, onCancel }: { lang: Lang; initial: AttendeeInput; onSave: (v: AttendeeInput) => void; onCancel: () => void }) {
   const t = DICT[lang]
   const familyFirst = lang === 'zh' || lang === 'ko'
   const [v, setV] = useState(initial)
+  const initialDietary = initial.dietary_needs.trim()
+  const dietaryChoice = DIETARY_VALUES.find((choice) => choice === initialDietary) ?? (initialDietary ? 'Other' : 'None')
+  const [dietarySelection, setDietarySelection] = useState<string>(dietaryChoice)
+  const [dietaryOther, setDietaryOther] = useState(initialDietary.startsWith('Other:') ? initialDietary.slice('Other:'.length).trim() : dietaryChoice === 'Other' && initialDietary !== 'Other' ? initialDietary : '')
+  const initialAccess = parseAccessibility(initial.accessibility_needs)
+  const [accessEnabled, setAccessEnabled] = useState(initialAccess.enabled)
+  const [accessChoices, setAccessChoices] = useState<AccessValue[]>(initialAccess.choices)
+  const [accessDetails, setAccessDetails] = useState(initialAccess.details)
   const [touched, setTouched] = useState(false)
   const IDS = { first_name: 'fn', last_name: 'ln', title: 'ti', organization: 'or', email: 'em' } as const
   const errs: Partial<Record<keyof AttendeeInput, string>> = {}
@@ -25,27 +52,71 @@ function AttendeeForm({ lang, initial, onSave, onCancel }: { lang: Lang; initial
     const id = IDS[k]
     return { 'aria-required': true, 'aria-invalid': err(k) ? true : undefined, 'aria-describedby': err(k) ? `${id}-err` : hint ? `${id}-hint` : undefined }
   }
-  const givenField = <Field key="fn" id="fn" label={t.firstName} error={err('first_name')}><input id="fn" className="input" value={v.first_name} onChange={set('first_name')} autoFocus={!familyFirst} autoComplete="off" {...a11y('first_name')} /></Field>
-  const familyField = <Field key="ln" id="ln" label={t.lastName} error={err('last_name')}><input id="ln" className="input" value={v.last_name} onChange={set('last_name')} autoFocus={familyFirst} autoComplete="off" {...a11y('last_name')} /></Field>
+  const givenField = <Field key="fn" id="fn" label={t.firstName} error={err('first_name')}><input id="fn" className="input min-h-[44px]" value={v.first_name} onChange={set('first_name')} autoFocus={!familyFirst} autoComplete="off" {...a11y('first_name')} /></Field>
+  const familyField = <Field key="ln" id="ln" label={t.lastName} error={err('last_name')}><input id="ln" className="input min-h-[44px]" value={v.last_name} onChange={set('last_name')} autoFocus={familyFirst} autoComplete="off" {...a11y('last_name')} /></Field>
   const trimmed = Object.fromEntries(Object.entries(v).map(([k, x]) => [k, x.trim()])) as unknown as AttendeeInput
+  const dietaryValue = dietarySelection === 'None' ? '' : dietarySelection === 'Other' ? (dietaryOther.trim() ? `Other: ${dietaryOther.trim()}` : 'Other') : dietarySelection
+  const accessParts: string[] = accessChoices.filter((choice) => choice !== 'Other')
+  if (accessChoices.includes('Other')) accessParts.push(accessDetails.trim() ? `Other: ${accessDetails.trim()}` : 'Other')
+  else if (accessDetails.trim()) accessParts.push(`Details: ${accessDetails.trim()}`)
+  const accessibilityValue = !accessEnabled ? '' : accessParts.length ? accessParts.join('; ') : 'Yes'
   return (
     <form noValidate className="space-y-4" onSubmit={(e) => {
       e.preventDefault(); setTouched(true)
       const order = (familyFirst ? ['last_name', 'first_name', 'title', 'organization', 'email'] : ['first_name', 'last_name', 'title', 'organization', 'email']) as (keyof typeof IDS)[]
       const firstBad = order.find((k) => errs[k])
       if (firstBad) document.getElementById(IDS[firstBad])?.focus() // jump to the first field that needs fixing
-      else onSave(trimmed)
+      else onSave({ ...trimmed, dietary_needs: dietaryValue, accessibility_needs: accessibilityValue })
     }}>
       {/* Chinese and Korean names are written family name first, so the fields (and the Tab order) follow that */}
       <div className="grid gap-4 sm:grid-cols-2">
         {(familyFirst ? [familyField, givenField] : [givenField, familyField])}
       </div>
-      <Field id="ti" label={t.title} hint={t.titleHint} error={err('title')}><input id="ti" className="input" value={v.title} onChange={set('title')} {...a11y('title', true)} /></Field>
-      <Field id="or" label={t.organization} hint={t.titleHint} error={err('organization')}><input id="or" className="input" value={v.organization} onChange={set('organization')} {...a11y('organization', true)} /></Field>
-      <Field id="em" label={t.email} error={err('email')}><input id="em" type="email" className="input" value={v.email} onChange={set('email')} {...a11y('email')} /></Field>
+      <Field id="ti" label={t.title} hint={t.titleHint} error={err('title')}><input id="ti" className="input min-h-[44px]" value={v.title} onChange={set('title')} {...a11y('title', true)} /></Field>
+      <Field id="or" label={t.organization} hint={t.titleHint} error={err('organization')}><input id="or" className="input min-h-[44px]" value={v.organization} onChange={set('organization')} {...a11y('organization', true)} /></Field>
+      <Field id="em" label={t.email} error={err('email')}><input id="em" type="email" className="input min-h-[44px]" value={v.email} onChange={set('email')} {...a11y('email')} /></Field>
       <div className="grid gap-4">
-        <Field id="di" label={t.dietary}><input id="di" className="input" value={v.dietary_needs} onChange={set('dietary_needs')} /></Field>
-        <Field id="ac" label={t.access}><input id="ac" className="input" value={v.accessibility_needs} onChange={set('accessibility_needs')} /></Field>
+        <Field id="di" label={t.dietary}>
+          <select id="di" className="input min-h-[44px]" value={dietarySelection} onChange={(e) => setDietarySelection(e.target.value)}>
+            <option value="None">{t.dietaryNone}</option>
+            <option value="Vegetarian">{t.dietaryVegetarian}</option>
+            <option value="Vegan">{t.dietaryVegan}</option>
+            <option value="Halal">{t.dietaryHalal}</option>
+            <option value="Kosher">{t.dietaryKosher}</option>
+            <option value="Gluten-free">{t.dietaryGlutenFree}</option>
+            <option value="No pork">{t.dietaryNoPork}</option>
+            <option value="No beef">{t.dietaryNoBeef}</option>
+            <option value="No shellfish">{t.dietaryNoShellfish}</option>
+            <option value="Nut allergy">{t.dietaryNutAllergy}</option>
+            <option value="Other">{t.otherOption}</option>
+          </select>
+        </Field>
+        {dietarySelection === 'Other' && <Field id="di-other" label={t.pleaseDescribe}>
+          <input id="di-other" className="input min-h-[44px]" value={dietaryOther} onChange={(e) => setDietaryOther(e.target.value)} />
+        </Field>}
+        <Field id="ac" label={t.accessQuestion}>
+          <select id="ac" className="input min-h-[44px]" value={accessEnabled ? 'yes' : 'no'} onChange={(e) => setAccessEnabled(e.target.value === 'yes')}>
+            <option value="no">{t.accessNo}</option>
+            <option value="yes">{t.accessYes}</option>
+          </select>
+        </Field>
+        {accessEnabled && <>
+          <fieldset className="space-y-1">
+            <legend className="mb-1 text-sm font-medium text-navy-800">{t.accessNeedsPrompt}</legend>
+            {([
+              ['Wheelchair access', t.accessWheelchair], ['Step-free seating', t.accessStepFree], ['Hearing support', t.accessHearing],
+              ['Visual support', t.accessVisual], ['Other', t.otherOption],
+            ] as [AccessValue, string][]).map(([value, label]) => (
+              <label key={value} className="flex min-h-[44px] cursor-pointer items-center gap-3 rounded-md px-2 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand-500">
+                <input type="checkbox" className="h-5 w-5 accent-brand-600" checked={accessChoices.includes(value)} onChange={(e) => setAccessChoices((current) => e.target.checked ? [...current, value] : current.filter((choice) => choice !== value))} />
+                <span>{label}</span>
+              </label>
+            ))}
+          </fieldset>
+          <Field id="ac-details" label={t.accessDetails}>
+            <input id="ac-details" className="input min-h-[44px]" value={accessDetails} onChange={(e) => setAccessDetails(e.target.value)} />
+          </Field>
+        </>}
       </div>
       <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
         <button type="button" onClick={onCancel} className="btn-ghost">{t.cancel}</button>
