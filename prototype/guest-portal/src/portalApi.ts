@@ -16,7 +16,7 @@ export interface PortalView {
   event: { name: string; date: string; doors: string; venue: string; address: string; dress: string }
   money: { commitment: number; paid: number; balance: number; status: 'paid' | 'partial' | 'pledged' | 'comp'; payments: { date: string; amount: number }[] }
   stats: ReturnType<typeof seatStats>
-  seats: { slot: number; status: SeatStatus; guest: (AttendeeInput & { updated_at: string }) | null }[]
+  seats: { slot: number; status: SeatStatus; guest: (AttendeeInput & { display_name?: string | null; updated_at: string }) | null }[]
   activity: { at: string; action: string; summary: string }[]
 }
 
@@ -29,7 +29,10 @@ export function getPortalView(db: DB, token: string): PortalView | null {
   const status = o.status === 'comp' ? 'comp' : m.balance <= 0.005 && m.pays.length ? 'paid' : m.pays.length ? 'partial' : 'pledged'
   const seats = db.seats.filter((s) => s.order_id === o.id && s.status !== 'cancelled').sort((a, b) => a.slot_number - b.slot_number).map((s) => {
     const g = s.guest_id ? db.guests.find((x) => x.id === s.guest_id) : null
-    return { slot: s.slot_number, status: s.status, guest: g ? { first_name: g.first_name, last_name: g.last_name, title: g.title ?? '', organization: g.organization ?? '', email: g.email ?? '', dietary_needs: g.dietary_needs ?? '', accessibility_needs: g.accessibility_needs ?? '', updated_at: g.updated_at } : null }
+    return { slot: s.slot_number, status: s.status, guest: g ? { first_name: g.first_name, last_name: g.last_name,
+      // Demo only: full-name proposal. Live save needs backend support (Aisling).
+      display_name: 'display_name' in g && typeof g.display_name === 'string' ? g.display_name : null,
+      title: g.title ?? '', organization: g.organization ?? '', email: g.email ?? '', dietary_needs: g.dietary_needs ?? '', accessibility_needs: g.accessibility_needs ?? '', updated_at: g.updated_at } : null }
   })
   return {
     orderId: o.id, organization: sp.organization_name, contactName: sp.primary_contact_name, tierName: tierOf(db, o.tier_id).name, deadline: o.guest_list_deadline,
@@ -44,8 +47,10 @@ export function saveAttendee(db: DB, token: string, slot: number, input: Attende
   const o = db.orders.find((x) => x.portal_token === token)!
   const seat = db.seats.find((s) => s.order_id === o.id && s.slot_number === slot)!
   const at = nowIso()
-  const name = `${input.first_name} ${input.last_name}`
-  const clean = { ...input, dietary_needs: input.dietary_needs || null, accessibility_needs: input.accessibility_needs || null }
+  // Demo only: full-name proposal. Live save needs backend support (Aisling).
+  const name = [input.first_name, input.last_name].filter(Boolean).join(' ').trim()
+  const clean = { ...input, first_name: name, last_name: '', display_name: name,
+    dietary_needs: input.dietary_needs || null, accessibility_needs: input.accessibility_needs || null }
   let guests = db.guests
   let guestId = seat.guest_id
   let action = 'guest.updated'

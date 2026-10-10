@@ -4,15 +4,17 @@ import { Field, Modal, Toast, fmtDate, money } from '@shared/ui'
 import type { DB } from '@shared/types'
 import { DICT, LOCALE, type Lang } from './i18n'
 import { parseAccessibilityNeeds, parseDietaryNeeds, serializeAccessibilityNeeds, serializeDietaryNeeds, type AccessibilityOption, type DietaryOption } from './guestNeeds'
+import { guestNameForDisplay, guestNameForForm } from './guestNames'
 import { LIVE, fetchPortalView, getPortalView, removeAttendee, removeAttendeeLive, saveAttendee, saveAttendeeLive, type AttendeeInput, type PortalView } from './portalApi'
 import Hero, { MissionStrip } from './Hero'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const EMPTY: AttendeeInput = { first_name: '', last_name: '', title: '', organization: '', email: '', dietary_needs: '', accessibility_needs: '' }
-function AttendeeForm({ lang, initial, onSave, onCancel }: { lang: Lang; initial: AttendeeInput; onSave: (v: AttendeeInput) => void; onCancel: () => void }) {
+function AttendeeForm({ lang, initial, onSave, onCancel }: { lang: Lang; initial: AttendeeInput & { display_name?: string | null }; onSave: (v: AttendeeInput) => void; onCancel: () => void }) {
   const t = DICT[lang]
   const familyFirst = lang === 'zh' || lang === 'ko'
   const [v, setV] = useState(initial)
+  const [fullName, setFullName] = useState(() => guestNameForForm(initial, lang))
   const initialDietary = parseDietaryNeeds(initial.dietary_needs)
   const [dietaryChoices, setDietaryChoices] = useState<DietaryOption[]>(initialDietary.selected)
   const [dietaryOther, setDietaryOther] = useState(initialDietary.otherDetails)
@@ -21,12 +23,19 @@ function AttendeeForm({ lang, initial, onSave, onCancel }: { lang: Lang; initial
   const [accessChoices, setAccessChoices] = useState<AccessibilityOption[]>(initialAccess.selected)
   const [accessDetails, setAccessDetails] = useState(initialAccess.otherDetails)
   const [touched, setTouched] = useState(false)
-  const IDS = { first_name: 'fn', last_name: 'ln', title: 'ti', organization: 'or', email: 'em' } as const
-  const errs: Partial<Record<keyof AttendeeInput, string>> = {}
-  ;(['first_name', 'last_name', 'title', 'organization', 'email'] as const).forEach((k) => { if (!v[k].trim()) errs[k] = t.required })
+  const fullNameMode = !LIVE
+  const IDS = { full_name: 'full-name', first_name: 'fn', last_name: 'ln', title: 'ti', organization: 'or', email: 'em' } as const
+  const errs: Partial<Record<keyof AttendeeInput | 'full_name', string>> = {}
+  if (fullNameMode) {
+    if (!fullName.trim()) errs.full_name = t.fullNameRequired
+  } else {
+    ;(['first_name', 'last_name'] as const).forEach((k) => { if (!v[k].trim()) errs[k] = t.required })
+  }
+  ;(['title', 'organization', 'email'] as const).forEach((k) => { if (!v[k].trim()) errs[k] = t.required })
   if (v.email.trim() && !EMAIL_RE.test(v.email.trim())) errs.email = t.invalidEmail
   const set = (k: keyof AttendeeInput) => (e: ChangeEvent<HTMLInputElement>) => setV({ ...v, [k]: e.target.value })
-  const err = (k: keyof AttendeeInput) => (touched ? errs[k] : undefined)
+  const err = (k: keyof AttendeeInput | 'full_name') => (touched ? errs[k] : undefined)
+  const fullNameError = touched ? errs.full_name : undefined
   // Link each required field to its error / hint so screen readers read them with the field
   const a11y = (k: keyof typeof IDS, hint = false) => {
     const id = IDS[k]
@@ -34,21 +43,19 @@ function AttendeeForm({ lang, initial, onSave, onCancel }: { lang: Lang; initial
   }
   const givenField = <Field key="fn" id="fn" label={t.firstName} error={err('first_name')}><input id="fn" className="input min-h-[44px]" value={v.first_name} onChange={set('first_name')} autoFocus={!familyFirst} autoComplete="off" {...a11y('first_name')} /></Field>
   const familyField = <Field key="ln" id="ln" label={t.lastName} error={err('last_name')}><input id="ln" className="input min-h-[44px]" value={v.last_name} onChange={set('last_name')} autoFocus={familyFirst} autoComplete="off" {...a11y('last_name')} /></Field>
+  const fullNameField = <Field id="full-name" label={t.fullName} error={fullNameError}><input id="full-name" className="input min-h-[44px]" value={fullName} onChange={(e) => setFullName(e.target.value)} autoFocus autoComplete="name" aria-required="true" aria-invalid={fullNameError ? true : undefined} aria-describedby={fullNameError ? 'full-name-err' : undefined} /></Field>
   const trimmed = Object.fromEntries(Object.entries(v).map(([k, x]) => [k, x.trim()])) as unknown as AttendeeInput
   const dietaryValue = serializeDietaryNeeds(dietaryChoices, dietaryOther)
   const accessibilityValue = accessEnabled ? serializeAccessibilityNeeds(accessChoices, accessDetails) : ''
   return (
     <form noValidate className="space-y-4" onSubmit={(e) => {
       e.preventDefault(); setTouched(true)
-      const order = (familyFirst ? ['last_name', 'first_name', 'title', 'organization', 'email'] : ['first_name', 'last_name', 'title', 'organization', 'email']) as (keyof typeof IDS)[]
+      const order = (fullNameMode ? ['full_name', 'title', 'organization', 'email'] : familyFirst ? ['last_name', 'first_name', 'title', 'organization', 'email'] : ['first_name', 'last_name', 'title', 'organization', 'email']) as (keyof typeof IDS)[]
       const firstBad = order.find((k) => errs[k])
       if (firstBad) document.getElementById(IDS[firstBad])?.focus() // jump to the first field that needs fixing
-      else onSave({ ...trimmed, dietary_needs: dietaryValue, accessibility_needs: accessibilityValue })
+      else onSave({ ...trimmed, ...(fullNameMode ? { first_name: fullName.trim(), last_name: '' } : {}), dietary_needs: dietaryValue, accessibility_needs: accessibilityValue })
     }}>
-      {/* Chinese and Korean names are written family name first, so the fields (and the Tab order) follow that */}
-      <div className="grid gap-4 sm:grid-cols-2">
-        {(familyFirst ? [familyField, givenField] : [givenField, familyField])}
-      </div>
+      {fullNameMode ? fullNameField : <div className="grid gap-4 sm:grid-cols-2">{(familyFirst ? [familyField, givenField] : [givenField, familyField])}</div>}
       <Field id="ti" label={t.title} hint={t.titleHint} error={err('title')}><input id="ti" className="input min-h-[44px]" value={v.title} onChange={set('title')} {...a11y('title', true)} /></Field>
       <Field id="or" label={t.organization} hint={t.titleHint} error={err('organization')}><input id="or" className="input min-h-[44px]" value={v.organization} onChange={set('organization')} {...a11y('organization', true)} /></Field>
       <Field id="em" label={t.email} error={err('email')}><input id="em" type="email" className="input min-h-[44px]" value={v.email} onChange={set('email')} {...a11y('email')} /></Field>
@@ -323,14 +330,15 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
               const g = s.guest
               const confirmed = s.status === 'reviewed' || s.status === 'badge_ready' || s.status === 'checked_in'
               // Screen readers hear which seat a button is for
-              const seatName = `${t.seat} ${s.slot}${g ? `, ${g.first_name} ${g.last_name}` : ''}`
+              const guestName = g ? guestNameForDisplay(g) : ''
+              const seatName = `${t.seat} ${s.slot}${g ? `, ${guestName}` : ''}`
               return (
                 <li key={s.slot} className={`flex flex-col gap-3 rounded-xl p-4 ${g ? 'bg-cream-100' : 'border border-dashed border-navy-300 bg-surface'}`} data-testid={`seat-${s.slot}`}>
                   <div className="min-w-0 flex-1">
                     <div className="type-nav text-navy-500">{t.seat} {s.slot}</div>
                     {g ? (
                       <>
-                        <div className="type-h6 mt-1 text-navy-900">{g.first_name} {g.last_name}</div>
+                        <div className="type-h6 mt-1 text-navy-900">{guestName}</div>
                         <div className="text-navy-600">{g.title}{g.organization && g.organization !== view.organization ? ` · ${g.organization}` : ''}</div>
                         {(g.dietary_needs || g.accessibility_needs) && (
                           <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
@@ -451,7 +459,7 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
       </Modal>
 
       {/* Remove asks first, in the page's own dialog (not the browser's), and names the guest and the seat */}
-      <Modal open={removingSeat != null} onClose={() => setRemoving(null)} title={removingSeat?.guest ? t.removeTitle(`${removingSeat.guest.first_name} ${removingSeat.guest.last_name}`, removingSeat.slot) : ''} closeLabel={t.close}>
+      <Modal open={removingSeat != null} onClose={() => setRemoving(null)} title={removingSeat?.guest ? t.removeTitle(guestNameForDisplay(removingSeat.guest), removingSeat.slot) : ''} closeLabel={t.close}>
         <p className="text-navy-700">{t.removeBody}</p>
         <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <button type="button" className="btn-ghost" onClick={() => setRemoving(null)} data-testid="keep-guest">{t.keepGuest}</button>
