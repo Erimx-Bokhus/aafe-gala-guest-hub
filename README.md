@@ -14,6 +14,8 @@ Copyright 2026 the ERIMX BOKHUS team. All rights reserved. Licensing to be decid
 
 `node scripts/ci-local.mjs` runs the same six checks as GitHub Actions (real-data guard, secret scan, import engine, frontend tests and demo-file rebuild, backend tests, server-function type-check), with no Actions minutes. About 3 minutes; `--quick` skips the backend tests and the rebuild (about 15 seconds). Run it before you push, or `node scripts/ci-local.mjs --install-hook` to run `--quick` before every `git push`. Docker (secret scan) and Deno (server functions) are optional; a missing tool skips that check. Details at the top of the script.
 
+To run the actual workflow files instead, in Docker, `act` works too (`act pull_request -j real-data-guard`). It's slower, and its first run downloads a large runner image.
+
 ## Project hub
 
 `hub/` holds a browsable, presentable version of the docs. Run `npx serve` inside it; see `hub/README.md`.
