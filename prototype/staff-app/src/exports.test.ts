@@ -75,18 +75,18 @@ describe('who may export, and the change log', () => {
 describe('the CSV files', () => {
   it('keep the badge columns staff already use, and say what the badge says', () => {
     const csv = badgeCsv([
-      { first_name: 'Ana', last_name: 'Ruiz', title: 'Director', organization: 'Example Co', table_number: 3, seat_number: 2, sponsor: 'Example Sponsor', guest_type: 'sponsor_guest', badge_status: 'ready' },
-      { first_name: 'Bo', last_name: 'Han', title: null, organization: null, table_number: null, seat_number: null, sponsor: null, guest_type: 'comp_relationship', badge_status: 'ready' },
+      { display_name: 'Dr. Ana Ruiz', first_name: 'Ana', last_name: 'Ruiz', title: 'Director', organization: 'Example Co', table_number: 3, seat_number: 2, sponsor: 'Example Sponsor', guest_type: 'sponsor_guest', badge_status: 'ready' },
+      { display_name: 'Bo Han', first_name: 'Bo', last_name: 'Han', title: null, organization: null, table_number: null, seat_number: null, sponsor: null, guest_type: 'comp_relationship', badge_status: 'ready' },
     ])
-    expect(csv[1]).toEqual(['First', 'Last', 'Title', 'Organization', 'Table', 'Seat', 'Affiliation'])
-    expect(csv[2]).toEqual(['Ana', 'Ruiz', 'Director', 'Example Co', 3, 2, 'Example Sponsor'])
-    expect(csv[3][6]).toBe('Guest of AAFE')
+    expect(csv[1]).toEqual(['Name on badge', 'First', 'Last', 'Title', 'Organization', 'Table', 'Seat', 'Affiliation'])
+    expect(csv[2]).toEqual(['Dr. Ana Ruiz', 'Ana', 'Ruiz', 'Director', 'Example Co', 3, 2, 'Example Sponsor'])   // the badge prints the name as written
+    expect(csv[3][7]).toBe('Guest of AAFE')
   })
 
   it('label unnamed seats, arrivals and walk-ins in plain words', () => {
     const list = checkinCsv(demoCheckinRows(loadDB()))
     expect(list[1]).toContain('Access needs')
-    expect(list.some((r) => r[6] === 'Unnamed sponsor seat')).toBe(true)
+    expect(list.some((r) => r[7] === 'Unnamed sponsor seat')).toBe(true)
     expect(salesforceCsv([{ first_name: null, last_name: 'Riley Walkin', email: null, title: null, organization: null, sponsor: null, salesforce_account_id: null,
       salesforce_opportunity_id: null, guest_type: 'walk_in', checked_in_at: '2027-05-20T23:00:00Z', check_in_method: 'exception' }])[2][8]).toBe('Walk-in')
   })
