@@ -56,3 +56,30 @@
   --n700: 64 64 64;
   --n800: 51 51 51;
 }
+
+/* "Send AAFE an email" form, measured from aafe.org/contact (Oct 2026) */
+.brand-warm .aafe-field {
+  display: block; width: 100%; height: 50px; padding: 0 14px;
+  background: #F4F4F6; border: 1px solid #B5B5B5; border-radius: 0;
+  font-family: "Poppins", "Noto Sans TC", "Noto Sans KR", sans-serif; font-size: 16px; font-weight: 400; color: #000;
+}
+.brand-warm .aafe-field::placeholder { color: #707070; opacity: 1; }
+.brand-warm .aafe-field:focus { outline: 2px solid #C64C28; outline-offset: 2px; }
+.brand-warm .aafe-field[aria-invalid="true"] { border-color: #BE123C; }
+.brand-warm .aafe-textarea { height: 138px; padding: 15px 14px; resize: vertical; }
+.brand-warm .aafe-submit {
+  display: inline-flex; align-items: center; justify-content: center; width: 210px; max-width: 100%; height: 46px;
+  background: #C64C28; color: #fff; border: 2px solid #C64C28; border-radius: 50px;
+  font-size: 16px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.02em;
+}
+.brand-warm .aafe-submit:hover { background: #fff; color: #C64C28; }
+.brand-warm.dark .aafe-field { background: rgb(46 41 37); color: #fff; border-color: rgb(120 110 102); }
+
+/* "Donate" button measured from the aafe.org header: 15px bold uppercase, 22px side padding, 30px radius.
+   Height raised from 38px to 44px so it is easy to tap and lines up with "Open your guest list". */
+.brand-warm .aafe-donate {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 22px;
+  background: #C64C28; color: #fff; border: 2px solid #C64C28; border-radius: 30px;
+  font-size: 15px; font-weight: 700; text-transform: uppercase; line-height: 1;
+}
+.brand-warm .aafe-donate:hover { background: #fff; color: #C64C28; }
