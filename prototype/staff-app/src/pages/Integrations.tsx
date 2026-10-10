@@ -4,6 +4,8 @@ import { processorFee } from '@shared/data'
 import { Pill, ago, downloadCsv, fmtDate } from '@shared/ui'
 import { PageHead } from '../App'
 import { importGiveLively, salesforceSyncNow, useStaff, type GLRow } from '../store'
+import { canDo } from '../api'
+import { salesforceCsv } from '../exports'
 
 // Column names follow Give Lively's "Line Items (All)" report. Confirm against a real AAFE export before launch.
 const COLS: Record<keyof GLRow, string[]> = {
@@ -42,7 +44,7 @@ const sampleRows = () => [
 ]
 
 export default function Integrations() {
-  const { db, api, toast, act, demo } = useStaff()
+  const { db, api, user, toast, act, demo } = useStaff()
   const file = useRef<HTMLInputElement>(null)
   const [lastPull, setLastPull] = useState<string | null>(null)
   const [preview, setPreview] = useState<GLRow[] | null>(null)
@@ -106,7 +108,11 @@ export default function Integrations() {
             <div className="rounded-lg bg-cream-100 p-2"><div className="text-xl font-semibold tabular-nums text-amber-700" data-testid="sf-pending">{pending}</div><div className="text-xs text-navy-500">pending</div></div>
             <div className="rounded-lg bg-cream-100 p-2"><div className="text-sm font-semibold">{lastSync ? fmtDate(lastSync, 'en-US', true) : '—'}</div><div className="text-xs text-navy-500">last sync</div></div>
           </div>
-          <button className="btn-ghost mt-4" disabled={!demo} onClick={() => { if (!demo) return; const r = salesforceSyncNow(db); demo(() => r.db); toast(`${r.n} records pushed to Salesforce (simulated)`) }}><RefreshCw size={15} /> Sync now (simulated)</button>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button className="btn-ghost" disabled={!demo} onClick={() => { if (!demo) return; const r = salesforceSyncNow(db); demo(() => r.db); toast(`${r.n} records pushed to Salesforce (simulated)`) }}><RefreshCw size={15} /> Sync now (simulated)</button>
+            {/* Who actually came, for a Contact + Campaign Member import. Carries email, so gala admins only. */}
+            {canDo(user.role, 'exportSalesforce') && <button className="btn-ghost" data-testid="export-salesforce" onClick={() => void act(api.exportSalesforce().then((rows) => downloadCsv('aafe-salesforce-attendees-SYNTHETIC.csv', salesforceCsv(rows))), 'Salesforce file downloaded')}><Download size={15} /> Download Salesforce file</button>}
+          </div>
           <p className="mt-2 text-xs text-navy-500">Give Lively’s own free Salesforce integration can also sync donations hourly. This app adds what Give Lively doesn’t know: checks, direct ACH, comps, seats and attendance.</p>
         </section>
 
