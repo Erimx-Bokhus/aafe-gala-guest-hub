@@ -121,7 +121,7 @@ export default function Integrations() {
           {drafts.length > 0 && (
             <div className="border-b border-navy-100 bg-brand-50 px-5 py-3" data-testid="email-drafts">
               <h3 className="text-sm font-semibold text-navy-900">Waiting for approval ({drafts.length})</h3>
-              <ul className="mt-2 divide-y divide-brand-100">
+              <ul className="mt-2 divide-y divide-navy-100">
                 {drafts.map((e) => (
                   <li key={e.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
                     <span><span className="font-medium text-navy-900">{e.template.replace(/_/g, ' ')}</span> to {e.to_name} <span className="text-xs text-navy-500">{e.to_email} · {e.trigger.replace(/_/g, ' ')}</span></span>
