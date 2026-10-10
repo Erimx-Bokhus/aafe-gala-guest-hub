@@ -13,8 +13,8 @@ describe('toGlImport', () => {
       quantity: 2, seats: 2, original: 1000, covered: 30, gross: 1030, refunded: 0, cancelled: false,
       guest_text: 'Jane Doe jane@example.org\nme',
       guests: [
-        { display_name: 'Jane Doe', email: 'jane@example.org', is_buyer: false },
-        { display_name: 'Grace Kim', email: 'grace.kim@example.org', is_buyer: true },
+        { display_name: 'Jane Doe', first_name: 'Jane', last_name: 'Doe', email: 'jane@example.org', is_buyer: false },
+        { display_name: 'Grace Kim', first_name: 'Grace', last_name: 'Kim', email: 'grace.kim@example.org', is_buyer: true },
       ],
     }])
     expect(run).toMatchObject({ file_name: 'export.csv', earliest: '2027-02-05T22:14:46Z', latest: '2027-02-05T22:14:46Z', missing: [] })
