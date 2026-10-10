@@ -5,8 +5,8 @@ import { describe, expect, it } from 'vitest'
 import { DICT, LANGS, LOCALE } from '../guest-portal/src/i18n'
 import { buildSheet, keys, OUT, PAGE, render, REVIEW_LANGS, SAMPLES } from './translation-sheet.mts'
 
-/** Phrases that are rightly the same in another language: proper names. */
-const SAME_AS_ENGLISH_OK: Record<string, string[]> = { es: ['orgName'] }
+/** Phrases that are rightly the same in another language: proper names or standard borrowed terms. */
+const SAME_AS_ENGLISH_OK: Record<string, string[]> = { es: ['orgName', 'dietaryHalal', 'dietaryKosher', 'accessNo'] }
 
 const langs = Object.keys(DICT) as (keyof typeof DICT)[]
 const dicts = DICT as unknown as Record<string, Record<string, unknown>>
