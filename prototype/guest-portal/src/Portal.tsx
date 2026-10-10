@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ChangeEvent } from 'react'
-import { Award, CheckCircle2, CircleDashed, Clock, Lock, MapPin, Pencil, Plus } from 'lucide-react'
+import { Award, CheckCircle2, CircleDashed, Clock, Facebook, Instagram, Linkedin, Lock, MapPin, Pencil, Plus, Twitter, Youtube } from 'lucide-react'
 import { Field, Modal, Toast, fmtDate, money } from '@shared/ui'
 import type { DB } from '@shared/types'
 import { DICT, LOCALE, type Lang } from './i18n'
@@ -55,6 +55,62 @@ function AttendeeForm({ lang, initial, onSave, onCancel }: { lang: Lang; initial
   )
 }
 
+// Contact form, styled like "Send AAFE an email" on aafe.org/contact (same fields, sizes and button).
+// Prototype: nothing is sent yet. In production this posts to the team's email service.
+function ContactForm({ lang, onClose }: { lang: Lang; onClose: () => void }) {
+  const t = DICT[lang]
+  const [v, setV] = useState({ name: '', email: '', phone: '', message: '' })
+  const [touched, setTouched] = useState(false)
+  const [sent, setSent] = useState(false)
+  const errs: Partial<Record<keyof typeof v, string>> = {}
+  if (!v.name.trim()) errs.name = t.required
+  if (!v.email.trim()) errs.email = t.required
+  else if (!EMAIL_RE.test(v.email.trim())) errs.email = t.invalidEmail
+  if (!v.message.trim()) errs.message = t.required
+  const err = (k: keyof typeof v) => (touched ? errs[k] : undefined)
+  const set = (k: keyof typeof v) => (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setV({ ...v, [k]: e.target.value })
+  if (sent) return (
+    <div className="py-4 text-center" role="status" data-testid="contact-sent">
+      <CheckCircle2 size={36} className="mx-auto text-emerald-700" aria-hidden />
+      <p className="type-h6 mt-3 text-navy-900">{t.cSentTitle}</p>
+      <p className="mt-1 text-navy-600">{t.cSentBody}</p>
+      <button type="button" className="aafe-submit mt-6" onClick={onClose}>{t.close}</button>
+    </div>
+  )
+  const field = (k: keyof typeof v, label: string, ph: string, type = 'text') => (
+    <div>
+      <label htmlFor={`c-${k}`} className="sr-only">{label}</label>
+      {k === 'message'
+        ? <textarea id={`c-${k}`} className="aafe-field aafe-textarea" placeholder={ph} value={v[k]} onChange={set(k)} aria-invalid={err(k) ? true : undefined} aria-describedby={err(k) ? `c-${k}-err` : undefined} />
+        : <input id={`c-${k}`} type={type} className="aafe-field" placeholder={ph} value={v[k]} onChange={set(k)} autoComplete={k === 'name' ? 'name' : k === 'email' ? 'email' : 'tel'} aria-invalid={err(k) ? true : undefined} aria-describedby={err(k) ? `c-${k}-err` : undefined} />}
+      {err(k) && <p id={`c-${k}-err`} className="mt-1 text-sm font-medium text-rose-700">{err(k)}</p>}
+    </div>
+  )
+  return (
+    <form noValidate className="space-y-5" data-testid="contact-form" onSubmit={(e) => {
+      e.preventDefault(); setTouched(true)
+      const firstBad = (['name', 'email', 'message'] as const).find((k) => errs[k])
+      if (firstBad) document.getElementById(`c-${firstBad}`)?.focus()
+      else setSent(true)
+    }}>
+      {field('name', t.cName, t.phName)}
+      {field('email', t.cEmail, t.phEmail, 'email')}
+      {field('phone', t.cPhone, t.phPhone, 'tel')}
+      {field('message', t.cMessage, t.phMessage)}
+      <div className="pt-2 text-center"><button type="submit" className="aafe-submit" data-testid="contact-submit">{t.cSubmit}</button></div>
+    </form>
+  )
+}
+
+// AAFE's official social accounts (from aafe.org/contact)
+const SOCIAL = [
+  { name: 'Facebook', href: 'https://www.facebook.com/aafe1974', Icon: Facebook },
+  { name: 'Instagram', href: 'https://www.instagram.com/aafenyc/', Icon: Instagram },
+  { name: 'X (Twitter)', href: 'https://twitter.com/AAFE1974', Icon: Twitter },
+  { name: 'LinkedIn', href: 'https://www.linkedin.com/company/aafe/', Icon: Linkedin },
+  { name: 'YouTube', href: 'https://www.youtube.com/@aafe1974', Icon: Youtube },
+]
+
 function activityText(lang: Lang, a: PortalView['activity'][number]) {
   const t = DICT[lang]
   const m = a.summary.match(/^(.*?) (?:added to seat|updated \(seat|removed from seat) (\d+)/)
@@ -89,6 +145,7 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
   const [liveView, setLiveView] = useState<PortalView | null | undefined>(undefined)
   const [editing, setEditing] = useState<number | null>(null)
   const [removing, setRemoving] = useState<number | null>(null)
+  const [contactOpen, setContactOpen] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const [justSaved, setJustSaved] = useState(false)
   useEffect(() => { if (LIVE) { setLiveView(undefined); fetchPortalView(token).then(setLiveView, () => setLiveView(null)) } }, [token])
@@ -157,7 +214,11 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
             </div>
           </li>
         </ul>
-        <button type="button" className="btn-ghost mt-5" onClick={goToSeats}>{t.openList}</button>
+        <div className="mt-5 flex flex-wrap items-center gap-3">
+          <button type="button" className="btn-ghost" onClick={goToSeats}>{t.openList}</button>
+          {/* Same Donate button as the aafe.org header; goes to AAFE's donate page (Give Lively) */}
+          <a href="https://www.aafe.org/donate/" target="_blank" rel="noopener noreferrer" className="aafe-donate" data-testid="donate">{t.donate}</a>
+        </div>
       </Hero>
 
       <div className="mx-auto max-w-4xl space-y-6 px-5 py-8">
@@ -193,15 +254,16 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
             </div>
           </div>
 
-          <ul className="card mt-4 divide-y divide-navy-100 px-5">
+          {/* Two guests per row on wider screens; cards share the row height, actions sit at the bottom so rows line up */}
+          <ul className="mt-4 grid gap-3 sm:grid-cols-2">
             {view.seats.map((s) => {
               const g = s.guest
               const confirmed = s.status === 'reviewed' || s.status === 'badge_ready' || s.status === 'checked_in'
               // Screen readers hear which seat a button is for
               const seatName = `${t.seat} ${s.slot}${g ? `, ${g.first_name} ${g.last_name}` : ''}`
               return (
-                <li key={s.slot} className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between" data-testid={`seat-${s.slot}`}>
-                  <div className="min-w-0">
+                <li key={s.slot} className={`flex flex-col gap-3 rounded-xl p-4 ${g ? 'bg-cream-100' : 'border border-dashed border-navy-300 bg-surface'}`} data-testid={`seat-${s.slot}`}>
+                  <div className="min-w-0 flex-1">
                     <div className="type-nav text-navy-500">{t.seat} {s.slot}</div>
                     {g ? (
                       <>
@@ -209,15 +271,15 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
                         <div className="text-navy-600">{g.title}{g.organization && g.organization !== view.organization ? ` · ${g.organization}` : ''}</div>
                         {(g.dietary_needs || g.accessibility_needs) && (
                           <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
-                            {g.dietary_needs && <span className="rounded bg-navy-50 px-2 py-0.5 text-navy-700">{t.dietaryShort}: {g.dietary_needs}</span>}
-                            {g.accessibility_needs && <span className="rounded bg-navy-50 px-2 py-0.5 text-navy-700">{t.accessShort}: {g.accessibility_needs}</span>}
+                            {g.dietary_needs && <span className="rounded bg-surface px-2 py-0.5 text-navy-700">{t.dietaryShort}: {g.dietary_needs}</span>}
+                            {g.accessibility_needs && <span className="rounded bg-surface px-2 py-0.5 text-navy-700">{t.accessShort}: {g.accessibility_needs}</span>}
                           </div>
                         )}
                         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
                           {confirmed
                             ? <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-800"><CheckCircle2 size={14} aria-hidden /> {t.confirmed}</span>
                             : <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-800"><Clock size={14} aria-hidden /> {t.received}</span>}
-                          <span className="text-xs text-navy-500">{t.lastUpdated}: {fmtDate(g.updated_at, loc)}</span>
+                          <span className="text-xs text-navy-600">{t.lastUpdated}: {fmtDate(g.updated_at, loc)}</span>
                         </div>
                       </>
                     ) : (
@@ -253,9 +315,24 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
         <section className="card flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between" aria-labelledby="help-h">
           <div>
             <h2 id="help-h" className="type-h6 text-navy-900">{t.help}</h2>
-            <p className="text-navy-600">gala-team@aafe-demo.example.org · (212) 555-0100</p>
+            <button type="button" className="btn-ghost mt-3" onClick={() => setContactOpen(true)} data-testid="open-contact">{t.contact}</button>
           </div>
-          <a className="btn-ghost shrink-0" href="mailto:gala-team@aafe-demo.example.org">{t.contact}</a>
+          {/* Like the "Follow us" block on aafe.org/contact: black round icons, then the phone in orange */}
+          <div className="sm:text-right" data-testid="follow-us">
+            <p className="text-[15px] font-bold uppercase text-navy-900">{t.followUs}</p>
+            <ul className="mt-2 flex gap-2 sm:justify-end">
+              {SOCIAL.map(({ name, href, Icon }) => (
+                <li key={name}>
+                  <a href={href} target="_blank" rel="noopener noreferrer" aria-label={`AAFE ${name}`} title={name}
+                    className="flex h-11 w-11 items-center justify-center rounded-full bg-[#000] text-white hover:bg-brand-500">
+                    <Icon size={18} aria-hidden />
+                  </a>
+                </li>
+              ))}
+            </ul>
+            {/* Demo number: the real-data guard only allows 555-01xx. Production shows AAFE's real number from aafe.org. */}
+            <a href="tel:+12125550100" className="mt-2 inline-block text-[15px] font-bold text-brand-600 underline underline-offset-2">(212) 555-0100</a>
+          </div>
         </section>
 
         {/* 4. Contribution: secondary, leads with status and balance, never a big "$0" */}
@@ -317,6 +394,9 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
           <button type="button" className="btn-ghost" onClick={() => setRemoving(null)} data-testid="keep-guest">{t.keepGuest}</button>
           <button type="button" className="btn-danger-outline" onClick={() => { if (removingSeat) remove(removingSeat.slot, () => { setRemoving(null); setToast(t.saved) }) }} data-testid="confirm-remove">{t.removeGuest}</button>
         </div>
+      </Modal>
+      <Modal open={contactOpen} onClose={() => setContactOpen(false)} title={t.contactTitle} closeLabel={t.close}>
+        {contactOpen && <ContactForm lang={lang} onClose={() => setContactOpen(false)} />}
       </Modal>
       <Toast msg={toast} onDone={() => setToast(null)} />
     </main>
