@@ -41,3 +41,18 @@
 .brand-warm details > summary { list-style: none; }
 .brand-warm details > summary::before { content: "▸"; margin-right: 10px; color: #C64C28; transition: transform .15s; display: inline-block; }
 .brand-warm details[open] > summary::before { transform: rotate(90deg); }
+
+/* Official AAFE neutrals (aafe.org / Greybox Creative brand): white + light grey #F4F4F6 instead of cream.
+   Redesign v2 PROPOSAL for Natalie, guest portal only, light mode only (dark mode unchanged). */
+.brand-warm:not(.dark) {
+  --page: 255 255 255;   /* page background: white */
+  --muted: 244 244 246;  /* #F4F4F6: hero band, soft panels */
+  --line: 235 235 235;   /* #EBEBEB: section lines */
+  --n50: 244 244 246;    /* tag and panel fills */
+  --n100: 235 235 235;   /* card borders, empty progress segments */
+  --n300: 186 185 185;   /* #BAB9B9: decorative only, never text */
+  --n500: 112 112 112;   /* #707070: meta text (4.95:1 on white) */
+  --n600: 77 76 76;      /* #4D4C4C: secondary text */
+  --n700: 64 64 64;
+  --n800: 51 51 51;
+}

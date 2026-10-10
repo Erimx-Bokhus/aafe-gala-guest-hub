@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ChangeEvent } from 'react'
-import { CalendarDays, CheckCircle2, CircleDashed, Clock, Lock, MapPin, Pencil, Plus } from 'lucide-react'
+import { Award, CheckCircle2, CircleDashed, Clock, Lock, MapPin, Pencil, Plus } from 'lucide-react'
 import { Field, Modal, Toast, fmtDate, money } from '@shared/ui'
 import type { DB } from '@shared/types'
 import { DICT, LOCALE, type Lang } from './i18n'
@@ -117,6 +117,10 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
   const openSeats = view.stats.total - view.stats.named
   const firstOpen = view.seats.find((s) => !s.guest)
   const deadlineText = view.deadline ? fmtDate(view.deadline, loc) : undefined
+  // Short place, like an invitation: the venue name (before any comma) and the city/state, no street or ZIP
+  const venueName = view.event.venue.split(',')[0]!.trim()
+  const venueCity = view.event.address.replace(/\s*\(synthetic\)\s*/i, '').split(',').slice(1).join(',').replace(/\s*\d{5}(-\d{4})?\s*$/, '').trim()
+  const eventDate = new Date(view.event.date.length === 10 ? view.event.date + 'T12:00:00' : view.event.date)
   const statusText = { paid: t.stPaid, partial: t.stPartial, pledged: t.stPledged, comp: t.stComp }[view.money.status]
   const statusCls = { paid: 'bg-emerald-50 text-emerald-800', partial: 'bg-amber-50 text-amber-800', pledged: 'bg-amber-50 text-amber-800', comp: 'bg-brand-50 text-brand-600' }[view.money.status]
   const goToSeats = () => {
@@ -129,7 +133,30 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
     <main>
       {/* 1. Short hero: who this is for, the package, and the gala date. The task starts right below it. */}
       <Hero compact lang={lang} eyebrow={t.eyebrow} title={`${t.welcome}, ${view.organization}`} body="">
-        <p className="mt-3 text-navy-700"><strong className="font-semibold text-navy-900">{view.tierName}</strong> · {t.eventWhen}: {fmtDate(view.event.date, loc)}</p>
+        {/* Like an event invitation (Luma): the sponsorship as a badge, then one fact per row with an icon tile */}
+        <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-brand-100 bg-brand-50 py-1.5 pl-2 pr-4" data-testid="sponsor-badge">
+          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-500 text-white"><Award size={16} aria-hidden /></span>
+          <span className="font-semibold text-navy-900">{view.tierName}</span>
+        </div>
+        <ul className="mt-5 flex flex-wrap gap-x-10 gap-y-3" aria-label={t.eventWhen}>
+          <li className="flex items-center gap-3">
+            <span className="flex h-11 w-11 shrink-0 flex-col overflow-hidden rounded-lg border border-navy-100 bg-surface text-center" aria-hidden>
+              <span className="bg-cream-100 text-[10px] font-semibold uppercase leading-4 text-navy-600">{eventDate.toLocaleDateString(loc, { month: 'short' })}</span>
+              <span className="flex-1 text-base font-bold leading-6 text-navy-900">{eventDate.getDate()}</span>
+            </span>
+            <div>
+              <div className="font-semibold text-navy-900">{eventDate.toLocaleDateString(loc, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</div>
+              {view.event.doors && <div className="text-navy-600">{t.doorsAt(view.event.doors)}</div>}
+            </div>
+          </li>
+          <li className="flex items-center gap-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-navy-100 bg-surface text-navy-700" aria-hidden><MapPin size={20} /></span>
+            <div>
+              <div className="font-semibold text-navy-900">{venueName}</div>
+              {venueCity && <div className="text-navy-600">{venueCity}</div>}
+            </div>
+          </li>
+        </ul>
         <button type="button" className="btn-ghost mt-5" onClick={goToSeats}>{t.openList}</button>
       </Hero>
 
@@ -214,10 +241,6 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
             })}
           </ul>
 
-          <p className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-1 text-navy-700">
-            <span className="inline-flex items-center gap-2"><CalendarDays size={16} className="text-navy-500" aria-hidden /> {fmtDate(view.event.date, loc)} · {view.event.doors}</span>
-            <span className="inline-flex items-center gap-2"><MapPin size={16} className="text-navy-500" aria-hidden /> {view.event.venue}, {view.event.address}</span>
-          </p>
         </section>
 
         {justSaved && (
