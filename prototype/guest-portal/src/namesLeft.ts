@@ -1,7 +1,6 @@
 export function namesLeftText(
   count: number,
-  deadline: string | undefined,
-  format: (count: number, deadline?: string) => string,
+  format: (count: number) => string,
 ) {
-  return count > 0 ? format(count, deadline) : null
+  return count > 0 ? format(count) : null
 }
