@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ChangeEvent } from 'react'
-import { Award, CheckCircle2, CircleDashed, Clock, Facebook, Instagram, Linkedin, Lock, MapPin, Pencil, Plus, Twitter, Youtube } from 'lucide-react'
+import { Award, CheckCircle2, CircleDashed, Clock, Facebook, Instagram, Linkedin, Lock, MapPin, Pencil, Phone, Plus, Twitter, Youtube } from 'lucide-react'
 import { Field, Modal, Toast, fmtDate, money } from '@shared/ui'
 import type { DB } from '@shared/types'
 import { DICT, LOCALE, type Lang } from './i18n'
@@ -385,26 +385,26 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
         )}
 
         {/* 3. Help, right after the task */}
-        <section className="card flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between" aria-labelledby="help-h">
+        <section className="card grid gap-5 border-[#EBEBEB] p-5 sm:grid-cols-2" aria-labelledby="help-h">
           <div>
             <h2 id="help-h" className="type-h6 text-navy-900">{t.help}</h2>
             <button type="button" className="btn-ghost mt-3" onClick={() => setContactOpen(true)} data-testid="open-contact">{t.contact}</button>
+            <a href="tel:+12125550100" className="mt-3 flex w-fit items-center gap-2 text-sm text-navy-700 underline underline-offset-2">
+              <Phone size={16} aria-hidden /> (212) 555-0100
+            </a>
           </div>
-          {/* Like the "Follow us" block on aafe.org/contact: black round icons, then the phone in orange */}
-          <div className="sm:text-right" data-testid="follow-us">
-            <p className="text-[15px] font-bold uppercase text-navy-900">{t.followUs}</p>
-            <ul className="mt-2 flex gap-2 sm:justify-end">
+          <div className="border-t border-[#EBEBEB] pt-4 sm:border-l sm:border-t-0 sm:pl-5 sm:pt-0" data-testid="follow-us">
+            <p className="text-sm font-semibold text-navy-700">{t.followUs}</p>
+            <ul className="mt-3 flex gap-3">
               {SOCIAL.map(({ name, href, Icon }) => (
                 <li key={name}>
                   <a href={href} target="_blank" rel="noopener noreferrer" aria-label={`AAFE ${name}`} title={name}
-                    className="flex h-11 w-11 items-center justify-center rounded-full bg-[#000] text-white hover:bg-brand-500">
+                    className="flex h-11 w-11 items-center justify-center rounded-full bg-[#000] text-white hover:bg-brand-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500">
                     <Icon size={18} aria-hidden />
                   </a>
                 </li>
               ))}
             </ul>
-            {/* Demo number: the real-data guard only allows 555-01xx. Production shows AAFE's real number from aafe.org. */}
-            <a href="tel:+12125550100" className="mt-2 inline-block text-[15px] font-bold text-brand-600 underline underline-offset-2">(212) 555-0100</a>
           </div>
         </section>
 
