@@ -49,3 +49,21 @@ describe('hero contact button', () => {
     expect(document.activeElement).toBe(heading)
   })
 })
+
+describe('guest-facing slot wording', () => {
+  it('uses guest labels in cards, add/edit actions, and the remove dialog', () => {
+    const db = loadDB()
+    render(<PortalHarness initialDb={db} onDbChange={() => undefined} />)
+
+    expect(screen.getByText('Guest 4')).toBeTruthy()
+    expect(screen.getByTestId('add-next').textContent).toContain('Add guest 6')
+    expect(screen.getByLabelText(/Edit: Guest 1/)).toBeTruthy()
+
+    fireEvent.click(screen.getByTestId('edit-seat-1'))
+    expect(screen.getByRole('dialog').textContent).toContain('Edit guest 1')
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }))
+
+    fireEvent.click(screen.getByTestId('remove-seat-1'))
+    expect(screen.getByRole('dialog').textContent).toContain('Remove Jordan Lee from Guest 1?')
+  })
+})
