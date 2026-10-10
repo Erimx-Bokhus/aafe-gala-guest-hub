@@ -29,11 +29,24 @@ export default function Hero({ lang, eyebrow, title, body, children, compact }: 
 
   // Compact hero (sponsor page): the guest task must be visible without scrolling, so no slideshow here.
   if (compact) return (
-    <section className="relative overflow-hidden border-b border-cream-200 bg-cream-100">
+    <section className="hero-glass-hero relative overflow-hidden border-b border-cream-200 bg-cream-100">
+      <div className="hero-glass-blobs" aria-hidden="true">
+        <span className="hero-glass-blob hero-glass-blob-1" />
+        <span className="hero-glass-blob hero-glass-blob-2" />
+        <span className="hero-glass-blob hero-glass-blob-3" />
+        <span className="hero-glass-blob hero-glass-blob-4" />
+        <span className="hero-glass-blob hero-glass-blob-5" />
+      </div>
+      <div className="hero-glass-layer" aria-hidden="true" />
+      <div className="hero-glass-texture" aria-hidden="true">
+        <span className="hero-glass-noise-fine" />
+        <span className="hero-glass-noise-frost" />
+      </div>
+      <div className="hero-glass-highlight" aria-hidden="true" />
       {/* Gala watercolor flowers (AAFE gala art), decorative only: top-right and bottom-left corners, behind the text */}
-      <img src="./brand/gala-flower-top-right.png" alt="" aria-hidden="true" className="pointer-events-none absolute right-0 top-0 w-44 select-none opacity-30 sm:w-72 md:w-96 lg:w-[26rem]" />
-      <img src="./brand/gala-flower-bottom-left.png" alt="" aria-hidden="true" className="pointer-events-none absolute bottom-0 left-0 hidden select-none opacity-30 md:block md:w-80 lg:w-96" />
-      <div className="relative mx-auto max-w-6xl px-5 py-8 md:py-10">
+      <img src="./brand/gala-flower-top-right.png" alt="" aria-hidden="true" className="pointer-events-none absolute right-0 top-0 z-10 w-44 select-none opacity-30 sm:w-72 md:w-96 lg:w-[26rem]" />
+      <img src="./brand/gala-flower-bottom-left.png" alt="" aria-hidden="true" className="pointer-events-none absolute bottom-0 left-0 z-10 hidden select-none opacity-30 md:block md:w-80 lg:w-96" />
+      <div className="relative z-20 mx-auto max-w-6xl px-5 py-8 md:py-10">
         <div className="mb-4 h-1 w-16 rounded-full bg-brand-500" aria-hidden />
         <p className="type-nav text-brand-600">{eyebrow}</p>
         <h1 className="type-display mt-2 text-navy-900">{title}</h1>
