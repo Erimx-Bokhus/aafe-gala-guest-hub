@@ -10,6 +10,10 @@ Team ERIMX BOKHUS (Pursuit AI Native Fellowship): Natalie Walker, Aisling Leiva-
 
 Copyright 2026 the ERIMX BOKHUS team. All rights reserved. Licensing to be decided with AAFE and Pursuit.
 
+## Run the checks on your own computer
+
+`node scripts/ci-local.mjs` runs the same six checks as GitHub Actions (real-data guard, secret scan, import engine, frontend tests and demo-file rebuild, backend tests, server-function type-check), with no Actions minutes. About 3 minutes; `--quick` skips the backend tests and the rebuild (about 15 seconds). Run it before you push, or `node scripts/ci-local.mjs --install-hook` to run `--quick` before every `git push`. Docker (secret scan) and Deno (server functions) are optional; a missing tool skips that check. Details at the top of the script.
+
 ## Project hub
 
 `hub/` holds a browsable, presentable version of the docs. Run `npx serve` inside it; see `hub/README.md`.
