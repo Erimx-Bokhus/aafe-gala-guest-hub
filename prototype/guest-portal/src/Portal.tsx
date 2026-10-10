@@ -3,6 +3,7 @@ import { CalendarDays, CheckCircle2, Clock, History, Lock, MapPin, Pencil, Plus,
 import { Field, Modal, Toast, fmtDate, money } from '@shared/ui'
 import type { DB } from '@shared/types'
 import { DICT, LOCALE, type Lang } from './i18n'
+import { isPastDeadline } from './deadline'
 import { namesLeftText } from './namesLeft'
 import { LIVE, fetchPortalView, getPortalView, removeAttendee, removeAttendeeLive, saveAttendee, saveAttendeeLive, type AttendeeInput, type PortalView } from './portalApi'
 import Hero, { MissionStrip } from './Hero'
@@ -87,7 +88,8 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
     </main>
   )
 
-  const seat = editing != null ? view.seats.find((s) => s.slot === editing)! : null
+  const closed = isPastDeadline(view.deadline, { live: LIVE, search: window.location.search })
+  const seat = !closed && editing != null ? view.seats.find((s) => s.slot === editing)! : null
   const pct = view.stats.total ? Math.round((view.stats.named / view.stats.total) * 100) : 0
   const namesLeft = view.stats.total - view.stats.named
   const namesLeftMessage = namesLeftText(namesLeft, t.namesLeft)
@@ -150,7 +152,16 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
         {/* Seats */}
         <section id="seats" className="scroll-mt-20">
           <h2 className="text-2xl font-semibold text-navy-900">{t.seatsTitle}</h2>
-          <p className="mt-1 max-w-3xl text-navy-600">{t.seatsHelp}</p>
+          {closed ? (
+            <div role="status" className="mt-3 flex max-w-3xl items-start gap-3 rounded-xl border border-cream-200 bg-cream-100 p-4" data-testid="list-closed">
+              <Lock size={20} className="mt-0.5 shrink-0 text-brand-600" aria-hidden="true" />
+              <div>
+                <p className="font-semibold text-navy-900">{t.closedTitle}</p>
+                <p className="mt-1 text-navy-600">{t.closedBody}</p>
+                <a className="mt-2 inline-block font-medium text-brand-600 underline underline-offset-2" href="mailto:gala-team@aafe-demo.example.org">gala-team@aafe-demo.example.org</a>
+              </div>
+            </div>
+          ) : <p className="mt-1 max-w-3xl text-navy-600">{t.seatsHelp}</p>}
           <ul className="mt-5 grid gap-3 md:grid-cols-2">
             {view.seats.map((s) => {
               const named = !!s.guest
@@ -175,7 +186,7 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
                       <div className="mt-2 text-xs text-navy-500">{t.lastUpdated}: {fmtDate(s.guest.updated_at, loc, true)}</div>
                     </div>
                   ) : <div className="flex-1" />}
-                  <div className="mt-3 flex flex-wrap gap-2">
+                  {!closed && <div className="mt-3 flex flex-wrap gap-2">
                     <button className={named ? 'btn-ghost btn-sm' : 'btn-primary btn-sm'} onClick={() => setEditing(s.slot)} data-testid={`edit-seat-${s.slot}`}>
                       {named ? <><Pencil size={14} /> {t.update}</> : <><Plus size={14} /> {t.add}</>}
                     </button>
@@ -184,7 +195,7 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
                         <Trash2 size={14} /> {t.remove}
                       </button>
                     )}
-                  </div>
+                  </div>}
                 </li>
               )
             })}
