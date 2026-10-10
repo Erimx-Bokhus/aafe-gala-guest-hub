@@ -1,0 +1,8 @@
+# Every text file is stored and checked out with Unix line endings (LF) on every machine, whatever a computer's own
+# git setting (core.autocrlf) says. On Windows, files checked out with CRLF were copied into the double-click demo
+# files and failed CI's drift check (PR #87).
+* text=auto eol=lf
+
+# Test fixtures keep their exact bytes: the Give Lively export sample ends rows with CRLF and breaks lines inside a
+# guest-list cell with LF, as real exports do, and the import tests read it that way.
+import-engine/test/fixtures/** -text

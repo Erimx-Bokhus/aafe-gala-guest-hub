@@ -48,11 +48,13 @@ export default function Hero({ lang, eyebrow, title, body, children }: { lang: L
             <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-3 px-4 pb-3">
               <div className="flex gap-1.5">
                 {SLIDES.map((s, k) => (
-                  <button key={s.src} onClick={() => setI(k)} aria-label={`${t.slide} ${k + 1}`} aria-current={k === i}
-                    className={`h-1.5 rounded-full transition-all ${k === i ? 'w-6 bg-white' : 'w-2.5 bg-white/50 hover:bg-white/80'}`} />
+                  <button type="button" key={s.src} onClick={() => setI(k)} aria-label={`${t.slide} ${k + 1}`} aria-current={k === i}
+                    className="group flex h-6 items-center">
+                    <span className={`block h-1.5 rounded-full transition-all ${k === i ? 'w-6 bg-white' : 'w-2.5 bg-white/50 group-hover:bg-white/80'}`} />
+                  </button>
                 ))}
               </div>
-              <button onClick={() => setPlaying((p) => !p)} aria-label={playing ? t.pause : t.play} title={playing ? t.pause : t.play}
+              <button type="button" onClick={() => setPlaying((p) => !p)} aria-label={playing ? t.pause : t.play} title={playing ? t.pause : t.play}
                 className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur hover:bg-black/60">
                 {playing ? <Pause size={14} /> : <Play size={14} />}
               </button>
@@ -80,7 +82,7 @@ export function MissionStrip({ lang }: { lang: Lang }) {
             <img key={p.src} src={p.src} alt={p.alt} loading="lazy" className="aspect-[4/5] w-full rounded-xl object-cover" style={{ objectPosition: p.pos }} />
           ))}
         </div>
-        <p className="mt-3 text-xs text-navy-500">{t.photoCredit}</p>
+        <p className="mt-3 text-xs text-navy-600">{t.photoCredit}</p>
       </div>
     </section>
   )

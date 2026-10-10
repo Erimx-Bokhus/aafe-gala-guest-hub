@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { Camera, CheckCircle2, QrCode, Search, UserPlus } from 'lucide-react'
+import { Camera, CheckCircle2, Download, QrCode, Search, UserPlus } from 'lucide-react'
 import { GUEST_TYPE_LABEL, hasSponsor, sponsorOf } from '@shared/data'
-import { Field, Modal, fmtDate } from '@shared/ui'
+import { Field, Modal, downloadCsv, fmtDate } from '@shared/ui'
 import { useStaff } from '../store'
 import { curOrders } from './Dashboard'
 import { errorText } from '../api'
+import { checkinCsv } from '../exports'
 
 // iPad check-in. Volunteers see ONLY name, title, organization, sponsor, table/seat and status.
 const EXCEPTIONS = ['Arrived with sponsor', 'Sponsor seat was not previously named', 'Comp guest', 'Approved by relationship manager', 'Walk-in pending confirmation']
@@ -64,7 +65,11 @@ export default function CheckIn() {
     <div className="mx-auto max-w-3xl">
       <div className="mb-5 flex items-end justify-between gap-3">
         <div><h1 className="text-2xl font-semibold text-navy-900">Event-day check-in</h1><p className="text-sm text-navy-600">Search a name or scan a guest’s QR code.</p></div>
-        <div className="text-right"><div className="text-3xl font-semibold tabular-nums text-navy-900" data-testid="arrived-count">{arrived}</div><div className="text-xs text-navy-500">arrived</div></div>
+        <div className="flex items-end gap-4">
+          {/* The fallback if the iPad or the venue's internet fails: print it before doors open. */}
+          <button className="btn-ghost" data-testid="export-checkin" onClick={() => void act(api.exportCheckin().then((rows) => downloadCsv('aafe-checkin-list-SYNTHETIC.csv', checkinCsv(rows))), 'Check-in list downloaded')}><Download size={15} /> Printed check-in list</button>
+          <div className="text-right"><div className="text-3xl font-semibold tabular-nums text-navy-900" data-testid="arrived-count">{arrived}</div><div className="text-xs text-navy-500">arrived</div></div>
+        </div>
       </div>
 
       {lastG && <div role="status" className="mb-4 flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800"><CheckCircle2 size={22} /><div><div className="font-semibold">{lastG.first_name} {lastG.last_name} — welcome</div><div className="text-sm">{lastG.table_id ? `Table ${db.event_tables.find((t) => t.id === lastG.table_id)!.number}, seat ${lastG.seat_number}` : 'See the host stand for seating'}</div></div></div>}

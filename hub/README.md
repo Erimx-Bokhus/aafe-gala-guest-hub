@@ -67,6 +67,16 @@ The History page reads `docs/history.json`, which is built from git: every line 
 
 Changes that only add or move change markers don't count as edits, and a page's first version shows as one "Page created" entry.
 
+## Rebuild the code map
+
+The Code map page reads `docs/codemap.json`, built from the code by [graphify](https://pypi.org/project/graphifyy/) (no AI, nothing sent anywhere). After code changes on `main`, from the repo root:
+
+    uv tool install "graphifyy[sql]"     # once
+    graphify update . --force             # writes graphify-out/, which git ignores
+    node hub/scripts/build-codemap.mjs
+
+Commit `hub/docs/codemap.json` and `hub/docs/codemap-source.json` (the code previews, loaded only when someone opens one), then publish both with the hub. The script keeps source code only, puts each file in an area, and lays the map out ahead of time, so the same code always gives the same picture. It also adds what graphify can't see: app calls to database functions by name, table use, a database function calling another, the access rules (written as a loop in `backend.sql`) and the triggers. A file's purpose is its opening comment, or its line in `scripts/codemap-purposes.json`.
+
 ## Custom blocks
 
 Write these as fenced code blocks with the name after the backticks.
@@ -85,6 +95,7 @@ Write these as fenced code blocks with the name after the backticks.
 | `risks` | risk | `Title | likelihood 1–3 | impact 1–3 | mitigation | owner` |
 | `glossary` | term | `Term | definition` |
 | `wireframe dashboard`, `wireframe sponsor`, `wireframe checkin` | — | Rough sketches, hard-coded in `index.html` |
+| `codemap` | — | The interactive code map, drawn from `docs/codemap.json` (see above) |
 | `notes` | — | Speaker notes for the section (hidden in client view; N in present mode) |
 
 ## Present
