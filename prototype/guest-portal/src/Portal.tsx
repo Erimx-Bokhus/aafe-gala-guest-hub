@@ -15,11 +15,13 @@ function AttendeeForm({ lang, initial, onSave, onCancel }: { lang: Lang; initial
   const familyFirst = lang === 'zh' || lang === 'ko'
   const [v, setV] = useState(initial)
   const [fullName, setFullName] = useState(() => guestNameForForm(initial, lang))
-  const initialDietary = parseDietaryNeeds(initial.dietary_needs)
+  const dietaryNeeds = initial.dietary_needs ?? ''
+  const accessibilityNeeds = initial.accessibility_needs ?? ''
+  const initialDietary = parseDietaryNeeds(dietaryNeeds)
   const [dietaryChoices, setDietaryChoices] = useState<DietaryOption[]>(initialDietary.selected)
   const [dietaryOther, setDietaryOther] = useState(initialDietary.otherDetails)
-  const initialAccess = parseAccessibilityNeeds(initial.accessibility_needs)
-  const [accessEnabled, setAccessEnabled] = useState(initial.accessibility_needs.trim() !== '' && initial.accessibility_needs.trim() !== 'No')
+  const initialAccess = parseAccessibilityNeeds(accessibilityNeeds)
+  const [accessEnabled, setAccessEnabled] = useState(accessibilityNeeds.trim() !== '' && accessibilityNeeds.trim() !== 'No')
   const [accessChoices, setAccessChoices] = useState<AccessibilityOption[]>(initialAccess.selected)
   const [accessDetails, setAccessDetails] = useState(initialAccess.otherDetails)
   const [touched, setTouched] = useState(false)
@@ -44,7 +46,7 @@ function AttendeeForm({ lang, initial, onSave, onCancel }: { lang: Lang; initial
   const givenField = <Field key="fn" id="fn" label={t.firstName} error={err('first_name')}><input id="fn" className="input min-h-[44px]" value={v.first_name} onChange={set('first_name')} autoFocus={!familyFirst} autoComplete="off" {...a11y('first_name')} /></Field>
   const familyField = <Field key="ln" id="ln" label={t.lastName} error={err('last_name')}><input id="ln" className="input min-h-[44px]" value={v.last_name} onChange={set('last_name')} autoFocus={familyFirst} autoComplete="off" {...a11y('last_name')} /></Field>
   const fullNameField = <Field id="full-name" label={t.fullName} error={fullNameError}><input id="full-name" className="input min-h-[44px]" value={fullName} onChange={(e) => setFullName(e.target.value)} autoFocus autoComplete="name" aria-required="true" aria-invalid={fullNameError ? true : undefined} aria-describedby={fullNameError ? 'full-name-err' : undefined} /></Field>
-  const trimmed = Object.fromEntries(Object.entries(v).map(([k, x]) => [k, x.trim()])) as unknown as AttendeeInput
+  const trimmed = Object.fromEntries(Object.entries(v).map(([k, x]) => [k, typeof x === 'string' ? x.trim() : x])) as unknown as AttendeeInput
   const dietaryValue = serializeDietaryNeeds(dietaryChoices, dietaryOther)
   const accessibilityValue = accessEnabled ? serializeAccessibilityNeeds(accessChoices, accessDetails) : ''
   return (
