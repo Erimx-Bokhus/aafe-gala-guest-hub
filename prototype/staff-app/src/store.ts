@@ -3,7 +3,7 @@
 // Pages don't call these directly: they go through StaffApi (api.ts), which runs these in demo mode and the matching
 // staff_* database function in live mode.
 import { createContext, useContext } from 'react'
-import { addAudit, newQrToken, nowIso, processorFee, secureToken, sponsorOf, tierOf, uid } from '@shared/data'
+import { addAudit, displayName, nameParts, newQrToken, nowIso, processorFee, secureToken, sponsorOf, tierOf, uid } from '@shared/data'
 import type { DB, Guest, PayMethod, ReviewReason, StaffUser } from '@shared/types'
 import { tierMappingKey, type GlImportRow, type GlImportRun, type ImportResult } from './importer'
 import type { StaffApi } from './api'
@@ -18,12 +18,17 @@ export const StaffCtx = createContext<Ctx>(null as unknown as Ctx)
 export const useStaff = () => useContext(StaffCtx)
 
 const name = (g: Guest) => `${g.first_name} ${g.last_name}`
-const BADGE_FIELDS = ['first_name', 'last_name', 'title', 'organization'] as const
+const BADGE_FIELDS = ['first_name', 'last_name', 'display_name', 'title', 'organization'] as const
 
 export function updateGuest(db: DB, actor: string, id: string, patch: Partial<Guest>): DB {
   const g = db.guests.find((x) => x.id === id)!
   const badgeChanged = BADGE_FIELDS.some((k) => k in patch && patch[k] !== g[k])
   const next: Guest = { ...g, ...patch, updated_at: nowIso(), last_updated_by: 'staff' }
+  // Like staff_update_guest: a display name that was just "First Last" follows a new first or last name.
+  const followed = !('display_name' in patch) && (next.first_name !== g.first_name || next.last_name !== g.last_name)
+    && [null, undefined, '', displayName({ first_name: g.first_name, last_name: g.last_name })].includes(g.display_name)
+  const n = nameParts(followed ? null : next.display_name, next.first_name, next.last_name)
+  Object.assign(next, { display_name: n.display, first_name: n.first, last_name: n.last })
   if (badgeChanged && g.badge_status === 'printed') next.badge_status = 'reprint_needed'
   const changed = Object.keys(patch).filter((k) => (patch as Record<string, unknown>)[k] !== (g as unknown as Record<string, unknown>)[k])
   if (!changed.length) return db
@@ -238,7 +243,9 @@ export function demoImport(db: DB, user: StaffUser, rows: GlImportRow[], run: Gl
       const display = g.display_name.trim(); if (!display) continue
       const seat = d.seats.filter((s) => s.order_id === o.id && !s.guest_id && s.status === 'unnamed').sort((a, b) => a.slot_number - b.slot_number)[0]
       if (!seat) break
-      const guest: Guest = { id: uid('g'), order_id: o.id, first_name: display.includes(' ') ? display.replace(/\s+\S+$/, '') : display, last_name: display.includes(' ') ? lastWord(display) : '',
+      // The name engine's split comes with the row (glImport.ts); like import_fill_guests, fall back to the last word.
+      const n = nameParts(display, g.first_name, g.last_name)
+      const guest: Guest = { id: uid('g'), order_id: o.id, first_name: n.first, last_name: n.last, display_name: n.display,
         title: '', organization: '', email: g.email?.trim().toLowerCase() ?? '', dietary_needs: null, accessibility_needs: null,
         guest_type: tier.tier_category === 'ticket' ? 'ticket_holder' : 'sponsor_guest', relationship_note: null, table_id: null, seat_number: null,
         badge_status: 'needs_review', attendance_status: 'expected', qr_token: null, last_updated_by: 'givelively_sync', created_at: nowIso(), updated_at: nowIso() }
@@ -296,7 +303,7 @@ export function addCompGuest(db: DB, user: StaffUser, g: { first_name: string; l
   const orderId = 'ord-rel'
   const slot = Math.max(0, ...db.seats.filter((s) => s.order_id === orderId).map((s) => s.slot_number)) + 1
   const id = uid('g')
-  const guest: Guest = { id, order_id: orderId, ...g, dietary_needs: null, accessibility_needs: null, guest_type: 'comp_relationship', table_id: null, seat_number: null, badge_status: 'needs_review', attendance_status: 'expected', qr_token: newQrToken(), last_updated_by: 'staff', created_at: nowIso(), updated_at: nowIso() }
+  const guest: Guest = { id, order_id: orderId, ...g, display_name: nameParts(null, g.first_name, g.last_name).display, dietary_needs: null, accessibility_needs: null, guest_type: 'comp_relationship', table_id: null, seat_number: null, badge_status: 'needs_review', attendance_status: 'expected', qr_token: newQrToken(), last_updated_by: 'staff', created_at: nowIso(), updated_at: nowIso() }
   const d: DB = { ...db, guests: [...db.guests, guest], seats: [...db.seats, { id: `seat-${orderId}-${slot}`, order_id: orderId, slot_number: slot, guest_id: id, status: 'reviewed', updated_at: nowIso() }] }
   return addAudit(d, { actor_type: 'staff', actor: user.name, entity: 'guest', entity_id: id, order_id: orderId, action: 'comp_guest.added', from_state: null, to_state: 'reviewed', guest_visible: false, summary: `${g.first_name} ${g.last_name} added as relationship guest (${g.relationship_note || 'no note'}).` })
 }
