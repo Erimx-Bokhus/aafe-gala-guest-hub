@@ -1,10 +1,10 @@
-import { useRef, useState } from 'react'
-import { CloudDownload, Download, RefreshCw, Upload } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { BellRing, CloudDownload, Download, RefreshCw, Upload } from 'lucide-react'
 import { processorFee } from '@shared/data'
 import { Pill, ago, downloadCsv, fmtDate } from '@shared/ui'
 import { PageHead } from '../App'
 import { importGiveLively, salesforceSyncNow, useStaff, type GLRow } from '../store'
-import { canDo } from '../api'
+import { canDo, type QueuedEmail } from '../api'
 import { salesforceCsv } from '../exports'
 
 // Column names follow Give Lively's "Line Items (All)" report. Confirm against a real AAFE export before launch.
@@ -52,7 +52,17 @@ export default function Integrations() {
   const pending = db.salesforce_sync.filter((s) => s.status === 'pending').length
   const synced = db.salesforce_sync.filter((s) => s.status === 'synced').length
   const lastSync = db.salesforce_sync.map((s) => s.last_synced_at).filter(Boolean).sort().at(-1)
-  const drafts = db.email_log.filter((e) => e.status === 'queued')
+  // Unsent emails from staff_email_queue(): drafts to approve, approved ones waiting for the sender, and failed ones.
+  const [queue, setQueue] = useState<QueuedEmail[]>([])
+  const managers = canDo(user.role, 'emailQueue')
+  useEffect(() => {
+    if (!managers) return
+    let on = true
+    api.emailQueue().then((q) => { if (on) setQueue(q) }, () => {})
+    return () => { on = false }
+  }, [api, db, managers])
+  const drafts = queue.filter((e) => e.state === 'draft')
+  const remind = () => void act(api.queueReminders().then((n) => toast(n ? `${n} guest-list reminder${n === 1 ? '' : 's'} drafted: approve each below` : 'No sponsor needs a reminder right now')))
   const emails = db.email_log.filter((e) => e.status !== 'queued').reverse().slice(0, 12)
 
   const runImport = (rows: GLRow[]) => {
@@ -117,18 +127,28 @@ export default function Integrations() {
         </section>
 
         <section className="card overflow-hidden xl:col-span-2">
-          <div className="border-b border-navy-100 px-5 py-3"><h2 className="font-semibold text-navy-900">Email log</h2><p className="text-xs text-navy-500">Nothing sends on its own. Give Lively purchases, pledges and payments create a draft guest-list email; staff approve or discard it below. QR invitations and resent links are sent by the staff member who reviews them.</p></div>
-          {drafts.length > 0 && (
+          <div className="border-b border-navy-100 px-5 py-3"><div className="flex flex-wrap items-center justify-between gap-2"><h2 className="font-semibold text-navy-900">Email log</h2>{managers && <button className="btn-ghost btn-sm" data-testid="draft-reminders" onClick={remind}><BellRing size={14} /> Draft guest-list reminders</button>}</div><p className="text-xs text-navy-500">Nothing sends on its own. Give Lively purchases, pledges and payments create a draft guest-list email; staff approve or discard it below. QR invitations and resent links are sent by the staff member who reviews them.</p></div>
+          {queue.length > 0 && (
             <div className="border-b border-navy-100 bg-brand-50 px-5 py-3" data-testid="email-drafts">
-              <h3 className="text-sm font-semibold text-navy-900">Waiting for approval ({drafts.length})</h3>
+              <h3 className="text-sm font-semibold text-navy-900">Waiting for approval ({drafts.length}){queue.length > drafts.length && <span className="font-normal text-navy-600"> · {queue.length - drafts.length} approved or stuck</span>}</h3>
               <ul className="mt-2 divide-y divide-navy-100">
-                {drafts.map((e) => (
+                {queue.map((e) => (
                   <li key={e.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
-                    <span><span className="font-medium text-navy-900">{e.template.replace(/_/g, ' ')}</span> to {e.to_name} <span className="text-xs text-navy-500">{e.to_email} · {e.trigger.replace(/_/g, ' ')}</span></span>
-                    <span className="flex gap-2">
-                      <button className="btn-primary btn-sm" onClick={() => void act(api.approveEmail(e.id), api.live ? `Approved: sending to ${e.to_name}` : `Approved and sent to ${e.to_name} (simulated)`)}>Approve and send</button>
-                      <button className="btn-ghost btn-sm" onClick={() => void act(api.cancelEmail(e.id), 'Draft discarded')}>Discard</button>
+                    <span>
+                      <span className="font-medium text-navy-900">{e.template.replace(/_/g, ' ')}</span> to {e.to_name} <span className="text-xs text-navy-500">{e.to_email} · {e.trigger.replace(/_/g, ' ')}</span>
+                      {/* What staff need to judge it: the sponsor, its seats and deadline, the guest or the payment. */}
+                      {e.organization && <span className="block text-xs text-navy-600">{[e.organization, e.tier, e.seats_total ? `${e.seats_unnamed} of ${e.seats_total} seats unnamed` : null, e.deadline ? `names due ${fmtDate(e.deadline)}` : null, e.guest, e.payment ? `payment ${fmtDate(e.payment.received_at)}` : null].filter(Boolean).join(' · ')}</span>}
                     </span>
+                    {e.state === 'draft' ? (
+                      <span className="flex gap-2">
+                        <button className="btn-primary btn-sm" onClick={() => void act(api.approveEmail(e.id), api.live ? `Approved: sending to ${e.to_name}` : `Approved and sent to ${e.to_name} (simulated)`)}>Approve and send</button>
+                        <button className="btn-ghost btn-sm" onClick={() => void act(api.cancelEmail(e.id), 'Draft discarded')}>Discard</button>
+                      </span>
+                    ) : e.state === 'approved' ? (
+                      <Pill tone="gray">Approved by {e.approved_by} · sending</Pill>
+                    ) : (
+                      <span className="flex items-center gap-2"><Pill tone="red">Not sent after {e.attempts} tries{e.last_error ? `: ${e.last_error}` : ''}</Pill><button className="btn-ghost btn-sm" onClick={() => void act(api.cancelEmail(e.id), 'Draft discarded')}>Discard</button></span>
+                    )}
                   </li>
                 ))}
               </ul>
