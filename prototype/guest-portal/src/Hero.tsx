@@ -29,8 +29,11 @@ export default function Hero({ lang, eyebrow, title, body, children, compact }: 
 
   // Compact hero (sponsor page): the guest task must be visible without scrolling, so no slideshow here.
   if (compact) return (
-    <section className="border-b border-cream-200 bg-cream-100">
-      <div className="mx-auto max-w-6xl px-5 py-8 md:py-10">
+    <section className="relative overflow-hidden border-b border-cream-200 bg-cream-100">
+      {/* Gala watercolor flowers (AAFE gala art), decorative only: top-right and bottom-left corners, behind the text */}
+      <img src="./brand/gala-flower-top-right.png" alt="" aria-hidden="true" className="pointer-events-none absolute right-0 top-0 w-44 select-none opacity-30 sm:w-72 md:w-96 lg:w-[26rem]" />
+      <img src="./brand/gala-flower-bottom-left.png" alt="" aria-hidden="true" className="pointer-events-none absolute bottom-0 left-0 hidden select-none opacity-30 md:block md:w-80 lg:w-96" />
+      <div className="relative mx-auto max-w-6xl px-5 py-8 md:py-10">
         <div className="mb-4 h-1 w-16 rounded-full bg-brand-500" aria-hidden />
         <p className="type-nav text-brand-600">{eyebrow}</p>
         <h1 className="type-display mt-2 text-navy-900">{title}</h1>
