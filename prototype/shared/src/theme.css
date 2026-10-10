@@ -73,7 +73,7 @@
   .card { @apply rounded-xl border border-navy-100 bg-surface; }
   .label { @apply block text-xs font-semibold uppercase tracking-wide text-navy-500 mb-1; }
   .input { @apply w-full rounded-md border border-navy-500 bg-surface px-3 py-2 text-sm text-navy-900 placeholder:text-navy-500 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100; }
-  .th { @apply px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-navy-500 whitespace-nowrap; }
+  .th { @apply px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-navy-600 whitespace-nowrap; }
   .td { @apply px-3 py-2.5 text-sm text-navy-800 align-top; }
   .icon-btn { @apply inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 border-navy-500 bg-surface text-navy-700 hover:bg-navy-50 disabled:opacity-40; }
 }
