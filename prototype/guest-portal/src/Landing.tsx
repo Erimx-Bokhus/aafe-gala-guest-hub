@@ -29,9 +29,9 @@ export default function Landing({ db, lang }: { db: DB; lang: Lang }) {
         <h2 className="text-lg font-semibold text-navy-900">{t.emailSample}</h2>
         <div className="card mt-4 overflow-hidden" data-testid="sample-email">
           <dl className="grid grid-cols-[auto,1fr] gap-x-3 gap-y-1 border-b border-cream-200 bg-cream-100 px-5 py-3 text-sm">
-            <dt className="text-navy-500">{t.emailFrom}</dt><dd className="text-navy-900">AAFE Gala Team &lt;gala-team@aafe-demo.example.org&gt;</dd>
-            <dt className="text-navy-500">{t.emailTo}</dt><dd className="text-navy-900">{primarySponsor?.organization_name ?? 'Sponsor'}</dd>
-            <dt className="text-navy-500">{t.emailSubject}</dt><dd className="font-semibold text-navy-900">{t.emailSubjectText}</dd>
+            <dt className="text-navy-600">{t.emailFrom}</dt><dd className="text-navy-900">AAFE Gala Team &lt;gala-team@aafe-demo.example.org&gt;</dd>
+            <dt className="text-navy-600">{t.emailTo}</dt><dd className="text-navy-900">{primarySponsor?.organization_name ?? 'Sponsor'}</dd>
+            <dt className="text-navy-600">{t.emailSubject}</dt><dd className="font-semibold text-navy-900">{t.emailSubjectText}</dd>
           </dl>
           <div className="px-5 py-5 text-[0.9375rem] leading-relaxed text-navy-700">
             <img src="./brand/aafe-mark-orange.png" alt="" className="mb-4 h-9 w-9" />
