@@ -91,7 +91,7 @@ const checks = {
     if (!has('deno --version')) return [SKIP, 'Deno is not installed (winget install DenoLand.Deno, or https://deno.com)']
     const dir = join(proto, 'supabase', 'functions')
     const files = readdirSync(dir).filter((d) => existsSync(join(dir, d, 'index.ts'))).map((d) => `supabase/functions/${d}/index.ts`)
-    return sh(`deno check --node-modules-dir=auto ${files.join(' ')}`, proto)
+    return sh(`deno check --no-lock --node-modules-dir=auto ${files.join(' ')}`, proto)   // --no-lock: no deno.lock left behind
   },
 }
 
