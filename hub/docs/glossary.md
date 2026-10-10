@@ -1,6 +1,6 @@
 # Glossary
 <!-- updated 2026-10-05 22:58 Aisling -->
-<!-- reviewed 2026-10-08 Aisling -->
+<!-- reviewed 2026-10-09 Aisling -->
 
 Terms used across this hub, in plain language.
 
@@ -50,10 +50,12 @@ Stretch | Work we do only if the must-haves are finished, such as a scrambler AA
 Synthetic data | Invented names and organizations used for building and the public demo. The prototype never holds real guest data.
 Walk-in | A guest who arrives without being on the list. The check-in lead decides, and the tool records it.
 iPad check-in app | Natalie's app for volunteers at the door (`prototype/checkin-app/`): tonight's gala only, A to Z, search, QR scan, and it keeps working offline. <!-- new 2026-10-08 04:15 Aisling -->
-Door list | What the iPad app holds: only the fields a door volunteer needs (name, organization, sponsor, table, QR code); never emails, payments, or dietary details. <!-- new 2026-10-08 04:15 Aisling -->
+Door list | What the iPad app holds: only the fields a door volunteer needs (name, organization, sponsor, table, accessibility needs, and each QR code's fingerprint, never the code itself); never emails, payments, or dietary details. <!-- modified 2026-10-09 06:10 Aisling -->
 Offline queue | Check-ins the iPad saved while the internet was down, sent once it's back; the first arrival wins. <!-- new 2026-10-08 04:15 Aisling -->
-Approval queue | Emails waiting for a staff member to approve them; nothing sends without that approval. <!-- new 2026-10-08 04:15 Aisling -->
+Approval queue | Emails waiting for a staff member to approve them; nothing sends without that approval. In the staff app it's the "Waiting for approval" list on Integrations. <!-- modified 2026-10-09 06:10 Aisling -->
 Pre-fill | Clearly readable names from a Give Lively guest list, placed in the sponsor's seats for the sponsor to confirm. <!-- new 2026-10-08 04:15 Aisling -->
+Code map | The hub page that draws every file, function and database table in the prototype and how they connect, built from the code by graphify. <!-- new 2026-10-09 00:05 Aisling -->
+graphify | An open-source tool that reads code and maps what uses what, with no AI and nothing sent anywhere; it builds the Code map. <!-- new 2026-10-09 00:05 Aisling -->
 Fingerprint | The stored, scrambled copy (a SHA-256 hash) of a sponsor link or QR code; the database never keeps the working code itself. <!-- new 2026-10-08 04:15 Aisling -->
 Vercel | The host for the demo's web apps, on its free plan; the database stays on Supabase. <!-- new 2026-10-08 04:15 Aisling -->
 Labeled data sets | The three invented demo data sets, one loaded at a time: Small, Full as sent, and Full fixed. <!-- new 2026-10-08 04:15 Aisling -->
