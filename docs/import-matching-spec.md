@@ -157,7 +157,18 @@ confirm. The sponsor knows their guests, staff do far less review, and no AI is 
 Names are stored and printed **as the buyer typed them** (proposed `display_name` on `guests`, used for
 badges, check-in, and the portal). Splitting into first and last name happens **only for duplicate
 matching** (section 4): "Chen Wei", written family-name-first, prints as "Chen Wei", never re-ordered.
-`first_name` and `last_name` (required in Natalie's schema) hold the best-effort split for sorting.
+`first_name` and `last_name` (required in Natalie's schema) hold the best-effort split for sorting. That split comes from the **name engine** (`import-engine/src/names.ts`, Oct 10), used by every way a
+name arrives (the import, and later the portal and the staff app):
+
+- Titles and suffixes stay in the display name but not in first or last ("Dr. Lena Ortiz" → Lena / Ortiz).
+- Surname prefixes stay with the last name ("Maria de la Cruz" → Maria / de la Cruz).
+- "Doe, Jane" is last name first. A one-word name has an empty last name.
+- Chinese and Korean script: family name first, including two-character family names (欧阳, 남궁).
+- A romanized family name written first is recognized from the pattern ("Kim Min-ji", "KIM Minji").
+  Otherwise, a split that could go either way ("Chen Wei", three or more words) is marked **not sure**,
+  for staff to check.
+- The buyer's own seat uses Give Lively's First Name and Last Name columns.
+- Salesforce always gets a LastName: a one-word name goes there.
 
 ### Splitting the free-text guest list
 
