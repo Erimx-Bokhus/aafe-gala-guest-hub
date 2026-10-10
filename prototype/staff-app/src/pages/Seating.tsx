@@ -58,7 +58,7 @@ export default function Seating() {
               {byOrder.map(({ o, list }) => (
                 <div key={o.id}>
                   <div className="mb-1 flex items-center gap-2 text-xs font-semibold text-navy-500"><span className="h-2.5 w-2.5 rounded-full" style={{ background: color[o.id] }} />{sponsorOf(db, o.sponsor_id).organization_name}</div>
-                  <ul className="space-y-1">{list.map((g) => <li key={g.id}><button onClick={() => setSel(g.id === sel ? null : g.id)} aria-pressed={g.id === sel} data-testid={`unseated-${g.id}`} className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm ${g.id === sel ? 'bg-brand-500 text-white' : 'hover:bg-navy-50'}`}><UserRound size={14} /> {label(g)}</button></li>)}</ul>
+                  <ul className="space-y-1">{list.map((g) => <li key={g.id}><button onClick={() => setSel(g.id === sel ? null : g.id)} aria-pressed={g.id === sel} data-testid={`unseated-${g.id}`} className={`flex min-h-[44px] w-full items-center gap-2 rounded-full border-2 border-transparent px-4 text-left text-sm ${g.id === sel ? 'border-brand-500 bg-brand-500 text-white' : 'hover:bg-navy-50'}`}><UserRound size={14} /> {label(g)}</button></li>)}</ul>
                 </div>
               ))}
               {!unseated.length && <p className="text-sm text-navy-500">Everyone with a name is seated.</p>}
@@ -82,7 +82,7 @@ export default function Seating() {
                     return (
                       <button key={n} onClick={() => clickSeat(t.id, n)} data-testid={`seat-${t.number}-${n}`}
                         title={g ? `${label(g)} — Table ${t.number}, seat ${n}` : `Table ${t.number}, seat ${n} (open)`} aria-label={g ? `${label(g)}, table ${t.number} seat ${n}` : `Open seat ${n} at table ${t.number}`}
-                        className={`absolute h-[22%] w-[22%] -translate-x-1/2 -translate-y-1/2 rounded-full border-2 text-[0.55rem] font-bold text-white transition-transform hover:scale-110 ${g?.id === sel ? 'ring-4 ring-brand-200' : ''} ${!g && selected ? 'border-brand-400 bg-brand-50' : g ? 'border-white' : 'border-navy-100 bg-surface'}`}
+                        className={`absolute h-[22%] w-[22%] -translate-x-1/2 -translate-y-1/2 rounded-full border-2 text-[0.55rem] font-bold text-white transition-transform hover:scale-110 ${g?.id === sel ? 'ring-4 ring-brand-500' : ''} ${!g && selected ? 'border-brand-400 bg-brand-50' : g ? 'border-white' : 'border-navy-100 bg-surface'}`}
                         style={{ left: `${50 + 41 * Math.cos(a)}%`, top: `${50 + 41 * Math.sin(a)}%`, background: g ? color[g.order_id] : undefined }}>
                         {g ? (g.first_name[0] + g.last_name[0]) : ''}
                       </button>
