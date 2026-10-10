@@ -9,6 +9,11 @@ on:
   # Every pull request, so it can be a required check on main.
   pull_request:
 
+# A newer push to the same pull request cancels the older run still in progress (saves Actions minutes).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 permissions:
   contents: read
 
