@@ -49,7 +49,7 @@ export default function Payments() {
                     <td className="td whitespace-nowrap">{fmtDate(p.received_at)}</td>
                     <td className="td"><div className="font-semibold text-navy-900">{sponsorOf(db, o.sponsor_id).organization_name}</div><div className="text-xs text-navy-500">{tierOf(db, o.tier_id).name}</div></td>
                     <td className="td whitespace-nowrap">{METHOD_LABEL[p.method]}</td>
-                    <td className="td whitespace-nowrap font-mono text-xs">{p.givelively_transaction_id ?? (p.check_number ? `Check #${p.check_number}` : '—')}</td>
+                    <td className="td whitespace-nowrap font-sans tabular-nums text-xs">{p.givelively_transaction_id ?? (p.check_number ? `Check #${p.check_number}` : '—')}</td>
                     <td className="td text-right tabular-nums">{c(p.original_amount)}</td>
                     <td className="td text-right tabular-nums text-emerald-700">{p.covered_fee_amount ? c(p.covered_fee_amount) : '—'}</td>
                     <td className="td text-right tabular-nums">{c(p.gross_amount)}</td>
