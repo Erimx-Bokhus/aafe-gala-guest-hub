@@ -59,6 +59,18 @@ export const hasSponsor = (t: GuestType) => t === 'sponsor_guest' || t === 'tick
 
 export const tierOf = (db: DB, id: string) => db.sponsorship_tiers.find((t) => t.id === id)!
 export const sponsorOf = (db: DB, id: string) => db.sponsors.find((s) => s.id === id)!
+/** A guest's printed name: the display name, or "First Last" for guests saved before display names (the database backfills the same). */
+export const displayName = (g: { display_name?: string | null; first_name: string; last_name: string }) =>
+  g.display_name?.trim() || [g.first_name, g.last_name].map((x) => (x ?? '').trim()).filter(Boolean).join(' ')
+/** name_parts() in backend.sql: fill in whatever part of a name is missing. The apps send the name engine's split; this
+ *  fallback (last word = last name) is only for a full name sent alone. One word: no last name. */
+export function nameParts(display: string | null | undefined, first: string | null | undefined, last: string | null | undefined) {
+  const f = (first ?? '').trim(), l = (last ?? '').trim()
+  const d = (display ?? '').replace(/\s+/g, ' ').trim() || [f, l].filter(Boolean).join(' ')
+  if (f || l) return { display: d, first: f, last: l }
+  const i = d.lastIndexOf(' ')
+  return i < 0 ? { display: d, first: d, last: '' } : { display: d, first: d.slice(0, i), last: d.slice(i + 1) }
+}
 export const staffName = (db: DB, id: string) => db.staff_users.find((s) => s.id === id)?.name ?? id
 
 export function orderMoney(db: DB, orderId: string) {
