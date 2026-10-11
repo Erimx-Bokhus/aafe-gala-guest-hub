@@ -1,6 +1,6 @@
 # Tasks
 <!-- updated 2026-10-05 22:58 Aisling -->
-<!-- reviewed 2026-10-08 Aisling -->
+<!-- reviewed 2026-10-09 Aisling -->
 
 The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus), kept by Natalie at Pursuit's request. This page is a snapshot for planning; when they differ, Trello wins. Build work belongs to a pair (Oct 5): **Frontend: Natalie + Antonin**; **Backend: Aisling + Cornell**. <!-- modified 2026-10-05 20:37 Aisling -->
 
@@ -138,12 +138,27 @@ The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus),
 - [x] iPad check-in: a larger AAFE mark and a tidier search row in portrait, screenshots retaken (PR #81) — Natalie <!-- new 2026-10-09 00:05 Aisling -->
 - [x] iPad follow-ups: the mark goes back to its small size while searching, so the list keeps its room above the keyboard; Tab follows the screen in portrait; checked at four iPad sizes (PR #82) — Aisling <!-- new 2026-10-09 00:05 Aisling -->
 - [x] Review Antonin's portal PRs #75–#77, each tested merged with `main` (90 tests, build, translation and real-data checks pass), and send the findings to Natalie first, since the portal is hers. Suggested order: #77, then #75 with a hide check, then #76 once its files are rebuilt — Aisling <!-- new 2026-10-09 00:05 Aisling -->
-- [ ] Natalie's take on the #75–#77 review, then the notes go on the PRs for Antonin. His questions for Natalie: Poppins for the portal, a darker input border, full name or first and last (maybe for AAFE on Oct 15), and the PRD still saying Korean is dropped — Natalie, then Aisling <!-- new 2026-10-09 00:05 Aisling -->
+- [ ] Natalie's take on Antonin's six portal PRs (#75–#77 reviewed Oct 8; #84–#86 opened since), then the notes go on the PRs for Antonin. Merge order once approved: #77 → #75 → #76 → #84 → #86 → #85, one at a time, rebuilding the double-click files between merges. His questions for Natalie: Poppins for the portal, a darker input border, full name or first and last (maybe for AAFE on Oct 15), and the PRD still saying Korean is dropped — Natalie, then Aisling <!-- modified 2026-10-09 06:10 Aisling -->
 - [x] Natalie's enterprise PRD approved by Pursuit and submitted in Pathfinder under Build — Natalie, Aisling <!-- new 2026-10-09 00:05 Aisling -->
 - [ ] Submit Natalie's enterprise PRD in Pathfinder under Build, for the team's PRD milestone — Cornell, Antonin <!-- new 2026-10-09 00:05 Aisling -->
 - [ ] Confirm the in-person sign-in test: Saturday, Oct 10, 12 PM, at the Pursuit building — Cornell <!-- new 2026-10-09 00:05 Aisling -->
 - [x] Code map page in the hub, built from the code with graphify; iPad screenshots on Live build retaken with #81 and #82 — Aisling <!-- new 2026-10-09 00:05 Aisling -->
-- [ ] Wire the 14 database functions no screen calls yet to the staff app: the three exports, the import and its review, the email queue, the sponsor pipeline, sponsor arrivals (found with the Code map) — Backend pair, with the frontend pair for the screens <!-- new 2026-10-09 00:45 Aisling -->
+- [ ] Wire the 14 database functions no screen calls yet to the staff app: the three exports, the import and its review, the email queue, the sponsor pipeline, sponsor arrivals (found with the Code map). Split into five slices on Oct 9 (Added October 9) — Backend pair, with the frontend pair for the screens <!-- modified 2026-10-09 06:10 Aisling -->
+
+## Added October 9
+<!-- new 2026-10-09 06:10 Aisling -->
+
+- [x] Slice A: the three export buttons call the server's export functions; the demo builds the same rows as the database (PR #87) — Aisling <!-- new 2026-10-09 06:10 Aisling -->
+- [x] Unix line endings for every text file on every computer, after a Windows checkout failed CI's drift check on #87 (PR #88) — Aisling <!-- new 2026-10-09 06:10 Aisling -->
+- [ ] Slice B: the approval list reads the server's email queue, fixing an approved email still showing "Approve and send", plus a "Draft guest-list reminders" button (PR #89; Natalie's sign-off, then merge) — Aisling <!-- new 2026-10-09 06:10 Aisling -->
+- [ ] Slice C: the Give Lively import screen: upload, gala-page and tier-mapping pickers, review queue; the staff app takes the import engine as a dependency (probably two or three PRs) — Aisling, frontend pair for the screens <!-- new 2026-10-09 06:10 Aisling -->
+- [ ] Slice D: the sponsor pipeline page, from Natalie's screen design — Aisling (data), Natalie (screen) <!-- new 2026-10-09 06:10 Aisling -->
+- [ ] Slice E: the sponsor-arrivals switch on Gala information, off until AAFE's privacy review says yes — Aisling <!-- new 2026-10-09 06:10 Aisling -->
+- [x] AAFE check-in prep: a one-page sheet and two backup recordings (1:30 with captions, 3:20 narrated with an offline voice), posted to the team channel — Aisling <!-- new 2026-10-09 06:10 Aisling -->
+- [ ] AAFE check-in, Oct 9 around noon: record the decisions on Decisions, then settle #75 and the name-field question — Aisling, Natalie <!-- new 2026-10-09 06:10 Aisling -->
+- [x] Hub audit: every page current to Oct 9; team-only material out of client view (team decisions, team risks, team documents, who builds what); walkthrough videos on Live build with grey placeholders — Aisling <!-- new 2026-10-09 06:10 Aisling -->
+- [x] Rebuild the Code map with graphify's SQL support (`graphifyy[sql]`, installed on Aisling's laptop Oct 9): the exports now show as connected; 11 functions left to wire — Aisling <!-- new 2026-10-09 06:10 Aisling -->
+- [ ] After #89 merges: re-record the hub's narrated walkthrough so the approval list shows each email's sponsor and seats — Aisling <!-- new 2026-10-09 06:10 Aisling -->
 
 ## Week of October 12
 
@@ -160,8 +175,8 @@ The team's task tracker is [Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus),
 
 ## Week of October 26
 
-- [ ] Exports: staff app buttons for the badge file, check-in list and Salesforce file (database side done, PR #34) — Frontend pair, with Backend pair <!-- modified 2026-10-08 04:15 Aisling -->
-- [ ] Approval screen in the staff app (reminder and payment-confirmation templates and the queue are built, PR #44) — Frontend pair <!-- modified 2026-10-07 13:45 Aisling -->
+- [x] Exports: staff app buttons for the badge file, check-in list and Salesforce file (database side PR #34; buttons PR #87, Oct 9) — Frontend pair, with Backend pair <!-- modified 2026-10-09 06:10 Aisling -->
+- [ ] Approval screen in the staff app (templates and the queue are built, PR #44; the existing list now reads the queue, in review, PR #89) — Frontend pair <!-- modified 2026-10-09 06:10 Aisling -->
 - [x] Check-in app: search, arrivals, walk-ins, blank sponsor seats (iPad app, PR #56) — Natalie <!-- modified 2026-10-08 04:15 Aisling -->
 - [ ] Show AAFE the full path for feedback — Natalie
 

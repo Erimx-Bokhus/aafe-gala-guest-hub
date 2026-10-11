@@ -4,7 +4,7 @@
 import Papa from 'papaparse'
 import { z } from 'zod'
 import { purchaseKey } from './purchaseKey.ts'
-import { parseAmount, parseCount, parsePurchaseTime, ValueError } from './values.ts'
+import { parseAmount, parseCount, parseCoveredFee, parsePurchaseTime, ValueError } from './values.ts'
 
 export type Field =
   | 'first' | 'last' | 'email' | 'tierName' | 'tierCategory' | 'quantity' | 'seats' | 'gross' | 'refunded'
@@ -156,7 +156,7 @@ export async function readExport(csv: string): Promise<ReadResult> {
       purchasedAt = parsePurchaseTime(cell('purchasedAt'))
       gross = parseAmount(cell('gross'))
       refunded = parseAmount(cell('refunded'))
-      covered = parseAmount(cell('covered'))
+      covered = parseCoveredFee(cell('covered'))
       quantity = parseCount(cell('quantity'))
       seats = parseCount(cell('seats'))
     } catch (e) {

@@ -54,7 +54,7 @@ doesn't matter.
 | Total Seats | `seats` | no | Preferred seat count |
 | Amount Spent | `gross` | yes | `$1,000.00` → 1000.00 |
 | Amount Refunded | `refunded` | no | |
-| Transaction Fee Covered | `covered` | no | Donor-covered fee |
+| Transaction Fee Covered | `covered` | no | Donor-covered fee: a dollar amount, or TRUE/FALSE (yes/no) in exports that only say whether the donor covered it, read as no amount (Oct 10) |
 | Date/Time of Purchase | `date` | yes | `2026-02-05 05:14:46 PM EST`; converted to UTC |
 | Payment Method | `method` | no | e.g. "Stripe Card" |
 | Status | `status` | no | e.g. "succeeded"; refunds and failures read from here |
@@ -157,7 +157,18 @@ confirm. The sponsor knows their guests, staff do far less review, and no AI is 
 Names are stored and printed **as the buyer typed them** (proposed `display_name` on `guests`, used for
 badges, check-in, and the portal). Splitting into first and last name happens **only for duplicate
 matching** (section 4): "Chen Wei", written family-name-first, prints as "Chen Wei", never re-ordered.
-`first_name` and `last_name` (required in Natalie's schema) hold the best-effort split for sorting.
+`first_name` and `last_name` (required in Natalie's schema) hold the best-effort split for sorting. That split comes from the **name engine** (`import-engine/src/names.ts`, Oct 10), used by every way a
+name arrives (the import, and later the portal and the staff app):
+
+- Titles and suffixes stay in the display name but not in first or last ("Dr. Lena Ortiz" → Lena / Ortiz).
+- Surname prefixes stay with the last name ("Maria de la Cruz" → Maria / de la Cruz).
+- "Doe, Jane" is last name first. A one-word name has an empty last name.
+- Chinese and Korean script: family name first, including two-character family names (欧阳, 남궁).
+- A romanized family name written first is recognized from the pattern ("Kim Min-ji", "KIM Minji").
+  Otherwise, a split that could go either way ("Chen Wei", three or more words) is marked **not sure**,
+  for staff to check.
+- The buyer's own seat uses Give Lively's First Name and Last Name columns.
+- Salesforce always gets a LastName: a one-word name goes there.
 
 ### Splitting the free-text guest list
 
@@ -165,16 +176,22 @@ The column answers "Please list the name(s) and email address(es) of all guests.
 gala@aafe.org." Buyers type it however they like. Plain rules, in this order:
 
 1. **Nothing to name:** empty, or only "TBD", "TBA", "to follow", "N/A", "none" → all seats stay unnamed.
-2. **Split into entries** on line breaks, semicolons, and list markers (`1.`, `2)`, `-`, `•`). One line
-   holding two or more email addresses is split around each address.
-3. **Commas between names without emails** ("Jane Doe, Sam Lee"): split on commas **only if** that gives
-   no more entries than the purchase has seats **and** every piece has two or more words. Otherwise the
-   line counts as unclear.
-4. **Read each entry:** an email address if present (lower-cased); the rest, minus separators such as
-   `-`, `:`, `<>` and `()`, is the name, kept exactly as written.
-5. **The buyer themself:** "me", "myself", "self", or the buyer's own name → the buyer is seated, with
+   A purchase with **no seats** (an ad) names nobody, whatever the text says ("No ticket included").
+2. **Split into entries** on line breaks, semicolons, a spaced slash (" / "), and list markers (`1.`, `2)`,
+   `-`, `•`). One line holding two or more email addresses is split around each address; with one
+   address, the line splits there only when a comma follows it ("Ellen Marsh ellen@…, Paul Marsh").
+3. **Open seats inside a list:** an entry that is only a placeholder ("TBD", "Seats 4-10 to be named",
+   "guest to follow") leaves a seat open and is skipped, not shown as unclear.
+4. **Commas between names** ("Jane Doe, Sam Lee", or "Rina Adeyemi, Hector Vale hector@…" where only some
+   names have an address): placeholders are dropped, an address on its own stays with the name before it
+   ("Jane Doe, jane@…"), and the line is split on commas **only if** that gives no more entries than the
+   purchase has seats **and** every piece has two or more words. Otherwise a line without an address
+   counts as unclear, and a line with one stays a single entry, as before.
+5. **Read each entry:** an email address if present (lower-cased); the rest, minus separators such as
+   `-`, `:`, `/`, `<>` and `()`, is the name, kept exactly as written.
+6. **The buyer themself:** "me", "myself", "self", or the buyer's own name → the buyer is seated, with
    their email.
-6. **Unclear → left for the sponsor to confirm** (the original text shows in the portal; no guest is
+7. **Unclear → left for the sponsor to confirm** (the original text shows in the portal; no guest is
    created for that entry, and the clear names in the list are still pre-filled): an entry with an email
    but no name, a one-word name, a couple ("John and Mary Smith", "J & M Smith"), or an entry that can't
    be read. **More names than seats** pre-fills nothing at all, since there's no way to know who to leave
@@ -345,3 +362,8 @@ data (`docs/seed-data-requirements.md`, `seed/natalie-prototype/`).
 | 37b | Gala page not set | No page name for the gala | Any upload | Nothing imported; the page names in the file listed with row counts for staff to pick |
 | 37 | Another gala page in the file | Page name "AAFE's 52nd Annual Gala" | Rows from that page plus 1 row from "Year-End Appeal" | 1 row skipped and listed in the report; others imported |
 | 38 | Sync page filter | Page name "AAFE's 52nd Annual Gala" | JSON donations from that page and from "Year-End Appeal" | Only the gala page's donations imported |
+| 39 | Some names without an address | 8-seat purchase | "Samuel Adeyemi samuel@…, Rina Adeyemi, Hector Vale hector@…" | 3 guests pre-filled |
+| 40 | Slash between guests | 2-seat purchase | "Imani Carter imani@… / Dre Carter dre@…" | 2 guests; no "/" in a name |
+| 41 | Placeholders in a list | 3-seat purchase; 10-seat purchase | "Ellen Marsh ellen@…, Paul Marsh, TBD"; a line "Seats 4-10 to be named" | 2 guests, 1 seat open; the placeholder line is skipped, not unclear |
+| 42 | Ad with no seats | Full-page ad, 0 seats | "No ticket included" | No guests, nothing unclear |
+| 43 | Fee covered as TRUE/FALSE | — | Transaction Fee Covered "TRUE" | Row imports; covered amount unknown (Natalie's synthetic export, `import-engine/test/fixtures/messy-guest-lists/`) |

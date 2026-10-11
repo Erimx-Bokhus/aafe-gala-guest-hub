@@ -20,8 +20,8 @@ type Prefs = ReturnType<typeof useDisplayPrefs>
 type Volunteer = (typeof DemoModule.VOLUNTEERS)[number]
 const CATS = ['Sponsor guest', 'Ticket holder', 'Comped', 'AAFE staff', 'Event volunteer', 'Event staff', 'Government or VIP']
 const CAT_TONE: Record<string, string> = {
-  'Sponsor guest': 'bg-brand-50 text-brand-700 ring-brand-200', 'Ticket holder': 'bg-cream-100 text-navy-800 ring-navy-100',
-  Comped: 'bg-amber-50 text-amber-800 ring-amber-200', 'AAFE staff': 'bg-surface text-brand-700 ring-brand-200',
+  'Sponsor guest': 'bg-brand-50 text-brand-700 ring-navy-100', 'Ticket holder': 'bg-cream-100 text-navy-800 ring-navy-100',
+  Comped: 'bg-amber-50 text-amber-800 ring-amber-200', 'AAFE staff': 'bg-surface text-brand-700 ring-brand-500',
   'Event volunteer': 'bg-surface text-navy-700 ring-navy-300', 'Event staff': 'bg-surface text-navy-700 ring-navy-300',
   'Government or VIP': 'bg-brand-600 text-white ring-brand-600',
 }

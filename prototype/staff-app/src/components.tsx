@@ -58,7 +58,7 @@ export function RecordPaymentModal({ open, onClose, orderId }: { open: boolean; 
           <legend className="mb-1 block text-sm font-medium text-navy-800">How it arrived</legend>
           <div className="grid grid-cols-3 gap-2">
             {([['check', 'Check (mail)'], ['ach_direct', 'ACH to bank'], ['wire', 'Wire']] as const).map(([v, l]) => (
-              <button type="button" key={v} onClick={() => setMethod(v)} aria-pressed={method === v} className={`rounded-md border px-2 py-2 text-sm font-medium ${method === v ? 'border-brand-500 bg-brand-50 text-brand-600' : 'border-navy-100 text-navy-700'}`}>{l}</button>
+              <button type="button" key={v} onClick={() => setMethod(v)} aria-pressed={method === v} className={`min-h-[44px] rounded-full border-2 px-3 text-sm font-semibold ${method === v ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-navy-500 text-navy-700'}`}>{l}</button>
             ))}
           </div>
         </fieldset>

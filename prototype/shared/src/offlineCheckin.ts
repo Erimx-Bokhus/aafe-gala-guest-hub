@@ -17,6 +17,8 @@ export interface SnapshotGuest {
   order_id: string
   first_name: string
   last_name: string
+  /** The guest's name as written (staff_checkin_snapshot sends it; older saved lists may not have it). */
+  display_name?: string | null
   title: string | null
   organization: string | null
   sponsor: string
@@ -167,7 +169,7 @@ export class CheckInDesk {
     if (!words.length) return []
     return this.guests()
       .filter((g) => {
-        const hay = fold([g.first_name, g.last_name, g.organization, g.sponsor].join(' '))
+        const hay = fold([g.first_name, g.last_name, g.display_name ?? '', g.organization, g.sponsor].join(' '))
         return words.every((w) => hay.includes(w))
       })
       .slice(0, limit)

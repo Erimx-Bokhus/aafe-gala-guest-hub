@@ -1,8 +1,9 @@
 // Edge cases from the testing gap list: daylight-saving days, a full-size export, and an export
 // that names the gala only in Internal Name. Invented data only (hard rule 1).
+import { readFileSync } from 'node:fs'
 import Papa from 'papaparse'
 import { describe, expect, it } from 'vitest'
-import { findMissing, GalaPageNotSetError, parsePurchaseTime, prepareUpload, purchaseKey } from '../src/index.ts'
+import { findMissing, GalaPageNotSetError, parseGuestList, parsePurchaseTime, prepareUpload, purchaseKey, readExport } from '../src/index.ts'
 import { context, exportCsv, GALA_PAGE } from './helpers.ts'
 
 /** The same export with some columns removed, as when AAFE picks fewer columns in Give Lively. */
@@ -122,5 +123,37 @@ describe('an export with Internal Name and no Page Name column', () => {
     const { rows, report } = await prepareUpload(bare, context())
     expect(rows).toHaveLength(2)
     expect(report.skippedOtherPage).toEqual([])
+  })
+})
+
+describe("Natalie's synthetic export: every tier and deliberately messy guest lists (Oct 10)", () => {
+  const csv = readFileSync(new URL('./fixtures/messy-guest-lists/givelively-export.csv', import.meta.url), 'utf8')
+
+  it('reads all 11 purchases, with TRUE/FALSE in Transaction Fee Covered', async () => {
+    const { rows, rejected } = await readExport(csv)
+    expect(rejected).toEqual([])
+    expect(rows).toHaveLength(11)
+    expect(rows.every((r) => r.covered === null)).toBe(true)
+  })
+
+  it('splits each guest list the way a person would read it', async () => {
+    const { rows } = await readExport(csv)
+    const read = Object.fromEntries(rows.map((r) => {
+      const g = parseGuestList(r.guestText, r.seats ?? 0, r.buyer)
+      return [r.buyer.last, g.kind === 'names' ? g.guests.map((x) => x.displayName) : g.kind]
+    }))
+    expect(read).toEqual({
+      Lindqvist: ['Maya Lindqvist', 'Omar Haddad', 'Priya Raman', 'Daniel Okafor', 'Grace Tan', 'Luis Ferreira'],   // semicolons
+      Brandt: ['Theo Brandt', 'Anna Brandt', 'Carlos Mejia'],          // lines, addresses in parentheses, "Seats 4-10 to be named"
+      Nakamura: ['Joyce Nakamura', 'Kenji Nakamura', 'Dr. Lena Ortiz'], // "Name - address", commas
+      Adeyemi: ['Samuel Adeyemi', 'Rina Adeyemi', 'Hector Vale'],      // commas, one name without an address
+      Zhou: ['Wen Zhou', 'Mei Zhou'],
+      Pereira: ['Ana Pereira', 'Rui Pereira'],
+      Whitfield: ['Brooke Whitfield'],
+      Carter: ['Imani Carter', 'Dre Carter'],                          // " / "
+      Seo: ['Hyun Seo'],
+      Salazar: 'none',                                                 // full-page ad, no seats: "No ticket included"
+      Marsh: ['Ellen Marsh', 'Paul Marsh'],                            // "..., Paul Marsh, TBD"
+    })
   })
 })
