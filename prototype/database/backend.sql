@@ -1143,7 +1143,7 @@ begin
     end if;
     v_key := coalesce(nullif(r ->> 'purchase_key', ''), purchase_key(r ->> 'email', v_at));
     v_text := nullif(btrim(r ->> 'guest_text'), '');
-    v_cancel := coalesce((r ->> 'cancelled')::boolean, false)
+    v_cancel := coalesce((r ->> 'cancelled')::boolean, false) or coalesce((r ->> 'cancel_only')::boolean, false)
              or coalesce(r ->> 'status', '') ~* 'refund|fail|cancel|void'
              or (v_refunded > 0 and v_refunded >= v_gross);
 
@@ -1178,6 +1178,8 @@ begin
       if v_cancel and o.status <> 'cancelled' then
         update orders set status = 'cancelled', updated_at = now() where id = o.id;
         update seats set status = 'cancelled', updated_at = now() where order_id = o.id;
+        -- An unsent guest-list link would hand the sponsor a link to a cancelled order.
+        update email_log set status = 'cancelled' where order_id = o.id and status = 'queued';
         perform write_audit('system', p_actor, 'order', o.id, o.id, 'order.cancelled', o.status, 'cancelled', false,
           'Refunded or failed in Give Lively; seats cancelled.');
         if add_import_review(p_run_id, v_key, o.id, 'refund', jsonb_build_object('status', r ->> 'status', 'refunded', v_refunded)) then v_reviews := v_reviews + 1; end if;
@@ -1199,6 +1201,8 @@ begin
       if v_changed then v_updated := v_updated + 1; else v_skipped := v_skipped + 1; end if;
       continue;
     end if;
+    -- A failed donation from the sync (cancel_only) only undoes a purchase imported earlier; it never creates one.
+    if coalesce((r ->> 'cancel_only')::boolean, false) then v_skipped := v_skipped + 1; continue; end if;
 
     -- Package: the prepared tier, else this gala's tier mapping, else the longest tier name (before
     -- " — ") found in the Give Lively name. No match: staff review, nothing created until mapped.
