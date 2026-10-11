@@ -7,6 +7,34 @@
   background: #fff;
 }
 
+/* The sponsor hero is intentionally light in both themes. Reset only the
+   inherited guest-portal tokens here; the rest of the page keeps dark mode. */
+.brand-warm .hero-glass-hero.force-light {
+  --page: 255 255 255;
+  --surface: 255 255 255;
+  --muted: 244 244 246;
+  --line: 235 235 235;
+  --brand-50: 252 241 235;
+  --brand-100: 248 224 212;
+  --n50: 244 244 246;
+  --n100: 235 235 235;
+  --n300: 186 185 185;
+  --n500: 112 112 112;
+  --n600: 77 76 76;
+  --n700: 64 64 64;
+  --n800: 51 51 51;
+  --n900: 49 49 49;
+  --ink: 49 49 49;
+  --ink2: 61 56 53;
+  color-scheme: light;
+}
+
+/* The global dark-theme orange is too pale over the glass. This darker brand
+   orange retains at least 4.5:1 contrast even against white. */
+.brand-warm .hero-glass-hero.force-light .text-brand-600 {
+  color: #A63E1F;
+}
+
 .brand-warm .hero-glass-blobs {
   position: absolute;
   z-index: 0;
