@@ -449,15 +449,10 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
           <div className="max-w-2xl">
             <h2 className="type-h2 text-navy-900">{t.thanksTitle}</h2>
             <p className="type-lead mt-3 text-navy-600">{t.thanksBody}</p>
-            {/* Donate sits here, not in the header: sponsors have just given, so the page thanks them first and
-                offers a way to do more only after the guest list. Goes to AAFE's donate page (Give Lively). */}
-            <div className="mt-6">
-              <a href="https://www.aafe.org/donate/" target="_blank" rel="noopener noreferrer" className="aafe-donate" data-testid="donate">{t.donate}</a>
-            </div>
           </div>
         </div>
       </section>
-      <MissionStrip lang={lang} />
+      <MissionStrip lang={lang} donate />
       <footer className="mx-auto max-w-6xl px-5 py-8 text-xs text-navy-500">{t.privacy}</footer>
 
       <Modal open={seat != null} onClose={() => setEditing(null)} title={seat ? (seat.guest ? t.editInSeat(seat.slot) : t.addToSeat(seat.slot)) : ''} closeLabel={t.close}>
