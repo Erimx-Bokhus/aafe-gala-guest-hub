@@ -95,7 +95,9 @@ export default function Hero({ lang, eyebrow, title, body, children, compact }: 
   )
 }
 
-export function MissionStrip({ lang }: { lang: Lang }) {
+// `donate`: the sponsor portal shows AAFE's Donate button here, under the photos, and not in the header:
+// sponsors have just given, so the page thanks them first and offers a way to do more at the end.
+export function MissionStrip({ lang, donate = false }: { lang: Lang; donate?: boolean }) {
   const t = DICT[lang]
   const photos = [
     { src: './photos/community-youth-delivery.jpg', alt: 'Young AAFE volunteers delivering supplies to neighbors', pos: 'center 30%' },
@@ -111,7 +113,11 @@ export function MissionStrip({ lang }: { lang: Lang }) {
             <img key={p.src} src={p.src} alt={p.alt} loading="lazy" className="aspect-[4/5] w-full rounded-xl object-cover" style={{ objectPosition: p.pos }} />
           ))}
         </div>
-        <p className="mt-3 text-xs text-navy-600">{t.photoCredit}</p>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-xs text-navy-600">{t.photoCredit}</p>
+          {/* Goes to AAFE's donate page (Give Lively) */}
+          {donate && <a href="https://www.aafe.org/donate/" target="_blank" rel="noopener noreferrer" className="aafe-donate" data-testid="donate">{t.donate}</a>}
+        </div>
       </div>
     </section>
   )
