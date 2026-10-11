@@ -35,6 +35,20 @@
   color: #A63E1F;
 }
 
+/* In dark mode only, keep the two compact event tiles distinct from the
+   light glass while retaining the same white date and icon foregrounds. */
+.brand-warm.dark .hero-glass-hero.force-light .hero-glass-tile {
+  background-color: #4D4C4C;
+  color: #fff;
+}
+.brand-warm.dark .hero-glass-hero.force-light .hero-glass-date-month {
+  background-color: #4D4C4C;
+  color: #fff;
+}
+.brand-warm.dark .hero-glass-hero.force-light .hero-glass-date-day {
+  color: #fff;
+}
+
 .brand-warm .hero-glass-blobs {
   position: absolute;
   z-index: 0;
