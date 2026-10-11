@@ -58,6 +58,7 @@ alter table email_log add column if not exists last_error  text;
 alter table email_log add column if not exists approved_by text;          -- staff name
 alter table email_log add column if not exists approved_at timestamptz;   -- null = draft awaiting approval
 alter table email_log add column if not exists created_at  timestamptz not null default now();
+alter table email_log add column if not exists claimed_at  timestamptz;   -- set while one send-emails run is sending it (email_claim)
 alter table email_log add column if not exists payment_id  text references payments(id);  -- payment_receipt: which payment
 alter table email_log drop constraint if exists email_log_status_check;
 alter table email_log add constraint email_log_status_check check (status in ('queued','sent','opened','bounced','cancelled'));
@@ -1429,7 +1430,7 @@ create or replace function email_mark_sent(p_email_id text, p_token_hash text de
 language plpgsql security definer set search_path = public as $$
 declare m email_log; v_deadline date;
 begin
-  update email_log set status = 'sent', sent_at = now(), attempts = attempts + 1, last_error = null
+  update email_log set status = 'sent', sent_at = now(), attempts = attempts + 1, last_error = null, claimed_at = null
    where id = p_email_id and status = 'queued' and approved_at is not null returning * into m;
   if m.id is null then return; end if;
   -- A reminder carries a fresh link too, so the newest email always has the one that works.
@@ -1511,7 +1512,23 @@ end $$;
 -- After 5 failed attempts the email stays 'queued' but the worker stops retrying.
 create or replace function email_mark_failed(p_email_id text, p_error text) returns void
 language sql security definer set search_path = public as $$
-  update email_log set attempts = attempts + 1, last_error = left(p_error, 1000) where id = p_email_id
+  update email_log set attempts = attempts + 1, last_error = left(p_error, 1000), claimed_at = null where id = p_email_id
+$$;
+
+-- The send-emails worker claims its batch before sending anything. The every-minute schedule and a
+-- staff member's "send now" can overlap; without a claim both runs would send the same email, and
+-- each would mint its own link, so the second run's email_mark_sent would replace the link the
+-- sponsor actually received. SKIP LOCKED hands each email to exactly one run. A claim older than
+-- 10 minutes belongs to a run that died mid-send, so the email can be claimed again.
+create or replace function email_claim(p_limit int default 25) returns setof email_log
+language sql security definer set search_path = public as $$
+  update email_log set claimed_at = now()
+   where id in (select id from email_log
+                 where status = 'queued' and approved_at is not null and attempts < 5
+                   and (claimed_at is null or claimed_at < now() - interval '10 minutes')
+                 order by id limit greatest(coalesce(p_limit, 25), 0)
+                 for update skip locked)
+  returning *
 $$;
 
 -- ---------------------------------------------------------------------
@@ -1976,7 +1993,7 @@ begin
               'portal_release_seat','staff_me','staff_update_guest','staff_set_seat_status','staff_mark_printed',
               'staff_assign_seat','staff_seat_order_at_table','staff_record_payment','staff_add_pledge','staff_add_comp_guest',
               'staff_send_qr_invite','staff_resend_portal_link','staff_approve_email','staff_cancel_email','checkin_list','staff_check_in','staff_check_in_qr',
-              'staff_check_in_exception','gl_import','staff_import_givelively','email_mark_sent','email_mark_failed',
+              'staff_check_in_exception','gl_import','staff_import_givelively','email_mark_sent','email_mark_failed','email_claim',
               'purchase_key','name_key','add_import_review','import_fill_guests','staff_set_tier_mapping','staff_set_gala_page',
               'staff_resolve_import_review','seats_void_qr','guests_void_qr','require_gala_order',
               'staff_export_badges','staff_export_checkin','staff_export_salesforce',
@@ -2013,7 +2030,7 @@ grant execute on function
   to authenticated;
 
 -- Edge functions (service role)
-grant execute on function gl_import(jsonb, text, text), email_mark_sent(text, text), email_mark_failed(text, text), hash_token(text)
+grant execute on function gl_import(jsonb, text, text), email_mark_sent(text, text), email_mark_failed(text, text), email_claim(int), hash_token(text)
   to service_role;
 
 -- ---------------------------------------------------------------------
