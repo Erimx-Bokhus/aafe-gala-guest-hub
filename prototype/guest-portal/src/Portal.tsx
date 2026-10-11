@@ -290,8 +290,6 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
           </li>
         </ul>
         <div className="mt-5 flex flex-wrap items-center gap-3">
-          {/* Same Donate button as the aafe.org header; goes to AAFE's donate page (Give Lively) */}
-          <a href="https://www.aafe.org/donate/" target="_blank" rel="noopener noreferrer" className="aafe-donate" data-testid="donate">{t.donate}</a>
           <button type="button" className="aafe-contact" onClick={scrollToContact} data-testid="hero-contact">{t.contact}</button>
         </div>
       </Hero>
@@ -451,6 +449,11 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
           <div className="max-w-2xl">
             <h2 className="type-h2 text-navy-900">{t.thanksTitle}</h2>
             <p className="type-lead mt-3 text-navy-600">{t.thanksBody}</p>
+            {/* Donate sits here, not in the header: sponsors have just given, so the page thanks them first and
+                offers a way to do more only after the guest list. Goes to AAFE's donate page (Give Lively). */}
+            <div className="mt-6">
+              <a href="https://www.aafe.org/donate/" target="_blank" rel="noopener noreferrer" className="aafe-donate" data-testid="donate">{t.donate}</a>
+            </div>
           </div>
         </div>
       </section>
