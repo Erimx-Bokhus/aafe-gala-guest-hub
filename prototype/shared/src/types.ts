@@ -11,7 +11,7 @@ export type BadgeStatus = 'needs_review' | 'ready' | 'printed' | 'reprint_needed
 // AAFE's seven guest categories (requirements); the Full demo data sets use all of them.
 export type GuestType = 'sponsor_guest' | 'ticket_holder' | 'comp_relationship' | 'government_vip' | 'aafe_staff' | 'event_volunteer' | 'event_staff'
 
-export interface GalaEvent { id: string; year: number; name: string; event_date: string; doors_time: string; program_time: string; venue_name: string; venue_address: string; dress_code: string; guest_list_deadline: string; program_ad_deadline: string; status: 'planning' | 'live' | 'closed'; is_synthetic: boolean; /** This gala's Give Lively page; only its purchases are imported. */ givelively_page_name?: string | null }
+export interface GalaEvent { id: string; year: number; name: string; event_date: string; doors_time: string; program_time: string; venue_name: string; venue_address: string; dress_code: string; guest_list_deadline: string; program_ad_deadline: string; status: 'planning' | 'live' | 'closed'; is_synthetic: boolean; /** Sponsors see which of their guests have arrived (off until AAFE approves). */ sponsor_arrivals_visible?: boolean; /** Who at AAFE approved it, and when. */ sponsor_arrivals_note?: string | null; /** This gala's Give Lively page; only its purchases are imported. */ givelively_page_name?: string | null; /** The sponsorship goal the pipeline board measures against. */ sponsorship_goal?: number | null }
 export interface StaffUser { id: string; name: string; email: string; role: Role }
 export interface Tier { id: string; name: string; contribution_amount: number; included_seat_count: number; tier_category: 'sponsorship' | 'ticket' | 'advertising_only' | 'complimentary'; required_materials: string[] }
 export interface Sponsor { id: string; organization_name: string; primary_contact_name: string; primary_contact_email: string; phone: string; relationship_owner_id: string; salesforce_account_id: string | null; created_at: string }
@@ -29,6 +29,9 @@ export type ReviewReason = 'unknown_tier' | 'guest_text_changed' | 'email_name_c
 export interface ImportRun { id: string; event_id: string; source: 'csv' | 'sync'; file_name: string | null; file_hash: string | null; started_by: string; started_at: string; finished_at: string | null; status: 'running' | 'succeeded' | 'failed'; earliest_purchase: string | null; latest_purchase: string | null; counts: Record<string, number> | null; report: unknown }
 export interface ImportReview { id: string; run_id: string | null; event_id: string; purchase_key: string | null; order_id: string | null; reason: ReviewReason; details: Record<string, unknown>; status: 'open' | 'resolved'; resolution: string | null; resolved_by: string | null; resolved_at: string | null; created_at: string }
 export interface TierMappingRow { id: string; event_id: string; givelively_name: string; name_key: string; tier_id: string; created_by: string; created_at: string }
+export type PipelineStage = 'not_started' | 'reached_out' | 'in_conversation' | 'closed_won' | 'payment_received' | 'lost'
+export type Sector = 'board' | 'community' | 'corporate' | 'foundation' | 'individual' | 'small_business'
+export interface Prospect { id: string; event_id: string; sponsor_id: string; stage: PipelineStage; sector: Sector | null; ask_amount: number | null; ask_tier_id: string | null; order_id: string | null; follow_up_owner_id: string | null; notes: string | null; stage_changed_at: string; created_at: string; updated_at: string; /** Demo only: the order status the stage last followed, so a stage staff set holds until the order changes (as the trigger does). */ seen_status?: string | null }
 export interface DB {
   meta: { current_event_id: string; fee_rates: Record<string, string>; fee_source: string }
   gala_events: GalaEvent[]; staff_users: StaffUser[]; sponsorship_tiers: Tier[]; sponsors: Sponsor[]; orders: Order[]
@@ -36,4 +39,6 @@ export interface DB {
   email_log: EmailLog[]; audit_log: AuditEntry[]; salesforce_sync: SfSync[]
   /** The Give Lively import's own tables (backend.sql): uploads, close calls for staff, and tier names linked to packages. */
   import_runs?: ImportRun[]; import_review?: ImportReview[]; tier_mappings?: TierMappingRow[]
+  /** AAFE's prospect tracker (backend.sql sponsor_prospects). */
+  sponsor_prospects?: Prospect[]
 }

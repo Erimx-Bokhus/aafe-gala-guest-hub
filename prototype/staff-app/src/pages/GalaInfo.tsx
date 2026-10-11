@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { fmtDate, money } from '@shared/ui'
+import { Pill, fmtDate, money } from '@shared/ui'
 import type { GalaEvent, Seat } from '@shared/types'
 import { PageHead } from '../App'
 import { useStaff } from '../store'
+import { canDo } from '../api'
 
 const RUN = [
   ['5:00 PM', 'Staff & volunteer call time; check-in iPads charged and synced'],
@@ -13,6 +14,34 @@ const RUN = [
   ['8:30 PM', 'Honoree recognition & sponsor thank-yous'],
   ['9:30 PM', 'Closing remarks · dessert & networking'],
 ]
+
+// Sponsor-facing arrivals (decided Oct 6): built switched off; a gala admin switches it on once AAFE's privacy review
+// approves, recording who approved and when (staff_set_sponsor_arrivals). Sponsors see arrived or not, never a time.
+function SponsorArrivals({ ev }: { ev: GalaEvent }) {
+  const { api, user, act } = useStaff()
+  const [note, setNote] = useState('')
+  const on = !!ev.sponsor_arrivals_visible
+  const admin = canDo(user.role, 'setSponsorArrivals')
+  return (
+    <section className="card p-5" data-testid="sponsor-arrivals">
+      <div className="flex items-start justify-between gap-3">
+        <h2 className="font-semibold text-navy-900">Sponsors see who has arrived</h2>
+        <Pill tone={on ? 'green' : 'gray'}>{on ? 'On' : 'Off'}</Pill>
+      </div>
+      <p className="mt-1 text-sm text-navy-600">On gala night, a sponsor's private link can show which of their guests have arrived: arrived or not, never a time. It stays off until AAFE's privacy review approves it.</p>
+      {on && ev.sponsor_arrivals_note && <p className="mt-2 text-xs text-navy-500">Approved: {ev.sponsor_arrivals_note}</p>}
+      {!admin ? <p className="mt-3 text-xs text-navy-500">Only gala admins can change this.</p>
+        : on ? <button className="btn-ghost mt-3" data-testid="arrivals-off" onClick={() => void act(api.setSponsorArrivals(false, ''), 'Sponsors no longer see arrivals')}>Switch off</button>
+        : (
+          <div className="mt-3 space-y-2">
+            <label className="label" htmlFor="arr-note">AAFE's privacy approval: who approved it, and when</label>
+            <input id="arr-note" className="input" value={note} onChange={(e) => setNote(e.target.value)} />
+            <button className="btn-primary" data-testid="arrivals-on" disabled={!note.trim()} onClick={() => void act(api.setSponsorArrivals(true, note), 'Sponsors can now see which of their guests have arrived').then((ok) => { if (ok) setNote('') })}>Switch on</button>
+          </div>
+        )}
+    </section>
+  )
+}
 
 export default function GalaInfo() {
   const { db, api, user, act } = useStaff()
@@ -51,6 +80,7 @@ export default function GalaInfo() {
           {canEdit ? <button className="btn-primary">Save gala information</button> : <p className="text-xs text-navy-500">Only gala admins can edit.</p>}
         </form>
         <div className="space-y-6">
+          <SponsorArrivals ev={ev} />
           <section className="card p-5">
             <h2 className="font-semibold text-navy-900">Run of show (draft)</h2>
             <ol className="mt-3 space-y-2">{RUN.map(([t, d]) => <li key={t} className="flex gap-3 text-sm"><span className="w-16 shrink-0 font-semibold tabular-nums text-brand-600">{t}</span><span className="text-navy-700">{d}</span></li>)}</ol>
