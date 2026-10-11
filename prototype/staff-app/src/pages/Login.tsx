@@ -3,7 +3,7 @@ import { Lock, Mail } from 'lucide-react'
 import { DisplayControls, type Prefs } from '@shared/ui'
 import { AafeLogo } from '@shared/Logo'
 import type { DB, StaffUser } from '@shared/types'
-import { sendSignInLink, supabase } from '../supabase'
+import { sendSignInLink, supabase } from '@shared/supabase'
 
 // LIVE (Supabase configured): staff get a one-time sign-in link by email; the role comes from staff_users via
 // staff_me() and is enforced by RLS. DEMO (no Supabase): picks a synthetic staff user, no real sign-in.
@@ -33,10 +33,10 @@ export default function Login({ db, prefs, notice, onLogin }: { db: DB; prefs: P
     <div className="grid min-h-[calc(100vh-28px)] lg:grid-cols-2">
       <div className="relative hidden lg:block">
         <img src="./photos/gala-50th-panel.jpg" alt="Speakers on stage at AAFE’s 50th anniversary gala" className="absolute inset-0 h-full w-full object-cover" style={{ objectPosition: 'center 40%' }} />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#313131]/85 via-[#313131]/20 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
         <div className="absolute bottom-0 p-10 text-white">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#F0C3AD]">AAFE Gala Operations</p>
-          <p className="mt-2 max-w-md font-serif text-3xl leading-tight">One place for every sponsor, seat, payment and badge.</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white">AAFE Gala Operations</p>
+          <p className="mt-2 max-w-md font-sans text-3xl leading-tight">One place for every sponsor, seat, payment and badge.</p>
         </div>
       </div>
       <div className="flex flex-col bg-cream-50">
@@ -60,12 +60,12 @@ export default function Login({ db, prefs, notice, onLogin }: { db: DB; prefs: P
               ? <p className="mt-5 rounded-lg bg-surface p-3 text-sm text-navy-700" role="status" data-testid="link-sent">Check your inbox for a sign-in link from AAFE Gala. It works once and expires in an hour.</p>
               : live
                 ? <button className="btn-primary mt-5 w-full" type="submit" disabled={busy} data-testid="send-link"><Mail size={15} /> {busy ? 'Sending…' : 'Email me a sign-in link'}</button>
-                : <button className="btn-primary mt-5 w-full" type="submit" data-testid="sign-in"><Lock size={15} /> Sign in</button>}
+                : <button className="btn-primary mt-5 w-full uppercase tracking-wide" type="submit" data-testid="sign-in"><Lock size={15} /> Sign in</button>}
             {!live && <div className="mt-8 rounded-xl border border-navy-100 bg-surface p-4">
               <div className="label">Demo accounts (synthetic)</div>
               <ul className="mt-2 space-y-1.5">
                 {db.staff_users.filter((u, i) => i < 2 || u.role === 'check_in_volunteer').map((u) => (
-                  <li key={u.id}><button type="button" className="w-full rounded-md px-2 py-1.5 text-left text-sm hover:bg-navy-50" onClick={() => onLogin(u)} data-testid={`login-${u.role}`}>
+                  <li key={u.id}><button type="button" className="flex min-h-[44px] w-full items-center gap-1.5 rounded-full px-4 text-left text-sm hover:bg-navy-50" onClick={() => onLogin(u)} data-testid={`login-${u.role}`}>
                     <span className="font-semibold text-navy-900">{u.name}</span> <span className="text-navy-500">— {u.role.replace(/_/g, ' ')}</span>
                   </button></li>
                 ))}

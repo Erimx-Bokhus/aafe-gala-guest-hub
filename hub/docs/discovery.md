@@ -1,5 +1,5 @@
 # Discovery
-<!-- reviewed 2026-10-08 Aisling -->
+<!-- reviewed 2026-10-09 Aisling -->
 
 What AAFE told us on the October 1 call, in their words where it matters. AAFE's gala lead ran the guest list for the 2026 gala while AAFE's project contact was on leave.
 
@@ -46,7 +46,7 @@ What AAFE told us on the October 1 call, in their words where it matters. AAFE's
 
 ## Inputs from AAFE
 <!-- updated 2026-10-05 16:51 Aisling -->
-<!-- modified 2026-10-08 08:15 Aisling -->
+<!-- modified 2026-10-08 04:15 Aisling -->
 
 What we need from AAFE, in one list: the materials promised on the call (expected about a week after it) plus the approvals Natalie's prototype review surfaced. Until each arrives, we build against invented data and placeholders. <!-- modified 2026-10-03 12:36 Aisling -->
 
@@ -92,10 +92,12 @@ AAFE's project contact sent the guest-list notes, the 2026 sponsorship flyer, a 
 - Who maintains the tool after November 10
 - Confirm Traditional Chinese (used on aafe.org and in the portal) with AAFE <!-- modified 2026-10-06 06:12 Aisling -->
 - Whether Give Lively also has an Attendee Data report (one row per ticket) for AAFE's gala page <!-- updated 2026-10-06 06:12 Aisling -->
-- Whether sponsors may see which of their guests have arrived (arrived or not, never a time; built switched off until AAFE approves) <!-- modified 2026-10-08 08:15 Aisling -->
+- Whether sponsors may see which of their guests have arrived (arrived or not, never a time; built switched off until AAFE approves) <!-- modified 2026-10-08 04:15 Aisling -->
 - Who sends the tax acknowledgment when a sponsor pays by check or ACH, and when. Give Lively sends receipts only for online purchases, and the October 1 call didn't cover this <!-- new 2026-10-07 00:11 Aisling -->
 - AAFE's accounting already emails a payment confirmation for checks and ACH (October 5 email thread). Should the tool's confirmation draft replace it, or should the tool leave confirmations to accounting? <!-- new 2026-10-07 00:11 Aisling -->
-- Whether sponsors get a few days' grace to change names after the deadline (until AAFE answers, links stop at the deadline) <!-- updated 2026-10-08 08:15 Aisling -->
-- Confirm our proposal: no AI in the first version <!-- updated 2026-10-08 08:15 Aisling -->
-- Confirm our proposal: delete guest contact details, dietary and accessibility details included, within 60 days after the gala <!-- updated 2026-10-08 08:15 Aisling -->
-- Whether a guest email is required, or optional <!-- updated 2026-10-08 08:15 Aisling -->
+- Whether sponsors get a few days' grace to change names after the deadline (until AAFE answers, links stop at the deadline) <!-- updated 2026-10-08 04:15 Aisling -->
+- Confirm our proposal: no AI in the first version <!-- updated 2026-10-08 04:15 Aisling -->
+- Confirm our proposal: delete guest contact details, dietary and accessibility details included, within 60 days after the gala <!-- updated 2026-10-08 04:15 Aisling -->
+- Whether a guest email is required, or optional <!-- updated 2026-10-08 04:15 Aisling -->
+- Guest names as one full-name field, or first and last name separately <!-- new 2026-10-09 06:10 Aisling -->
+- Whether approving every email one at a time works for staff (one click can draft dozens of reminders), or whether an "approve all reminders" option would help; it would still count as staff approval <!-- new 2026-10-09 06:10 Aisling -->

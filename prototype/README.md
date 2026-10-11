@@ -22,6 +22,7 @@ Double-clicking `guest-portal/index.html` or `staff-app/index.html` also works: 
 Rebuild the OPEN files after changes: `npm run build`, then `python3 scripts/make_open_files.py`.
 
 ## Run
+Needs **Node 22.18** or newer (`node --version`). The backend tests load TypeScript files directly, which Node does from 22.18; older versions fail with `ERR_UNKNOWN_FILE_EXTENSION`. With nvm, `nvm install` in this folder picks the version from `.nvmrc`.
 ```bash
 npm install            # once, at this folder (npm workspaces)
 npm run dev:guest      # http://localhost:5173  -> open #/s/ac-6w9k3p5d
@@ -37,7 +38,7 @@ npm run translations   # rebuild the translation review sheet (docs/translations
 3. Check: `select * from v_fee_totals order by event_id;` returns 2024–2027 totals.
 
 ## Backend (Supabase + Give Lively)
-Run `database/backend.sql` after the seed, then follow **`docs/BACKEND.md`** to deploy the Give Lively poller and email sender. `npm run test:backend` checks the backend locally.
+Run `database/backend.sql` after the seed, then follow **`docs/BACKEND.md`** to deploy the Give Lively poller and email sender. `npm run test:backend` checks the backend locally. It also runs the import engine, so install that once first: `npm ci --prefix ../import-engine`.
 
 ## Seed contents (all fictional)
 - 4 galas (2024 50th anniversary, 2025, 2026 history; 2027 current demo)

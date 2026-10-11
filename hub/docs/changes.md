@@ -5,21 +5,69 @@ Every change to this hub, newest first. Open it while signed in to claude.ai and
 Each change has a kind, shown the same way on every page next to the exact line that changed: **✦ New** (didn't exist before), **+ Updated** (rows, tasks, or terms added), **✎ Modified** (wording, numbers, or a rule changed), **− Removed** (taken out), and **! Important** (everyone should act on it). Hover an icon for the date, time (New York), and who made the change; click it to mark it read.
 
 ```changes
-2026-10-08 08:15 | new | Aisling | screens.ipad-check-in-app | Screens is now Live build, with six screenshots of Natalie's iPad check-in app on the Full gala (AAFE's logo as a grey placeholder)
-2026-10-08 08:15 | new | Aisling | sketches | New page: Early sketches, the first wireframes moved off Screens; the check-in sketch is marked superseded by the iPad app
-2026-10-08 08:15 | modified | Aisling | tasks | Tasks checked against the Oct 8 audit: sign-in split from server-side roles; no AI, PRDs and the three data sets (#18, PR #66) done; three Vercel projects; new tasks for the demo's Supabase project and the iPad app's build guard
-2026-10-08 08:15 | modified | Aisling | build-plan | New component C13, Demo Day additions, with capacity rechecked; emails, exports and check-in bars show only what's left; Oct 15 review on the timeline; C1 names the two 553-guest galas; about 1,160 automated checks
-2026-10-08 08:15 | modified | Aisling | architecture.what-s-built | Three apps on one database; no AI in v1; new rows for the iPad app, offline check-in, the approval queue, the pipeline, arrivals, translations and the data sets; the data model is labeled early design
-2026-10-08 08:15 | modified | Aisling | import | Earlier questions and the original 22 test cases cut (the spec's cases are linked); the demo's three data sets described
-2026-10-08 08:15 | modified | Aisling | decisions | What separates the two Full demo sets (Oct 8); three Vercel projects; the AI and retention question now waits on AAFE's Oct 15 review; the repo's log sorted by date
-2026-10-08 08:15 | modified | Aisling | risks | AI and free-plan rows updated, owners fixed, and three new risks: one person's Supabase account, the Oct 7 additions against Oct 30, and the iPad app's missing build guard
-2026-10-08 08:15 | modified | Aisling | overview | Status, roles and the seating line fixed; the who-builds-what paragraph now lives only here
-2026-10-08 08:15 | modified | Aisling | data-ai | No AI in the first version throughout; dietary details follow the 60-day proposal; the two AI sections merged
-2026-10-08 08:15 | updated | Aisling | discovery.still-to-ask | Four questions for AAFE: a grace period after the deadline, no AI in v1, 60-day deletion, and whether guest email is required
-2026-10-08 08:15 | modified | Aisling | requirements.working-prd | Working PRD reconciled with Natalie's two PRDs; pre-fill reaffirmed; Oct 15 review added to the success measures
-2026-10-08 08:15 | updated | Aisling | documents | Documents: the iPad app, WORKFLOW, data handling and data model, the translation sheet, the iPad screenshots, and Natalie's two PRDs
-2026-10-08 08:15 | updated | Aisling | glossary | Eight new terms: iPad check-in app, door list, offline queue, approval queue, pre-fill, fingerprint, Vercel, labeled data sets
-2026-10-08 08:15 | modified | Aisling | hosting.demo-preview-team-notes | Three Vercel projects; the backend stays in Aisling's test project until the team picks one; the iPad app syncs once connected to Supabase
+2026-10-09 06:10 | important | Aisling | decisions.team-and-build-decisions | Client view now hides everything internal: team decisions, team risks, team documents, who builds what, and how the hub works. Show AAFE the hub in Client view, and don't send them the link itself (Client view hides, it doesn't lock)
+2026-10-09 06:10 | new | Aisling | screens.walkthrough-videos | Two walkthrough videos of the whole path: about three minutes narrated, and 90 seconds with captions; AAFE's logo and photos as grey placeholders
+2026-10-09 06:10 | updated | Aisling | screens.the-build-so-far | Screenshots of the three export buttons (PR #87); the 25-second walkthrough from Oct 6 is replaced by the new videos
+2026-10-09 06:10 | modified | Aisling | decisions | Product decisions stay for AAFE; 21 team and build decisions and 3 team questions moved to a team-only section; new questions for AAFE on name fields and approving reminders
+2026-10-09 06:10 | modified | Aisling | risks.team-risks | Five internal risks moved to Team risks; new team risk: six portal PRs edit the same file
+2026-10-09 06:10 | modified | Aisling | overview | Status in plain language; who builds what and how the hub works are team-only
+2026-10-09 06:10 | modified | Aisling | build-plan.where-each-component-stands | Exports connected to the staff app (C8, PR #87); approval list in review (C7, PR #89); Unix line endings (PR #88); about 1,250 automated checks
+2026-10-09 06:10 | updated | Aisling | tasks.added-october-9 | Oct 9: the five slices for the unwired database functions, the AAFE check-in prep, the hub audit, and two follow-ups (Code map rebuild, re-record after #89)
+2026-10-09 06:10 | modified | Aisling | architecture.what-s-built | The iPad app is connected to the backend (it said it wasn't); the staff app's export buttons and approval list
+2026-10-09 06:10 | modified | Aisling | data-ai | The Demo Day AI note moved to a team section; sponsor links stop after the deadline day
+2026-10-09 06:10 | updated | Aisling | documents.team-documents | Internal documents moved to Team documents, with the Oct 9 check-in prep; the export screenshots in the repo list
+2026-10-09 06:10 | updated | Aisling | discovery.still-to-ask | Two new questions for AAFE: one name field or first and last; approving reminders one at a time
+2026-10-09 06:10 | modified | Aisling | codemap.what-stands-out | Map rebuilt from today's code: the three exports now show as connected, leaving 11 database functions to wire
+2026-10-09 06:10 | modified | Aisling | glossary | Door list: the iPad holds each QR code's fingerprint, never the code; approval queue: where staff find it
+2026-10-09 06:10 | modified | Aisling | import.built-and-tested | The upload screen is next on the Build plan
+2026-10-09 06:10 | modified | Aisling | requirements.working-prd | About 1,250 automated checks; PR detail trimmed
+2026-10-09 06:10 | modified | Aisling | hosting.demo-preview-team-notes | The hosted iPad app syncs through Supabase
+2026-10-09 00:55 | modified | Aisling | codemap.the-map | The code preview shows in Team view only; Client view hides it
+2026-10-09 00:45 | updated | Aisling | codemap.the-map | Click any part of the code map to see what it's for and read its code, with the whole file one click away
+2026-10-09 00:45 | new | Aisling | codemap.what-stands-out | The code map now draws the links into the database: which app calls each database function, the tables each one uses, the 4 access rules and the 3 triggers. It found 14 database functions no screen calls yet
+2026-10-09 00:45 | modified | Aisling | codemap.what-the-map-doesn-t-show | Corrected: triggers don't write the change log; database functions do
+2026-10-09 00:45 | updated | Aisling | tasks | Code map task done; new task to wire the 14 unused database functions to the staff app
+2026-10-09 00:05 | modified | Aisling | tasks | Oct 8 night: PRs #81 and #82 (iPad layout), the review of Antonin's #75–#77 sent to Natalie, the PRD in Pathfinder, and the Saturday sign-in test at 12 PM; the code map task shows what's built and what's left
+2026-10-09 00:05 | modified | Natalie | screens.ipad-check-in-app | iPad screenshots retaken: the larger logo mark (still a grey placeholder) and the portrait filter on its own row (PRs #81, #82)
+2026-10-09 00:05 | modified | Aisling | build-plan.where-each-component-stands | Check-in app: the larger mark and portrait layout (PRs #81, #82); sponsor form: Antonin's #75–#77 reviewed, waiting on Natalie
+2026-10-09 00:05 | modified | Aisling | decisions.pending | When sponsor links stop: with option A, live sponsors never see #75's "list is closed" card, because their link stops at the same moment
+2026-10-09 00:05 | modified | Aisling | documents | The PR review plan's status, and Natalie's enterprise PRD approved by Pursuit and in Pathfinder
+2026-10-09 00:05 | modified | Aisling | overview | Status: the iPad app connected, the backend audit fixed, Antonin's portal PRs in review
+2026-10-09 00:05 | modified | Aisling | risks | The sign-in test is Saturday at 12 PM at the Pursuit building, once Cornell confirms
+2026-10-09 00:05 | updated | Aisling | glossary | Two new terms: Code map and graphify
+2026-10-08 23:55 | new | Aisling | codemap | New page: Code map, an interactive map of every file, function and table in the prototype and how they connect; search, filter by area, click for details
+2026-10-08 17:10 | modified | Aisling | tasks | The four audit bugs and the five smaller findings are fixed with tests in one PR (#78); next: a full audit of the whole system and a code map in the hub
+2026-10-08 17:10 | modified | Aisling | decisions | Supabase advisor warnings down from 43 to 1: the functions the apps call moved to a private schema behind same-name wrappers (PR #78)
+2026-10-08 17:10 | modified | Aisling | build-plan.where-each-component-stands | About 1,250 automated checks; nine audit bugs fixed with tests (PR #78)
+2026-10-08 17:10 | modified | Aisling | changes | Six of Oct 8's timestamps were in UTC and are now New York time; nothing you've read is marked unread
+2026-10-08 16:40 | new | Aisling | decisions | The staff app saves every change through the server, which checks the role (PR #72); gala date and deadline changes move QR e-tickets and sponsor links; Node 22.18 or newer (PR #73); how teammates' PRs are reviewed
+2026-10-08 16:40 | modified | Aisling | decisions | When sponsor links stop is now three options (A, B recommended, C) on the PR review plan, for Natalie and then AAFE; 43 advisor warnings after PR #72, all by design; new pending question on admins' direct table edits
+2026-10-08 16:40 | modified | Aisling | build-plan.where-each-component-stands | Sign-in and roles, commitments and seats, and the staff dashboard are connected to the server (PR #72); about 1,230 automated checks (90 app)
+2026-10-08 16:40 | updated | Aisling | tasks | PRs #72 and #73 reviewed, fixed and merged; the audit after the merge; four audit bugs fixed with tests (PR #78) and the smaller findings listed; the deadline decision, the #76 split and #77 follow-ups
+2026-10-08 16:40 | updated | Aisling | risks | New risk: the staff app hasn't yet run against Supabase with real sign-in; test on Saturday, Oct 10
+2026-10-08 16:40 | modified | Aisling | architecture.what-s-built | Staff app: every change through a role-checked server function, reads through the access rules (PR #72)
+2026-10-08 16:40 | modified | Aisling | overview | Status: roles checked on the server for every staff action (PR #72)
+2026-10-08 16:40 | updated | Aisling | documents | New: the PR review plan for #72–#77
+2026-10-08 14:45 | modified | Aisling | decisions | Supabase advisor: 41 warnings after PR #71 (the iPad undo function adds one of the same accepted kind); the test project now holds the Full gala, fixed set (553 guests)
+2026-10-08 05:40 | modified | Aisling | build-plan.where-each-component-stands | The iPad check-in app is connected to the backend (PR #71): staff sign in, the door list comes from Supabase, check-ins sync with first arrival winning, and only the person who checked a guest in, or a gala admin, can undo it. The first live run waits for the in-person sign-in test
+2026-10-08 05:40 | new | Aisling | decisions | The iPad shows an "Access needs" flag, not the details; undo is limited to the same person or a gala admin; demo mode keeps the demo sync server
+2026-10-08 05:20 | modified | Aisling | tasks | PRs #42–#66 loaded into Aisling's test Supabase project; 40 advisor warnings, all the two kinds accepted by design (staff functions check the role inside; portal functions take the link as the credential)
+2026-10-08 05:10 | modified | Aisling | build-plan.where-each-component-stands | The iPad check-in app now has the same build guard as the other two apps, builds in CI, and its demo file is drift-checked (PR #70)
+2026-10-08 04:15 | new | Aisling | screens.ipad-check-in-app | Screens is now Live build, with six screenshots of Natalie's iPad check-in app on the Full gala (AAFE's logo as a grey placeholder)
+2026-10-08 04:15 | new | Aisling | sketches | New page: Early sketches, the first wireframes moved off Screens; the check-in sketch is marked superseded by the iPad app
+2026-10-08 04:15 | modified | Aisling | tasks | Tasks checked against the Oct 8 audit: sign-in split from server-side roles; no AI, PRDs and the three data sets (#18, PR #66) done; three Vercel projects; new tasks for the demo's Supabase project and the iPad app's build guard
+2026-10-08 04:15 | modified | Aisling | build-plan | New component C13, Demo Day additions, with capacity rechecked; emails, exports and check-in bars show only what's left; Oct 15 review on the timeline; C1 names the two 553-guest galas; about 1,160 automated checks
+2026-10-08 04:15 | modified | Aisling | architecture.what-s-built | Three apps on one database; no AI in v1; new rows for the iPad app, offline check-in, the approval queue, the pipeline, arrivals, translations and the data sets; the data model is labeled early design
+2026-10-08 04:15 | modified | Aisling | import | Earlier questions and the original 22 test cases cut (the spec's cases are linked); the demo's three data sets described
+2026-10-08 04:15 | modified | Aisling | decisions | What separates the two Full demo sets (Oct 8); three Vercel projects; the AI and retention question now waits on AAFE's Oct 15 review; the repo's log sorted by date
+2026-10-08 04:15 | modified | Aisling | risks | AI and free-plan rows updated, owners fixed, and three new risks: one person's Supabase account, the Oct 7 additions against Oct 30, and the iPad app's missing build guard
+2026-10-08 04:15 | modified | Aisling | overview | Status, roles and the seating line fixed; the who-builds-what paragraph now lives only here
+2026-10-08 04:15 | modified | Aisling | data-ai | No AI in the first version throughout; dietary details follow the 60-day proposal; the two AI sections merged
+2026-10-08 04:15 | updated | Aisling | discovery.still-to-ask | Four questions for AAFE: a grace period after the deadline, no AI in v1, 60-day deletion, and whether guest email is required
+2026-10-08 04:15 | modified | Aisling | requirements.working-prd | Working PRD reconciled with Natalie's two PRDs; pre-fill reaffirmed; Oct 15 review added to the success measures
+2026-10-08 04:15 | updated | Aisling | documents | Documents: the iPad app, WORKFLOW, data handling and data model, the translation sheet, the iPad screenshots, and Natalie's two PRDs
+2026-10-08 04:15 | updated | Aisling | glossary | Eight new terms: iPad check-in app, door list, offline queue, approval queue, pre-fill, fingerprint, Vercel, labeled data sets
+2026-10-08 04:15 | modified | Aisling | hosting.demo-preview-team-notes | Three Vercel projects; the backend stays in Aisling's test project until the team picks one; the iPad app syncs once connected to Supabase
 2026-10-08 01:59 | new | Aisling | decisions | Sponsor links and QR e-tickets keep SHA-256 fingerprints (not SHA-512 or SHA-3): the codes are random, so a longer hash adds no protection, and SHA-256 works in every browser, Postgres, and Supabase
 2026-10-08 01:50 | new | Aisling | build-plan.where-each-component-stands | Natalie's iPad check-in app is in `main` (PR #56): 553 invented guests A to Z, search, check in several at once with undo, QR scan, approved exceptions, offline queue. Next: connect it to the backend
 2026-10-08 01:50 | modified | Aisling | build-plan.where-each-component-stands | Check-in sync fix (PR #60), full 128-bit QR code generator (PR #61), and invented names for 12 real organizations in the door list (PR #62); about 1,120 automated checks

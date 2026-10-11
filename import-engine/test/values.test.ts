@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseAmount, parseCount, parsePurchaseTime, purchaseKey, ValueError } from '../src/index.ts'
+import { parseAmount, parseCount, parseCoveredFee, parsePurchaseTime, purchaseKey, ValueError } from '../src/index.ts'
 
 describe('parseAmount', () => {
   it('reads Give Lively amounts, including trailing spaces', () => {
@@ -16,6 +16,14 @@ describe('parseAmount', () => {
   })
   it('rejects what it cannot read', () => {
     for (const s of ['abc', '$1,00.00', '1.234', '($5.00', '$1 000']) expect(() => parseAmount(s)).toThrow(ValueError)
+  })
+})
+
+describe('parseCoveredFee', () => {
+  it('reads a dollar amount, or TRUE/FALSE (yes/no) as no amount given', () => {
+    expect(parseCoveredFee('$12.50')).toBe(12.5)
+    for (const v of ['TRUE', 'false', ' Yes ', 'no', '']) expect(parseCoveredFee(v)).toBeNull()
+    expect(() => parseCoveredFee('maybe')).toThrow(ValueError)
   })
 })
 

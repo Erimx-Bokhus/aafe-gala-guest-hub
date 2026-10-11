@@ -71,6 +71,8 @@ ok(r[0].status === 'checked_in' && ci.length === 1 && new Date(ci[0].checked_in_
 ok((await logCount('checkin.conflict', online.id)) === 1, 'and the online one is logged as the second')
 
 // ---- Times, walk-ins, and bad items
+r = await sync(VOL, [{ client_id: 'door2-old', guest_id: 'g-023', method: 'search', at: ago(25 * 60), device: 'Door 2' }])
+ok(r[0].status === 'error' && r[0].error.startsWith('invalid_input'), 'a check-in time more than a day old is refused, so it cannot claim to be first')
 r = await sync(VOL, [{ client_id: 'door2-0003', guest_id: 'g-023', method: 'search', at: '2099-01-01T00:00:00Z', device: 'Door 2' }])
 ok(r[0].status === 'checked_in' && new Date((await checkIns('g-023'))[0].checked_in_at) <= new Date(), "an iPad clock set in the future is capped at now")
 
@@ -142,6 +144,29 @@ door1.d.checkIn(other.id)
 await door1.d.sync(async (items) => { await door1.send(items); throw new Error('connection lost before the answer') })
 ok(door1.d.pending().length === 1, 'an unanswered sync keeps the check-in waiting')
 ok((await door1.d.sync(door1.send)).synced === 1 && (await checkIns(other.id)).length === 1, 'syncing again records it once')
+
+// ---- What the iPad app needs from the list, and undo (Oct 8): only the person who checked a guest in, or a gala admin
+const ADMIN = STAFF.gala_admin
+const listNow = async () => (await as('authenticated', VOL.email, `select staff_checkin_snapshot() s`))[0].s
+const s3 = await listNow()
+ok(s3.status && s3.event_date && Array.isArray(s3.exceptions), "the list says the gala's date and status, and tonight's exceptions")
+ok(s3.guests.every((g) => 'package' in g && 'checkin_id' in g), 'each guest has its package, and a check-in id once arrived')
+const pick = (await q(`select g.id, s.status from guests g join seats s on s.guest_id = g.id join orders o on o.id = g.order_id
+  where o.event_id = current_event_id() and g.attendance_status = 'expected' and s.status not in ('cancelled', 'checked_in') limit 1`))[0]
+await as('authenticated', RM.email, `select staff_check_in($1)`, [pick.id])
+const made = (await checkIns(pick.id))[0]
+ok(made.staff_id && made.seat_status_before === pick.status, 'a check-in records who made it, by account, and the seat status before it')
+ok((await err('authenticated', VOL.email, `select staff_undo_check_in($1)`, [made.id]))?.startsWith('forbidden'), 'another volunteer cannot undo it')
+const undone = (await as('authenticated', RM.email, `select staff_undo_check_in($1) r`, [made.id]))[0].r
+ok(undone.status === 'undone' && (await checkIns(pick.id)).length === 0, 'the person who checked the guest in can undo it')
+ok((await q(`select attendance_status a from guests where id = $1`, [pick.id]))[0].a === 'expected'
+  && (await q(`select status from seats where guest_id = $1`, [pick.id]))[0].status === pick.status, 'the guest is expected again and the seat is back as it was')
+ok((await logCount('checkin.undone', made.id)) === 1, 'the undo is logged')
+await as('authenticated', VOL.email, `select staff_check_in_exception('Undo Test', null, 'Walk-in pending confirmation', 'Approved by the lead')`)
+const exc = (await listNow()).exceptions.find((e) => e.name === 'Undo Test')
+ok(exc && !('note' in exc), 'exceptions are on the list, without their notes')
+ok((await as('authenticated', ADMIN.email, `select staff_undo_check_in($1) r`, [exc.id]))[0].r.status === 'undone', "a gala admin can undo anyone's check-in, exceptions too")
+ok((await err('authenticated', VOL.email, `select staff_undo_check_in('ci-nope')`))?.startsWith('not_found'), "undoing a check-in that isn't there says so")
 
 console.log(`offline check-in: ${count.pass} passed, ${count.fail} failed`)
 if (count.fail) process.exitCode = 1

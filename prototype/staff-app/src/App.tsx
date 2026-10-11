@@ -1,14 +1,15 @@
 // AAFE STAFF APP (the "client app": AAFE's gala team)
 // Reads everything the guest portal writes (same database), plus Give Lively + Salesforce data.
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
-import { Activity, Armchair, BadgeCheck, CalendarDays, ClipboardList, CreditCard, Heart, LayoutDashboard, LogOut, Menu, Plug, ScanLine, Table2, X } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { Activity, Armchair, BadgeCheck, CalendarDays, ClipboardList, CreditCard, FileUp, Heart, LayoutDashboard, LogOut, Menu, Plug, ScanLine, Table2, X } from 'lucide-react'
 import { loadDB } from '@shared/data'
 import { AafeLogo } from '@shared/Logo'
 import { DisplayControls, go, Link, PrototypeBanner, Toast, useDisplayPrefs, useRoute } from '@shared/ui'
 import type { DB, Role, StaffUser } from '@shared/types'
 import { StaffCtx } from './store'
+import { demoApi, demoSnapshot, errorText, liveApi, loadLiveDb, volunteerDb } from './api'
 import Login from './pages/Login'
-import { currentStaff, signOut, supabase } from './supabase'
+import { currentStaff, signOut, supabase } from '@shared/supabase'
 import Dashboard from './pages/Dashboard'
 import GalaInfo from './pages/GalaInfo'
 import Sponsors, { SponsorDetail } from './pages/Sponsors'
@@ -19,6 +20,7 @@ import Relationship from './pages/Relationship'
 import Badges from './pages/Badges'
 import CheckIn from './pages/CheckIn'
 import Integrations from './pages/Integrations'
+import Import from './pages/Import'
 import AuditLog from './pages/AuditLog'
 
 const NAV: { to: string; label: string; icon: typeof LayoutDashboard; roles: Role[] }[] = [
@@ -31,6 +33,7 @@ const NAV: { to: string; label: string; icon: typeof LayoutDashboard; roles: Rol
   { to: '/relationship', label: 'Relationship guests', icon: Heart, roles: ['gala_admin', 'relationship_manager'] },
   { to: '/badges', label: 'Badges', icon: BadgeCheck, roles: ['gala_admin', 'relationship_manager'] },
   { to: '/checkin', label: 'iPad check-in', icon: ScanLine, roles: ['gala_admin', 'relationship_manager', 'check_in_volunteer'] },
+  { to: '/import', label: 'Give Lively import', icon: FileUp, roles: ['gala_admin', 'relationship_manager'] },
   { to: '/integrations', label: 'Integrations & email', icon: Plug, roles: ['gala_admin'] },
   { to: '/activity', label: 'Activity log', icon: Activity, roles: ['gala_admin', 'relationship_manager'] },
 ]
@@ -45,8 +48,35 @@ export default function App() {
   const [msg, setMsg] = useState<string | null>(null)
   const [menu, setMenu] = useState(false)
   const prefs = useDisplayPrefs()
+  const [liveDb, setLiveDb] = useState<DB | null>(null)
+  const [loadError, setLoadError] = useState('')
   const update = useCallback((fn: (d: DB) => DB) => setDb((d) => fn(d)), [])
   const toast = useCallback((m: string) => setMsg(m), [])
+  const full = useRef(db)
+  full.current = db
+  // LIVE: load what this role may read after sign-in, and again after every change (issue #9).
+  // Keyed on who is signed in, not on the user object: Supabase re-sends "signed in" when a tab regains focus, and that
+  // must not reload the gala or close an open form. The data on screen stays while a reload runs, and a reload that a
+  // newer one overtook is dropped, so an older answer never replaces a newer one.
+  const userKey = user ? `${user.id}|${user.role}` : ''
+  const userRef = useRef(user)
+  userRef.current = user
+  const latest = useRef(0)
+  const reload = useCallback(async () => {
+    const u = userRef.current
+    if (!supabase || !u) return
+    const n = ++latest.current
+    try { const d = await loadLiveDb(supabase, u); if (n === latest.current) { setLiveDb(d); setLoadError('') } }
+    catch (e) { if (n === latest.current) setLoadError(errorText(e)) }
+  }, [userKey]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setLiveDb(null); void reload() }, [reload])
+  const api = useMemo(() => (!userRef.current ? null : supabase ? liveApi(supabase, reload) : demoApi(userRef.current, update, () => full.current)), [userKey, reload, update]) // eslint-disable-line react-hooks/exhaustive-deps
+  const act = useCallback(async (p: Promise<unknown>, done?: string) => {
+    try { await p; if (done) toast(done); return true }
+    catch (e) { toast(errorText(e)); return false }
+  }, [toast])
+  // DEMO: a volunteer works from the same cut-down door list the database gives a real volunteer.
+  const viewDb = supabase ? liveDb : user?.role === 'check_in_volunteer' ? volunteerDb(demoSnapshot(db), user) : db
   // LIVE: restore the session on load and follow sign-in/sign-out (including the emailed link landing here).
   // A signed-in email that isn't in staff_users is signed straight back out.
   useEffect(() => {
@@ -80,6 +110,7 @@ export default function App() {
 
   if (!authChecked) return <PrototypeBanner dataSwitch />
   if (!user) return <><PrototypeBanner dataSwitch /><Login db={db} prefs={prefs} notice={notice} onLogin={(u) => { setUser(u); go(u.role === 'check_in_volunteer' ? '/checkin' : '/') }} /></>
+  if (!viewDb || !api) return <><PrototypeBanner dataSwitch /><p className="p-8 text-sm text-navy-600" role={loadError ? 'alert' : 'status'}>{loadError || 'Loading the gala…'}</p></>
 
   const nav = NAV.filter((n) => n.roles.includes(user.role))
   const allowed = (p: string) => nav.some((n) => (n.to === '/' ? p === '/' : p.startsWith(n.to)))
@@ -95,6 +126,7 @@ export default function App() {
   else if (p === '/relationship') page = <Relationship />
   else if (p === '/badges') page = <Badges />
   else if (p === '/checkin') page = <CheckIn />
+  else if (p === '/import') page = <Import />
   else if (p === '/integrations') page = <Integrations />
   else if (p === '/activity') page = <AuditLog />
   else page = <Dashboard />
@@ -110,7 +142,7 @@ export default function App() {
           const active = n.to === '/' ? p === '/' : p.startsWith(n.to)
           return (
             <li key={n.to}>
-              <Link to={n.to} aria-current={active ? 'page' : undefined} className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium ${active ? 'bg-white text-brand-700' : 'text-white hover:bg-brand-600'}`}>
+              <Link to={n.to} aria-current={active ? 'page' : undefined} className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium ${active ? 'bg-white text-brand-700 dark:!text-[#8A3118]' : 'text-white hover:bg-white/15'}`}>
                 <n.icon size={17} className={active ? 'text-brand-500' : 'text-white'} /> {n.label}
               </Link>
             </li>
@@ -126,7 +158,7 @@ export default function App() {
   )
 
   return (
-    <StaffCtx.Provider value={{ db, update, user, toast }}>
+    <StaffCtx.Provider value={{ db: viewDb, api, user, toast, act, demo: supabase ? null : update }}>
       <PrototypeBanner dataSwitch />
       <div className="flex min-h-[calc(100vh-28px)]">
         <aside className="no-print sticky top-0 hidden h-[calc(100vh-28px)] w-60 shrink-0 lg:block">{Side}</aside>
@@ -135,7 +167,7 @@ export default function App() {
           <header className="no-print sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-navy-100 bg-surface/95 px-4 py-2.5 backdrop-blur sm:px-6">
             <div className="flex items-center gap-2">
               <button className="icon-btn lg:hidden" aria-label={menu ? 'Close menu' : 'Open menu'} onClick={() => setMenu((m) => !m)}>{menu ? <X size={18} /> : <Menu size={18} />}</button>
-              <div className="text-sm font-semibold text-navy-900">{db.gala_events.find((e) => e.id === db.meta.current_event_id)!.name}</div>
+              <div className="text-sm font-semibold text-navy-900">{viewDb.gala_events.find((e) => e.id === viewDb.meta.current_event_id)?.name}</div>
             </div>
             <DisplayControls prefs={prefs} />
           </header>

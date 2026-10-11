@@ -36,9 +36,10 @@ Where every key lives, and what stops a secret from reaching the browser or the 
    npm run db:backend                                   # backend.sql; safe to re-run after every change to it
    npm run db:advisors                                  # Supabase's security and performance checks
    ```
+   The advisor should show one warning, about `staff_role()`: the access rules call it directly, so it stays in `public`. Every other function the apps call lives in the `private` schema, which Supabase's API doesn't expose, behind a `public` wrapper with the same name and grants (`backend.sql`, section 10). Add a new app function to the grant lists as usual; the wrapper is made for it.
    `db query --linked` goes through your Supabase login, so no database password is needed or stored. `supabase link` keeps its state in `supabase/.temp/`, which git ignores.
    **Switch demo data sets** (decided Oct 7): `npm run db:load -- small`, `full-as-sent` or `full-fixed`. It **replaces** the demo data in the linked project with that set, in one transaction: it refuses if any gala is not marked synthetic, keeps the staff list (test sign-in emails survive), then re-runs `backend.sql`. The staff app and portal have the same switch on their prototype banner (saved in the browser). Change the sets in `database/generate_seed.py` and `generate_full_seed.py` (`npm run seed`), never in the seed files.
-2. **Staff logins.** Authentication → Providers: turn **off** "Allow new users to sign up". Authentication → Users → **Invite** each staff member using the exact email in `staff_users`. Login is matched to the role by email. Demo seed emails are `@aafe-demo.example.org`, so change them to real team inboxes (`update staff_users set email = ...`) to test. Then copy `staff-app/.env.example` to `staff-app/.env.local` with the project URL and anon key: the Staff App's login page switches from demo accounts to an emailed one-time sign-in link, and an email not in `staff_users` is signed straight back out. Authentication → URL Configuration: add the Staff App's address (e.g. `http://localhost:5174/`) to the redirect URLs.
+2. **Staff logins.** Authentication → Providers: turn **off** "Allow new users to sign up". Authentication → Users → **Invite** each staff member using the exact email in `staff_users`. Login is matched to the role by email. Demo seed emails are `@aafe-demo.example.org`, so change them to real team inboxes (`update staff_users set email = ...`) to test. Then copy `staff-app/.env.example` to `staff-app/.env.local` with the project URL and anon key: the Staff App's login page switches from demo accounts to an emailed one-time sign-in link, and an email not in `staff_users` is signed straight back out. Authentication → URL Configuration: add the Staff App's address (e.g. `http://localhost:5174/`) and the iPad check-in app's (e.g. `http://localhost:5175/`) to the redirect URLs. The iPad app takes the same two settings in `checkin-app/.env.local` (`checkin-app/.env.example`); see `checkin-app/README.md`.
 3. **Edge functions.**
    ```bash
    npx supabase login
@@ -133,6 +134,8 @@ Never returned: payment method, fees, check numbers, internal notes, relationshi
 
 Reads: `gala_admin` and `relationship_manager` can `select` every table directly (RLS). `check_in_volunteer` can't read tables. Volunteers use `checkin_list()`.
 Writes: only through these functions, and each one writes `audit_log`. `audit_log` can't be updated or deleted.
+**Guest names (Oct 10).** `guests.display_name` is the guest's name as written: badges, the check-in list, the door list, exports and the portal print it. `first_name` and `last_name` are a best guess for sorting and search, from the name engine (`import-engine/src/names.ts`). `portal_save_guest`, `staff_update_guest` and `staff_add_comp_guest` take a `display_name`, first and last, or both; `name_parts()` fills in whatever is missing (a full name alone falls back to last word = last name). A one-word name is allowed, with an empty last name. A display name that's just "First Last" follows a new first or last name; one staff corrected stays. Salesforce gets the last name, or the whole name when there is no last name.
+
 Guest edits (`staff_update_guest`, and a sponsor editing a named guest through `portal_save_guest`) also record the old and new value of each changed field in `audit_log.changes`, e.g. `{"title": {"from": "Manager", "to": "Director"}}`. It's for staff: the portal's activity list shows only the summary. Status changes, seating, and payment amounts keep using `from_state` and `to_state`.
 
 | Prototype (`staff-app/src/store.ts`) | Backend call | Roles |
@@ -152,10 +155,13 @@ Guest edits (`staff_update_guest`, and a sponsor editing a named guest through `
 | `checkInException` | `staff_check_in_exception(p_name, p_order_id, p_type, p_note)` | all |
 | Check-in → save the list for offline use (new) | `staff_checkin_snapshot()`: every guest with table, seat, accessibility needs, arrival, and their QR code's hash; no email, phone, payment, dietary needs or notes. A read, not logged | all |
 | Check-in → sync offline check-ins (new) | `staff_sync_check_ins(p_items)`: see "Offline check-in" below | all |
+| Check-in → undo (Oct 8) | `staff_undo_check_in(p_id)`: the check-in's id or the iPad's `client_id`. Only the staff member who made it (by account) or a gala admin; the guest goes back to expected and the seat to its status before check-in; logged as `checkin.undone` | all (own check-ins); admin (any) |
 | Sponsors → pipeline board (new) | `staff_pipeline()`: totals per stage against the goal, and every prospect with its ask, commitment, money received, balance, and the last two galas' giving; no emails or phones. A read, not logged | admin, RM |
 | Sponsors → add or edit a prospect (new) | `staff_save_prospect(p)`: `{ id? , sponsor_id? or organization + contact_name, sector, ask_amount, ask_tier_id, follow_up_owner_id, notes, order_id? }` | admin, RM |
 | Sponsors → move a prospect (new) | `staff_set_prospect_stage(p_id, p_stage)` | admin, RM |
 | Sponsors → set the goal (new) | `staff_set_sponsorship_goal(p_amount)` | admin |
+| Gala info → save (new) | `staff_update_gala_event(p_patch)`: name, date, doors and program times, venue, address, dress code and the two deadlines; nothing else. Logged with the old and new value of each field | admin |
+| Sponsors → logo or program ad status (new) | `staff_set_material_status(p_order_id, p_material, p_status)`: `logo` or `program_ad`; `not_required`, `pending`, `received` or `approved` | admin, RM |
 | Gala info → sponsor arrivals on/off (new) | `staff_set_sponsor_arrivals(p_on, p_note)`: off by default; switching on needs a note recording AAFE's privacy approval (who and when). See "Gala-night arrivals" below | admin |
 | `importGiveLively` (CSV) | `staff_import_givelively(p_rows)` | admin |
 | Integrations "Pull now" | `functions.invoke('givelively-sync')` | admin |
@@ -163,7 +169,7 @@ Guest edits (`staff_update_guest`, and a sponsor editing a named guest through `
 | List unsent emails for the approval screen | `staff_email_queue()` | admin, RM |
 | Draft guest-list reminders | `staff_queue_guest_list_reminders(p_min_days)` | admin, RM |
 | Send approved email now | `functions.invoke('send-emails')` | admin, RM |
-| Badges → "CSV for printer" | `staff_export_badges(p_include_printed default false)`: ready and reprint badges, sorted by table and seat; badge fields only (no email, dietary, payment, or notes) | admin, RM |
+| Badges → "CSV for printer" | `staff_export_badges(p_include_printed default false)`: ready and reprint badges, sorted by table and seat; the name as written (`display_name`) plus first and last; badge fields only (no email, dietary, payment, or notes) | admin, RM |
 | Check-in → printed list (new) | `staff_export_checkin()`: every guest by last name plus one row per unnamed sponsor seat, with table, seat, and arrived; no email or dietary needs | all |
 | Integrations → Salesforce file (new) | `staff_export_salesforce()`: one row per arrival (walk-ins included) with email, Salesforce Account and Opportunity ids, and arrival time | admin |
 
@@ -218,9 +224,9 @@ Errors come back as the Postgres message: `forbidden`, `not_found`, `invalid_lin
 ## Not done yet
 
 - **Guest Portal is connected** when `guest-portal/.env.local` is set, and runs offline on the synthetic data when it isn't (the `OPEN-*.html` files). The landing page's demo cards still come from the built-in data. Their links work against the backend only if `seed.sql` was loaded.
-- **Staff App still uses in-memory data** after sign-in. Login is real when `staff-app/.env.local` is set (issue #8); the pages still read and write the synthetic data. To connect them (issue #9):
-  - Swap `staff-app/src/store.ts` to the calls above.
-  - Sponsors → "copy portal link" becomes "send new link", because tokens are stored hashed.
+- **Staff App is connected** when `staff-app/.env.local` is set (issues #8, #9). Every page action goes through `staff-app/src/api.ts`: one `staff_*` call from the table above, then a reload of what the role may read. Gala admins and relationship managers read the tables (RLS); a check-in volunteer loads only `staff_checkin_snapshot()`, with no emails, phones, payments, notes or QR codes. Without the env file the same actions run on the demo data with the same role rules.
+  - Live, Sponsors shows "Resend portal link" only (links are stored hashed, so there is nothing to copy), and relationship guests show their invitation status instead of a QR code.
+  - Still simulated in both modes: the Give Lively "Pull now" and CSV import on Integrations (live imports come with the import upload screen) and the Salesforce sync.
 - **QR e-tickets (hard rule 6).** A code is minted only when an approved `qr_invitation` email sends; the database keeps its SHA-256 hash on the guest's seat (`seats.qr_token_hash`), valid until 6 a.m. New York time the morning after gala night. Resending replaces the code; a different guest on the seat, a name or email change, or a cancelled seat voids it. Staff can't display a code, only resend it. The seed's QR codes are moved onto seats as hashes when `backend.sql` runs. The seed's demo sponsor links are short (8 characters), fine for the demo but below rule 6's 128 bits; real links are minted at 128 bits by `send-emails`.
 - **Email.** Templates (`_shared/emails.ts`) are in English: the guest-list link, guest-list reminders, payment confirmations, and QR invitations. The portal page itself has 中文, 한국어, and Español. Reminders are drafted when staff ask (`staff_queue_guest_list_reminders`), not on a schedule.
 - **Salesforce.** No direct sync (out of scope in the project scope doc). `staff_export_salesforce()` gives a file shaped for a Contact and Campaign Member import instead.
