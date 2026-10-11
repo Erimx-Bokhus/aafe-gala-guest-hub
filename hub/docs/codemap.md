@@ -1,6 +1,6 @@
 # Code map
 <!-- new 2026-10-08 23:55 Aisling -->
-<!-- reviewed 2026-10-08 Aisling -->
+<!-- reviewed 2026-10-09 Aisling -->
 
 Every file, function, type, database table, access rule and trigger in the prototype, and how they connect, drawn from the code on `main`. Click any of them to see what it's for and read its code. It's built by a tool called graphify, which reads the code itself, with no AI and nothing sent anywhere, plus a step of our own that adds the links into the database. Use it to see how the pieces fit before you change one, or to find where something lives. Only code is shown: docs, settings files and demo data are left out. <!-- modified 2026-10-09 00:45 Aisling -->
 
@@ -34,7 +34,7 @@ Clicking a dot shows what it's for beside the map: a file's own opening note, or
 
 - **The busiest parts.** The staff app's `App.tsx` and its `useStaff()` store, the `orders` table, the shared `data.ts` and `types.ts`, `sponsorOf()` (which sponsor a seat belongs to), `CheckInDesk` (the iPad's offline check-in), and the iPad's `DoorScreen()`. A change to any of these reaches the most other code, so they deserve the most care and the most tests.
 - **No loops between files.** No file imports another that imports it back.
-- **The database functions no screen calls yet.** 14 are built and tested in the database, but no app calls them yet: the three exports (`staff_export_badges`, `staff_export_checkin`, `staff_export_salesforce`), the import (`staff_import_givelively`, `staff_resolve_import_review`, `staff_set_tier_mapping`, `staff_set_gala_page`), the email queue (`staff_email_queue`, `staff_queue_guest_list_reminders`), the sponsor pipeline (`staff_pipeline`, `staff_save_prospect`, `staff_set_prospect_stage`, `staff_set_sponsorship_goal`) and sponsor arrivals (`staff_set_sponsor_arrivals`). Wiring them to buttons is on the [Build plan](#build-plan.where-each-component-stands). <!-- new 2026-10-09 00:45 Aisling -->
+- **The database functions no screen calls yet.** On Oct 9 the map found 14 built and tested in the database with no app calling them. The three exports are now connected to buttons (PR #87), which leaves 11: the import (`staff_import_givelively`, `staff_resolve_import_review`, `staff_set_tier_mapping`, `staff_set_gala_page`), the email queue (`staff_email_queue`, `staff_queue_guest_list_reminders`, in review in PR #89), the sponsor pipeline (`staff_pipeline`, `staff_save_prospect`, `staff_set_prospect_stage`, `staff_set_sponsorship_goal`) and sponsor arrivals (`staff_set_sponsor_arrivals`). Wiring them to buttons is on the [Build plan](#build-plan.where-each-component-stands). <!-- modified 2026-10-09 06:10 Aisling Map rebuilt Oct 9 -->
 - **Who can touch each table.** Four access rules guard the tables: `staff_read` lets gala admins and relationship managers read 19 tables, and `admin_insert`, `admin_update` and `admin_delete` let only gala admins change the 4 setup tables. Every other change goes through a database function, which checks the role and writes the change log. <!-- new 2026-10-09 00:45 Aisling -->
 - **The import engine stands apart.** It has its own folder, tests and package, as the stack decision asked, so it can be checked and replaced on its own.
 

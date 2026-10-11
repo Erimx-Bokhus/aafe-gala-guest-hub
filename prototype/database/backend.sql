@@ -58,6 +58,7 @@ alter table email_log add column if not exists last_error  text;
 alter table email_log add column if not exists approved_by text;          -- staff name
 alter table email_log add column if not exists approved_at timestamptz;   -- null = draft awaiting approval
 alter table email_log add column if not exists created_at  timestamptz not null default now();
+alter table email_log add column if not exists claimed_at  timestamptz;   -- set while one send-emails run is sending it (email_claim)
 alter table email_log add column if not exists payment_id  text references payments(id);  -- payment_receipt: which payment
 alter table email_log drop constraint if exists email_log_status_check;
 alter table email_log add constraint email_log_status_check check (status in ('queued','sent','opened','bounced','cancelled'));
@@ -144,6 +145,10 @@ alter table gala_events add column if not exists sponsor_arrivals_note text;   -
 alter table payments    add column if not exists purchase_key text;   -- SHA-256(email | UTC purchase time); see purchase_key()
 create unique index if not exists payments_purchase_key_uq on payments (purchase_key) where purchase_key is not null;
 alter table guests      add column if not exists display_name text;   -- the name exactly as typed; printed on badges
+-- The display name IS the guest's name (badges, check-in, table chart, exports, portal); first and last are a
+-- best guess for sorting and search (import-engine/src/names.ts). Guests saved before Oct 10 get "First Last".
+update guests set display_name = btrim(concat_ws(' ', nullif(btrim(first_name), ''), nullif(btrim(last_name), '')))
+ where coalesce(btrim(display_name), '') = '';
 alter table orders      add column if not exists imported_guest_text text;  -- the export's free-text guest list, as written
 alter table gala_events add column if not exists givelively_page_name text; -- e.g. "AAFE's 52nd Annual Gala"; set once per year
 do $$ begin
@@ -446,7 +451,7 @@ begin
                 'slot', s.slot_number,
                 'status', case when s.status = 'checked_in' and not v_show then 'badge_ready' else s.status end,
                 'guest', case when g.id is null then null else jsonb_build_object(
-                  'first_name', g.first_name, 'last_name', g.last_name, 'title', coalesce(g.title, ''),
+                  'first_name', g.first_name, 'last_name', g.last_name, 'display_name', g.display_name, 'title', coalesce(g.title, ''),
                   'organization', coalesce(g.organization, ''), 'email', coalesce(g.email, ''),
                   'dietary_needs', coalesce(g.dietary_needs, ''), 'accessibility_needs', coalesce(g.accessibility_needs, ''),
                   'updated_at', g.updated_at) end)
@@ -462,6 +467,18 @@ begin
   return v_view;
 end $$;
 
+-- A guest's name from whatever the caller sent: the display name (or "First Last"), and first and last (or, when only
+-- a full name came in, its last word as the last name; the apps send the name engine's split). One word: no last name.
+create or replace function name_parts(p_display text, p_first text, p_last text, out display text, out first text, out last text)
+language sql immutable set search_path = public as $$
+  select d, case when f <> '' or l <> '' then f else coalesce(nullif(regexp_replace(d, '\s+\S+$', ''), d), d) end,
+            case when f <> '' or l <> '' then l when d ~ '\s' then regexp_replace(d, '^.*\s', '') else '' end
+    from (select btrim(coalesce(p_first, '')) f, btrim(coalesce(p_last, '')) l) x,
+         lateral (select coalesce(nullif(btrim(regexp_replace(coalesce(p_display, ''), '\s+', ' ', 'g')), ''),
+                                  btrim(concat_ws(' ', nullif(x.f, ''), nullif(x.l, ''))), '') d) y
+$$;
+revoke all on function name_parts(text, text, text) from public;
+
 create or replace function portal_save_guest(p_token text, p_slot int, p_guest jsonb) returns jsonb
 language plpgsql security definer set search_path = public as $$
 declare
@@ -469,32 +486,38 @@ declare
   st seats; g guests; g_old guests; v_contact text; v_action text; v_from text;
   v_first text := left(trim(coalesce(p_guest ->> 'first_name', '')), 100);
   v_last  text := left(trim(coalesce(p_guest ->> 'last_name', '')), 100);
+  v_display text := left(trim(coalesce(p_guest ->> 'display_name', '')), 200);
   f_title text := nullif(left(trim(coalesce(p_guest ->> 'title', '')), 200), '');
   f_org   text := nullif(left(trim(coalesce(p_guest ->> 'organization', '')), 200), '');
   f_email text := nullif(left(trim(coalesce(p_guest ->> 'email', '')), 254), '');
   f_diet  text := nullif(left(trim(coalesce(p_guest ->> 'dietary_needs', '')), 500), '');
   f_acc   text := nullif(left(trim(coalesce(p_guest ->> 'accessibility_needs', '')), 500), '');
 begin
-  if v_first = '' or v_last = '' then raise exception 'invalid_input: first and last name are required'; end if;
   select * into st from seats where order_id = o.id and slot_number = p_slot and status <> 'cancelled' for update;
   if st.id is null then raise exception 'invalid_input: no such seat'; end if;
   if st.status = 'checked_in' then raise exception 'seat_locked: this seat can no longer be changed online; please contact AAFE'; end if;
+  select * into g_old from guests where id = st.guest_id;
+  -- First and last sent without a display name, unchanged: keep the display name staff may have corrected.
+  if v_display = '' and g_old.id is not null and g_old.first_name = v_first and g_old.last_name = v_last then
+    v_display := coalesce(g_old.display_name, '');
+  end if;
+  select n.display, n.first, n.last into v_display, v_first, v_last from name_parts(v_display, v_first, v_last) n;
+  if v_display = '' then raise exception 'invalid_input: a name is required'; end if;
   select primary_contact_name into v_contact from sponsors where id = o.sponsor_id;
   v_from := st.status;
 
   if st.guest_id is not null then
     v_action := 'guest.updated';
-    select * into g_old from guests where id = st.guest_id;
-    update guests set first_name = v_first, last_name = v_last, title = f_title, organization = f_org, email = f_email,
+    update guests set first_name = v_first, last_name = v_last, display_name = v_display, title = f_title, organization = f_org, email = f_email,
            dietary_needs = f_diet, accessibility_needs = f_acc, last_updated_by = 'guest_portal', updated_at = now(),
            -- editing a printed badge means it must be reprinted
            badge_status = case when badge_status = 'printed' then 'reprint_needed' else 'needs_review' end
      where id = st.guest_id returning * into g;
   else
     v_action := 'guest.submitted';
-    insert into guests (id, order_id, first_name, last_name, title, organization, email, dietary_needs, accessibility_needs,
+    insert into guests (id, order_id, first_name, last_name, display_name, title, organization, email, dietary_needs, accessibility_needs,
                         guest_type, last_updated_by)
-    values (new_id('g'), o.id, v_first, v_last, f_title, f_org, f_email, f_diet, f_acc,
+    values (new_id('g'), o.id, v_first, v_last, v_display, f_title, f_org, f_email, f_diet, f_acc,
             case when (select tier_category from sponsorship_tiers where id = o.tier_id) = 'ticket' then 'ticket_holder' else 'sponsor_guest' end,
             'guest_portal')
     returning * into g;
@@ -502,10 +525,10 @@ begin
 
   update seats set guest_id = g.id, status = 'submitted', updated_at = now() where id = st.id;
   perform write_audit('guest_portal', 'Guest portal (' || v_contact || ')', 'guest', g.id, o.id, v_action, v_from, 'submitted', true,
-    case when v_action = 'guest.submitted' then format('%s %s added to seat %s.', v_first, v_last, p_slot)
-         else format('%s %s updated (seat %s).', v_first, v_last, p_slot) end,
+    case when v_action = 'guest.submitted' then format('%s added to seat %s.', v_display, p_slot)
+         else format('%s updated (seat %s).', v_display, p_slot) end,
     case when v_action = 'guest.updated' then audit_changes(to_jsonb(g_old), to_jsonb(g),
-      array['first_name','last_name','title','organization','email','dietary_needs','accessibility_needs']) end);
+      array['first_name','last_name','display_name','title','organization','email','dietary_needs','accessibility_needs']) end);
   return portal_get_view(p_token);
 end $$;
 
@@ -543,7 +566,7 @@ create or replace function staff_update_guest(p_guest_id text, p_patch jsonb) re
 language plpgsql security definer set search_path = public as $$
 declare
   me staff_users := require_staff(array['gala_admin','relationship_manager']);
-  allowed text[] := array['first_name','last_name','title','organization','email','dietary_needs','accessibility_needs','relationship_note'];
+  allowed text[] := array['first_name','last_name','display_name','title','organization','email','dietary_needs','accessibility_needs','relationship_note'];
   g guests; n guests; v_patch jsonb; v_changed text[];
 begin
   select * into g from guests where id = p_guest_id for update;
@@ -551,21 +574,24 @@ begin
   select coalesce(jsonb_object_agg(key, case when jsonb_typeof(value) = 'string' and trim(value #>> '{}') = '' then 'null'::jsonb else value end), '{}')
     into v_patch from jsonb_each(coalesce(p_patch, '{}')) where key = any (allowed);
   n := jsonb_populate_record(g, v_patch);
-  if coalesce(trim(n.first_name), '') = '' or coalesce(trim(n.last_name), '') = '' then
-    raise exception 'invalid_input: first and last name are required';
+  if not (v_patch ? 'display_name') and (n.first_name is distinct from g.first_name or n.last_name is distinct from g.last_name)
+     and coalesce(g.display_name, '') in ('', btrim(concat_ws(' ', nullif(g.first_name, ''), nullif(g.last_name, '')))) then
+    n.display_name := null;   -- it was just "First Last": follow the new first and last
   end if;
+  select p.display, p.first, p.last into n.display_name, n.first_name, n.last_name from name_parts(n.display_name, n.first_name, n.last_name) p;
+  if n.display_name = '' then raise exception 'invalid_input: a name is required'; end if;
   select coalesce(array_agg(k), '{}') into v_changed from unnest(allowed) k where to_jsonb(n) -> k is distinct from to_jsonb(g) -> k;
   if cardinality(v_changed) = 0 then return; end if;
 
-  update guests set first_name = n.first_name, last_name = n.last_name, title = n.title, organization = n.organization,
-         email = n.email, dietary_needs = n.dietary_needs, accessibility_needs = n.accessibility_needs,
+  update guests set first_name = n.first_name, last_name = n.last_name, display_name = n.display_name, title = n.title,
+         organization = n.organization, email = n.email, dietary_needs = n.dietary_needs, accessibility_needs = n.accessibility_needs,
          relationship_note = n.relationship_note, last_updated_by = 'staff', updated_at = now(),
          badge_status = case when badge_status = 'printed'
-                              and v_changed && array['first_name','last_name','title','organization'] then 'reprint_needed'
+                              and v_changed && array['first_name','last_name','display_name','title','organization'] then 'reprint_needed'
                              else badge_status end
    where id = g.id;
   perform write_audit('staff', me.name, 'guest', g.id, g.order_id, 'guest.updated', null, null, false,
-    format('%s %s: %s edited by staff.', n.first_name, n.last_name, array_to_string(v_changed, ', ')),
+    format('%s: %s edited by staff.', n.display_name, array_to_string(v_changed, ', ')),
     audit_changes(to_jsonb(g), to_jsonb(n), v_changed));
 end $$;
 
@@ -723,10 +749,12 @@ language plpgsql security definer set search_path = public as $$
 declare
   me staff_users := require_staff(array['gala_admin','relationship_manager']);
   v_order text; v_sp text; v_guest text := new_id('g'); v_slot int;
-  v_first text := trim(coalesce(p_guest ->> 'first_name', '')); v_last text := trim(coalesce(p_guest ->> 'last_name', ''));
+  v_first text; v_last text; v_display text;
   v_note text := nullif(trim(coalesce(p_guest ->> 'relationship_note', '')), '');
 begin
-  if v_first = '' or v_last = '' then raise exception 'invalid_input: first and last name are required'; end if;
+  select n.display, n.first, n.last into v_display, v_first, v_last
+    from name_parts(p_guest ->> 'display_name', p_guest ->> 'first_name', p_guest ->> 'last_name') n;
+  if v_display = '' then raise exception 'invalid_input: a name is required'; end if;
   select id into v_order from orders
    where event_id = current_event_id() and tier_id = 'comp_relationship' and status <> 'cancelled' order by created_at limit 1;
   if v_order is null then
@@ -738,13 +766,13 @@ begin
   end if;
   select coalesce(max(slot_number), 0) + 1 into v_slot from seats where order_id = v_order;
 
-  insert into guests (id, order_id, first_name, last_name, title, organization, email, guest_type, relationship_note, qr_token, last_updated_by)
-  values (v_guest, v_order, v_first, v_last, nullif(trim(coalesce(p_guest ->> 'title', '')), ''),
+  insert into guests (id, order_id, first_name, last_name, display_name, title, organization, email, guest_type, relationship_note, qr_token, last_updated_by)
+  values (v_guest, v_order, v_first, v_last, v_display, nullif(trim(coalesce(p_guest ->> 'title', '')), ''),
           nullif(trim(coalesce(p_guest ->> 'organization', '')), ''), nullif(trim(coalesce(p_guest ->> 'email', '')), ''),
           'comp_relationship', v_note, null, 'staff');
   insert into seats (id, order_id, slot_number, guest_id, status) values ('seat-' || v_order || '-' || v_slot, v_order, v_slot, v_guest, 'reviewed');
   perform write_audit('staff', me.name, 'guest', v_guest, v_order, 'comp_guest.added', null, 'reviewed', false,
-    format('%s %s added as relationship guest (%s).', v_first, v_last, coalesce(v_note, 'no note')));
+    format('%s added as relationship guest (%s).', v_display, coalesce(v_note, 'no note')));
   return v_guest;
 end $$;
 
@@ -859,7 +887,7 @@ begin
     'event_date', e.event_date, 'doors_time', e.doors_time, 'venue_name', e.venue_name, 'status', e.status,
     'guests', coalesce((
       select jsonb_agg(jsonb_build_object(
-        'id', g.id, 'order_id', g.order_id, 'first_name', g.first_name, 'last_name', g.last_name, 'title', g.title,
+        'id', g.id, 'order_id', g.order_id, 'first_name', g.first_name, 'last_name', g.last_name, 'display_name', g.display_name, 'title', g.title,
         'organization', g.organization, 'sponsor', sp.organization_name, 'package', tr.name, 'guest_type', g.guest_type,
         'table_number', t.number, 'seat_number', g.seat_number, 'accessibility_needs', g.accessibility_needs,
         'qr_hash', case when s.qr_token_expires_at > now() then s.qr_token_hash end,
@@ -1402,7 +1430,7 @@ create or replace function email_mark_sent(p_email_id text, p_token_hash text de
 language plpgsql security definer set search_path = public as $$
 declare m email_log; v_deadline date;
 begin
-  update email_log set status = 'sent', sent_at = now(), attempts = attempts + 1, last_error = null
+  update email_log set status = 'sent', sent_at = now(), attempts = attempts + 1, last_error = null, claimed_at = null
    where id = p_email_id and status = 'queued' and approved_at is not null returning * into m;
   if m.id is null then return; end if;
   -- A reminder carries a fresh link too, so the newest email always has the one that works.
@@ -1484,7 +1512,23 @@ end $$;
 -- After 5 failed attempts the email stays 'queued' but the worker stops retrying.
 create or replace function email_mark_failed(p_email_id text, p_error text) returns void
 language sql security definer set search_path = public as $$
-  update email_log set attempts = attempts + 1, last_error = left(p_error, 1000) where id = p_email_id
+  update email_log set attempts = attempts + 1, last_error = left(p_error, 1000), claimed_at = null where id = p_email_id
+$$;
+
+-- The send-emails worker claims its batch before sending anything. The every-minute schedule and a
+-- staff member's "send now" can overlap; without a claim both runs would send the same email, and
+-- each would mint its own link, so the second run's email_mark_sent would replace the link the
+-- sponsor actually received. SKIP LOCKED hands each email to exactly one run. A claim older than
+-- 10 minutes belongs to a run that died mid-send, so the email can be claimed again.
+create or replace function email_claim(p_limit int default 25) returns setof email_log
+language sql security definer set search_path = public as $$
+  update email_log set claimed_at = now()
+   where id in (select id from email_log
+                 where status = 'queued' and approved_at is not null and attempts < 5
+                   and (claimed_at is null or claimed_at < now() - interval '10 minutes')
+                 order by id limit greatest(coalesce(p_limit, 25), 0)
+                 for update skip locked)
+  returning *
 $$;
 
 -- ---------------------------------------------------------------------
@@ -1856,14 +1900,16 @@ end $$;
 
 -- Badge mail merge. Only what prints on a badge: never email, dietary or accessibility needs,
 -- payment, or staff notes. A guest with no table is admitted without a guaranteed seat.
+drop function if exists public.staff_export_badges(boolean);
+drop function if exists private.staff_export_badges(boolean);
 create or replace function staff_export_badges(p_include_printed boolean default false)
-returns table (first_name text, last_name text, title text, organization text,
+returns table (display_name text, first_name text, last_name text, title text, organization text,
                table_number int, seat_number int, sponsor text, guest_type text, badge_status text)
 language plpgsql security definer set search_path = public as $$
 declare me staff_users := require_staff(array['gala_admin','relationship_manager']); v_n int;
 begin
   return query
-    select g.first_name, g.last_name, g.title, g.organization, t.number, g.seat_number,
+    select g.display_name, g.first_name, g.last_name, g.title, g.organization, t.number, g.seat_number,
            case when g.guest_type = 'sponsor_guest' then sp.organization_name end, g.guest_type, g.badge_status
     from guests g join orders o on o.id = g.order_id join sponsors sp on sp.id = o.sponsor_id
     left join event_tables t on t.id = g.table_id
@@ -1878,21 +1924,23 @@ end $$;
 -- Printed check-in list: the fallback if the iPad or the venue's internet fails. Every named guest
 -- by last name, plus one row per unnamed sponsor seat so the desk knows who may bring a walk-in.
 -- Volunteers may export it; it carries no email, phone, payment, dietary needs, or staff notes.
+drop function if exists public.staff_export_checkin();
+drop function if exists private.staff_export_checkin();
 create or replace function staff_export_checkin()
-returns table (last_name text, first_name text, organization text, sponsor text, table_number int,
+returns table (last_name text, first_name text, display_name text, organization text, sponsor text, table_number int,
                seat_number int, guest_type text, accessibility_needs text, arrived boolean)
 language plpgsql security definer set search_path = public as $$
 declare me staff_users := require_staff(array['gala_admin','relationship_manager','check_in_volunteer']); v_n int;
 begin
   return query
     select * from (
-      select g.last_name, g.first_name, g.organization, sp.organization_name, t.number, g.seat_number,
+      select g.last_name, g.first_name, g.display_name, g.organization, sp.organization_name, t.number, g.seat_number,
              g.guest_type, g.accessibility_needs, g.attendance_status = 'checked_in'
       from guests g join orders o on o.id = g.order_id join sponsors sp on sp.id = o.sponsor_id
       left join event_tables t on t.id = g.table_id
       where o.event_id = current_event_id() and o.status <> 'cancelled'
       union all
-      select 'Unnamed seat', null, null, sp.organization_name, null, s.slot_number, 'unnamed_seat', null, false
+      select 'Unnamed seat', null, 'Unnamed seat', null, sp.organization_name, null, s.slot_number, 'unnamed_seat', null, false
       from seats s join orders o on o.id = s.order_id join sponsors sp on sp.id = o.sponsor_id
       where o.event_id = current_event_id() and o.status <> 'cancelled' and s.guest_id is null and s.status <> 'cancelled'
     ) x
@@ -1913,7 +1961,8 @@ language plpgsql security definer set search_path = public as $$
 declare me staff_users := require_staff(array['gala_admin']); v_n int;
 begin
   return query
-    select g.first_name, g.last_name, nullif(g.email, ''), g.title, g.organization, sp.organization_name,
+    select case when g.last_name <> '' then g.first_name end, coalesce(nullif(g.last_name, ''), g.display_name, g.first_name),
+           nullif(g.email, ''), g.title, g.organization, sp.organization_name,
            sp.salesforce_account_id, o.salesforce_opportunity_id, g.guest_type, c.checked_in_at, c.method
     from check_ins c join guests g on g.id = c.guest_id
     join orders o on o.id = g.order_id join sponsors sp on sp.id = o.sponsor_id
@@ -1944,7 +1993,7 @@ begin
               'portal_release_seat','staff_me','staff_update_guest','staff_set_seat_status','staff_mark_printed',
               'staff_assign_seat','staff_seat_order_at_table','staff_record_payment','staff_add_pledge','staff_add_comp_guest',
               'staff_send_qr_invite','staff_resend_portal_link','staff_approve_email','staff_cancel_email','checkin_list','staff_check_in','staff_check_in_qr',
-              'staff_check_in_exception','gl_import','staff_import_givelively','email_mark_sent','email_mark_failed',
+              'staff_check_in_exception','gl_import','staff_import_givelively','email_mark_sent','email_mark_failed','email_claim',
               'purchase_key','name_key','add_import_review','import_fill_guests','staff_set_tier_mapping','staff_set_gala_page',
               'staff_resolve_import_review','seats_void_qr','guests_void_qr','require_gala_order',
               'staff_export_badges','staff_export_checkin','staff_export_salesforce',
@@ -1981,7 +2030,7 @@ grant execute on function
   to authenticated;
 
 -- Edge functions (service role)
-grant execute on function gl_import(jsonb, text, text), email_mark_sent(text, text), email_mark_failed(text, text), hash_token(text)
+grant execute on function gl_import(jsonb, text, text), email_mark_sent(text, text), email_mark_failed(text, text), email_claim(int), hash_token(text)
   to service_role;
 
 -- ---------------------------------------------------------------------
