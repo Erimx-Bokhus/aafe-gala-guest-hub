@@ -4,10 +4,11 @@
 // DEMO (no Supabase): the same actions run on the in-browser demo data (store.ts), with the same role rules, so the
 //   demo behaves like the real app, including what a check-in volunteer can and can't see.
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { addAudit, loadDB } from '@shared/data'
+import { addAudit, displayName, loadDB } from '@shared/data'
 import type { Snapshot } from '@shared/offlineCheckin'
 import type { AuditEntry, DB, EmailLog, GalaEvent, Guest, Material, PayMethod, Role, StaffUser } from '@shared/types'
 import * as store from './store'
+import type { GlImportRow, GlImportRun, ImportResult } from './importer'
 import { demoBadgeRows, demoCheckinRows, demoSalesforceRows, type BadgeRow, type CheckinRow, type SalesforceRow } from './exports'
 
 export type OfflineMethod = Extract<PayMethod, 'check' | 'ach_direct' | 'wire'>
@@ -15,7 +16,7 @@ export interface PaymentInput { method: OfflineMethod; amount: number; received:
 export interface PledgeInput { org: string; contact: string; email: string; tierId: string; source: OfflineMethod }
 export interface CompGuestInput { first_name: string; last_name: string; title: string; organization: string; email: string; relationship_note: string }
 export interface ExceptionInput { name: string; orderId: string | null; type: string; note: string }
-export type GuestPatch = Partial<Pick<Guest, 'first_name' | 'last_name' | 'title' | 'organization' | 'email' | 'dietary_needs' | 'accessibility_needs' | 'relationship_note'>>
+export type GuestPatch = Partial<Pick<Guest, 'first_name' | 'last_name' | 'display_name' | 'title' | 'organization' | 'email' | 'dietary_needs' | 'accessibility_needs' | 'relationship_note'>>
 /** One unsent email as staff_email_queue() returns it: what staff need to judge a draft before approving it. */
 export interface QueuedEmail {
   id: string; template: EmailLog['template']; to_name: string; to_email: string; trigger: string; created_at: string | null
@@ -60,6 +61,14 @@ export interface StaffApi {
   queueReminders(minDays?: number): Promise<number>
   /** Let sponsors see which of their guests have arrived (arrived or not, never a time). Switching on needs a note of AAFE's privacy approval. */
   setSponsorArrivals(on: boolean, note: string): Promise<void>
+  /** Write a prepared Give Lively upload (importer.ts): all of it, or nothing. Gala admins only. */
+  importGiveLively(rows: GlImportRow[], run: GlImportRun): Promise<ImportResult>
+  /** This gala's Give Lively page name, chosen once from the pages in an upload. */
+  setGalaPage(pageName: string): Promise<void>
+  /** Link a Give Lively tier name ("Ticket") to one of AAFE's packages for this gala. */
+  setTierMapping(givelivelyName: string, tierId: string): Promise<void>
+  /** Close an import review item with what staff decided. */
+  resolveImportReview(id: string, resolution: string): Promise<void>
 }
 
 // Who may do what. Mirrors require_staff(...) in each staff_* function, and scripts/test-access.mjs checks the server side.
@@ -74,6 +83,7 @@ export const ROLES: Record<Exclude<keyof StaffApi, 'live'>, Role[]> = {
   updateGalaEvent: ADMIN, history: MANAGERS,
   exportBadges: MANAGERS, exportCheckin: ALL, exportSalesforce: ADMIN,
   emailQueue: MANAGERS, queueReminders: MANAGERS, setSponsorArrivals: ADMIN,
+  importGiveLively: ADMIN, setGalaPage: ADMIN, setTierMapping: ADMIN, resolveImportReview: MANAGERS,
 }
 export const canDo = (role: Role, action: keyof typeof ROLES) => ROLES[action].includes(role)
 
@@ -171,6 +181,21 @@ export function demoApi(user: StaffUser, update: (fn: (d: DB) => DB) => void, fu
             summary: on ? `Sponsors can now see which of their guests have arrived (approval: ${why}).` : 'Sponsors can no longer see which of their guests have arrived.' })
       })
     },
+    importGiveLively: async (rows, run) => {
+      if (!may('importGiveLively')) return forbidden()
+      let result: ImportResult | null = null
+      update((d) => { const r = store.demoImport(d, user, rows, run); result = r.result; return r.db })
+      return result!
+    },
+    setGalaPage: (page) => (page.trim() ? run('setGalaPage', (d) => store.setGalaPage(d, user, page)) : Promise.reject(new Error('invalid_input: page name is required'))),
+    setTierMapping: (name, tierId) => (!name.trim() ? Promise.reject(new Error('invalid_input: tier name is required'))
+      : !full().sponsorship_tiers.some((t) => t.id === tierId) ? Promise.reject(new Error('not_found: tier'))
+      : run('setTierMapping', (d) => store.setTierMapping(d, user, name, tierId))),
+    resolveImportReview: (id, resolution) => {
+      if (!may('resolveImportReview')) return forbidden()
+      if (!(full().import_review ?? []).some((v) => v.id === id && v.status === 'open')) return Promise.reject(new Error('not_found'))
+      update((d) => store.resolveImportReview(d, user, id, resolution)); return Promise.resolve()
+    },
   }
   // Like the staff_export_* functions: refused for the wrong role, otherwise logged with the row count.
   function exported<T>(a: keyof typeof ROLES, what: string, rows: T[], summary: (n: number) => string): Promise<T[]> {
@@ -225,6 +250,10 @@ export function liveApi(client: SupabaseClient, reload: () => Promise<void>): St
     emailQueue: () => call<QueuedEmail[]>('staff_email_queue', {}),
     queueReminders: async (minDays = 7) => { const n = await call<number>('staff_queue_guest_list_reminders', { p_min_days: minDays }); await reload(); return n },
     setSponsorArrivals: (on, note) => write('staff_set_sponsor_arrivals', { p_on: on, p_note: note.trim() || null }),
+    importGiveLively: async (rows, run) => { const r = await call<ImportResult>('staff_import_givelively', { p_rows: rows, p_run: run }); await reload(); return r },
+    setGalaPage: (page) => write('staff_set_gala_page', { p_page_name: page }),
+    setTierMapping: (name, tierId) => write('staff_set_tier_mapping', { p_givelively_name: name, p_tier_id: tierId }),
+    resolveImportReview: (id, resolution) => write('staff_resolve_import_review', { p_id: id, p_resolution: resolution }),
   }
 }
 
@@ -269,7 +298,7 @@ export function demoSnapshot(db: DB): CheckinSnapshot {
     guests: db.guests.filter((g) => orders.has(g.order_id)).map((g) => {
       const ci = db.check_ins.find((c) => c.guest_id === g.id && c.event_id === ev.id)
       return {
-        id: g.id, order_id: g.order_id, first_name: g.first_name, last_name: g.last_name, title: g.title, organization: g.organization,
+        id: g.id, order_id: g.order_id, first_name: g.first_name, last_name: g.last_name, display_name: displayName(g), title: g.title, organization: g.organization,
         sponsor: sponsorOf(g.order_id), package: db.sponsorship_tiers.find((t) => t.id === orders.get(g.order_id)!.tier_id)?.name ?? null,
         guest_type: g.guest_type, table_number: db.event_tables.find((t) => t.id === g.table_id)?.number ?? null, seat_number: g.seat_number,
         accessibility_needs: g.accessibility_needs, qr_hash: null, qr_expires_at: null,
@@ -305,7 +334,7 @@ export function volunteerDb(snap: CheckinSnapshot, user: StaffUser): DB {
     orders: orderIds.map((o) => ({ id: o, event_id: snap.event_id, sponsor_id: `sp-${o}`, tier_id: '', source: 'staff_entry' as const, commitment_amount: 0, status: 'pledged' as const, portal_token: null, portal_token_expires_at: null, portal_link_sent_at: null, guest_list_deadline: null, logo_status: 'not_required' as const, program_ad_status: 'not_required' as const, givelively_order_ref: null, salesforce_opportunity_id: null, internal_notes: '', created_at: at, updated_at: at })),
     payments: [],
     event_tables: [...new Set(snap.guests.map((g) => g.table_number).filter((n): n is number => n != null))].map((n) => ({ id: tableId(n)!, event_id: snap.event_id, number: n, label: null, capacity: 0, pos_x: 0, pos_y: 0 })),
-    guests: snap.guests.map((g) => ({ id: g.id, order_id: g.order_id, first_name: g.first_name, last_name: g.last_name, title: g.title ?? '', organization: g.organization ?? '', email: '', dietary_needs: null, accessibility_needs: g.accessibility_needs, guest_type: g.guest_type as Guest['guest_type'], relationship_note: null, table_id: tableId(g.table_number), seat_number: g.seat_number, badge_status: 'ready' as const, attendance_status: g.arrived ? 'checked_in' as const : 'expected' as const, qr_token: null, last_updated_by: 'staff' as const, created_at: at, updated_at: at })),
+    guests: snap.guests.map((g) => ({ id: g.id, order_id: g.order_id, first_name: g.first_name, last_name: g.last_name, display_name: g.display_name ?? null, title: g.title ?? '', organization: g.organization ?? '', email: '', dietary_needs: null, accessibility_needs: g.accessibility_needs, guest_type: g.guest_type as Guest['guest_type'], relationship_note: null, table_id: tableId(g.table_number), seat_number: g.seat_number, badge_status: 'ready' as const, attendance_status: g.arrived ? 'checked_in' as const : 'expected' as const, qr_token: null, last_updated_by: 'staff' as const, created_at: at, updated_at: at })),
     seats: [],
     check_ins: [
       ...snap.guests.filter((g) => g.arrived).map((g) => ({ id: g.checkin_id ?? `ci-${g.id}`, event_id: snap.event_id, guest_id: g.id, order_id: g.order_id, arrival_name: null, method: 'search' as const, type: 'standard', checked_in_by: g.checked_in_by ?? '', note: '', checked_in_at: g.checked_in_at ?? at })),
@@ -316,7 +345,7 @@ export function volunteerDb(snap: CheckinSnapshot, user: StaffUser): DB {
   }
 }
 
-const TABLES = ['gala_events', 'staff_users', 'sponsorship_tiers', 'sponsors', 'orders', 'payments', 'event_tables', 'guests', 'seats', 'check_ins', 'email_log', 'salesforce_sync'] as const
+const TABLES = ['gala_events', 'staff_users', 'sponsorship_tiers', 'sponsors', 'orders', 'payments', 'event_tables', 'guests', 'seats', 'check_ins', 'email_log', 'salesforce_sync', 'import_runs', 'import_review', 'tier_mappings'] as const
 const PAGE = 1000 // Supabase returns at most 1,000 rows per request
 
 export async function selectAll(client: SupabaseClient, table: string): Promise<unknown[]> {
