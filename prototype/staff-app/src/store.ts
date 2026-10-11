@@ -351,6 +351,14 @@ export const STAGES: { stage: PipelineStage; label: string; probability: number 
   { stage: 'payment_received', label: 'Payment received', probability: 1 }, { stage: 'lost', label: 'Lost', probability: 0 },
 ]
 export const SECTORS: Sector[] = ['board', 'community', 'corporate', 'foundation', 'individual', 'small_business']
+/** A typed dollar amount (the Goal and Ask boxes): empty means none. Refuses what isn't a number ("1.2.3", "."),
+ *  which would otherwise reach the server as null (JSON has no NaN) and clear the goal or the ask. */
+export function parseAmount(s: string): number | null {
+  if (!s.trim()) return null
+  const n = Number(s)
+  if (!Number.isFinite(n)) throw new Error('invalid_input: enter a valid amount, like 25000')
+  return n
+}
 const stageLabel = (s: PipelineStage) => STAGES.find((x) => x.stage === s)!.label
 const moneyFmt = (n: number) => '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })   // money_fmt()
 const orgKey = (db: DB, sponsorId: string) => sponsorOf(db, sponsorId)?.organization_name.trim().toLowerCase()
