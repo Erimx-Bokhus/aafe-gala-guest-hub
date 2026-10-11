@@ -48,7 +48,7 @@ export type Prefs = ReturnType<typeof useDisplayPrefs>
 
 export function DisplayControls({ prefs, labels, onDark }: { prefs: Prefs; labels?: { smaller: string; larger: string; theme: string }; onDark?: boolean }) {
   const l = labels ?? { smaller: 'Smaller text', larger: 'Larger text', theme: prefs.dark ? 'Switch to light mode' : 'Switch to dark mode' }
-  const cls = onDark ? 'inline-flex h-9 w-9 items-center justify-center rounded-md text-navy-100 hover:bg-white/10 disabled:opacity-40' : 'icon-btn'
+  const cls = onDark ? 'inline-flex h-9 w-9 items-center justify-center rounded-full text-navy-100 hover:bg-white/10 disabled:opacity-40' : 'icon-btn'
   return (
     <div className="flex items-center gap-1">
       <button className={cls} onClick={prefs.smaller} disabled={!prefs.canSmaller} aria-label={l.smaller} title={l.smaller}><AArrowDown size={18} /></button>
@@ -133,7 +133,7 @@ export function Modal({ open, onClose, title, children, wide, closeLabel = 'Clos
       <div ref={boxRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby={titleId} onMouseDown={(e) => e.stopPropagation()} className={`max-h-[92vh] w-full overflow-y-auto rounded-t-2xl bg-surface shadow-2xl outline-none sm:rounded-2xl ${wide ? 'sm:max-w-3xl' : 'sm:max-w-lg'}`}>
         <div className="flex items-center justify-between border-b border-navy-100 px-5 py-4">
           <h2 id={titleId} className="text-base font-semibold text-navy-900">{title}</h2>
-          <button type="button" onClick={onClose} className="rounded-md p-1 text-navy-500 hover:bg-navy-50" aria-label={closeLabel} title={closeLabel}><X size={20} /></button>
+          <button type="button" onClick={onClose} className="rounded-full p-1 text-navy-500 hover:bg-navy-50" aria-label={closeLabel} title={closeLabel}><X size={20} /></button>
         </div>
         <div className="p-5">{children}</div>
       </div>
