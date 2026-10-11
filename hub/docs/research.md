@@ -1,5 +1,5 @@
 # Research
-<!-- reviewed 2026-10-08 Aisling -->
+<!-- reviewed 2026-10-09 Aisling -->
 
 What already exists, what it costs, and why we are building a companion to Give Lively rather than replacing it. Market research by Natalie Walker (Source of Truth v3, §13); prices collected September 29, 2026 from vendor pages and third-party listings. Several vendors quote privately and prices change often, so confirm before quoting any figure to AAFE.
 
@@ -94,7 +94,7 @@ Natalie's research predates the October 1 call. Where it differs, discovery and 
 | --- | --- |
 | Give Lively forms are embedded on aafe.org | Registration links out to Give Lively; it isn't embedded <!-- new 2026-10-03 11:56 Aisling --> |
 | Option B: an AAFE Stripe checkout that collects names at purchase | Out of scope: the tool never processes payments <!-- new 2026-10-03 11:56 Aisling --> |
-| Drag-and-drop seating chart | A seating map that staff control is in the Demo Day scope (Oct 7); nothing seats guests automatically <!-- modified 2026-10-08 08:15 Aisling --> |
+| Drag-and-drop seating chart | A seating map that staff control is in the Demo Day scope (Oct 7); nothing seats guests automatically <!-- modified 2026-10-08 04:15 Aisling --> |
 | A $50,000 sponsorship with 12 seats | Confirmed: AAFE's 2026 flyer gives Platinum ($50,000) 12 guaranteed seats <!-- modified 2026-10-05 16:51 Aisling --> |
 | November 9 presentation | Nov 9 is the team's last work day; Demo Day is Nov 10 <!-- new 2026-10-03 11:56 Aisling --> |
 
@@ -106,7 +106,7 @@ Covered on the [Systems](#systems) page: no public API, no comps, no conditional
 
 ## aafe.org and its web partner
 
-Covered on the [Systems](#systems.aafe-org-and-its-web-partner) page: AAFE works with GreyBox Creative, the prototype matches the site's look, and production hosting is AAFE's call (see [Hosting](#hosting)). <!-- removed 2026-10-08 08:15 Aisling Three bullets that repeated the Systems page -->
+Covered on the [Systems](#systems.aafe-org-and-its-web-partner) page: AAFE works with GreyBox Creative, the prototype matches the site's look, and production hosting is AAFE's call (see [Hosting](#hosting)). <!-- removed 2026-10-08 04:15 Aisling Three bullets that repeated the Systems page -->
 
 ## Questions this raises for AAFE
 

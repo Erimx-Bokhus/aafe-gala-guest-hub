@@ -4,10 +4,12 @@ import { Field, Modal, Pill, fmtDate } from '@shared/ui'
 import type { Guest } from '@shared/types'
 import { PageHead } from '../App'
 import { QR } from '../qr'
-import { addCompGuest, sendQrInvite, useStaff } from '../store'
+import { useStaff } from '../store'
+import { useSave } from '../components'
 
 export default function Relationship() {
-  const { db, update, user, toast } = useStaff()
+  const { db, api, act } = useStaff()
+  const { saving, save } = useSave()
   const [add, setAdd] = useState(false)
   const [preview, setPreview] = useState<Guest | null>(null)
   const [f, setF] = useState({ first_name: '', last_name: '', title: '', organization: '', email: '', relationship_note: '' })
@@ -24,12 +26,12 @@ export default function Relationship() {
           const t = db.event_tables.find((x) => x.id === g.table_id)
           return (
             <li key={g.id} className="card flex gap-4 p-4">
-              <QR value={g.qr_token!} size={96} className="shrink-0 ring-1 ring-navy-100" />
+              {g.qr_token && <QR value={g.qr_token} size={96} className="shrink-0 ring-1 ring-navy-100" />}
               <div className="min-w-0 flex-1">
                 <div className="font-semibold text-navy-900">{g.first_name} {g.last_name}</div>
                 <div className="truncate text-sm text-navy-600">{g.title} · {g.organization}</div>
                 <div className="mt-1 text-xs text-navy-500">{g.relationship_note} · {t ? `Table ${t.number}, seat ${g.seat_number}` : 'Not seated'}</div>
-                <div className="mt-1 font-mono text-xs text-navy-500">{g.qr_token}</div>
+                {g.qr_token && <div className="mt-1 font-sans tabular-nums text-xs text-navy-500">{g.qr_token}</div>}
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   {em ? <Pill tone={em.status === 'queued' ? 'amber' : 'green'}>{em.status === 'queued' ? 'Invitation queued' : `Sent ${em.sent_at ? fmtDate(em.sent_at) : ''}`}</Pill> : <Pill tone="amber">Not sent</Pill>}
                   {g.attendance_status === 'checked_in' && <Pill tone="brand">Arrived</Pill>}
@@ -42,7 +44,7 @@ export default function Relationship() {
       </ul>
 
       <Modal open={add} onClose={() => setAdd(false)} title="Add relationship guest">
-        <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); if (!ok) return; update((d) => addCompGuest(d, user, f)); toast('Guest added — QR code created'); setAdd(false); setF({ first_name: '', last_name: '', title: '', organization: '', email: '', relationship_note: '' }) }}>
+        <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); if (!ok) return; void save(() => api.addCompGuest(f), api.live ? 'Guest added — send the QR invitation when ready' : 'Guest added — QR code created').then((done) => { if (done) { setAdd(false); setF({ first_name: '', last_name: '', title: '', organization: '', email: '', relationship_note: '' }) } }) }}>
           <div className="grid gap-3 sm:grid-cols-2">
             <Field id="cf" label="First name"><input id="cf" className="input" value={f.first_name} onChange={(e) => setF({ ...f, first_name: e.target.value })} /></Field>
             <Field id="cl" label="Last name"><input id="cl" className="input" value={f.last_name} onChange={(e) => setF({ ...f, last_name: e.target.value })} /></Field>
@@ -51,7 +53,7 @@ export default function Relationship() {
           <Field id="co" label="Organization"><input id="co" className="input" value={f.organization} onChange={(e) => setF({ ...f, organization: e.target.value })} /></Field>
           <Field id="ce" label="Email"><input id="ce" className="input" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></Field>
           <Field id="cn" label="Relationship (staff only)" hint="Never shown to the guest or printed"><input id="cn" className="input" value={f.relationship_note} onChange={(e) => setF({ ...f, relationship_note: e.target.value })} placeholder="e.g. Executive Director’s guest" /></Field>
-          <div className="flex justify-end gap-2 pt-1"><button type="button" className="btn-ghost" onClick={() => setAdd(false)}>Cancel</button><button className="btn-primary" disabled={!ok}>Add guest</button></div>
+          <div className="flex justify-end gap-2 pt-1"><button type="button" className="btn-ghost" onClick={() => setAdd(false)}>Cancel</button><button className="btn-primary" disabled={!ok || saving} data-testid="save-comp">{saving ? 'Saving…' : 'Add guest'}</button></div>
         </form>
       </Modal>
 
@@ -64,10 +66,10 @@ export default function Relationship() {
               <p className="text-sm text-navy-800">Dear {preview.first_name},</p>
               <p className="mt-2 text-sm text-navy-800">It would be our honor to welcome you as our guest at the {ev.name} on {fmtDate(ev.event_date)} at {ev.venue_name}. Doors open at {ev.doors_time}.</p>
               <p className="mt-2 text-sm text-navy-800">Please show this code at check-in:</p>
-              <div className="mt-3 flex justify-center"><QR value={preview.qr_token!} size={140} /></div>
+              <div className="mt-3 flex justify-center">{preview.qr_token ? <QR value={preview.qr_token} size={140} /> : <p className="text-sm text-navy-600">(A new personal QR code is created when this sends.)</p>}</div>
               <p className="mt-3 text-sm text-navy-800">With gratitude,<br />The AAFE Gala Team</p>
             </div>
-            <div className="mt-4 flex justify-end gap-2"><button className="btn-ghost" onClick={() => setPreview(null)}>Close</button><button className="btn-primary" data-testid="send-qr" onClick={() => { update((d) => sendQrInvite(d, user, preview.id)); toast(`QR invitation sent to ${preview.email} (simulated)`); setPreview(null) }}><Mail size={15} /> Send (simulated)</button></div>
+            <div className="mt-4 flex justify-end gap-2"><button className="btn-ghost" onClick={() => setPreview(null)}>Close</button><button className="btn-primary" data-testid="send-qr" onClick={() => { void act(api.sendQrInvite(preview.id), api.live ? `QR invitation sent to ${preview.email}` : `QR invitation sent to ${preview.email} (simulated)`); setPreview(null) }}><Mail size={15} /> Send (simulated)</button></div>
           </div>
         )}
       </Modal>

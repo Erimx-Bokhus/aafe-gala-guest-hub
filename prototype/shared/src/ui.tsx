@@ -84,8 +84,8 @@ export function PrototypeBanner({ dataSwitch = false }: { dataSwitch?: boolean }
 }
 const PILL: Record<string, string> = {
   green: 'bg-emerald-50 text-emerald-800 ring-emerald-200', amber: 'bg-amber-50 text-amber-800 ring-amber-200',
-  red: 'bg-rose-50 text-rose-800 ring-rose-200', blue: 'bg-brand-50 text-brand-700 ring-brand-200',
-  gray: 'bg-navy-50 text-navy-700 ring-navy-100', brand: 'bg-brand-50 text-brand-600 ring-brand-200',
+  red: 'bg-rose-50 text-rose-800 ring-rose-200', blue: 'bg-brand-50 text-brand-700 ring-navy-100',
+  gray: 'bg-navy-50 text-navy-700 ring-navy-100', brand: 'bg-brand-50 text-brand-600 ring-navy-100',
 }
 export type Tone = keyof typeof PILL
 export function Pill({ tone = 'gray', children }: { tone?: Tone; children: ReactNode }) {

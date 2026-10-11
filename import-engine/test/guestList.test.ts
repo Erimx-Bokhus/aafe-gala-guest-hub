@@ -6,6 +6,12 @@ const names = (text: string, seats = 4) => {
   const r = parseGuestList(text, seats, buyer)
   return r.kind === 'names' ? r.guests : r
 }
+/** The pre-filled guests; fails the test if the list wasn't read as names. */
+const guests = (text: string, seats = 4) => {
+  const r = parseGuestList(text, seats, buyer)
+  if (r.kind !== 'names') throw new Error(`expected names, got ${r.kind}`)
+  return r.guests
+}
 
 describe('parseGuestList', () => {
   it('case 1: "me" seats the buyer with their email', () => {
@@ -124,5 +130,31 @@ describe('parseGuestList', () => {
 
   it('more names than seats pre-fills nothing, even with unclear entries mixed in', () => {
     expect(parseGuestList('Jane Doe\nSam Lee\nBob', 1, buyer)).toEqual({ kind: 'unclear', reasons: ['2 names for 1 seat', 'a one-word name: "Bob"'] })
+  })
+
+  // From Natalie's synthetic export with deliberately messy guest lists (Oct 10).
+  it('commas where only some names have an address split into one guest each', () => {
+    expect(guests('Sam Lee sam@example.org, Rina Adeyemi, Hector Vale hector@example.org').map((g) => [g.displayName, g.email])).toEqual([
+      ['Sam Lee', 'sam@example.org'], ['Rina Adeyemi', null], ['Hector Vale', 'hector@example.org']])
+  })
+
+  it('a spaced slash separates guests, and never ends up in a name', () => {
+    expect(guests('Jane Doe jane@example.org / Sam Lee sam@example.org', 2).map((g) => g.displayName)).toEqual(['Jane Doe', 'Sam Lee'])
+  })
+
+  it('"TBD" in a list leaves a seat open; the names around it still count', () => {
+    expect(guests('Jane Doe jane@example.org, Sam Lee, TBD', 3).map((g) => g.displayName)).toEqual(['Jane Doe', 'Sam Lee'])
+    expect(parseGuestList('Jane Doe\nSeats 4-10 to be named', 10, buyer)).toEqual({ kind: 'names', guests: [{ displayName: 'Jane Doe', email: null, isBuyer: false }], unread: [] })
+  })
+
+  it('a purchase with no seats (an ad) names nobody, whatever the text says', () => {
+    expect(parseGuestList('No ticket included', 0, buyer)).toEqual({ kind: 'none' })
+    expect(parseGuestList('Jane Doe', 0, buyer)).toEqual({ kind: 'none' })
+  })
+
+  it('unchanged: one address before or after its name, and "Name, address", stay one guest', () => {
+    expect(names('jane@example.org Jane Doe', 1)).toEqual([{ displayName: 'Jane Doe', email: 'jane@example.org', isBuyer: false }])
+    expect(names('Jane Doe, jane@example.org', 1)).toEqual([{ displayName: 'Jane Doe', email: 'jane@example.org', isBuyer: false }])
+    expect(parseGuestList('John Smith email TBD', 2, buyer).kind).not.toBe('none')   // only a bare placeholder is skipped
   })
 })

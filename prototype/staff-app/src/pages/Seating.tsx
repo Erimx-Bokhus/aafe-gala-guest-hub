@@ -3,14 +3,14 @@ import { UserRound, X } from 'lucide-react'
 import { sponsorOf } from '@shared/data'
 import type { Guest } from '@shared/types'
 import { PageHead } from '../App'
-import { assignSeat, seatOrderAtTable, useStaff } from '../store'
+import { useStaff } from '../store'
 import { curOrders } from './Dashboard'
 
 // No blue (AAFE brand); each color keeps white initials at 4.5:1 or better.
 const PALETTE = ['#C64C28', '#6E5A1E', '#1F7A5C', '#8A5CC2', '#8A6420', '#B8476E', '#2F7A3E', '#6B7A2E', '#9E5B3C', '#9C6B30', '#7A4B8F', '#4D7A2E', '#A0522D', '#8A4F00', '#8F4B6B']
 
 export default function Seating() {
-  const { db, update, user, toast } = useStaff()
+  const { db, api, toast, act } = useStaff()
   const [sel, setSel] = useState<string | null>(null)
   const [grpOrder, setGrpOrder] = useState('')
   const [grpTable, setGrpTable] = useState('')
@@ -28,8 +28,7 @@ export default function Seating() {
     const occupant = guests.find((g) => g.table_id === tableId && g.seat_number === n)
     if (occupant) { setSel(occupant.id === sel ? null : occupant.id); return }
     if (!selected) { toast('Pick a guest first, then tap an open seat'); return }
-    update((d) => assignSeat(d, user.name, selected.id, tableId, n))
-    toast(`${label(selected)} → Table ${tables.find((t) => t.id === tableId)!.number}, seat ${n}`)
+    void act(api.assignSeat(selected.id, tableId, n), `${label(selected)} → Table ${tables.find((t) => t.id === tableId)!.number}, seat ${n}`)
     setSel(null)
   }
 
@@ -43,14 +42,14 @@ export default function Seating() {
             <div className="mt-2 space-y-2">
               <select className="input" value={grpOrder} onChange={(e) => setGrpOrder(e.target.value)} aria-label="Sponsor group"><option value="">Choose sponsor…</option>{byOrder.map(({ o, list }) => <option key={o.id} value={o.id}>{sponsorOf(db, o.sponsor_id).organization_name} ({list.length})</option>)}</select>
               <select className="input" value={grpTable} onChange={(e) => setGrpTable(e.target.value)} aria-label="Table"><option value="">Choose table…</option>{tables.map((t) => <option key={t.id} value={t.id}>Table {t.number} — {t.capacity - guests.filter((g) => g.table_id === t.id).length} open</option>)}</select>
-              <button className="btn-navy w-full" disabled={!grpOrder || !grpTable} onClick={() => { update((d) => seatOrderAtTable(d, user.name, grpOrder, grpTable)); toast('Group seated'); setGrpOrder('') }}>Seat group</button>
+              <button className="btn-navy w-full" disabled={!grpOrder || !grpTable} onClick={() => { void act(api.seatOrderAtTable(grpOrder, grpTable), 'Group seated'); setGrpOrder('') }}>Seat group</button>
             </div>
           </section>
           {selected && (
             <section className="card border-brand-400 p-4" data-testid="selected-guest">
               <div className="flex items-start justify-between"><div><div className="font-semibold text-navy-900">{label(selected)}</div><div className="text-xs text-navy-500">{selected.title} · {sponsorOf(db, db.orders.find((o) => o.id === selected.order_id)!.sponsor_id).organization_name}</div></div><button onClick={() => setSel(null)} aria-label="Clear selection" className="text-navy-500"><X size={16} /></button></div>
               <p className="mt-2 text-sm text-navy-600">{selected.table_id ? `Table ${tables.find((t) => t.id === selected.table_id)?.number}, seat ${selected.seat_number}. Tap an open seat to move.` : 'Tap an open seat on the floor plan.'}</p>
-              {selected.table_id && <button className="btn-ghost btn-sm mt-2" onClick={() => { update((d) => assignSeat(d, user.name, selected.id, null, null)); setSel(null) }}>Remove from seat</button>}
+              {selected.table_id && <button className="btn-ghost btn-sm mt-2" onClick={() => { void act(api.assignSeat(selected.id, null, null)); setSel(null) }}>Remove from seat</button>}
             </section>
           )}
           <section className="card p-4">
@@ -59,7 +58,7 @@ export default function Seating() {
               {byOrder.map(({ o, list }) => (
                 <div key={o.id}>
                   <div className="mb-1 flex items-center gap-2 text-xs font-semibold text-navy-500"><span className="h-2.5 w-2.5 rounded-full" style={{ background: color[o.id] }} />{sponsorOf(db, o.sponsor_id).organization_name}</div>
-                  <ul className="space-y-1">{list.map((g) => <li key={g.id}><button onClick={() => setSel(g.id === sel ? null : g.id)} aria-pressed={g.id === sel} data-testid={`unseated-${g.id}`} className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm ${g.id === sel ? 'bg-brand-500 text-white' : 'hover:bg-navy-50'}`}><UserRound size={14} /> {label(g)}</button></li>)}</ul>
+                  <ul className="space-y-1">{list.map((g) => <li key={g.id}><button onClick={() => setSel(g.id === sel ? null : g.id)} aria-pressed={g.id === sel} data-testid={`unseated-${g.id}`} className={`flex min-h-[44px] w-full items-center gap-2 rounded-full border-2 border-transparent px-4 text-left text-sm ${g.id === sel ? 'border-brand-500 bg-brand-500 text-white' : 'hover:bg-navy-50'}`}><UserRound size={14} /> {label(g)}</button></li>)}</ul>
                 </div>
               ))}
               {!unseated.length && <p className="text-sm text-navy-500">Everyone with a name is seated.</p>}
@@ -83,7 +82,7 @@ export default function Seating() {
                     return (
                       <button key={n} onClick={() => clickSeat(t.id, n)} data-testid={`seat-${t.number}-${n}`}
                         title={g ? `${label(g)} — Table ${t.number}, seat ${n}` : `Table ${t.number}, seat ${n} (open)`} aria-label={g ? `${label(g)}, table ${t.number} seat ${n}` : `Open seat ${n} at table ${t.number}`}
-                        className={`absolute h-[22%] w-[22%] -translate-x-1/2 -translate-y-1/2 rounded-full border-2 text-[0.55rem] font-bold text-white transition-transform hover:scale-110 ${g?.id === sel ? 'ring-4 ring-brand-200' : ''} ${!g && selected ? 'border-brand-400 bg-brand-50' : g ? 'border-white' : 'border-navy-100 bg-surface'}`}
+                        className={`absolute h-[22%] w-[22%] -translate-x-1/2 -translate-y-1/2 rounded-full border-2 text-[0.55rem] font-bold text-white transition-transform hover:scale-110 ${g?.id === sel ? 'ring-4 ring-brand-500' : ''} ${!g && selected ? 'border-brand-400 bg-brand-50' : g ? 'border-white' : 'border-navy-100 bg-surface'}`}
                         style={{ left: `${50 + 41 * Math.cos(a)}%`, top: `${50 + 41 * Math.sin(a)}%`, background: g ? color[g.order_id] : undefined }}>
                         {g ? (g.first_name[0] + g.last_name[0]) : ''}
                       </button>

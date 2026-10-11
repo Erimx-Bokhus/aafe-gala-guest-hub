@@ -2,9 +2,11 @@ import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type Mouse
 import { Award, CheckCircle2, CircleDashed, Clock, Facebook, Instagram, Linkedin, Lock, MapPin, Pencil, Phone, Plus, Twitter, Youtube } from 'lucide-react'
 import { Field, Modal, Toast, fmtDate, money } from '@shared/ui'
 import type { DB } from '@shared/types'
+import { displayName } from '@shared/data'
 import { DICT, LOCALE, type Lang } from './i18n'
+import { isPastDeadline } from './deadline'
+import { namesLeftText } from './namesLeft'
 import { parseAccessibilityNeeds, parseDietaryNeeds, serializeAccessibilityNeeds, serializeDietaryNeeds, type AccessibilityOption, type DietaryOption } from './guestNeeds'
-import { guestNameForDisplay, guestNameForForm } from './guestNames'
 import { LIVE, fetchPortalView, getPortalView, removeAttendee, removeAttendeeLive, saveAttendee, saveAttendeeLive, type AttendeeInput, type PortalView } from './portalApi'
 import Hero, { MissionStrip } from './Hero'
 import WelcomeScreen from './WelcomeScreen'
@@ -21,11 +23,11 @@ function scrollToContact(event: MouseEvent<HTMLButtonElement>) {
   heading?.focus({ preventScroll: true })
 }
 
-function AttendeeForm({ lang, initial, onSave, onCancel }: { lang: Lang; initial: AttendeeInput & { display_name?: string | null }; onSave: (v: AttendeeInput) => void; onCancel: () => void }) {
+function AttendeeForm({ lang, initial, onSave, onCancel }: { lang: Lang; initial: AttendeeInput; onSave: (v: AttendeeInput) => void; onCancel: () => void }) {
   const t = DICT[lang]
   const familyFirst = lang === 'zh' || lang === 'ko'
   const [v, setV] = useState(initial)
-  const [fullName, setFullName] = useState(() => guestNameForForm(initial, lang))
+  const [fullName, setFullName] = useState(() => initial.display_name?.trim() || (familyFirst ? [initial.last_name, initial.first_name] : [initial.first_name, initial.last_name]).filter(Boolean).join(' '))
   const dietaryNeeds = initial.dietary_needs ?? ''
   const accessibilityNeeds = initial.accessibility_needs ?? ''
   const initialDietary = parseDietaryNeeds(dietaryNeeds)
@@ -66,7 +68,7 @@ function AttendeeForm({ lang, initial, onSave, onCancel }: { lang: Lang; initial
       const order = (fullNameMode ? ['full_name', 'title', 'organization', 'email'] : familyFirst ? ['last_name', 'first_name', 'title', 'organization', 'email'] : ['first_name', 'last_name', 'title', 'organization', 'email']) as (keyof typeof IDS)[]
       const firstBad = order.find((k) => errs[k])
       if (firstBad) document.getElementById(IDS[firstBad])?.focus() // jump to the first field that needs fixing
-      else onSave({ ...trimmed, ...(fullNameMode ? { first_name: fullName.trim(), last_name: '' } : {}), dietary_needs: dietaryValue, accessibility_needs: accessibilityValue })
+      else onSave({ ...trimmed, ...(fullNameMode ? { first_name: fullName.trim(), last_name: '', display_name: fullName.trim() } : {}), dietary_needs: dietaryValue, accessibility_needs: accessibilityValue })
     }}>
       {fullNameMode ? fullNameField : <div className="grid gap-4 sm:grid-cols-2">{(familyFirst ? [familyField, givenField] : [givenField, familyField])}</div>}
       <Field id="ti" label={t.title} hint={t.titleHint} error={err('title')}><input id="ti" className="input min-h-[44px]" value={v.title} onChange={set('title')} {...a11y('title', true)} /></Field>
@@ -211,15 +213,6 @@ function activityText(lang: Lang, a: PortalView['activity'][number]) {
   }
 }
 
-// B9: after the guest-name deadline the page is read-only (AAFE time, end of the deadline day).
-// Demo only (offline mode): add ?demoToday=YYYY-MM-DD before the # to preview, e.g. ?demoToday=2027-05-01
-function isPastDeadline(deadline: string | null) {
-  if (!deadline) return false
-  const demo = LIVE ? null : new URLSearchParams(window.location.search).get('demoToday')
-  const today = demo && /^\d{4}-\d{2}-\d{2}$/.test(demo) ? demo : new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
-  return today > deadline.slice(0, 10)
-}
-
 export default function Portal({ db, update, token, lang }: { db: DB; update: (fn: (d: DB) => DB) => void; token: string; lang: Lang }) {
   const t = DICT[lang]
   const loc = LOCALE[lang]
@@ -257,12 +250,12 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
     </main>
   )
 
-  const closed = isPastDeadline(view.deadline)
+  const closed = isPastDeadline(view.deadline, { live: LIVE, search: window.location.search })
   const seat = !closed && editing != null ? view.seats.find((s) => s.slot === editing)! : null
   const removingSeat = !closed && removing != null ? view.seats.find((s) => s.slot === removing) : undefined
   const openSeats = view.stats.total - view.stats.named
+  const namesLeftMessage = namesLeftText(openSeats, t.namesLeft)
   const firstOpen = view.seats.find((s) => !s.guest)
-  const deadlineText = view.deadline ? fmtDate(view.deadline, loc) : undefined
   // Short place, like an invitation: the venue name (before any comma) and the city/state, no street or ZIP
   const venueName = view.event.venue.split(',')[0]!.trim()
   const venueCity = view.event.address.replace(/\s*\(synthetic\)\s*/i, '').split(',').slice(1).join(',').replace(/\s*\d{5}(-\d{4})?\s*$/, '').trim()
@@ -325,7 +318,7 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
                 <div className="mt-3 flex gap-1" role="progressbar" aria-label={t.seatsTitle} aria-valuemin={0} aria-valuemax={view.stats.total} aria-valuenow={view.stats.named} aria-valuetext={t.namedOf(view.stats.named, view.stats.total)}>
                   {view.seats.map((s) => <span key={s.slot} className={`h-2 flex-1 rounded-full ${s.guest ? 'bg-brand-500' : 'bg-navy-100'}`} />)}
                 </div>
-                {!closed && openSeats > 0 && <p className="mt-2 text-navy-700">{t.openDue(openSeats, deadlineText)}</p>}
+                {!closed && namesLeftMessage && <p className="mt-2 text-sm text-amber-800">{namesLeftMessage}</p>}
               </div>
               {!closed && firstOpen && (
                 <button type="button" className="btn-primary shrink-0" onClick={() => setEditing(firstOpen.slot)} data-testid="add-next">
@@ -341,7 +334,7 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
               const g = s.guest
               const confirmed = s.status === 'reviewed' || s.status === 'badge_ready' || s.status === 'checked_in'
               // Screen readers hear which seat a button is for
-              const guestName = g ? guestNameForDisplay(g) : ''
+              const guestName = g ? displayName(g) : ''
               const seatName = `${t.seat} ${s.slot}${g ? `, ${guestName}` : ''}`
               return (
                 <li key={s.slot} className={`flex flex-col gap-3 rounded-xl p-4 ${g ? 'bg-cream-100' : 'border border-dashed border-navy-300 bg-surface'}`} data-testid={`seat-${s.slot}`}>
@@ -469,7 +462,7 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
       </Modal>
 
       {/* Remove asks first, in the page's own dialog (not the browser's), and names the guest and the seat */}
-      <Modal open={removingSeat != null} onClose={() => setRemoving(null)} title={removingSeat?.guest ? t.removeTitle(guestNameForDisplay(removingSeat.guest), removingSeat.slot) : ''} closeLabel={t.close}>
+      <Modal open={removingSeat != null} onClose={() => setRemoving(null)} title={removingSeat?.guest ? t.removeTitle(displayName(removingSeat.guest), removingSeat.slot) : ''} closeLabel={t.close}>
         <p className="text-navy-700">{t.removeBody}</p>
         <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <button type="button" className="btn-ghost" onClick={() => setRemoving(null)} data-testid="keep-guest">{t.keepGuest}</button>

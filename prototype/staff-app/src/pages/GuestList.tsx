@@ -5,7 +5,7 @@ import { Pill, ago, downloadCsv } from '@shared/ui'
 import type { Guest } from '@shared/types'
 import { PageHead } from '../App'
 import { SeatPill } from '../components'
-import { setSeatStatus, updateGuest, useStaff } from '../store'
+import { useStaff } from '../store'
 import { curOrders } from './Dashboard'
 
 // Spreadsheet-style grid: edit any cell, changes save on blur and are written to the activity log.
@@ -17,17 +17,17 @@ const EDITABLE: { k: keyof Guest; label: string; w: string }[] = [
 const BADGE_TONE = { needs_review: 'amber', ready: 'green', printed: 'gray', reprint_needed: 'red' } as const
 
 function Cell({ g, k, w }: { g: Guest; k: keyof Guest; w: string }) {
-  const { update, user } = useStaff()
+  const { api, act } = useStaff()
   const [v, setV] = useState(String(g[k] ?? ''))
   const [prev, setPrev] = useState(g[k])
   if (prev !== g[k]) { setPrev(g[k]); setV(String(g[k] ?? '')) }
   return <input aria-label={`${k} for ${g.first_name} ${g.last_name}`} className={`${w} rounded border border-transparent bg-transparent px-1.5 py-1 text-sm text-navy-900 hover:border-navy-100 focus:border-brand-500 focus:bg-surface focus:outline-none`}
     value={v} onChange={(e) => setV(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-    onBlur={() => { if (v !== String(g[k] ?? '')) update((d) => updateGuest(d, user.name, g.id, { [k]: v || (k.endsWith('needs') ? null : '') })) }} />
+    onBlur={() => { if (v !== String(g[k] ?? '')) void act(api.updateGuest(g.id, { [k]: v || (k.endsWith('needs') ? null : '') })) }} />
 }
 
 export default function GuestList() {
-  const { db, update, user, toast } = useStaff()
+  const { db, api, act } = useStaff()
   const [q, setQ] = useState('')
   const [status, setStatus] = useState('all')
   const orderIds = new Set(curOrders(db).map((o) => o.id))
@@ -69,7 +69,7 @@ export default function GuestList() {
                 <td className="border-b border-navy-100 px-3"><SeatPill s={seat.status} /></td>
                 <td className="border-b border-navy-100 px-3"><Pill tone={BADGE_TONE[g.badge_status]}>{g.badge_status.replace('_', ' ')}</Pill></td>
                 <td className="whitespace-nowrap border-b border-navy-100 px-3 text-xs text-navy-500">{g.last_updated_by === 'guest_portal' ? 'Guest portal' : 'Staff'} · {ago(g.updated_at)}</td>
-                <td className="border-b border-navy-100 px-3">{seat.status === 'submitted' && <button className="btn-ghost btn-sm" onClick={() => { update((d) => setSeatStatus(d, user.name, g.id, 'reviewed')); toast('Reviewed') }}>Review</button>}</td>
+                <td className="border-b border-navy-100 px-3">{seat.status === 'submitted' && <button className="btn-ghost btn-sm" onClick={() => void act(api.setSeatStatus(g.id, 'reviewed'), 'Reviewed')}>Review</button>}</td>
               </tr>
             ))}
           </tbody>

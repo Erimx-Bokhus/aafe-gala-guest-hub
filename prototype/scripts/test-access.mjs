@@ -94,14 +94,14 @@ const ALL_STAFF = ['gala_admin', 'relationship_manager', 'check_in_volunteer']
 const MANAGERS = ['gala_admin', 'relationship_manager']
 const STAFF_FUNCTIONS = {
   checkin_list: ALL_STAFF, staff_check_in: ALL_STAFF, staff_check_in_qr: ALL_STAFF, staff_check_in_exception: ALL_STAFF,
-  staff_export_checkin: ALL_STAFF, staff_checkin_snapshot: ALL_STAFF, staff_sync_check_ins: ALL_STAFF,
+  staff_export_checkin: ALL_STAFF, staff_checkin_snapshot: ALL_STAFF, staff_sync_check_ins: ALL_STAFF, staff_undo_check_in: ALL_STAFF,
   staff_update_guest: MANAGERS, staff_set_seat_status: MANAGERS, staff_mark_printed: MANAGERS, staff_assign_seat: MANAGERS,
   staff_seat_order_at_table: MANAGERS, staff_record_payment: MANAGERS, staff_add_pledge: MANAGERS, staff_add_comp_guest: MANAGERS,
   staff_send_qr_invite: MANAGERS, staff_resend_portal_link: MANAGERS, staff_resolve_import_review: MANAGERS,
   staff_approve_email: MANAGERS, staff_cancel_email: MANAGERS, staff_email_queue: MANAGERS,
   staff_queue_guest_list_reminders: MANAGERS, staff_export_badges: MANAGERS,
   staff_pipeline: MANAGERS, staff_save_prospect: MANAGERS, staff_set_prospect_stage: MANAGERS, staff_set_sponsorship_goal: ['gala_admin'],
-  staff_set_sponsor_arrivals: ['gala_admin'],
+  staff_set_sponsor_arrivals: ['gala_admin'], staff_update_gala_event: ['gala_admin'], staff_set_material_status: MANAGERS,
   staff_import_givelively: ['gala_admin'], staff_set_tier_mapping: ['gala_admin'], staff_set_gala_page: ['gala_admin'],
   staff_export_salesforce: ['gala_admin'],
 }
@@ -163,6 +163,14 @@ ok((await portal(`select portal_get_view($1)`, [LINK])) === 'ok', 'link works be
 await db.query(`update orders set status = 'cancelled' where id = $1`, [order.id])
 ok((await portal(`select portal_get_view($1)`, [LINK])) === 'invalid_link', 'cancelled order: link stops working')
 await db.query(`update orders set portal_token_expires_at = $2, status = $3 where id = $1`, [order.id, saved.e, saved.status])
+
+// Supabase advisor (lints 0028, 0029): no owner-rights function the API can call sits in public; the apps call
+// SECURITY INVOKER wrappers, and the real functions live in the unexposed "private" schema (backend.sql, section 10).
+const exposed = (await db.query(`select p.proname f from pg_proc p where p.pronamespace = 'public'::regnamespace and p.prosecdef
+  and (has_function_privilege('anon', p.oid, 'execute') or has_function_privilege('authenticated', p.oid, 'execute'))`)).rows.map((r) => r.f)
+ok(exposed.length === 1 && exposed[0] === 'staff_role', `only staff_role() is an owner-rights function the API can call: ${exposed}`)
+const moved = (await db.query(`select count(*)::int n from pg_proc where pronamespace = 'private'::regnamespace and prosecdef`)).rows[0].n
+ok(moved === PORTAL.length + Object.keys(STAFF_FUNCTIONS).length + 1, `every portal and staff function, and staff_me, runs from the private schema (${moved})`)
 
 console.log(`access: ${count.pass} passed, ${count.fail} failed`)
 if (count.fail) process.exitCode = 1

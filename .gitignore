@@ -31,3 +31,4 @@ Thumbs.db
 # Supabase CLI: link state and local stack files (supabase link / supabase start)
 **/supabase/.temp/
 **/supabase/.branches/
+graphify-out/
