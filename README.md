@@ -18,4 +18,4 @@ To run the actual workflow files instead, in Docker, `act` works too (`act pull_
 
 ## Project hub
 
-`hub/` holds a browsable, presentable version of the docs. Run `npx serve` inside it; see `hub/README.md`.
+Aisling keeps a browsable version of the docs for her own tracking in a separate repo, [AAFE Gala Guest Project Hub](https://github.com/Erimx-Bokhus/aafe-gala-guest-project-hub). It moved out of `hub/` on Oct 11, 2026, with its history, so its edits don't run this repo's six checks. Nobody else needs to clone it.
