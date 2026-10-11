@@ -264,6 +264,24 @@ end $$;
 drop trigger if exists guests_void_qr on guests;
 create trigger guests_void_qr after update of first_name, last_name, email on guests for each row execute function guests_void_qr();
 
+-- A project holds demo galas or AAFE's real ones, never both. The demo sets carry hundreds of working
+-- sponsor links and QR codes, so a real gala added beside them would share a database with links anyone
+-- in the team has seen. npm run db:load already refuses to load demo data next to a real gala; this
+-- covers the other direction (a real gala added to a demo project) and flipping is_synthetic.
+create or replace function gala_events_no_mixing() returns trigger
+language plpgsql set search_path = public as $$
+begin
+  if exists (select 1 from gala_events where id <> new.id and is_synthetic <> new.is_synthetic) then
+    raise exception 'invalid_input: % gala can''t be added to a project that holds % galas. Demo data and AAFE''s real data never share a project: use a project without the demo sets for real data.',
+      case when new.is_synthetic then 'a demo' else 'a real (not synthetic)' end,
+      case when new.is_synthetic then 'real' else 'demo (synthetic)' end;
+  end if;
+  return new;
+end $$;
+drop trigger if exists gala_events_no_mixing on gala_events;
+create trigger gala_events_no_mixing before insert or update of is_synthetic on gala_events
+  for each row execute function gala_events_no_mixing();
+
 -- The gala being run now: the latest one not closed.
 create or replace function current_event_id() returns text
 language sql stable security definer set search_path = public as $$
@@ -1978,7 +1996,7 @@ begin
               'staff_send_qr_invite','staff_resend_portal_link','staff_approve_email','staff_cancel_email','checkin_list','staff_check_in','staff_check_in_qr',
               'staff_check_in_exception','gl_import','staff_import_givelively','email_mark_sent','email_mark_failed',
               'purchase_key','name_key','add_import_review','import_fill_guests','staff_set_tier_mapping','staff_set_gala_page',
-              'staff_resolve_import_review','seats_void_qr','guests_void_qr','require_gala_order',
+              'staff_resolve_import_review','seats_void_qr','guests_void_qr','gala_events_no_mixing','require_gala_order',
               'staff_export_badges','staff_export_checkin','staff_export_salesforce',
               'staff_queue_guest_list_reminders','staff_email_queue','staff_checkin_snapshot','staff_sync_check_ins','staff_undo_check_in',
               'pipeline_stage_label','pipeline_apply_order','orders_pipeline','staff_pipeline','staff_save_prospect',
