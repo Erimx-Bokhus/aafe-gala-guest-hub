@@ -75,6 +75,29 @@ await db.exec(`update email_log set approved_at = now(), approved_by = 'test', a
 const failed = (await as('authenticated', RM, `select staff_email_queue() q`))[0].q.find((e) => e.id === conf.id)
 ok(failed?.state === 'failed' && failed.last_error === 'Resend HTTP 500', 'an email that stopped retrying shows as failed, with the error')
 
+// ---- Claiming before sending (send-emails): overlapping runs never send the same email
+const claim = async (n = 25) => (await as('service_role', null, `select id from email_claim($1)`, [n])).map((r) => r.id)
+ok(/permission denied/.test(await err('authenticated', ADMIN, `select email_claim(25)`) ?? ''), 'only the email worker can claim emails, not signed-in staff')
+await db.exec(`update email_log set claimed_at = null, attempts = 0 where status = 'queued'`)
+const pending = (await q(`select id from email_log where status = 'queued' and approved_at is not null order by id`)).map((r) => r.id)
+const unapproved = (await q(`select id from email_log where status = 'queued' and approved_at is null`)).map((r) => r.id)
+ok(pending.length >= 1 && unapproved.length >= 1, `test data has approved emails (${pending.length}) and drafts (${unapproved.length})`)
+const run1 = await claim(1000)
+ok(JSON.stringify([...run1].sort()) === JSON.stringify(pending), 'a run claims every approved, unsent email')
+ok(!run1.some((id) => unapproved.includes(id)), 'a draft waiting for staff approval is never claimed')
+ok((await claim(1000)).length === 0, 'an overlapping run gets nothing the first run is already sending')
+await as('service_role', null, `select email_mark_failed($1, 'Resend HTTP 500')`, [run1[0]])
+ok(JSON.stringify(await claim(1000)) === JSON.stringify([run1[0]]), 'a failed email is released and the next run retries it')
+if (run1.length > 1) {
+  await as('service_role', null, `select email_mark_sent($1)`, [run1[1]])
+  ok(!(await claim(1000)).includes(run1[1]), 'a sent email is never claimed again')
+}
+await db.exec(`update email_log set claimed_at = now() - interval '11 minutes' where id = '${run1[0]}'`)
+ok((await claim(1000)).includes(run1[0]), 'a claim left by a run that died (over 10 minutes old) can be claimed again')
+await db.exec(`update email_log set claimed_at = null where status = 'queued'`)
+ok((await claim(1)).length === 1, 'a run claims no more than its batch size')
+await db.exec(`update email_log set claimed_at = null where status = 'queued'`)
+
 // ---- Wording (supabase/functions/_shared/emails.ts)
 const event = { name: 'AAFE Gala 2027', event_date: '2027-05-13', doors_time: '6:00 PM', venue_name: 'Harbor Hall', venue_address: '1 Pier Rd' }
 const link = 'https://gala.example.org/#/s/abc_DEF-123'
