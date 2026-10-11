@@ -1,6 +1,6 @@
 # Early sketches
 <!-- new 2026-10-08 04:15 Aisling -->
-<!-- reviewed 2026-10-08 Aisling -->
+<!-- reviewed 2026-10-09 Aisling -->
 
 Rough sketches of the three screens AAFE asked for, drawn before the build to agree on what each one shows. The real screens are on [Live build](#screens). All names are invented.
 

@@ -1,5 +1,5 @@
 # Requirements
-<!-- reviewed 2026-10-08 Aisling -->
+<!-- reviewed 2026-10-09 Aisling -->
 
 What the tool must do, in priority order. Bracketed tags show where each requirement came from.
 
@@ -18,11 +18,11 @@ These pages together are the team's product requirements. Natalie's two PRDs (Oc
 | Success measures | The three questions below; AAFE's first prototype review (Oct 15); AAFE's feedback on the full path (Oct 30); Demo Day (Nov 10) | No numeric targets yet <!-- modified 2026-10-08 04:15 Aisling --> |
 | Data and AI rules | [Data and AI](#data-ai) | Settled; AAFE still to approve <!-- new 2026-10-06 04:16 Aisling --> |
 | Security and keys | [`docs/keys-and-secrets.md`](https://github.com/Erimx-Bokhus/aafe-gala-guest-hub/blob/main/docs/keys-and-secrets.md): where every key lives and what enforces it | Set Oct 6 (PR #36) <!-- updated 2026-10-06 20:56 Aisling --> |
-| Import rules | [Import and matching](#import) | Settled Oct 5; pre-fill reaffirmed Oct 7 (PR #58 closed) <!-- modified 2026-10-08 04:15 Aisling --> |
-| Owners and timeline | [Build plan](#build-plan): two areas, components C0–C13, with who is building each part; Natalie owns the sponsor portal and approves its PRs; first prototype review with AAFE Oct 15 | Settled Oct 5; updated Oct 8 <!-- modified 2026-10-08 04:15 Aisling --> |
+| Import rules | [Import and matching](#import) | Settled Oct 5; pre-fill reaffirmed Oct 7 <!-- modified 2026-10-09 06:10 Aisling --> |
+| Owners and timeline | [Build plan](#build-plan): two areas, components C0–C13; first prototype review with AAFE Oct 15 | Settled Oct 5; updated Oct 9 <!-- modified 2026-10-09 06:10 Aisling --> |
 | Decisions and open questions | [Decisions](#decisions), including "Pending" | Updated as we go <!-- new 2026-10-06 04:16 Aisling --> |
 | Risks | [Risks](#risks) | Updated as we go <!-- new 2026-10-06 04:16 Aisling --> |
-| Testing | [Build plan](#build-plan), "Testing: what to add" | About 1,160 automated checks on `main`; the counts are kept in [Build plan](#build-plan.where-each-component-stands), C11 <!-- modified 2026-10-08 04:15 Aisling --> |
+| Testing | [Build plan](#build-plan), "Testing: what to add" | About 1,250 automated checks on `main`; the counts are kept in [Build plan](#build-plan.where-each-component-stands), C11 <!-- modified 2026-10-09 06:10 Aisling --> |
 
 Natalie's two PRDs (enterprise and client-facing) were compared with this table on Oct 7, and every difference is recorded in [Decisions](#decisions). <!-- modified 2026-10-08 04:15 Aisling -->
 
@@ -30,7 +30,7 @@ Natalie's two PRDs (enterprise and client-facing) were compared with this table 
 
 ## The three questions the dashboard must answer
 
-From AAFE's intake form, for staff and for the Demo Day mock investor:
+From AAFE's intake form, for AAFE's staff and for Demo Day: <!-- modified 2026-10-09 06:10 Aisling -->
 
 1. Who is planning to attend, and have we received all their information, payment, and materials?
 2. For each guest, who on AAFE staff owns that relationship?
