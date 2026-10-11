@@ -6,6 +6,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { loadDB } from '@shared/data'
 import type { DB, StaffUser } from '@shared/types'
 import { demoApi, liveApi, type PipelineBoard } from './api'
+import { parseAmount } from './store'
 // @ts-expect-error plain JavaScript helper shared with the backend tests
 import { openTestDb } from '../../scripts/test-db.mjs'
 
@@ -119,5 +120,15 @@ describe('live mode', () => {
       ['staff_pipeline', {}], ['staff_save_prospect', { p: { sponsor_id: 'sp-1', ask_amount: 5000 } }],
       ['staff_set_prospect_stage', { p_id: 'pr-1', p_stage: 'reached_out' }], ['staff_set_sponsorship_goal', { p_amount: 250000 }]])
     expect(reload).toHaveBeenCalledTimes(3)
+  })
+})
+
+// Cornell's review of #93: "1.2.3" or "." used to become NaN, which JSON sends as null, so the goal or the ask was cleared.
+describe('the Goal and Ask boxes', () => {
+  it('read an amount, take empty as none, and refuse what is not a number', () => {
+    expect(parseAmount('25000')).toBe(25000)
+    expect(parseAmount('2500.50')).toBe(2500.5)
+    expect(parseAmount('  ')).toBeNull()
+    for (const bad of ['1.2.3', '.', '..']) expect(() => parseAmount(bad)).toThrow(/invalid_input: enter a valid amount/)
   })
 })

@@ -3,7 +3,7 @@ import { Plus } from 'lucide-react'
 import { Field, Modal, Pill, fmtDate, money } from '@shared/ui'
 import type { PipelineStage, Sector } from '@shared/types'
 import { PageHead } from '../App'
-import { SECTORS, STAGES, useStaff, type ProspectInput } from '../store'
+import { SECTORS, STAGES, parseAmount, useStaff, type ProspectInput } from '../store'
 import { canDo, type PipelineBoard, type PipelineProspect } from '../api'
 
 // Sponsor pipeline (AAFE's prospect tracker; staff_pipeline() in backend.sql). Staff move the early stages; a pledge moves a
@@ -122,7 +122,7 @@ function Goal({ goal }: { goal: number | null }) {
     </div>
   )
   return (
-    <form data-testid="pipeline-goal" onSubmit={(e) => { e.preventDefault(); void act(api.setSponsorshipGoal(draft.trim() ? Number(draft) : null), 'Goal saved').then((ok) => { if (ok) setDraft(null) }) }}>
+    <form data-testid="pipeline-goal" onSubmit={(e) => { e.preventDefault(); void act(Promise.resolve().then(() => api.setSponsorshipGoal(parseAmount(draft))), 'Goal saved').then((ok) => { if (ok) setDraft(null) }) }}>
       <label htmlFor="goal" className="text-xs font-semibold uppercase tracking-wide text-navy-500">Goal ($)</label>
       <input id="goal" className="input mt-1" inputMode="numeric" value={draft} onChange={(e) => setDraft(e.target.value.replace(/[^0-9.]/g, ''))} />
       <div className="mt-1 flex gap-1"><button className="btn-primary btn-sm">Save</button><button type="button" className="btn-ghost btn-sm" onClick={() => setDraft(null)}>Cancel</button></div>
@@ -157,14 +157,14 @@ function ProspectForm({ editing, board, onClose }: { editing: PipelineProspect |
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF({ ...f, [k]: e.target.value })
   const ready = !isNew || f.sponsor_id || (f.organization.trim() && f.contact_name.trim())
   const save = () => {
-    const fields = { sector: (f.sector || null) as Sector | null, ask_amount: f.ask.trim() ? Number(f.ask) : null, ask_tier_id: f.ask_tier_id || null, follow_up_owner_id: f.follow_up_owner_id || null, notes: f.notes }
+    const fields = { sector: (f.sector || null) as Sector | null, ask_amount: parseAmount(f.ask), ask_tier_id: f.ask_tier_id || null, follow_up_owner_id: f.follow_up_owner_id || null, notes: f.notes }
     const p: ProspectInput = old ? { id: old.id, ...fields }
       : f.sponsor_id ? { sponsor_id: f.sponsor_id, ...fields } : { organization: f.organization, contact_name: f.contact_name, contact_email: f.contact_email, ...fields }
-    void act(api.saveProspect(p), old ? 'Prospect saved' : 'Prospect added').then((ok) => { if (ok) onClose() })
+    return api.saveProspect(p)
   }
   return (
     <Modal open={!!editing} onClose={onClose} title={old ? `Edit ${old.organization}` : 'Add a prospect'}>
-      <form className="space-y-3" data-testid="prospect-form" onSubmit={(e) => { e.preventDefault(); if (ready) save() }}>
+      <form className="space-y-3" data-testid="prospect-form" onSubmit={(e) => { e.preventDefault(); if (ready) void act(Promise.resolve().then(save), old ? 'Prospect saved' : 'Prospect added').then((ok) => { if (ok) onClose() }) }}>
         {isNew && (
           <>
             <Field id="pf-sp" label="Sponsor already on file" hint="Or leave this empty and add a new organization below.">
