@@ -145,7 +145,7 @@ export default function App() {
           const active = n.to === '/' ? p === '/' : p.startsWith(n.to)
           return (
             <li key={n.to}>
-              <Link to={n.to} aria-current={active ? 'page' : undefined} className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium ${active ? 'bg-white text-brand-700 dark:!text-[#8A3118]' : 'text-white hover:bg-white/15'}`}>
+              <Link to={n.to} aria-current={active ? 'page' : undefined} className={`flex items-center gap-3 rounded-full px-3 py-2 text-sm font-medium ${active ? 'bg-white text-brand-700 dark:!text-[#8A3118]' : 'text-white hover:bg-white/15'}`}>
                 <n.icon size={17} className={active ? 'text-brand-500' : 'text-white'} /> {n.label}
               </Link>
             </li>

@@ -10,7 +10,7 @@ if (!window.matchMedia) (window as unknown as { matchMedia: unknown }).matchMedi
 function showError(msg: string) {
   const root = document.getElementById('root')
   if (root && !root.querySelector('[data-app-ready]')) {
-    root.innerHTML = `<div style="font-family:system-ui,sans-serif;max-width:560px;margin:80px auto;padding:24px;border:1px solid #DFE5EE;border-radius:12px;color:#101A2C;line-height:1.5"><strong style="color:#C64C27">The app could not start in this browser.</strong><br/>Please try the latest Safari or Chrome, or use the online preview link.<br/><br/><code style="font-size:12px;color:#4B5E7C">${msg.replace(/</g, '&lt;')}</code></div>`
+    root.innerHTML = `<div style="font-family:system-ui,sans-serif;max-width:560px;margin:80px auto;padding:24px;border:1px solid #DFE5EE;border-radius:0;color:#101A2C;line-height:1.5"><strong style="color:#C64C27">The app could not start in this browser.</strong><br/>Please try the latest Safari or Chrome, or use the online preview link.<br/><br/><code style="font-size:12px;color:#4B5E7C">${msg.replace(/</g, '&lt;')}</code></div>`
   }
 }
 window.addEventListener('error', (e) => showError(e.message || 'Unknown error'))
