@@ -29,7 +29,7 @@ export default function Hero({ lang, eyebrow, title, body, children, compact }: 
 
   // Compact hero (sponsor page): the guest task must be visible without scrolling, so no slideshow here.
   if (compact) return (
-    <section className="hero-glass-hero relative overflow-hidden border-b border-cream-200 bg-cream-100">
+    <section className="hero-glass-hero force-light relative overflow-hidden border-b border-cream-200 bg-cream-100">
       <div className="hero-glass-blobs" aria-hidden="true">
         <span className="hero-glass-blob hero-glass-blob-1" />
         <span className="hero-glass-blob hero-glass-blob-2" />
