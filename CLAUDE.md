@@ -16,7 +16,7 @@ technical partner.** Production hosting and real data are AAFE's decisions after
 - `docs/data-model.md`: proposed schema and the merge plan with Natalie's prototype schema
 - `docs/data-handling.md`: data and AI commitments made to the client
 - `docs/research/`: team research (Natalie's source of truth, Give Lively analysis, intake form)
-- Project hub: the same material as a browsable site, in its own repo since Oct 11, [aafe-gala-guest-project-hub](https://github.com/Erimx-Bokhus/aafe-gala-guest-project-hub) (`npx serve` there). Keep it in step with these docs
+- Project hub: Aisling's own tracking site (not a team deliverable), in its own repo since Oct 11, [aafe-gala-guest-project-hub](https://github.com/Erimx-Bokhus/aafe-gala-guest-project-hub). Keep it in step with these docs
 
 ## Hard rules
 1. **No real donor data, ever.** Fixtures and demo data are invented. Never commit real names, emails, or exports from AAFE.
