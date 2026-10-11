@@ -63,9 +63,9 @@ export default function CheckIn() {
   const lastG = guests.find((g) => g.id === last)
   return (
     <div className="mx-auto max-w-3xl">
-      <div className="mb-5 flex items-end justify-between gap-3">
+      <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div><h1 className="text-2xl font-semibold text-navy-900">Event-day check-in</h1><p className="text-sm text-navy-600">Search a name or scan a guest’s QR code.</p></div>
-        <div className="flex items-end gap-4">
+        <div className="flex flex-wrap items-end gap-4">
           {/* The fallback if the iPad or the venue's internet fails: print it before doors open. */}
           <button className="btn-ghost" data-testid="export-checkin" onClick={() => void act(api.exportCheckin().then((rows) => downloadCsv('aafe-checkin-list-SYNTHETIC.csv', checkinCsv(rows))), 'Check-in list downloaded')}><Download size={15} /> Printed check-in list</button>
           <div className="text-right"><div className="text-3xl font-semibold tabular-nums text-navy-900" data-testid="arrived-count">{arrived}</div><div className="text-xs text-navy-500">arrived</div></div>

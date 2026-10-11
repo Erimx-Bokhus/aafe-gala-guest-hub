@@ -18,7 +18,7 @@ export function AafeLogo({ tone = 'dark', size = 'md', cycle = true }: { tone?: 
     return () => clearInterval(id)
   }, [cycle, reduced])
   const mark = size === 'sm' ? 'h-8 w-8' : 'h-9 w-9 sm:h-10 sm:w-10'
-  const txt = tone === 'light' ? 'text-white' : 'text-[#313131] dark:text-[#FBF7F0]'
+  const txt = tone === 'light' ? 'text-white' : 'text-black dark:text-[#F5F5F5]'
   return (
     <span className="flex items-center gap-2.5" role="img" aria-label="Asian Americans for Equality (AAFE)">
       <img src="./brand/aafe-mark-orange.png" alt="" className={`${mark} shrink-0`} />

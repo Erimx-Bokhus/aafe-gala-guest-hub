@@ -3,15 +3,17 @@
 //   check the caller's role and log the export. DEMO: the functions below build the same rows from the demo data, in the
 //   same order, so both modes download the same file. Each page then writes the CSV with downloadCsv (one writer, with the
 //   spreadsheet-formula guard). Columns stay provisional until AAFE sends its badge and check-in templates.
-import { GUEST_TYPE_LABEL } from '@shared/data'
+import { GUEST_TYPE_LABEL, displayName } from '@shared/data'
 import type { DB, GuestType } from '@shared/types'
 
 export interface BadgeRow {
+  /** The name printed on the badge. */
+  display_name: string
   first_name: string; last_name: string; title: string | null; organization: string | null
   table_number: number | null; seat_number: number | null; sponsor: string | null; guest_type: GuestType; badge_status: string
 }
 export interface CheckinRow {
-  last_name: string; first_name: string | null; organization: string | null; sponsor: string; table_number: number | null
+  last_name: string; first_name: string | null; display_name: string; organization: string | null; sponsor: string; table_number: number | null
   seat_number: number | null; guest_type: GuestType | 'unnamed_seat'; accessibility_needs: string | null; arrived: boolean
 }
 export interface SalesforceRow {
@@ -40,7 +42,7 @@ export function demoBadgeRows(db: DB, includePrinted: boolean): BadgeRow[] {
   return db.guests
     .filter((g) => orders.has(g.order_id) && (g.badge_status === 'ready' || g.badge_status === 'reprint_needed' || (includePrinted && g.badge_status === 'printed')))
     .map((g) => ({
-      first_name: g.first_name, last_name: g.last_name, title: g.title, organization: g.organization, table_number: table(g.table_id),
+      display_name: displayName(g), first_name: g.first_name, last_name: g.last_name, title: g.title, organization: g.organization, table_number: table(g.table_id),
       seat_number: g.seat_number, sponsor: g.guest_type === 'sponsor_guest' ? sponsor(g.order_id)?.organization_name ?? null : null,
       guest_type: g.guest_type, badge_status: g.badge_status,
     }))
@@ -51,12 +53,12 @@ export function demoBadgeRows(db: DB, includePrinted: boolean): BadgeRow[] {
 export function demoCheckinRows(db: DB): CheckinRow[] {
   const { orders, sponsor, table } = current(db)
   const named: CheckinRow[] = db.guests.filter((g) => orders.has(g.order_id)).map((g) => ({
-    last_name: g.last_name, first_name: g.first_name, organization: g.organization, sponsor: sponsor(g.order_id)?.organization_name ?? '',
+    last_name: g.last_name, first_name: g.first_name, display_name: displayName(g), organization: g.organization, sponsor: sponsor(g.order_id)?.organization_name ?? '',
     table_number: table(g.table_id), seat_number: g.seat_number, guest_type: g.guest_type, accessibility_needs: g.accessibility_needs,
     arrived: g.attendance_status === 'checked_in',
   }))
   const unnamed: CheckinRow[] = db.seats.filter((s) => !s.guest_id && s.status !== 'cancelled' && orders.has(s.order_id)).map((s) => ({
-    last_name: 'Unnamed seat', first_name: null, organization: null, sponsor: sponsor(s.order_id)?.organization_name ?? '',
+    last_name: 'Unnamed seat', first_name: null, display_name: 'Unnamed seat', organization: null, sponsor: sponsor(s.order_id)?.organization_name ?? '',
     table_number: null, seat_number: s.slot_number, guest_type: 'unnamed_seat', accessibility_needs: null, arrived: false,
   }))
   const order = (a: CheckinRow, b: CheckinRow) => byText(a.last_name, b.last_name) || byText(a.first_name, b.first_name) || byText(a.sponsor, b.sponsor) || byNum(a.seat_number, b.seat_number)
@@ -74,7 +76,8 @@ export function demoSalesforceRows(db: DB): SalesforceRow[] {
     const g = db.guests.find((x) => x.id === c.guest_id)
     if (!g) return []
     const gs = sponsor(g.order_id), go = db.orders.find((o) => o.id === g.order_id)
-    return [{ first_name: g.first_name, last_name: g.last_name, email: g.email || null, title: g.title, organization: g.organization, sponsor: gs?.organization_name ?? null,
+    // Salesforce requires a LastName: a one-word name goes there.
+    return [{ first_name: g.last_name ? g.first_name : null, last_name: g.last_name || displayName(g), email: g.email || null, title: g.title, organization: g.organization, sponsor: gs?.organization_name ?? null,
       salesforce_account_id: gs?.salesforce_account_id ?? null, salesforce_opportunity_id: go?.salesforce_opportunity_id ?? null, guest_type: g.guest_type,
       checked_in_at: c.checked_in_at, check_in_method: c.method }]
   }).sort((a, b) => byText(a.last_name, b.last_name) || byText(a.first_name, b.first_name))
@@ -83,11 +86,11 @@ export function demoSalesforceRows(db: DB): SalesforceRow[] {
 // ---- CSV layout (same columns as the downloads before the server exports, so nothing changes for staff) ----
 
 /** The badge printer's file. Affiliation is what the badge's bottom line says. */
-export const badgeCsv = (rows: BadgeRow[]) => [NOTICE, ['First', 'Last', 'Title', 'Organization', 'Table', 'Seat', 'Affiliation'],
-  ...rows.map((r) => [r.first_name, r.last_name, r.title, r.organization, r.table_number, r.seat_number, r.sponsor ?? GUEST_TYPE_LABEL[r.guest_type]])]
+export const badgeCsv = (rows: BadgeRow[]) => [NOTICE, ['Name on badge', 'First', 'Last', 'Title', 'Organization', 'Table', 'Seat', 'Affiliation'],
+  ...rows.map((r) => [r.display_name, r.first_name, r.last_name, r.title, r.organization, r.table_number, r.seat_number, r.sponsor ?? GUEST_TYPE_LABEL[r.guest_type]])]
 
-export const checkinCsv = (rows: CheckinRow[]) => [NOTICE, ['Last', 'First', 'Organization', 'Sponsor', 'Table', 'Seat', 'Guest type', 'Access needs', 'Arrived'],
-  ...rows.map((r) => [r.last_name, r.first_name, r.organization, r.sponsor, r.table_number, r.seat_number,
+export const checkinCsv = (rows: CheckinRow[]) => [NOTICE, ['Last', 'First', 'Name', 'Organization', 'Sponsor', 'Table', 'Seat', 'Guest type', 'Access needs', 'Arrived'],
+  ...rows.map((r) => [r.last_name, r.first_name, r.display_name, r.organization, r.sponsor, r.table_number, r.seat_number,
     r.guest_type === 'unnamed_seat' ? 'Unnamed sponsor seat' : GUEST_TYPE_LABEL[r.guest_type], r.accessibility_needs, r.arrived ? 'Yes' : ''])]
 
 export const salesforceCsv = (rows: SalesforceRow[]) => [NOTICE, ['First Name', 'Last Name', 'Email', 'Title', 'Account Name', 'Sponsor',
