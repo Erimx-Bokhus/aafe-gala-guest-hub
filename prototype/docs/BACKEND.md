@@ -61,7 +61,7 @@ The approval screen calls `staff_email_queue()`: every unsent email, drafts firs
 - **Payment confirmation** (`payment_receipt`): `staff_record_payment` drafts one for every check, ACH or wire payment staff record. It states the amount, date and balance, and says it is not a tax receipt (Give Lively sends its own receipts for online purchases).
 - **Guest-list reminder** (`guest_list_reminder`): `staff_queue_guest_list_reminders(p_min_days default 7)` drafts one for each sponsor of the current gala who still has unnamed seats, already got a link, and whose deadline hasn't passed. It skips sponsors with a link or reminder still waiting, or one sent in the last `p_min_days` days. A reminder carries a fresh private link, so the newest email always has the one that works. If every seat gets named before it goes out, the sender refuses it and it shows as failed for staff to discard.
 
-Until `RESEND_API_KEY` is set, approved emails wait in the queue and nothing is sent. Until the Give Lively secrets are set, the poller returns `not_configured`.
+Until `RESEND_API_KEY` is set, approved emails wait in the queue and nothing is sent. Each `send-emails` run claims its batch first (`email_claim()`), so the every-minute schedule and a manual "send now" never send the same email twice or replace a link a sponsor already received. A claim older than 10 minutes, from a run that stopped mid-send, is released for the next run. Until the Give Lively secrets are set, the poller returns `not_configured`.
 
 ## Demo with a fake Give Lively (all synthetic)
 
