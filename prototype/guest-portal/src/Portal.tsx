@@ -272,7 +272,7 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
   return (
     <main>
       {/* 1. Short hero: who this is for, the package, and the gala date. The task starts right below it. */}
-      <Hero compact lang={lang} eyebrow={t.eyebrow} title={`${t.welcome}, ${view.organization}`} body="">
+      <Hero compact lang={lang} eyebrow={t.eyebrow} title={`${t.thankYou}, ${view.organization}`} body="">
         {/* Like an event invitation (Luma): the sponsorship as a badge, then one fact per row with an icon tile */}
         <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-brand-100 bg-brand-50 py-1.5 pl-2 pr-4" data-testid="sponsor-badge">
           <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-500 text-white"><Award size={16} aria-hidden /></span>
@@ -298,8 +298,6 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
           </li>
         </ul>
         <div className="mt-5 flex flex-wrap items-center gap-3">
-          {/* Same Donate button as the aafe.org header; goes to AAFE's donate page (Give Lively) */}
-          <a href="https://www.aafe.org/donate/" target="_blank" rel="noopener noreferrer" className="aafe-donate" data-testid="donate">{t.donate}</a>
           <button type="button" className="aafe-contact" onClick={scrollToContact} data-testid="hero-contact">{t.contact}</button>
         </div>
       </Hero>
@@ -462,7 +460,7 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
           </div>
         </div>
       </section>
-      <MissionStrip lang={lang} />
+      <MissionStrip lang={lang} donate />
       <footer className="mx-auto max-w-6xl px-5 py-8 text-xs text-navy-500">{t.privacy}</footer>
 
       <Modal open={seat != null} onClose={() => setEditing(null)} title={seat ? (seat.guest ? t.editInSeat(seat.slot) : t.addToSeat(seat.slot)) : ''} closeLabel={t.close}>
