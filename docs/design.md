@@ -27,6 +27,7 @@ Dates and times are New York time (ET). Full details are in [Appendix A](#append
 | 2.3 | Oct 10, 2026, 2:04 PM | Natalie Walker | Fixes from the staff-app QA pass: no brown in dark mode, tabs, toggles and icon buttons follow the button spec, no monospace, small table buttons are the one documented exception |
 | 2.4 | Oct 10, 2026, 2:52 PM | Natalie Walker | Scope notes match what shipped: the staff app is done in PR #96; the guest portal's serif headings and type scale are still to do |
 | 2.5 | Oct 10, 2026, 2:54 PM | Natalie Walker | From Aisling's review of #96: table headers use `#4D4C4C` on gray; Inter no longer loaded anywhere; the shared styles' effect on the portal and iPad stated |
+| 2.6 | Oct 11, 2026, 3:05 PM | Natalie Walker | Square containers in every app (guest portal, staff app, iPad), matching aafe.org; buttons stay pills |
 
 ## Principles
 1. **White first, orange for meaning.** Pages are white or light gray. Orange marks the one main action on a screen, the brand mark, and focus. If everything is orange, nothing stands out.
@@ -139,7 +140,8 @@ Load Poppins 400, 600 and 700 from Google Fonts. Fallback: `system-ui, sans-seri
 Section headings are never larger than the page title, and a card's title is never larger than its section title. 🆕 *v2.0*
 
 ## Layout and spacing
-- 4px spacing grid (Tailwind default). Cards: 24px padding, 12px radius, 1px `line` (`#EBEBEB`) border, no heavy shadows.
+- 4px spacing grid (Tailwind default). Cards: 24px padding, 1px `line` (`#EBEBEB`) border, no heavy shadows.
+- ✏️ **Corners** *v2.6*: cards, panels, guest seats, dialogs, notes and form fields are **square (0px)** in every app, matching aafe.org; ~~12px radius~~. Still round: **buttons** (pill, see Components), status pills, avatars, progress bars and the round seating tables.
 - **Backgrounds:** white `#FFFFFF` and light gray `#F4F4F6` only. ~~Cream `#FBF7F0` bands~~ (no longer used). ✏️ *v2.0, v2.1*
 - 🆕 **Section headings:** with a thin orange rule, as on aafe.org ("What We Do", "Latest Stories"). *v2.0*
 - Sponsor portal: single column, max width 640px, works at 360px phone width.
@@ -222,6 +224,15 @@ In the prototype's code (`prototype/shared/src/theme.css`), the older class name
 
 ## Appendix A: Change log
 All times are New York time (ET). Earlier entries are kept as written, even when a later version replaced them.
+
+### Version 2.6: Oct 11, 2026, 3:05 PM ET, by Natalie Walker
+**Why:** aafe.org uses square boxes. Antonin's guest portal redesign squared the portal's containers (measured against aafe.org); Natalie approved that and applied the same to the staff app and iPad so all three apps match.
+
+| # | Section | Before | After |
+|---|---|---|---|
+| 1 | Layout: corners | Cards: 12px radius | **Square (0px)** cards, panels, guest seats, dialogs, notes and form fields, in the guest portal, staff app and iPad |
+| 2 | Still round | — | Buttons keep the pill (v2.2), including DONATE and CONTACT; status pills, avatars, progress bars and the round seating tables stay round |
+| 3 | Where it's set | — | One shared setting (`prototype/shared/tailwind.preset.cjs`, `borderRadius`), so every app follows it |
 
 ### Version 2.5: Oct 10, 2026, 2:54 PM ET, by Natalie Walker
 **Why:** Aisling's review of PR #96.

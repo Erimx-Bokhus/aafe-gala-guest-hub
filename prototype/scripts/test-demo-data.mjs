@@ -52,8 +52,17 @@ for (const [set, meta] of Object.entries(SETS)) {
     ok((await one(`select count(*)::int n from (select order_id from seats group by order_id, slot_number having count(*) > 1) x`)).n === 0, `${set}: no seat slot used twice`)
   }
 }
+// Demo and real galas never share a project (gala_events_no_mixing in backend.sql).
+const mix = (sql) => db.exec(sql).then(() => null, (x) => x.message)
+const realGala = `insert into gala_events (id, year, name, event_date, status, is_synthetic) values ('ev-real', 2031, 'AAFE Gala 2031', '2031-05-15', 'planning', false)`
+ok((await mix(realGala))?.includes('never share a project') && (await one(`select count(*)::int n from gala_events where id = 'ev-real'`)).n === 0,
+  'a real gala can\'t be added to a project holding demo data')
+ok((await mix(`update gala_events set is_synthetic = false where id = 'ev-2024'`))?.includes('never share a project'), 'a demo gala can\'t be relabeled as real')
+ok((await mix(`update gala_events set name = name where id = 'ev-2024'`)) === null, 'ordinary edits to a demo gala still work')
+
 // The guard: a gala that isn't synthetic stops the load, and nothing changes.
-await db.query(`update gala_events set is_synthetic = false where id = 'ev-2024'`)
+// (Set up with triggers off: the no-mixing guard would otherwise refuse the relabel this needs.)
+await db.exec(`set session_replication_role = replica; update gala_events set is_synthetic = false where id = 'ev-2024'; set session_replication_role = origin;`)
 const before = (await one(`select count(*)::int n from guests`)).n
 const e = await db.exec(buildLoadSql('small')).then(() => null, (x) => x.message)
 await db.exec('rollback').catch(() => {})
