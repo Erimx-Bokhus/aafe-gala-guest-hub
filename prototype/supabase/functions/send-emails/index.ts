@@ -14,8 +14,6 @@ import QRCode from 'npm:qrcode@1.5.4'
 import { guestListReminderEmail, paymentReceiptEmail, portalLinkEmail, qrInvitationEmail } from '../_shared/emails.ts'
 import { admin, caller, cors, env, json } from '../_shared/supabase.ts'
 
-const MAX_ATTEMPTS = 5
-
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
   if (!(await caller(req, ['gala_admin', 'relationship_manager']))) return json({ error: 'forbidden' }, 403)
@@ -24,8 +22,12 @@ Deno.serve(async (req) => {
   if (!apiKey || !from || !portalUrl) return json({ sent: 0, message: 'Email not configured (RESEND_API_KEY, EMAIL_FROM, GUEST_PORTAL_URL). Emails stay queued.' })
 
   const db = admin()
-  const { data: queue, error } = await db.from('email_log').select('*').eq('status', 'queued').not('approved_at', 'is', null).lt('attempts', MAX_ATTEMPTS).order('id').limit(25)
+  // Claim the batch first (email_claim in backend.sql): an email another run is already sending is skipped,
+  // so a scheduled run and a manual "send now" never send the same email or overwrite each other's link.
+  const { data: claimed, error } = await db.rpc('email_claim', { p_limit: 25 })
   if (error) return json({ error: 'db_error', message: error.message }, 500)
+  // deno-lint-ignore no-explicit-any
+  const queue = ((claimed ?? []) as any[]).sort((a, b) => String(a.id).localeCompare(String(b.id)))
 
   let sent = 0, failed = 0
   for (const m of queue ?? []) {
