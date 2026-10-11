@@ -79,7 +79,7 @@ export function SponsorDetail({ id }: { id: string }) {
           {link && <button className="btn-ghost" onClick={() => void act(api.resendPortalLink(o.id), 'Guest-list link re-sent')}><Mail size={15} /> Resend portal link</button>}
           {link && !api.live && <button className="btn-ghost" onClick={() => { navigator.clipboard?.writeText(link).catch(() => {}); toast('Portal link copied') }}><Copy size={15} /> Copy link</button>}
         </>} />
-      <div className="grid gap-6 xl:grid-cols-[1.5fr_1fr] [&>*]:min-w-0">
+      <div className="grid gap-6 2xl:grid-cols-[1.5fr_1fr] [&>*]:min-w-0">
         <div className="space-y-6">
           <section className="card overflow-x-auto">
             <div className="border-b border-navy-100 px-4 py-3"><h2 className="font-semibold text-navy-900">Seats ({st.named}/{st.total} named · {st.needsReview} to review)</h2></div>
@@ -92,7 +92,7 @@ export function SponsorDetail({ id }: { id: string }) {
                     return (
                       <tr key={s.id}>
                         <td className="td tabular-nums text-navy-500">{s.slot_number}</td>
-                        <td className="td">{g ? <><div className="font-semibold text-navy-900">{g.first_name} {g.last_name}</div><div className="text-xs text-navy-500">{g.title} · {g.organization}</div></> : <span className="text-navy-300">—</span>}</td>
+                        <td className="td">{g ? <><div className="font-semibold text-navy-900">{g.first_name} {g.last_name}</div><div className="text-xs text-navy-500">{g.title} · {g.organization}</div></> : <span className="text-navy-500">—</span>}</td>
                         <td className="td tabular-nums">{t ? `T${t.number} · S${g!.seat_number}` : g ? <span className="text-amber-700">Unseated</span> : ''}</td>
                         <td className="td text-xs">{[g?.dietary_needs, g?.accessibility_needs].filter(Boolean).join(' · ')}</td>
                         <td className="td"><SeatPill s={s.status} /></td>
@@ -140,7 +140,7 @@ export function SponsorDetail({ id }: { id: string }) {
           <section className="card p-4">
             <h2 className="font-semibold text-navy-900">Emails</h2>
             <ul className="mt-2 space-y-1.5 text-sm">{emails.map((e) => <li key={e.id} className="flex justify-between gap-2"><span>{e.template.replace(/_/g, ' ')} <span className="text-xs text-navy-500">({e.trigger.replace(/_/g, ' ')})</span></span>{e.status === 'queued' ? <button className="btn-primary btn-sm" onClick={() => void act(api.approveEmail(e.id), api.live ? `Approved: sending to ${e.to_name}` : `Approved and sent to ${e.to_name} (simulated)`)}>Approve and send</button> : <Pill tone={e.status === 'cancelled' ? 'gray' : 'green'}>{e.status}</Pill>}</li>)}{!emails.length && <li className="text-navy-500">None.</li>}</ul>
-            {link && <p className="mt-3 break-all rounded bg-cream-100 p-2 font-mono text-xs text-navy-600">{link}</p>}
+            {link && <p className="mt-3 break-all rounded bg-cream-100 p-2 font-sans tabular-nums text-xs text-navy-600">{link}</p>}
           </section>
           {o.internal_notes && <section className="card p-4"><h2 className="font-semibold text-navy-900">Internal notes</h2><p className="mt-1 text-sm text-navy-700">{o.internal_notes}</p></section>}
         </div>

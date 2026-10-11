@@ -61,7 +61,7 @@ The approval screen calls `staff_email_queue()`: every unsent email, drafts firs
 - **Payment confirmation** (`payment_receipt`): `staff_record_payment` drafts one for every check, ACH or wire payment staff record. It states the amount, date and balance, and says it is not a tax receipt (Give Lively sends its own receipts for online purchases).
 - **Guest-list reminder** (`guest_list_reminder`): `staff_queue_guest_list_reminders(p_min_days default 7)` drafts one for each sponsor of the current gala who still has unnamed seats, already got a link, and whose deadline hasn't passed. It skips sponsors with a link or reminder still waiting, or one sent in the last `p_min_days` days. A reminder carries a fresh private link, so the newest email always has the one that works. If every seat gets named before it goes out, the sender refuses it and it shows as failed for staff to discard.
 
-Until `RESEND_API_KEY` is set, approved emails wait in the queue and nothing is sent. Until the Give Lively secrets are set, the poller returns `not_configured`.
+Until `RESEND_API_KEY` is set, approved emails wait in the queue and nothing is sent. Each `send-emails` run claims its batch first (`email_claim()`), so the every-minute schedule and a manual "send now" never send the same email twice or replace a link a sponsor already received. A claim older than 10 minutes, from a run that stopped mid-send, is released for the next run. Until the Give Lively secrets are set, the poller returns `not_configured`.
 
 ## Demo with a fake Give Lively (all synthetic)
 
@@ -134,6 +134,8 @@ Never returned: payment method, fees, check numbers, internal notes, relationshi
 
 Reads: `gala_admin` and `relationship_manager` can `select` every table directly (RLS). `check_in_volunteer` can't read tables. Volunteers use `checkin_list()`.
 Writes: only through these functions, and each one writes `audit_log`. `audit_log` can't be updated or deleted.
+**Guest names (Oct 10).** `guests.display_name` is the guest's name as written: badges, the check-in list, the door list, exports and the portal print it. `first_name` and `last_name` are a best guess for sorting and search, from the name engine (`import-engine/src/names.ts`). `portal_save_guest`, `staff_update_guest` and `staff_add_comp_guest` take a `display_name`, first and last, or both; `name_parts()` fills in whatever is missing (a full name alone falls back to last word = last name). A one-word name is allowed, with an empty last name. A display name that's just "First Last" follows a new first or last name; one staff corrected stays. Salesforce gets the last name, or the whole name when there is no last name.
+
 Guest edits (`staff_update_guest`, and a sponsor editing a named guest through `portal_save_guest`) also record the old and new value of each changed field in `audit_log.changes`, e.g. `{"title": {"from": "Manager", "to": "Director"}}`. It's for staff: the portal's activity list shows only the summary. Status changes, seating, and payment amounts keep using `from_state` and `to_state`.
 
 | Prototype (`staff-app/src/store.ts`) | Backend call | Roles |
@@ -167,7 +169,7 @@ Guest edits (`staff_update_guest`, and a sponsor editing a named guest through `
 | List unsent emails for the approval screen | `staff_email_queue()` | admin, RM |
 | Draft guest-list reminders | `staff_queue_guest_list_reminders(p_min_days)` | admin, RM |
 | Send approved email now | `functions.invoke('send-emails')` | admin, RM |
-| Badges → "CSV for printer" | `staff_export_badges(p_include_printed default false)`: ready and reprint badges, sorted by table and seat; badge fields only (no email, dietary, payment, or notes) | admin, RM |
+| Badges → "CSV for printer" | `staff_export_badges(p_include_printed default false)`: ready and reprint badges, sorted by table and seat; the name as written (`display_name`) plus first and last; badge fields only (no email, dietary, payment, or notes) | admin, RM |
 | Check-in → printed list (new) | `staff_export_checkin()`: every guest by last name plus one row per unnamed sponsor seat, with table, seat, and arrived; no email or dietary needs | all |
 | Integrations → Salesforce file (new) | `staff_export_salesforce()`: one row per arrival (walk-ins included) with email, Salesforce Account and Opportunity ids, and arrival time | admin |
 

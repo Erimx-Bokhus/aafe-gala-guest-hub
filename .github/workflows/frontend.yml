@@ -8,8 +8,14 @@ on:
   # a path filter would leave PRs that don't touch these folders waiting forever.
   pull_request:
 
+# A newer push to the same pull request cancels the older run still in progress (saves Actions minutes).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 permissions:
   contents: read
+  pull-requests: read   # the hub-only check lists the pull request's files
 
 jobs:
   frontend-tests-build:
@@ -19,7 +25,21 @@ jobs:
         working-directory: prototype
     steps:
       - uses: actions/checkout@v4
+      # A pull request that only changes the hub (hub/**) skips the steps below: the hub doesn't affect the apps.
+      # The check still reports success, so it stays a required check on main. Saves Actions minutes.
+      - name: Hub-only change?
+        id: scope
+        if: github.event_name == 'pull_request'
+        working-directory: .
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          files=$(gh api "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" --paginate --jq '.[].filename')
+          if [ -n "$files" ] && ! printf '%s\n' "$files" | grep -qv '^hub/'; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"; echo "Only hub/ changed: skipping the rest of this check."
+          fi
       - uses: actions/setup-node@v4
+        if: steps.scope.outputs.skip != 'true'
         with:
           node-version: 22
           cache: npm
@@ -27,24 +47,33 @@ jobs:
             prototype/package-lock.json
             import-engine/package-lock.json
       - uses: actions/setup-python@v5
+        if: steps.scope.outputs.skip != 'true'
         with:
           python-version: '3.11'
       - run: npm ci
+        if: steps.scope.outputs.skip != 'true'
       # The staff app's Give Lively import screen runs the import engine in the browser.
       - run: npm ci
+        if: steps.scope.outputs.skip != 'true'
         working-directory: import-engine
       # Unit tests: the build guard that keeps secret keys out of the browser, and app tests.
       - run: npm test
+        if: steps.scope.outputs.skip != 'true'
       # Demo data comes from generate_seed.py. Regenerate it first: the apps bundle seed.json.
       - run: npm run seed
+        if: steps.scope.outputs.skip != 'true'
       # Type-checks and builds the guest portal, the staff app and the iPad check-in app, each behind the
       # build guard that stops a secret key from reaching the browser.
       - run: npm run build
+        if: steps.scope.outputs.skip != 'true'
       - run: python3 scripts/make_open_files.py
+        if: steps.scope.outputs.skip != 'true'
       - run: python3 checkin-app/scripts/make_open_file.py
+        if: steps.scope.outputs.skip != 'true'
       # seed.sql, seed.json and the OPEN-*.html files must be exactly what the generator and build
       # produce, so a hand edit can't drift from the generator or ship stale demo files.
       - name: Check generated files are up to date
+        if: steps.scope.outputs.skip != 'true'
         run: |
           if ! git diff --exit-code --stat -- database/seed.sql shared/src/seed.json database/seed.full-as-sent.sql database/seed.full-fixed.sql shared/src/seed.full-as-sent.json shared/src/seed.full-fixed.json OPEN-Guest-Portal.html OPEN-Staff-App.html OPEN-CheckIn-App.html; then
             echo "::error::Generated demo files are out of date. In prototype/, run: npm run seed && npm run build && python3 scripts/make_open_files.py && python3 checkin-app/scripts/make_open_file.py, then commit the result. Change demo data in database/generate_seed.py and generate_full_seed.py, not in the seed files."

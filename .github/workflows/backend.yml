@@ -8,8 +8,14 @@ on:
   # a path filter would leave PRs that don't touch these folders waiting forever.
   pull_request:
 
+# A newer push to the same pull request cancels the older run still in progress (saves Actions minutes).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 permissions:
   contents: read
+  pull-requests: read   # the hub-only check lists the pull request's files
 
 jobs:
   backend-tests:
@@ -19,7 +25,21 @@ jobs:
         working-directory: prototype
     steps:
       - uses: actions/checkout@v4
+      # A pull request that only changes the hub (hub/**) skips the steps below: the hub doesn't affect the apps.
+      # The check still reports success, so it stays a required check on main. Saves Actions minutes.
+      - name: Hub-only change?
+        id: scope
+        if: github.event_name == 'pull_request'
+        working-directory: .
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          files=$(gh api "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" --paginate --jq '.[].filename')
+          if [ -n "$files" ] && ! printf '%s\n' "$files" | grep -qv '^hub/'; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"; echo "Only hub/ changed: skipping the rest of this check."
+          fi
       - uses: actions/setup-node@v4
+        if: steps.scope.outputs.skip != 'true'
         with:
           node-version: 22
           cache: npm
@@ -27,9 +47,12 @@ jobs:
             prototype/package-lock.json
             import-engine/package-lock.json
       - run: npm ci
+        if: steps.scope.outputs.skip != 'true'
       # The backend tests run real CSVs through the import engine before gl_import().
       - run: npm ci
+        if: steps.scope.outputs.skip != 'true'
         working-directory: import-engine
       # Runs schema.sql + seed.sql + backend.sql in an in-memory Postgres (PGlite), then the
       # portal, staff, QR, import, and email-queue checks; plus the Give Lively field-mapping checks.
       - run: npm run test:backend
+        if: steps.scope.outputs.skip != 'true'
