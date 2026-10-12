@@ -61,7 +61,7 @@ The approval screen calls `staff_email_queue()`: every unsent email, drafts firs
 - **Payment confirmation** (`payment_receipt`): `staff_record_payment` drafts one for every check, ACH or wire payment staff record. It states the amount, date and balance, and says it is not a tax receipt (Give Lively sends its own receipts for online purchases).
 - **Guest-list reminder** (`guest_list_reminder`): `staff_queue_guest_list_reminders(p_min_days default 7)` drafts one for each sponsor of the current gala who still has unnamed seats, already got a link, and whose deadline hasn't passed. It skips sponsors with a link or reminder still waiting, or one sent in the last `p_min_days` days. A reminder carries a fresh private link, so the newest email always has the one that works. If every seat gets named before it goes out, the sender refuses it and it shows as failed for staff to discard.
 
-Until `RESEND_API_KEY` is set, approved emails wait in the queue and nothing is sent. Each `send-emails` run claims its batch first (`email_claim()`), so the every-minute schedule and a manual "send now" never send the same email twice or replace a link a sponsor already received. A claim older than 10 minutes, from a run that stopped mid-send, is released for the next run. Until the Give Lively secrets are set, the poller returns `not_configured`.
+Until `RESEND_API_KEY` is set, approved emails wait in the queue and nothing is sent. A guest-list link or reminder for an order whose deadline has passed can't be approved (it would arrive expired): extend that order's deadline first (`staff_set_order_deadline`), and the sender refuses one whose deadline passed after approval. Once Resend accepts an email, saving that is retried and never counts as a failed send, so a database hiccup can't send a second email whose new link replaces the first. Each `send-emails` run claims its batch first (`email_claim()`), so the every-minute schedule and a manual "send now" never send the same email twice or replace a link a sponsor already received. A claim older than 10 minutes, from a run that stopped mid-send, is released for the next run. Until the Give Lively secrets are set, the poller returns `not_configured`.
 
 ## Demo with a fake Give Lively (all synthetic)
 
@@ -109,6 +109,7 @@ The flow is tested in `npm run test:backend` (fake feed → mapping → import �
 - **Rules.**
   - No duplicates: a purchase is matched on its purchase key (buyer email + UTC purchase time), or its Give Lively transaction ID when the sync has one.
   - Refunds update the existing payment and flag it for review.
+  - Only a full refund cancels an order: by amount, or a status that says "Refunded" and nothing more. "Partially Refunded" keeps the order and its seats, as partly paid (import spec case 19).
   - Pending or failed bank payments are skipped until Give Lively reports them settled.
   - Give Lively's own fee is stored as reported and never recomputed.
 - **Flagged for review** (`payments.reconciliation_status = 'needs_review'`, reason in `orders.internal_notes`):
@@ -164,6 +165,7 @@ Guest edits (`staff_update_guest`, and a sponsor editing a named guest through `
 | Sponsors → logo or program ad status (new) | `staff_set_material_status(p_order_id, p_material, p_status)`: `logo` or `program_ad`; `not_required`, `pending`, `received` or `approved` | admin, RM |
 | Gala info → sponsor arrivals on/off (new) | `staff_set_sponsor_arrivals(p_on, p_note)`: off by default; switching on needs a note recording AAFE's privacy approval (who and when). See "Gala-night arrivals" below | admin |
 | `importGiveLively` (CSV) | `staff_import_givelively(p_rows)` | admin |
+| Sponsors → an order's guest-list deadline (new, Oct 12; screen to come) | `staff_set_order_deadline(p_order_id, p_deadline)`: for a sponsor who bought after the gala's deadline or needs more time; a link already sent moves with it; not after the gala; logged | admin |
 | Integrations "Pull now" | `functions.invoke('givelively-sync')` | admin |
 | Approve / discard a draft email | `staff_approve_email(p_email_id)` / `staff_cancel_email(p_email_id)` | admin, RM |
 | List unsent emails for the approval screen | `staff_email_queue()` | admin, RM |
@@ -211,6 +213,8 @@ Decided Oct 6: if the venue's internet drops, the iPad keeps checking guests in 
 Errors come back as the Postgres message: `forbidden`, `not_found`, `invalid_link`, `invalid_input: …`, `invalid_transition: …`, `seat_taken`, `seat_locked: …`.
 
 ## Changes to the schema (all in `backend.sql`)
+
+- **The current gala** (`current_event_id()`, Oct 12): the gala marked live; else the next one coming up, soonest first; else the newest not closed. Creating next year's gala in planning no longer takes check-in, imports and exports away from this year's before it's closed.
 
 - New tables: `givelively_sync_state` (poll cursor and last result) and `givelively_raw` (every gala donation as Give Lively sent it).
 - New `email_log` columns: `attempts`, `last_error`, `approved_by` and `approved_at`. New status: `cancelled`.
