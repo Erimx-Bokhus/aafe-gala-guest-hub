@@ -18,31 +18,40 @@ export interface RawRecord {
   transaction_id: string; payload: unknown; last_seen_at: string; import_status: string; import_note: string | null
 }
 export interface SyncPorts {
-  importRow(row: GLRow): Promise<{ data: ImportResult | null; error: string | null }>
+  /** cancel_only: a failed donation; gl_import may cancel a purchase it imported earlier, never create one. */
+  importRow(row: GLRow & { cancel_only?: boolean }): Promise<{ data: ImportResult | null; error: string | null }>
   saveRaw(rec: RawRecord): Promise<void>
 }
-export type SyncCounts = Record<'seen' | 'created' | 'updated' | 'skipped' | 'needs_review' | 'not_gala' | 'not_settled' | 'unmapped', number>
+export type SyncCounts = Record<'seen' | 'created' | 'updated' | 'skipped' | 'needs_review' | 'failed' | 'not_gala' | 'not_settled' | 'unmapped', number>
 
 /**
  * Classifies each donation against this gala's page name and imports the gala purchases.
  * - not_gala: another campaign; ignored and not stored.
- * - not_settled (pending, failed...): stored as skipped; it imports on a later poll once settled.
+ * - not_settled (pending, processing): stored as skipped; it imports on a later poll once settled.
+ * - failed (failed, declined, cancelled, a returned bank payment): sent to gl_import as cancel_only. A purchase
+ *   imported earlier is cancelled (order, seats, unsent link email, a staff review item); one never imported
+ *   creates nothing.
  * - unmapped (no transaction ID or date): stored, keyed by its content, so staff can see it once.
  * - A row the database refuses is stored as unmapped with the error, and the rest carry on.
  */
 export async function syncDonations(donations: unknown[], campaigns: string[], ports: SyncPorts, now = () => new Date()): Promise<SyncCounts> {
-  const counts: SyncCounts = { seen: donations.length, created: 0, updated: 0, skipped: 0, needs_review: 0, not_gala: 0, not_settled: 0, unmapped: 0 }
+  const counts: SyncCounts = { seen: donations.length, created: 0, updated: 0, skipped: 0, needs_review: 0, failed: 0, not_gala: 0, not_settled: 0, unmapped: 0 }
   for (const raw of donations) {
     const row = normalize(raw)
     const verdict = classify(row, campaigns)
     let status: string = verdict, note: string | null = null
-    if (verdict === 'import') {
-      const { data, error } = await ports.importRow(row)
+    if (verdict === 'import' || verdict === 'failed') {
+      const { data, error } = await ports.importRow(verdict === 'failed' ? { ...row, cancel_only: true } : row)
       if (error || !data) { status = 'unmapped'; note = error ?? 'No result from gl_import'; counts.unmapped++ }
       else {
         for (const k of ['created', 'updated', 'skipped', 'needs_review'] as const) counts[k] += data[k]
         status = data.created ? 'imported' : data.updated ? 'updated' : 'skipped'
         if (data.needs_review) note = 'Imported; flagged for review in Payments.'
+        if (verdict === 'failed') {
+          counts.failed++
+          note = data.updated ? `Status "${row.status}" in Give Lively: the purchase imported earlier is cancelled, with its seats.`
+            : `Status "${row.status}"; nothing to undo (never imported, or already cancelled).`
+        }
       }
     } else counts[verdict]++
     if (status === 'not_gala') continue

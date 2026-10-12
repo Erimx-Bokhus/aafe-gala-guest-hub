@@ -110,7 +110,9 @@ The flow is tested in `npm run test:backend` (fake feed → mapping → import �
   - No duplicates: a purchase is matched on its purchase key (buyer email + UTC purchase time), or its Give Lively transaction ID when the sync has one.
   - Refunds update the existing payment and flag it for review.
   - Only a full refund cancels an order: by amount, or a status that says "Refunded" and nothing more. "Partially Refunded" keeps the order and its seats, as partly paid (import spec case 19).
-  - Pending or failed bank payments are skipped until Give Lively reports them settled.
+  - Pending bank payments are skipped until Give Lively reports them settled.
+  - A purchase that fails after it was imported (a bounced ACH, a cancelled or declined donation) is cancelled, as the CSV import does: the order, its seats and any unsent guest-list link, with a staff review item. A failed donation that was never imported creates nothing.
+  - The sync and the CSV upload use the same failure words (failed, declined, cancelled, voided, reversed, returned), so one donation can't be live in one and cancelled in the other.
   - Give Lively's own fee is stored as reported and never recomputed.
 - **Flagged for review** (`payments.reconciliation_status = 'needs_review'`, reason in `orders.internal_notes`):
   - (an unknown package no longer defaults to Community Ticket: nothing is created, and it goes to `import_review` as `unknown_tier`)
