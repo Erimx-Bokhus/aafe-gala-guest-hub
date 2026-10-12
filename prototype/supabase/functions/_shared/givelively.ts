@@ -79,7 +79,7 @@ export function normalize(raw: unknown): GLRow {
   }
 }
 
-export type Verdict = 'import' | 'not_gala' | 'not_settled' | 'unmapped'
+export type Verdict = 'import' | 'failed' | 'not_gala' | 'not_settled' | 'unmapped'
 
 // The endpoint returns ALL of AAFE's donations, not just the gala; classify() keeps this gala's page only.
 
@@ -94,7 +94,10 @@ export function classify(row: GLRow, pageNames: string[]): Verdict {
   if (!row.txn || !row.email || !(row.gross ?? row.original)) return 'unmapped'
   const keys = pageNames.map(pageKey).filter(Boolean)
   if (!keys.includes(pageKey(row.campaign))) return 'not_gala'
+  // Failed, declined, cancelled or a returned bank payment: it may undo a purchase imported earlier (a bounced ACH).
+  // The same words as the CSV upload (import engine CANCELLED_STATUS, gl_import); test-audit-fixes checks they agree.
+  if (/fail|declin|cancel|void|revers|return/i.test(row.status)) return 'failed'
   // Bank (ACH) payments settle over days; Give Lively re-sends the donation when its status changes.
-  if (/fail|declin|cancel|pending|processing|incomplete/i.test(row.status)) return 'not_settled'
+  if (/pending|processing|incomplete/i.test(row.status)) return 'not_settled'
   return 'import'
 }

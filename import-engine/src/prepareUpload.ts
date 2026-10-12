@@ -82,8 +82,15 @@ export interface PreparedUpload {
   report: UploadReport
 }
 
+/**
+ * A Status that cancels the purchase. The failure words match the Give Lively sync's `classify()` and `gl_import`
+ * in backend.sql (prototype/scripts/test-audit-fixes.mjs checks all three agree). A partial refund keeps the order
+ * (spec case 19): "Partially Refunded" isn't a cancellation; "Refunded" alone is.
+ */
+export const CANCELLED_STATUS = /fail|declin|cancel|void|revers|return|^\s*(fully\s+)?refund(ed)?\s*$/i
+
 const isCancelled = (r: PurchaseRow) =>
-  /refund|fail|cancel|void/i.test(r.status ?? '') || (r.refunded !== null && r.refunded > 0 && r.refunded >= r.gross)
+  CANCELLED_STATUS.test(r.status ?? '') || (r.refunded !== null && r.refunded > 0 && r.refunded >= r.gross)
 
 export async function prepareUpload(csv: string, ctx: UploadContext): Promise<PreparedUpload> {
   const read = await readExport(csv)
@@ -102,6 +109,8 @@ export async function prepareUpload(csv: string, ctx: UploadContext): Promise<Pr
   const skippedOtherPage: UploadReport['skippedOtherPage'] = []
   const unknownTiers = new Map<string, { givelivelyName: string; rowNumbers: number[] }>()
   const reviewItems: ReviewItem[] = []
+  // ponytail: each guest is compared with every guest before it (quadratic): about 1 s for 1,000 purchases, 3 minutes
+  // for 10,000 (benchmarked Oct 12). AAFE has a few hundred; past that, index the pool by email and name words.
   const guestPool: ExistingGuest[] = [...ctx.existingGuests]
   let namesPrefilled = 0
   let listsForSponsor = 0
