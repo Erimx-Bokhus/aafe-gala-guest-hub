@@ -3,6 +3,8 @@
 import { counter, openTestDb } from './test-db.mjs'
 import { deadlinePassed } from '../supabase/functions/_shared/emails.ts'
 import { retry } from '../supabase/functions/_shared/retry.ts'
+import { classify } from '../supabase/functions/_shared/givelively.ts'
+import { CANCELLED_STATUS } from '../../import-engine/src/index.ts'
 const { db, as, err } = await openTestDb()
 const count = counter(), ok = count.ok
 const q = async (sql, params) => (await db.query(sql, params)).rows
@@ -53,6 +55,19 @@ await imp(row('GL-AUDIT-FULL', { status: 'Refunded', refunded: 0 }))
 ok((await state('GL-AUDIT-FULL')).status === 'cancelled', '"Refunded" on its own still cancels')
 await imp(row('GL-AUDIT-AMOUNT', { refunded: 500 }))
 ok((await state('GL-AUDIT-AMOUNT')).status === 'cancelled', 'a full refund by amount still cancels')
+
+// ---- One set of failure words: the CSV upload, the sync and gl_import agree (Cornell's #109 review)
+const STATUSES = ['Failed', 'Declined', 'Cancelled', 'Voided', 'Reversed', 'ACH Returned', 'Payment failed', 'Succeeded', 'Completed', 'Pending', 'Partially Refunded']
+const disagree = []
+for (const [i, status] of STATUSES.entries()) {
+  const csv = CANCELLED_STATUS.test(status)
+  const sync = classify({ txn: 'GL-X', email: 'x@example.org', gross: 100, original: 100, campaign: 'AAFE Gala 2027', status }, ['AAFE Gala 2027']) === 'failed'
+  await imp(row(`GL-WORDS-${i}`, { status }))
+  const sql = (await state(`GL-WORDS-${i}`)).status === 'cancelled'
+  if (csv !== sync || csv !== sql) disagree.push(`${status}: csv ${csv}, sync ${sync}, gl_import ${sql}`)
+}
+ok(disagree.length === 0, `the CSV upload, the sync and gl_import cancel on the same statuses ${disagree.join('; ')}`)
+ok(CANCELLED_STATUS.test('Declined') && CANCELLED_STATUS.test('ACH Returned'), 'a declined or returned payment is cancelled by the CSV upload too')
 
 // ---- The email sender's save is retried, not counted as a failed send
 let tries = 0
