@@ -72,6 +72,27 @@ ok(c4.created === 0 && (await q(`select count(*)::int n from payments where give
 const c5 = await syncDonations([donation('GL-S1', { total_refunded_amount: 25000 })], [PAGE], ports)
 ok(c5.updated === 1 && saved.get('GL-S1').import_status === 'updated', `a refund updates the payment: ${JSON.stringify(c5)}`)
 
+// ---- A bank payment that settled and was imported, then bounced (Natalie's backend review, item 1)
+const s3 = (await q(`select o.id from payments p join orders o on o.id = p.order_id where p.givelively_transaction_id = 'GL-S3'`))[0].id
+ok((await q(`select count(*)::int n from email_log where order_id = $1 and status = 'queued'`, [s3]))[0].n >= 1, 'the imported purchase has its guest-list link waiting for approval')
+const bounced = donation('GL-S3', { donation_status: 'failed', payment_method: 'Bank Account (ACH)' })
+const c8 = await syncDonations([bounced], [PAGE], ports)
+ok(c8.failed === 1 && c8.updated === 1 && c8.not_settled === 0, `a failed donation reaches gl_import: ${JSON.stringify(c8)}`)
+ok((await q(`select status from orders where id = $1`, [s3]))[0].status === 'cancelled', 'the bounced purchase is cancelled')
+ok((await q(`select count(*)::int n from seats where order_id = $1 and status <> 'cancelled'`, [s3]))[0].n === 0, 'and its seats')
+ok((await q(`select count(*)::int n from email_log where order_id = $1 and status = 'queued'`, [s3]))[0].n === 0, 'its unsent guest-list link is discarded')
+ok((await q(`select count(*)::int n from import_review where order_id = $1 and reason = 'refund'`, [s3]))[0].n === 1, 'staff get a review item')
+ok(saved.get('GL-S3').import_status === 'updated' && /failed.*cancelled/.test(saved.get('GL-S3').import_note), 'the stored donation says what happened')
+const c9 = await syncDonations([bounced], [PAGE], ports)
+ok(c9.updated === 0 && (await q(`select count(*)::int n from import_review where order_id = $1 and reason = 'refund'`, [s3]))[0].n === 1, 'the next poll changes nothing')
+// A donation that failed before it was ever imported creates nothing.
+const before8 = await totals()
+const c10 = await syncDonations([donation('GL-S8', { donation_status: 'declined' })], [PAGE], ports)
+ok(c10.failed === 1 && c10.created === 0, `a failed donation never imported creates nothing: ${JSON.stringify(c10)}`)
+const after8 = await totals()
+ok(after8.pay === before8.pay && after8.ord === before8.ord && after8.rev === before8.rev, 'no payment, order or review item')
+ok(saved.get('GL-S8')?.import_status === 'skipped' && /nothing to undo/.test(saved.get('GL-S8').import_note), 'it is stored as skipped, with why')
+
 // ---- The database refuses a row: it is recorded with the error and the rest carry on
 const failing: SyncPorts = { ...ports, importRow: async (row) => row.txn === 'GL-S5' ? { data: null, error: 'boom' } : ports.importRow(row) }
 const c6 = await syncDonations([donation('GL-S5'), donation('GL-S6')], [PAGE], failing)

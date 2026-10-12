@@ -6,6 +6,7 @@ import { createContext, useContext } from 'react'
 import { addAudit, displayName, nameParts, newQrToken, nowIso, processorFee, secureToken, sponsorOf, tierOf, uid } from '@shared/data'
 import type { DB, Guest, Order, PayMethod, PipelineStage, Prospect, ReviewReason, Sector, StaffUser } from '@shared/types'
 import { tierMappingKey, type GlImportRow, type GlImportRun, type ImportResult } from './importer'
+import { CANCELLED_STATUS } from '../../../import-engine/src/index.ts'
 import type { StaffApi } from './api'
 
 /**
@@ -177,6 +178,22 @@ export function importGiveLively(db: DB, rows: GLRow[]): { db: DB; created: numb
   return { db: d, created, skipped }
 }
 
+// Invented purchases for the demo's Sample CSV and its simulated "Pull now".
+export const SAMPLE_HEAD = ['Donation Date', 'Transaction ID', 'First Name', 'Last Name', 'Email', 'Company Name', 'Campaign Name', 'Ticket Level', 'Payment Method', 'Original Amount', 'Covered Transaction Fee Amount', 'Gross Amount', 'Transaction Fee Amount', 'Net Amount']
+export const sampleRows = () => [
+  ['2026-10-01T14:05:00Z', 'GL-55501234', 'Grace', 'Yoon', 'grace.yoon@brightpath.example.org', 'Brightpath Credit Union', 'AAFE Gala 2027', 'Bronze — Performance Sponsor', 'card', 10000, 0, 10000, processorFee('card', 10000), 10000 - processorFee('card', 10000)],
+  ['2026-10-01T16:40:00Z', 'GL-55501299', 'Luis', 'Romero', 'luis.romero@mail.example.org', '', 'AAFE Gala 2027', 'Community Ticket', 'bank', 250, 2, 252, processorFee('givelively_ach', 252), 252 - processorFee('givelively_ach', 252)],
+  ['2026-10-02T09:12:00Z', 'GL-55501342', 'Ama', 'Boateng', 'ama.boateng@mail.example.org', 'Boateng & Co.', 'AAFE Gala 2027', 'Corporate Ticket', 'card', 500, 11.3, 511.3, processorFee('card', 511.3), 511.3 - processorFee('card', 511.3)],
+]
+
+/** DEMO "Pull now": one new invented purchase, as if Give Lively just reported it. */
+export function demoPull(db: DB): { db: DB; created: number; skipped: number } {
+  const r = sampleRows()[Math.floor(Math.random() * 3)]
+  return importGiveLively(db, [{ txn: `GL-${Math.floor(1e7 + Math.random() * 9e7)}`, date: new Date().toISOString(), first: String(r[2]), last: String(r[3]),
+    email: String(r[4]).replace('@', `+${Math.floor(Math.random() * 999)}@`), company: String(r[5]), campaign: String(r[6]), ticketLevel: String(r[7]), method: String(r[8]),
+    original: Number(r[9]), covered: Number(r[10]), gross: Number(r[11]), fee: Number(r[12]), net: Number(r[13]) }])
+}
+
 // ---- Give Lively CSV import (slice C): the demo's stand-in for staff_import_givelively() / gl_import() ----
 
 const nameKey = (s: string | null | undefined) => tierMappingKey(s ?? '')
@@ -202,7 +219,7 @@ export function demoImport(db: DB, user: StaffUser, rows: GlImportRow[], run: Gl
     const original = r.original ?? r.gross, gross = r.gross ?? original, refunded = r.refunded ?? 0
     if (!r.email || !r.date || !(gross > 0)) { res.skipped++; continue }
     const key = r.purchase_key
-    const cancel = !!r.cancelled || /refund|fail|cancel|void/i.test(r.status ?? '') || (refunded > 0 && refunded >= gross)
+    const cancel = !!r.cancelled || CANCELLED_STATUS.test(r.status ?? '') || (refunded > 0 && refunded >= gross)
     if (d.payments.some((p) => p.purchase_key === key)) { res.skipped++; continue }
     const mapped = (d.tier_mappings ?? []).find((m) => m.event_id === ev.id && m.name_key === nameKey(r.ticket_level))
     const tier = d.sponsorship_tiers.find((t) => t.id === r.tier_id) ?? d.sponsorship_tiers.find((t) => t.id === mapped?.tier_id)
