@@ -38,6 +38,12 @@ const PLACEHOLDER = /^(?:(?:(?:seats?|guests?|names?|\+?\d+)\b[\s\d\-–#]*)?(?:
 const SELF = /^(me|myself|self|me \(buyer\)|myself \(buyer\))$/i
 const EMAIL = /[^\s<>(),;:"'[\]]+@[^\s<>(),;:"'[\]]+\.[a-z]{2,}/gi
 const COUPLE = /(^|\s)(and|&|\+)(\s|$)|&/i
+// Name particles and titles don't count toward a run-on: "Maria de la Cruz" and "Dr. Lena Ortiz" are one person.
+const PARTICLES = new Set(['de', 'del', 'della', 'la', 'le', 'van', 'von', 'der', 'den', 'da', 'di', 'du', 'dos', 'das', 'bin', 'binti', 'al', 'el', 'y'])
+// ponytail: four words is the cutoff, so a real four-word name ("Juan Carlos Rodriguez Garcia") is also left for the
+// sponsor to confirm. Two people run together with nothing between them ("Paul Marsh Ana Ruiz") can't be split safely.
+const RUN_ON = 4
+const countNameWords = (name: string) => name.split(/\s+/).map(normName).filter((w) => w && !PARTICLES.has(w)).length
 
 /** Split on line breaks, semicolons, a spaced slash (" / "), numbered markers ("1." "2)"), and bullets. */
 function splitEntries(text: string): string[] {
@@ -133,6 +139,7 @@ export function parseGuestList(text: string | null, seatCount: number, buyer: Bu
     if (!/\p{L}/u.test(name) || /\d|@/.test(name)) { reasons.push(`can't be read: "${entry}"`); continue }
     if (COUPLE.test(name)) { reasons.push(`a couple or pair on one line: "${entry}"`); continue }
     if (normName(name).split(' ').filter(Boolean).length < 2) { reasons.push(`a one-word name: "${entry}"`); continue }
+    if (countNameWords(name) >= RUN_ON) { reasons.push(`may be more than one person: "${entry}"`); continue }
     guests.push({ displayName: name, email: email === buyerEmail ? null : email, isBuyer: false })
   }
 

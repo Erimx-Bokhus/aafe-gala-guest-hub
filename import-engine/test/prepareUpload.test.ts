@@ -95,6 +95,13 @@ describe('prepareUpload', () => {
     expect(report.reviewItems).toMatchObject([{ reason: 'refund' }])
   })
 
+  it('case 19, with the status Give Lively may report: "Partially Refunded" keeps the order; "Refunded" alone cancels', async () => {
+    const partial = await prepareUpload(exportCsv({ 'Amount Spent': '$500.00', 'Amount Refunded': '$250.00', Status: 'Partially Refunded' }), context())
+    expect(partial.rows[0]).toMatchObject({ cancelled: false, refunded: 250 })
+    const full = await prepareUpload(exportCsv({ 'Amount Spent': '$500.00', 'Amount Refunded': '$0.00', Status: 'Refunded' }), context())
+    expect(full.rows[0]).toMatchObject({ cancelled: true })
+  })
+
   it('case 19: a partial refund keeps the order', async () => {
     const { rows, report } = await prepareUpload(exportCsv({ 'Amount Spent': '$500.00', 'Amount Refunded': '$250.00' }), context())
     expect(rows[0]).toMatchObject({ cancelled: false, gross: 500, refunded: 250 })

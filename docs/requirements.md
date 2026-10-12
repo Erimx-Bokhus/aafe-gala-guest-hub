@@ -2,7 +2,7 @@
 
 Priorities are the team's proposal until confirmed with AAFE. Source in brackets.
 
-Until the final PRDs (Natalie's and Pursuit's) arrive, this file plus the hub's Requirements page ("Working PRD") stand in for them; see `hub/docs/requirements.md`.
+Until the final PRDs (Natalie's and Pursuit's) arrive, this file plus the hub's Requirements page ("Working PRD") stand in for them; see [`docs/requirements.md` in the hub repo](https://github.com/Erimx-Bokhus/aafe-gala-guest-project-hub/blob/main/docs/requirements.md).
 
 ## Must have (Demo Day)
 - **Commitments and seats.** Each purchase or pledge has a package level and a seat entitlement; seats are named or open. [call]

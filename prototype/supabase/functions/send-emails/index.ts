@@ -11,10 +11,9 @@
 //          GUEST_PORTAL_URL (e.g. https://gala.aafe.org/), CRON_SECRET.
 // Demo: EMAIL_REDIRECT_TO=<team inbox> sends every email there instead of the (fake) recipient.
 import QRCode from 'npm:qrcode@1.5.4'
-import { guestListReminderEmail, paymentReceiptEmail, portalLinkEmail, qrInvitationEmail } from '../_shared/emails.ts'
+import { deadlinePassed, guestListReminderEmail, paymentReceiptEmail, portalLinkEmail, qrInvitationEmail } from '../_shared/emails.ts'
+import { retry } from '../_shared/retry.ts'
 import { admin, caller, cors, env, json } from '../_shared/supabase.ts'
-
-const MAX_ATTEMPTS = 5
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
@@ -24,11 +23,16 @@ Deno.serve(async (req) => {
   if (!apiKey || !from || !portalUrl) return json({ sent: 0, message: 'Email not configured (RESEND_API_KEY, EMAIL_FROM, GUEST_PORTAL_URL). Emails stay queued.' })
 
   const db = admin()
-  const { data: queue, error } = await db.from('email_log').select('*').eq('status', 'queued').not('approved_at', 'is', null).lt('attempts', MAX_ATTEMPTS).order('id').limit(25)
+  // Claim the batch first (email_claim in backend.sql): an email another run is already sending is skipped,
+  // so a scheduled run and a manual "send now" never send the same email or overwrite each other's link.
+  const { data: claimed, error } = await db.rpc('email_claim', { p_limit: 25 })
   if (error) return json({ error: 'db_error', message: error.message }, 500)
+  // deno-lint-ignore no-explicit-any
+  const queue = ((claimed ?? []) as any[]).sort((a, b) => String(a.id).localeCompare(String(b.id)))
 
-  let sent = 0, failed = 0
+  let sent = 0, failed = 0, unsaved = 0
   for (const m of queue ?? []) {
+    let delivered = false
     try {
       const { subject, html, attachments, tokenHash } = await build(db, m, portalUrl)
       const res = await fetch('https://api.resend.com/emails', {
@@ -37,15 +41,23 @@ Deno.serve(async (req) => {
         body: JSON.stringify({ from, to: [redirect || m.to_email], subject: redirect ? `[demo → ${m.to_email}] ${subject}` : subject, html, attachments }),
       })
       if (!res.ok) throw new Error(`Resend HTTP ${res.status}: ${(await res.text()).slice(0, 300)}`)
-      const { error: e2 } = await db.rpc('email_mark_sent', { p_email_id: m.id, p_token_hash: tokenHash })
-      if (e2) throw new Error(e2.message)
+      // The email is out. Saving that must not count as a failed send: a retry would send a second email with a
+      // new link, and the link in the first one would stop working (Oct 12 audit). Try the save a few times.
+      delivered = true
+      await retry(async () => {
+        const { error: e2 } = await db.rpc('email_mark_sent', { p_email_id: m.id, p_token_hash: tokenHash })
+        if (e2) throw new Error(e2.message)
+      })
       sent++
     } catch (e) {
+      // ponytail: a save that still fails leaves the email claimed, using no attempt; after 10 minutes the next run
+      // may send it once more. Store the link's hash before sending if a database outage mid-run ever matters.
+      if (delivered) { unsaved++; continue }
       failed++
       await db.rpc('email_mark_failed', { p_email_id: m.id, p_error: (e as Error).message })
     }
   }
-  return json({ sent, failed })
+  return json({ sent, failed, unsaved })
 })
 
 // Gathers what each template needs; the wording lives in _shared/emails.ts.
@@ -58,6 +70,10 @@ async function build(db: any, m: any, portalUrl: string) {
   const deadline = o?.guest_list_deadline ?? event?.guest_list_deadline ?? null
   const toName = m.to_name ?? ''
   const newLink = () => { const token = randomToken(); return { token, link: `${portalUrl.replace(/#.*$/, '')}#/s/${token}` } }
+  // staff_approve_email refuses these too; this catches a deadline that passed after the draft was approved.
+  if ((m.template === 'portal_link' || m.template === 'guest_list_reminder') && deadlinePassed(deadline)) {
+    throw new Error(`The guest-list deadline (${deadline}) has passed, so the link would arrive expired. Extend this order's deadline, then send the link again.`)
+  }
 
   if (m.template === 'portal_link') {
     const { token, link } = newLink()
