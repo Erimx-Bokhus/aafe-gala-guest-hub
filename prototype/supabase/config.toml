@@ -10,3 +10,10 @@ verify_jwt = false
 
 [functions.givelively-mock]
 verify_jwt = false
+
+[functions.salesforce-push]
+verify_jwt = false
+
+# Demo only: checks the SALESFORCE_TOKEN bearer itself, like a Salesforce org.
+[functions.salesforce-mock]
+verify_jwt = false

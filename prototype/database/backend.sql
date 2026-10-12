@@ -1997,6 +1997,70 @@ begin
 end $$;
 
 -- ---------------------------------------------------------------------
+-- 8b. SALESFORCE STAND-IN  (the salesforce-push edge function; _shared/salesforce.ts maps the rows)
+-- Give Lively's own connector already sends its online donations to AAFE's Salesforce (NPSP). This sends what
+-- Give Lively doesn't know, for the current gala: the gala (a Campaign), check, ACH, wire, comp and staff-entered
+-- orders (Opportunity) with their sponsors (Account) and payments (npe01__OppPayment__c), and every named guest
+-- (Contact) with their gala-night status (CampaignMember). No phones, dietary or accessibility details.
+-- In the demo it goes to the salesforce-mock function, never a real org (requirements: Salesforce push, simulated).
+-- ponytail: each run sends the whole gala; upserts on our ids make that safe. Send only what changed since the last
+-- sync (salesforce_sync.last_synced_at) if a gala ever outgrows a few thousand records.
+-- ---------------------------------------------------------------------
+create unique index if not exists salesforce_sync_record on salesforce_sync (entity, entity_id, sf_object);
+
+create or replace function salesforce_outbox() returns jsonb
+language sql stable security definer set search_path = public as $$
+  with e as (select * from gala_events where id = current_event_id()),
+  o as (select o.* from orders o join e on e.id = o.event_id where o.source <> 'givelively')
+  select jsonb_build_object(
+    'campaign', (select jsonb_build_object('id', e.id, 'name', e.name, 'date', e.event_date) from e),
+    'accounts', coalesce((select jsonb_agg(jsonb_build_object('id', sp.id, 'name', sp.organization_name) order by sp.id)
+                            from sponsors sp where sp.id in (select sponsor_id from o)), '[]'),
+    'opportunities', coalesce((select jsonb_agg(jsonb_build_object('id', o.id, 'account_id', o.sponsor_id,
+                                 'name', sp.organization_name || ' — ' || t.name || ' — ' || e.name, 'amount', o.commitment_amount,
+                                 'status', o.status, 'close_date', o.created_at::date) order by o.id)
+                                 from o join sponsors sp on sp.id = o.sponsor_id join sponsorship_tiers t on t.id = o.tier_id cross join e), '[]'),
+    -- Checks, direct ACH and wires that staff recorded; Give Lively's own payments (processor stripe) are its connector's.
+    'payments', coalesce((select jsonb_agg(jsonb_build_object('id', p.id, 'order_id', p.order_id, 'amount', p.original_amount - p.refunded_amount,
+                            'date', p.received_at::date, 'method', p.method) order by p.id)
+                            from payments p join o on o.id = p.order_id where p.processor = 'none'), '[]'),
+    -- Every named guest of the gala, Give Lively's buyers' guests included: Give Lively never sees guest names.
+    -- LastName is required in Salesforce: a one-word name goes there (as in staff_export_salesforce).
+    'contacts', coalesce((select jsonb_agg(jsonb_build_object('id', g.id,
+                            'first', case when g.last_name <> '' then g.first_name end,
+                            'last', coalesce(nullif(g.last_name, ''), nullif(g.display_name, ''), g.first_name),
+                            'email', nullif(g.email, ''),
+                            'status', case g.attendance_status when 'checked_in' then 'Attended' when 'no_show' then 'No Show' else 'Registered' end)
+                            order by g.id)
+                            from guests g join orders og on og.id = g.order_id join e on e.id = og.event_id
+                           where og.status <> 'cancelled'), '[]'))
+$$;
+
+-- What Salesforce said about each record (from salesforce-push): kept in salesforce_sync, and the Account and
+-- Opportunity ids on the sponsor and order, as the CSV export reads them. One change-log line per run.
+create or replace function salesforce_mark_synced(p_results jsonb, p_actor text default 'Salesforce sync') returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare r jsonb; v_ok int := 0; v_err int := 0; v_failed boolean;
+begin
+  for r in select * from jsonb_array_elements(coalesce(p_results, '[]')) loop
+    v_failed := coalesce(r ->> 'error', '') <> '';
+    insert into salesforce_sync (entity, entity_id, sf_object, sf_id, status, last_synced_at, error_message)
+    values (r ->> 'entity', r ->> 'entity_id', r ->> 'sf_object', nullif(r ->> 'sf_id', ''),
+            case when v_failed then 'error' else 'synced' end, now(), left(nullif(r ->> 'error', ''), 1000))
+    on conflict (entity, entity_id, sf_object) do update
+      set sf_id = coalesce(excluded.sf_id, salesforce_sync.sf_id), status = excluded.status,
+          last_synced_at = excluded.last_synced_at, error_message = excluded.error_message;
+    if v_failed then v_err := v_err + 1; continue; end if;
+    v_ok := v_ok + 1;
+    if r ->> 'sf_object' = 'Account' then update sponsors set salesforce_account_id = r ->> 'sf_id' where id = r ->> 'entity_id'; end if;
+    if r ->> 'sf_object' = 'Opportunity' then update orders set salesforce_opportunity_id = r ->> 'sf_id' where id = r ->> 'entity_id'; end if;
+  end loop;
+  perform write_audit('system', p_actor, 'salesforce', 'batch', null, 'salesforce.synced', null, null, false,
+    format('%s record(s) sent to Salesforce%s.', v_ok, case when v_err > 0 then format('; %s failed', v_err) else '' end));
+  return jsonb_build_object('synced', v_ok, 'failed', v_err);
+end $$;
+
+-- ---------------------------------------------------------------------
 -- 9. Who may call what
 -- ---------------------------------------------------------------------
 
@@ -2018,7 +2082,7 @@ begin
               'staff_queue_guest_list_reminders','staff_email_queue','staff_checkin_snapshot','staff_sync_check_ins','staff_undo_check_in',
               'pipeline_stage_label','pipeline_apply_order','orders_pipeline','staff_pipeline','staff_save_prospect',
               'staff_set_prospect_stage','staff_set_sponsorship_goal','staff_set_sponsor_arrivals',
-              'staff_update_gala_event','staff_set_material_status')
+              'staff_update_gala_event','staff_set_material_status','salesforce_outbox','salesforce_mark_synced')
   loop
     execute format('revoke all on function %s from public, anon, authenticated', f);
   end loop;
@@ -2048,7 +2112,8 @@ grant execute on function
   to authenticated;
 
 -- Edge functions (service role)
-grant execute on function gl_import(jsonb, text, text), email_mark_sent(text, text), email_mark_failed(text, text), email_claim(int), hash_token(text)
+grant execute on function gl_import(jsonb, text, text), email_mark_sent(text, text), email_mark_failed(text, text), email_claim(int), hash_token(text),
+  salesforce_outbox(), salesforce_mark_synced(jsonb, text)
   to service_role;
 
 -- ---------------------------------------------------------------------
