@@ -95,6 +95,21 @@ describe('parseGuestList', () => {
     for (const t of ['John and Mary Smith', 'J & M Smith', 'John + Mary Smith']) expect(parseGuestList(t, 2, buyer).kind).toBe('unclear')
   })
 
+  it('names run together with nothing between them are left for the sponsor (Natalie, Oct 12)', () => {
+    expect(parseGuestList('Paul Marsh Ana Ruiz', 4, buyer)).toEqual({ kind: 'unclear', reasons: ['may be more than one person: "Paul Marsh Ana Ruiz"'] })
+    expect(parseGuestList('Wen Zhou Mei Zhou Omar Haddad Priya Raman', 10, buyer).kind).toBe('unclear')
+    expect(parseGuestList('Paul Marsh Ana Ruiz paul@example.org', 4, buyer).kind).toBe('unclear')
+    // The clear names in the same list are still pre-filled.
+    expect(parseGuestList('Jane Doe\nPaul Marsh Ana Ruiz', 4, buyer)).toEqual({
+      kind: 'names', guests: [{ displayName: 'Jane Doe', email: null, isBuyer: false }], unread: ['may be more than one person: "Paul Marsh Ana Ruiz"'],
+    })
+  })
+
+  it('titles and name particles are not counted as extra people', () => {
+    for (const n of ['Dr. Lena Ortiz', 'Maria de la Cruz', 'Ludwig van der Berg', 'Ana Pereira-Santos', 'Mary Ann Lee', 'Martin Luther King Jr.'])
+      expect(guests(n, 2)).toEqual([{ displayName: n, email: null, isBuyer: false }])
+  })
+
   it('names containing "and" are not couples', () => {
     expect(names('Andrea Sandoval', 1)).toEqual([{ displayName: 'Andrea Sandoval', email: null, isBuyer: false }])
   })
