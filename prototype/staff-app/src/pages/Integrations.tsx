@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { BellRing, CloudDownload, Download, RefreshCw, Upload } from 'lucide-react'
-import { processorFee } from '@shared/data'
 import { Pill, ago, downloadCsv, fmtDate } from '@shared/ui'
 import { PageHead } from '../App'
-import { importGiveLively, salesforceSyncNow, useStaff, type GLRow } from '../store'
-import { canDo, type QueuedEmail } from '../api'
+import { SAMPLE_HEAD, importGiveLively, salesforceSyncNow, sampleRows, useStaff, type GLRow } from '../store'
+import { canDo, type PullCounts, type QueuedEmail } from '../api'
 import { salesforceCsv } from '../exports'
 
 // Column names follow Give Lively's "Line Items (All)" report. Confirm against a real AAFE export before launch.
@@ -36,12 +35,12 @@ function toRows(text: string): GLRow[] {
     return { txn: g('txn') || `GL-${Math.random().toString(36).slice(2, 10)}`, date: g('date') || new Date().toISOString(), first: g('first'), last: g('last'), email: g('email'), company: g('company'), campaign: g('campaign'), ticketLevel: g('ticketLevel'), method: g('method'), original, covered, gross, fee, net: num(g('net')) || gross - fee }
   }).filter((r) => r.gross > 0 && r.email)
 }
-const SAMPLE_HEAD = ['Donation Date', 'Transaction ID', 'First Name', 'Last Name', 'Email', 'Company Name', 'Campaign Name', 'Ticket Level', 'Payment Method', 'Original Amount', 'Covered Transaction Fee Amount', 'Gross Amount', 'Transaction Fee Amount', 'Net Amount']
-const sampleRows = () => [
-  ['2026-10-01T14:05:00Z', 'GL-55501234', 'Grace', 'Yoon', 'grace.yoon@brightpath.example.org', 'Brightpath Credit Union', 'AAFE Gala 2027', 'Bronze — Performance Sponsor', 'card', 10000, 0, 10000, processorFee('card', 10000), 10000 - processorFee('card', 10000)],
-  ['2026-10-01T16:40:00Z', 'GL-55501299', 'Luis', 'Romero', 'luis.romero@mail.example.org', '', 'AAFE Gala 2027', 'Community Ticket', 'bank', 250, 2, 252, processorFee('givelively_ach', 252), 252 - processorFee('givelively_ach', 252)],
-  ['2026-10-02T09:12:00Z', 'GL-55501342', 'Ama', 'Boateng', 'ama.boateng@mail.example.org', 'Boateng & Co.', 'AAFE Gala 2027', 'Corporate Ticket', 'card', 500, 11.3, 511.3, processorFee('card', 511.3), 511.3 - processorFee('card', 511.3)],
-]
+/** "Give Lively: 2 new, 1 updated, 1 to review, 3 still settling" */
+function pullSummary(c: PullCounts): string {
+  const parts = [`${c.created} new`, c.updated && `${c.updated} updated`, c.failed && `${c.failed} failed`, c.needs_review && `${c.needs_review} to review`,
+    c.not_settled && `${c.not_settled} still settling`, c.unmapped && `${c.unmapped} unreadable`].filter(Boolean)
+  return `Give Lively: ${parts.join(', ')}`
+}
 
 export default function Integrations() {
   const { db, api, user, toast, act, demo } = useStaff()
@@ -72,18 +71,14 @@ export default function Integrations() {
     demo(() => r.db)
     toast(`Give Lively: ${r.created} new, ${r.skipped} already imported — guest-list emails drafted for approval`)
   }
-  const pullNow = () => {
-    const r = sampleRows()[Math.floor(Math.random() * 3)]
-    const row: GLRow = { txn: `GL-${Math.floor(1e7 + Math.random() * 9e7)}`, date: new Date().toISOString(), first: String(r[2]), last: String(r[3]), email: String(r[4]).replace('@', `+${Math.floor(Math.random() * 999)}@`), company: String(r[5]), campaign: String(r[6]), ticketLevel: String(r[7]), method: String(r[8]), original: Number(r[9]), covered: Number(r[10]), gross: Number(r[11]), fee: Number(r[12]), net: Number(r[13]) }
-    runImport([row]); setLastPull(new Date().toISOString())
-  }
+  const pullNow = () => void act(api.pullGiveLively().then((c) => { setLastPull(new Date().toISOString()); toast(pullSummary(c)) }))
 
   return (
     <div>
-      <PageHead title="Integrations & email" sub="How data gets in (Give Lively), goes out (Salesforce), and reaches guests (email). Connections here are simulated in the prototype." />
+      <PageHead title="Integrations & email" sub={`How data gets in (Give Lively), goes out (Salesforce), and reaches guests (email). ${demo ? 'Connections here are simulated in the prototype.' : 'Salesforce is still simulated.'}`} />
       <div className="grid gap-6 xl:grid-cols-2 [&>*]:min-w-0">
         <section className="card break-words p-5">
-          <div className="flex items-start justify-between gap-3"><div><h2 className="text-lg font-semibold text-navy-900">Give Lively</h2><p className="text-sm text-navy-600">Ticket and sponsorship purchases → orders, payments, per-ticket fees, and a draft guest-list email for staff approval.</p></div><Pill tone="amber">Simulated</Pill></div>
+          <div className="flex items-start justify-between gap-3"><div><h2 className="text-lg font-semibold text-navy-900">Give Lively</h2><p className="text-sm text-navy-600">Ticket and sponsorship purchases → orders, payments, per-ticket fees, and a draft guest-list email for staff approval.</p></div>{demo ? <Pill tone="amber">Simulated</Pill> : <Pill tone="green">Connected</Pill>}</div>
           <ol className="mt-4 list-decimal space-y-1 pl-5 text-sm text-navy-700">
             <li>AAFE admin creates a Zapier API key in the Give Lively Nonprofit Admin Portal.</li>
             <li>Backend stores it as a secret and polls the JSON endpoint every 10–15 min with <code className="rounded bg-navy-50 px-1 font-sans text-xs">?start_time_ms=</code>.</li>
@@ -91,8 +86,8 @@ export default function Integrations() {
             <li>Backup: upload the “Line Items (All)” CSV export below. Duplicates are skipped by transaction ID.</li>
           </ol>
           <div className="mt-4 flex flex-wrap gap-2">
-            {!demo && <p className="w-full text-sm text-navy-600">Connected to the database: the simulated pull and CSV import below are for the demo. Live imports come with the import upload screen.</p>}
-            <button className="btn-primary" onClick={pullNow} disabled={!demo} data-testid="gl-pull"><CloudDownload size={16} /> Pull now (simulated)</button>
+            {!demo && <p className="w-full text-sm text-navy-600">Connected to the database. Pull now asks Give Lively for new gala purchases right away, as the 15-minute schedule does. To load a CSV export, use the Import page.</p>}
+            {canDo(user.role, 'pullGiveLively') && <button className="btn-primary" onClick={pullNow} data-testid="gl-pull"><CloudDownload size={16} /> {demo ? 'Pull now (simulated)' : 'Pull now'}</button>}
             <button className="btn-ghost" onClick={() => file.current?.click()} disabled={!demo}><Upload size={16} /> Import CSV</button>
             <button className="btn-ghost" onClick={() => downloadCsv('givelively-line-items-SAMPLE-SYNTHETIC.csv', [SAMPLE_HEAD, ...sampleRows()])}><Download size={16} /> Sample CSV</button>
             <input ref={file} type="file" accept=".csv,text/csv" className="hidden" onChange={async (e) => { const f = e.target.files?.[0]; if (!f) return; try { setErr(''); setPreview(toRows(await f.text())) } catch (x) { setErr((x as Error).message) } e.target.value = '' }} />
