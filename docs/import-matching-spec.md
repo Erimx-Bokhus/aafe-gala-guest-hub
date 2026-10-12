@@ -232,7 +232,7 @@ MVP scope.
 ## 5. Refunds, changes, and missing rows
 
 - **Refund.** Amount Refunded changes → payment updated (Natalie's code already does this). Refunded in
-  full, or Status shows refunded or failed → order `cancelled`, its seats `cancelled`, and staff review
+  full, or Status shows refunded ("Refunded" alone; "Partially Refunded" keeps the order, Oct 12) or failed → order `cancelled`, its seats `cancelled`, and staff review
   `refund` so the relationship owner can follow up. Nothing is deleted; badges and check-in skip
   cancelled seats.
 - **Amount change** on an imported purchase → payment updated, listed in the report.

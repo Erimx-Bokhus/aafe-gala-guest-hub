@@ -202,7 +202,7 @@ export function demoImport(db: DB, user: StaffUser, rows: GlImportRow[], run: Gl
     const original = r.original ?? r.gross, gross = r.gross ?? original, refunded = r.refunded ?? 0
     if (!r.email || !r.date || !(gross > 0)) { res.skipped++; continue }
     const key = r.purchase_key
-    const cancel = !!r.cancelled || /refund|fail|cancel|void/i.test(r.status ?? '') || (refunded > 0 && refunded >= gross)
+    const cancel = !!r.cancelled || /fail|cancel|void|^\s*(fully\s+)?refund(ed)?\s*$/i.test(r.status ?? '') || (refunded > 0 && refunded >= gross)
     if (d.payments.some((p) => p.purchase_key === key)) { res.skipped++; continue }
     const mapped = (d.tier_mappings ?? []).find((m) => m.event_id === ev.id && m.name_key === nameKey(r.ticket_level))
     const tier = d.sponsorship_tiers.find((t) => t.id === r.tier_id) ?? d.sponsorship_tiers.find((t) => t.id === mapped?.tier_id)
