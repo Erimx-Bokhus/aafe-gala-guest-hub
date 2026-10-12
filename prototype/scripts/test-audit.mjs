@@ -52,6 +52,7 @@ const ACTIONS = [
   ['staff_set_sponsor_arrivals', ADMIN, `select staff_set_sponsor_arrivals(true, 'Test approval')`, 'gala.sponsor_arrivals'],
   ['staff_update_gala_event', ADMIN, `select staff_update_gala_event('{"dress_code":"Black tie (audit test)"}')`, 'event.updated'],
   ['staff_set_material_status', RM, `select staff_set_material_status('ord-acme', 'logo', 'received')`, 'materials.updated'],
+  ['staff_set_order_deadline', ADMIN, `select staff_set_order_deadline('ord-acme', '2027-04-01')`, 'order.deadline_changed'],
   ['staff_export_badges', RM, `select * from staff_export_badges(true)`, 'export.badges'],
   ['staff_export_checkin', VOL, `select * from staff_export_checkin()`, 'export.checkin'],
   ['staff_export_salesforce', ADMIN, `select * from staff_export_salesforce()`, 'export.salesforce'],
