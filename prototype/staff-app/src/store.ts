@@ -4,7 +4,7 @@
 // staff_* database function in live mode.
 import { createContext, useContext } from 'react'
 import { addAudit, displayName, nameParts, newQrToken, nowIso, processorFee, secureToken, sponsorOf, tierOf, uid } from '@shared/data'
-import type { DB, Guest, PayMethod, ReviewReason, StaffUser } from '@shared/types'
+import type { DB, Guest, Order, PayMethod, PipelineStage, Prospect, ReviewReason, Sector, StaffUser } from '@shared/types'
 import { tierMappingKey, type GlImportRow, type GlImportRun, type ImportResult } from './importer'
 import type { StaffApi } from './api'
 
@@ -356,4 +356,171 @@ export function salesforceSyncNow(db: DB): { db: DB; n: number } {
     .map((x) => { n++; return { ...x, sf_id: (x.sf_object === 'Account' ? '001' : '006') + 'DEMO' + Math.random().toString(36).slice(2, 10).toUpperCase(), status: 'synced' as const, last_synced_at: at, error_message: null } })
   const d = addAudit({ ...db, salesforce_sync: [...sync, ...extra] }, { actor_type: 'system', actor: 'Salesforce sync (simulated)', entity: 'salesforce', entity_id: 'batch', order_id: null, action: 'salesforce.synced', from_state: null, to_state: null, guest_visible: false, summary: `${n} record(s) pushed to Salesforce (simulated).` })
   return { db: d, n }
+}
+
+// ---- Sponsor pipeline (backend.sql 7b) ----
+
+/** AAFE's stages and how likely each is to bring the money in (staff_pipeline()). */
+export const STAGES: { stage: PipelineStage; label: string; probability: number }[] = [
+  { stage: 'not_started', label: 'Not started', probability: 0 }, { stage: 'reached_out', label: 'Reached out', probability: 0.1 },
+  { stage: 'in_conversation', label: 'In conversation', probability: 0.5 }, { stage: 'closed_won', label: 'Closed won', probability: 0.9 },
+  { stage: 'payment_received', label: 'Payment received', probability: 1 }, { stage: 'lost', label: 'Lost', probability: 0 },
+]
+export const SECTORS: Sector[] = ['board', 'community', 'corporate', 'foundation', 'individual', 'small_business']
+/** A typed dollar amount (the Goal and Ask boxes): empty means none. Refuses what isn't a number ("1.2.3", "."),
+ *  which would otherwise reach the server as null (JSON has no NaN) and clear the goal or the ask. */
+export function parseAmount(s: string): number | null {
+  if (!s.trim()) return null
+  const n = Number(s)
+  if (!Number.isFinite(n)) throw new Error('invalid_input: enter a valid amount, like 25000')
+  return n
+}
+const stageLabel = (s: PipelineStage) => STAGES.find((x) => x.stage === s)!.label
+const moneyFmt = (n: number) => '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })   // money_fmt()
+const orgKey = (db: DB, sponsorId: string) => sponsorOf(db, sponsorId)?.organization_name.trim().toLowerCase()
+
+/** What staff_save_prospect() takes: an id to edit, or a sponsor_id (or a new organization and contact) to add. */
+export interface ProspectInput {
+  id?: string; sponsor_id?: string; organization?: string; contact_name?: string; contact_email?: string
+  sector?: Sector | null; ask_amount?: number | null; ask_tier_id?: string | null; follow_up_owner_id?: string | null; notes?: string | null
+  order_id?: string | null
+}
+
+/** pipeline_apply_order(): link the order and move the stage on (money → payment received; a pledge → closed won). */
+function applyOrder(db: DB, p: Prospect, o: Order, actorType: 'staff' | 'system', actor: string, at: string): DB {
+  if (p.order_id && p.order_id !== o.id) return db
+  const to: PipelineStage = o.status === 'paid' || o.status === 'partially_paid' ? 'payment_received'
+    : (o.status === 'pledged' || o.status === 'invoice_sent') && ['not_started', 'reached_out', 'in_conversation', 'lost'].includes(p.stage) ? 'closed_won' : p.stage
+  const next: Prospect = { ...p, order_id: o.id, stage: to, seen_status: o.status, updated_at: at, stage_changed_at: to !== p.stage ? at : p.stage_changed_at }
+  const d = { ...db, sponsor_prospects: (db.sponsor_prospects ?? []).map((x) => (x.id === p.id ? next : x)) }
+  if (to === p.stage) return d
+  return addAudit(d, { actor_type: actorType, actor, entity: 'prospect', entity_id: p.id, order_id: o.id, action: 'prospect.stage', from_state: p.stage, to_state: to, guest_visible: false,
+    summary: `${sponsorOf(db, p.sponsor_id)?.organization_name}: ${stageLabel(p.stage)} → ${stageLabel(to)} (${to === 'payment_received' ? 'payment recorded' : 'pledge or purchase recorded'}).` })
+}
+
+/**
+ * The orders_pipeline trigger, over the demo data: each sponsorship or ticket order moves its sponsor's prospect on, and a
+ * sponsorship with no prospect yet gets one (id pr-<order>, so the board reads the same ids every time).
+ * ponytail: the database runs this as each order changes; the demo runs it when the board is read or a pipeline action
+ * saves, and only for order changes made after the prospect existed (updated_at) and not yet followed (seen_status). So a
+ * stage staff set holds until the order changes, as it does live. Its "Pipeline" log entries appear on the next pipeline save.
+ */
+export function syncPipeline(db: DB): DB {
+  const ev = db.meta.current_event_id
+  let d: DB = { ...db, sponsor_prospects: db.sponsor_prospects ?? [] }
+  for (const o of db.orders) {
+    const cat = tierOf(db, o.tier_id)?.tier_category
+    if (o.event_id !== ev || o.status === 'cancelled' || o.status === 'comp' || (cat !== 'sponsorship' && cat !== 'ticket')) continue
+    const list = d.sponsor_prospects!
+    let p = list.find((x) => x.order_id === o.id) ?? list.find((x) => x.event_id === ev && x.sponsor_id === o.sponsor_id)
+      ?? list.filter((x) => x.event_id === ev && !x.order_id && orgKey(d, x.sponsor_id) === orgKey(d, o.sponsor_id)).sort((a, b) => a.created_at.localeCompare(b.created_at))[0]
+    if (p && (o.updated_at < p.created_at || (p.order_id === o.id && p.seen_status === o.status))) continue
+    if (!p) {
+      if (cat !== 'sponsorship') continue
+      p = { id: `pr-${o.id}`, event_id: ev, sponsor_id: o.sponsor_id, stage: 'not_started', sector: null, ask_amount: o.commitment_amount, ask_tier_id: o.tier_id,
+        order_id: null, follow_up_owner_id: null, notes: null, stage_changed_at: o.created_at, created_at: o.created_at, updated_at: o.created_at }
+      d = { ...d, sponsor_prospects: [...list, p] }
+    }
+    d = applyOrder(d, p, o, 'system', 'Pipeline', o.updated_at)
+  }
+  return d
+}
+
+/** staff_save_prospect()'s checks, on the synced demo data: the reason it refuses, or null. */
+export function prospectError(db: DB, p: ProspectInput): string | null {
+  const ev = db.meta.current_event_id
+  if (p.sector && !SECTORS.includes(p.sector)) return 'invalid_input: sector must be board, community, corporate, foundation, individual or small_business'
+  if (p.ask_amount != null && p.ask_amount < 0) return 'invalid_input: the ask cannot be negative'
+  if (p.ask_tier_id && !db.sponsorship_tiers.some((t) => t.id === p.ask_tier_id)) return 'not_found: tier'
+  if (p.follow_up_owner_id && !db.staff_users.some((u) => u.id === p.follow_up_owner_id)) return 'not_found: staff member'
+  const list = db.sponsor_prospects ?? []
+  let me: Prospect | undefined
+  if (!p.id) {
+    if (!p.sponsor_id) {
+      const org = (p.organization ?? '').trim()
+      if (!org || !(p.contact_name ?? '').trim()) return 'invalid_input: organization and contact name are required'
+      const sp = db.sponsors.find((s) => s.organization_name.trim().toLowerCase() === org.toLowerCase())
+      if (sp) return `invalid_input: ${org} is already a sponsor (${sp.id}); add them by sponsor_id`
+    } else {
+      if (!db.sponsors.some((s) => s.id === p.sponsor_id)) return 'not_found: sponsor'
+      if (list.some((x) => x.event_id === ev && x.sponsor_id === p.sponsor_id)) return "invalid_input: this sponsor is already in this gala's pipeline"
+    }
+  } else if (!(me = list.find((x) => x.id === p.id && x.event_id === ev))) return 'not_found'
+  if (p.order_id) {
+    if (!db.orders.some((o) => o.id === p.order_id && o.event_id === ev)) return 'not_found: order'
+    if (list.some((x) => x.order_id === p.order_id && x.id !== p.id)) return 'invalid_input: that order belongs to another prospect'
+    if (me?.order_id && me.order_id !== p.order_id) return 'invalid_input: this prospect already has an order'
+  }
+  return null
+}
+
+/** staff_save_prospect(), after prospectError() found nothing: add (as ids.prospect) or edit, then link an order if given. */
+export function saveProspect(db: DB, user: StaffUser, p: ProspectInput, ids: { prospect: string; sponsor: string }): DB {
+  const now = nowIso(), ev = db.meta.current_event_id
+  const blank = <T,>(v: T | null | undefined) => (v === '' || v == null ? null : v)
+  let d = db, id = p.id
+  if (!id) {
+    let spId = p.sponsor_id
+    if (!spId) {
+      spId = ids.sponsor
+      d = { ...d, sponsors: [...d.sponsors, { id: spId, organization_name: p.organization!.trim(), primary_contact_name: p.contact_name!.trim(), primary_contact_email: (p.contact_email ?? '').trim(),
+        phone: '', relationship_owner_id: user.id, salesforce_account_id: null, created_at: now }] }
+    }
+    id = ids.prospect
+    d = { ...d, sponsor_prospects: [...(d.sponsor_prospects ?? []), { id, event_id: ev, sponsor_id: spId, stage: 'not_started', sector: blank(p.sector), ask_amount: blank(p.ask_amount),
+      ask_tier_id: blank(p.ask_tier_id), order_id: null, follow_up_owner_id: blank(p.follow_up_owner_id), notes: blank((p.notes ?? '').trim()), stage_changed_at: now, created_at: now, updated_at: now }] }
+    d = addAudit(d, { actor_type: 'staff', actor: user.name, entity: 'prospect', entity_id: id, order_id: null, action: 'prospect.created', from_state: null, to_state: 'not_started', guest_visible: false,
+      summary: `${sponsorOf(d, spId).organization_name} added to the pipeline${p.ask_amount != null ? ', ask ' + moneyFmt(p.ask_amount) : ''}.` })
+  } else {
+    const old = d.sponsor_prospects!.find((x) => x.id === id)!
+    const fields = (['sector', 'ask_amount', 'ask_tier_id', 'follow_up_owner_id', 'notes'] as const).filter((k) => k in p)
+    const next = { ...old, ...Object.fromEntries(fields.map((k) => [k, blank(p[k])])) } as Prospect
+    const changed = fields.filter((k) => next[k] !== old[k])
+    if (changed.length) {
+      d = { ...d, sponsor_prospects: d.sponsor_prospects!.map((x) => (x.id === id ? { ...next, updated_at: now } : x)) }
+      d = addAudit(d, { actor_type: 'staff', actor: user.name, entity: 'prospect', entity_id: id!, order_id: old.order_id, action: 'prospect.updated', from_state: null, to_state: null, guest_visible: false,
+        summary: `${sponsorOf(d, old.sponsor_id).organization_name}: ${changed.join(', ')} edited.` })
+    }
+  }
+  // Link a pledge or purchase recorded under another sponsor record.
+  const pr = d.sponsor_prospects!.find((x) => x.id === id)!
+  if (p.order_id && !pr.order_id) {
+    const o = d.orders.find((x) => x.id === p.order_id)!
+    d = { ...d, sponsor_prospects: d.sponsor_prospects!.map((x) => (x.id === id ? { ...x, order_id: o.id, updated_at: now } : x)) }
+    d = addAudit(d, { actor_type: 'staff', actor: user.name, entity: 'prospect', entity_id: id!, order_id: o.id, action: 'prospect.order_linked', from_state: null, to_state: null, guest_visible: false,
+      summary: `${sponsorOf(d, pr.sponsor_id).organization_name}: order ${o.id} linked.` })
+    d = applyOrder(d, { ...pr, order_id: o.id }, o, 'staff', user.name, now)
+  }
+  return d
+}
+
+/** staff_set_prospect_stage()'s checks: payment received comes from a recorded payment, and a sponsor who has paid stays there. */
+export function stageError(db: DB, id: string, stage: PipelineStage): string | null {
+  if (!STAGES.some((s) => s.stage === stage)) return 'invalid_input: stage must be not_started, reached_out, in_conversation, closed_won, payment_received or lost'
+  const p = (db.sponsor_prospects ?? []).find((x) => x.id === id && x.event_id === db.meta.current_event_id)
+  if (!p) return 'not_found'
+  if (p.stage === stage) return null
+  const paid = db.payments.some((x) => x.order_id === p.order_id && x.original_amount - x.refunded_amount > 0)
+  if (stage === 'payment_received' && !paid) return 'invalid_transition: record the payment first'
+  if (paid && stage !== 'payment_received') return 'invalid_transition: this sponsor has paid; their stage stays payment received'
+  return null
+}
+
+export function setProspectStage(db: DB, user: StaffUser, id: string, stage: PipelineStage): DB {
+  const p = db.sponsor_prospects!.find((x) => x.id === id)!
+  if (p.stage === stage) return db
+  const now = nowIso()
+  return addAudit({ ...db, sponsor_prospects: db.sponsor_prospects!.map((x) => (x.id === id ? { ...x, stage, stage_changed_at: now, updated_at: now } : x)) },
+    { actor_type: 'staff', actor: user.name, entity: 'prospect', entity_id: id, order_id: p.order_id, action: 'prospect.stage', from_state: p.stage, to_state: stage, guest_visible: false,
+      summary: `${sponsorOf(db, p.sponsor_id).organization_name}: ${stageLabel(p.stage)} → ${stageLabel(stage)}.` })
+}
+
+/** staff_set_sponsorship_goal(): the board's target for this gala; null clears it. */
+export function setSponsorshipGoal(db: DB, user: StaffUser, amount: number | null): DB {
+  const ev = db.gala_events.find((e) => e.id === db.meta.current_event_id)!
+  const old = ev.sponsorship_goal ?? null
+  if (old === amount) return db
+  return addAudit({ ...db, gala_events: db.gala_events.map((e) => (e.id === ev.id ? { ...e, sponsorship_goal: amount } : e)) },
+    { actor_type: 'staff', actor: user.name, entity: 'gala_event', entity_id: ev.id, order_id: null, action: 'gala.goal_set', from_state: old == null ? null : old.toFixed(2),
+      to_state: amount == null ? null : amount.toFixed(2), guest_visible: false, summary: `Sponsorship goal set to ${amount == null ? 'none' : moneyFmt(amount)}.` })
 }
