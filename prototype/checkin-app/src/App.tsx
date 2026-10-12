@@ -80,14 +80,14 @@ function SignIn({ prefs, gala, guests, vols, onStart }: { prefs: Prefs; gala: Ga
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           {sorted.map((x) => (
             <button key={x.id} onClick={() => setV(x)} aria-pressed={v?.id === x.id} data-testid={`vol-${x.id}`}
-              className={`tap flex min-h-[72px] items-center gap-4 rounded-2xl border-2 bg-surface px-5 py-3 text-left ${v?.id === x.id ? 'border-brand-500 bg-brand-50' : 'border-navy-100'}`}>
+              className={`tap flex min-h-[72px] items-center gap-4 rounded-[50px] border-2 bg-surface px-5 py-3 text-left ${v?.id === x.id ? 'border-brand-500 bg-brand-50' : 'border-navy-100'}`}>
               <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-lg font-semibold ${v?.id === x.id ? 'bg-brand-500 text-white' : 'bg-cream-100 text-navy-700'}`}>{x.name.split(' ').map((p) => p[0]).slice(0, 2).join('')}</span>
               <span className="min-w-0"><span className="block text-lg font-semibold text-navy-900">{x.name.replace(' (volunteer)', '')}</span><span className="block text-sm text-navy-600">{ROLE[x.role] ?? x.role}</span></span>
             </button>
           ))}
         </div>
       </section>
-      <button className="btn-primary tap mt-8 h-16 w-full rounded-2xl text-lg" disabled={!v} onClick={() => v && onStart(v)} data-testid="start">Open guest list</button>
+      <button className="btn-primary tap mt-8 h-16 w-full text-lg" disabled={!v} onClick={() => v && onStart(v)} data-testid="start">Open guest list</button>
       <p className="mt-4 text-center text-sm text-navy-500">Prototype: no password. In production volunteers sign in with their AAFE staff account.</p>
     </Shell>
   )
@@ -173,7 +173,7 @@ function LiveSignIn({ prefs, notice }: { prefs: Prefs; notice: string }) {
         {err && <p className="mt-3 text-base font-medium text-rose-700" role="alert">{err}</p>}
         {sent
           ? <p className="mt-6 rounded-xl bg-surface p-4 text-base text-navy-800" role="status" data-testid="link-sent">Check your email on this iPad for a sign-in link from AAFE Gala. It works once and expires in an hour.</p>
-          : <button className="btn-primary tap mt-6 h-16 w-full rounded-2xl text-lg" type="submit" disabled={busy} data-testid="send-link"><Mail size={20} /> {busy ? 'Sending…' : 'Email me a sign-in link'}</button>}
+          : <button className="btn-primary tap mt-6 h-16 w-full text-lg" type="submit" disabled={busy} data-testid="send-link"><Mail size={20} /> {busy ? 'Sending…' : 'Email me a sign-in link'}</button>}
       </form>
     </Shell>
   )
@@ -295,8 +295,8 @@ function DoorScreen({ api, who, prefs, exitLabel, onExit }: { api: Door; who: st
             {q && <button className="tap absolute right-1 top-1/2 flex -translate-y-1/2 items-center justify-center rounded-full text-navy-600" onClick={() => setQ('')} aria-label="Clear search"><X size={22} /></button>}
           </div>
           {showFilter('hidden lg:flex')}
-          <button className="btn-ghost tap h-14 rounded-xl px-4 text-base" onClick={() => setScan(true)} data-testid="open-scan" aria-label="Scan QR code"><QrCode size={20} /><span className="hidden sm:inline">Scan</span></button>
-          <button className="btn-ghost tap h-14 rounded-xl px-4 text-base" onClick={() => setExc(true)} data-testid="open-exception" aria-label="Add approved exception"><UserPlus size={20} /><span className="hidden sm:inline">Exception</span></button>
+          <button className="btn-ghost tap h-14 px-4 text-base" onClick={() => setScan(true)} data-testid="open-scan" aria-label="Scan QR code"><QrCode size={20} /><span className="hidden sm:inline">Scan</span></button>
+          <button className="btn-ghost tap h-14 px-4 text-base" onClick={() => setExc(true)} data-testid="open-exception" aria-label="Add approved exception"><UserPlus size={20} /><span className="hidden sm:inline">Exception</span></button>
           {showFilter('flex basis-full lg:hidden [&>button]:flex-1')}
         </div>
         {notices.length > 0 && (
@@ -317,7 +317,7 @@ function DoorScreen({ api, who, prefs, exitLabel, onExit }: { api: Door; who: st
             <div className="m-6 rounded-2xl border-2 border-dashed border-navy-100 p-8 text-center text-navy-700">
               <p className="text-lg font-semibold text-navy-900">No guests match.</p>
               <p className="mt-1">Check the spelling or the filters, or add an approved exception.</p>
-              <button className="btn-primary tap mt-5 h-14 rounded-xl px-6 text-base" onClick={() => setExc(true)}><UserPlus size={20} /> Add approved exception</button>
+              <button className="btn-primary tap mt-5 h-14 px-6 text-base" onClick={() => setExc(true)}><UserPlus size={20} /> Add approved exception</button>
             </div>
           )}
           {[...groups.entries()].map(([l, gs]) => (
@@ -369,8 +369,8 @@ function DoorScreen({ api, who, prefs, exitLabel, onExit }: { api: Door; who: st
         <div className="fixed inset-x-0 bottom-0 z-40 border-t border-navy-100 bg-surface px-5 py-3 shadow-2xl" data-testid="action-bar">
           <div className="mx-auto flex max-w-3xl items-center gap-3">
             <div className="flex-1 text-lg text-navy-900"><strong className="tabular-nums">{selCount}</strong> selected</div>
-            <button className="btn-ghost tap h-14 rounded-xl px-5 text-base" onClick={() => setSel(new Set())}>Clear</button>
-            <button className="btn-primary tap h-14 min-w-[200px] rounded-xl px-8 text-lg" onClick={() => checkIn([...sel])} data-testid="checked-in"><CheckCircle2 size={22} /> Checked in</button>
+            <button className="btn-ghost tap h-14 px-5 text-base" onClick={() => setSel(new Set())}>Clear</button>
+            <button className="btn-primary tap h-14 min-w-[200px] px-8 text-lg" onClick={() => checkIn([...sel])} data-testid="checked-in"><CheckCircle2 size={22} /> Checked in</button>
           </div>
         </div>
       )}
@@ -381,7 +381,7 @@ function DoorScreen({ api, who, prefs, exitLabel, onExit }: { api: Door; who: st
             <div className="flex items-center gap-4 p-4">
               <CheckCircle2 size={34} className="shrink-0 text-emerald-700" aria-hidden />
               <div className="min-w-0 flex-1"><div className="text-lg font-semibold text-navy-900">Checked in</div><div className="truncate text-navy-700">{undo.label}</div></div>
-              <button className="btn-ghost tap h-14 rounded-xl px-5 text-base" onClick={() => void doUndo()} data-testid="undo"><Undo2 size={20} /> Undo</button>
+              <button className="btn-ghost tap h-14 px-5 text-base" onClick={() => void doUndo()} data-testid="undo"><Undo2 size={20} /> Undo</button>
             </div>
             <div className="h-1.5 bg-cream-100"><div key={undo.handles[0]} className="undo-bar h-full bg-brand-500" /></div>
           </div>
@@ -471,7 +471,7 @@ function ScanModal({ onClose, onCode }: { onClose: () => void; onCode: (c: strin
         <label htmlFor="qr" className="sr-only">QR code</label>
         <input id="qr" value={code} onChange={(e) => { setCode(e.target.value); setErr('') }} placeholder="e.g. AAFE-3F9C…" autoCapitalize="characters" autoComplete="off" data-testid="qr-input"
           className="h-16 min-w-0 flex-1 rounded-xl border-2 border-navy-100 bg-surface px-4 text-xl uppercase tracking-wide text-navy-900 placeholder:normal-case placeholder:tracking-normal placeholder:text-navy-500 focus:border-brand-500 focus:outline-none" />
-        <button className="btn-primary tap h-16 rounded-xl px-8 text-lg" data-testid="qr-submit"><QrCode size={22} /> Check in</button>
+        <button className="btn-primary tap h-16 px-8 text-lg" data-testid="qr-submit"><QrCode size={22} /> Check in</button>
       </form>
       {err && <p className="mt-3 text-base font-medium text-rose-700" role="alert">{err}</p>}
       <button className="btn-ghost tap mt-4 h-12" onClick={onClose}><ArrowLeft size={18} /> Back to guest list</button>
@@ -494,7 +494,7 @@ function ExceptionModal({ sponsors, prefill, onClose, onSave }: { sponsors: { or
           <div className="grid gap-2 sm:grid-cols-2">
             {EXCEPTION_TYPES.map((t) => (
               <button type="button" key={t} onClick={() => setF({ ...f, type: t })} aria-pressed={f.type === t} data-testid={`exc-type-${t.split(' ')[0]}`}
-                className={`tap min-h-[56px] rounded-xl border-2 px-4 py-2 text-left text-base font-medium ${f.type === t ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-navy-100 bg-surface text-navy-800'}`}>{t}</button>
+                className={`tap min-h-[56px] rounded-[50px] border-2 px-4 py-2 text-left text-base font-medium ${f.type === t ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-navy-100 bg-surface text-navy-800'}`}>{t}</button>
             ))}
           </div>
         </fieldset>

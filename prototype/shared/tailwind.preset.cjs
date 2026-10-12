@@ -22,6 +22,10 @@ module.exports = {
         zh: ['"Noto Sans TC"', '"Poppins"', 'sans-serif'],
         ko: ['"Noto Sans KR"', '"Poppins"', 'sans-serif'],
       },
+      // Square containers, matching aafe.org (docs/design.md v2.6): cards, panels, dialogs, inputs and notes have
+      // no rounded corners in every app. Buttons keep the pill (rounded-[50px]); status pills, avatars, progress
+      // bars and the round seating tables keep rounded-full.
+      borderRadius: { sm: '0px', DEFAULT: '0px', md: '0px', lg: '0px', xl: '0px', '2xl': '0px', '3xl': '0px' },
     },
   },
 }

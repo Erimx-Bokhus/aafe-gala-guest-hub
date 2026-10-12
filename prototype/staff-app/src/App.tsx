@@ -1,7 +1,7 @@
 // AAFE STAFF APP (the "client app": AAFE's gala team)
 // Reads everything the guest portal writes (same database), plus Give Lively + Salesforce data.
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { Activity, Armchair, BadgeCheck, CalendarDays, ClipboardList, CreditCard, FileUp, Heart, LayoutDashboard, LogOut, Menu, Plug, ScanLine, Table2, X } from 'lucide-react'
+import { Activity, Armchair, BadgeCheck, CalendarDays, ClipboardList, CreditCard, FileUp, Heart, LayoutDashboard, LogOut, Menu, Plug, ScanLine, Table2, TrendingUp, X } from 'lucide-react'
 import { loadDB } from '@shared/data'
 import { AafeLogo } from '@shared/Logo'
 import { DisplayControls, go, Link, PrototypeBanner, Toast, useDisplayPrefs, useRoute } from '@shared/ui'
@@ -21,12 +21,14 @@ import Badges from './pages/Badges'
 import CheckIn from './pages/CheckIn'
 import Integrations from './pages/Integrations'
 import Import from './pages/Import'
+import Pipeline from './pages/Pipeline'
 import AuditLog from './pages/AuditLog'
 
 const NAV: { to: string; label: string; icon: typeof LayoutDashboard; roles: Role[] }[] = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['gala_admin', 'relationship_manager'] },
   { to: '/gala', label: 'Gala information', icon: CalendarDays, roles: ['gala_admin', 'relationship_manager'] },
   { to: '/sponsors', label: 'Sponsors & orders', icon: ClipboardList, roles: ['gala_admin', 'relationship_manager'] },
+  { to: '/pipeline', label: 'Sponsor pipeline', icon: TrendingUp, roles: ['gala_admin', 'relationship_manager'] },
   { to: '/guests', label: 'Guest list', icon: Table2, roles: ['gala_admin', 'relationship_manager'] },
   { to: '/payments', label: 'Payments & fees', icon: CreditCard, roles: ['gala_admin', 'relationship_manager'] },
   { to: '/seating', label: 'Seating chart', icon: Armchair, roles: ['gala_admin', 'relationship_manager'] },
@@ -127,6 +129,7 @@ export default function App() {
   else if (p === '/badges') page = <Badges />
   else if (p === '/checkin') page = <CheckIn />
   else if (p === '/import') page = <Import />
+  else if (p === '/pipeline') page = <Pipeline />
   else if (p === '/integrations') page = <Integrations />
   else if (p === '/activity') page = <AuditLog />
   else page = <Dashboard />
@@ -142,7 +145,7 @@ export default function App() {
           const active = n.to === '/' ? p === '/' : p.startsWith(n.to)
           return (
             <li key={n.to}>
-              <Link to={n.to} aria-current={active ? 'page' : undefined} className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium ${active ? 'bg-white text-brand-700 dark:!text-[#8A3118]' : 'text-white hover:bg-white/15'}`}>
+              <Link to={n.to} aria-current={active ? 'page' : undefined} className={`flex items-center gap-3 rounded-full px-3 py-2 text-sm font-medium ${active ? 'bg-white text-brand-700 dark:!text-[#8A3118]' : 'text-white hover:bg-white/15'}`}>
                 <n.icon size={17} className={active ? 'text-brand-500' : 'text-white'} /> {n.label}
               </Link>
             </li>
