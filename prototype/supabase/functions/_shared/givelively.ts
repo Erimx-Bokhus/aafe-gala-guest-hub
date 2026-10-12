@@ -95,6 +95,7 @@ export function classify(row: GLRow, pageNames: string[]): Verdict {
   const keys = pageNames.map(pageKey).filter(Boolean)
   if (!keys.includes(pageKey(row.campaign))) return 'not_gala'
   // Failed, declined, cancelled or a returned bank payment: it may undo a purchase imported earlier (a bounced ACH).
+  // The same words as the CSV upload (import engine CANCELLED_STATUS, gl_import); test-audit-fixes checks they agree.
   if (/fail|declin|cancel|void|revers|return/i.test(row.status)) return 'failed'
   // Bank (ACH) payments settle over days; Give Lively re-sends the donation when its status changes.
   if (/pending|processing|incomplete/i.test(row.status)) return 'not_settled'

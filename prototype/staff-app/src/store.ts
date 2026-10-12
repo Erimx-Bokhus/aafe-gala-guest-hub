@@ -6,6 +6,7 @@ import { createContext, useContext } from 'react'
 import { addAudit, displayName, nameParts, newQrToken, nowIso, processorFee, secureToken, sponsorOf, tierOf, uid } from '@shared/data'
 import type { DB, Guest, Order, PayMethod, PipelineStage, Prospect, ReviewReason, Sector, StaffUser } from '@shared/types'
 import { tierMappingKey, type GlImportRow, type GlImportRun, type ImportResult } from './importer'
+import { CANCELLED_STATUS } from '../../../import-engine/src/index.ts'
 import type { StaffApi } from './api'
 
 /**
@@ -202,7 +203,7 @@ export function demoImport(db: DB, user: StaffUser, rows: GlImportRow[], run: Gl
     const original = r.original ?? r.gross, gross = r.gross ?? original, refunded = r.refunded ?? 0
     if (!r.email || !r.date || !(gross > 0)) { res.skipped++; continue }
     const key = r.purchase_key
-    const cancel = !!r.cancelled || /refund|fail|cancel|void/i.test(r.status ?? '') || (refunded > 0 && refunded >= gross)
+    const cancel = !!r.cancelled || CANCELLED_STATUS.test(r.status ?? '') || (refunded > 0 && refunded >= gross)
     if (d.payments.some((p) => p.purchase_key === key)) { res.skipped++; continue }
     const mapped = (d.tier_mappings ?? []).find((m) => m.event_id === ev.id && m.name_key === nameKey(r.ticket_level))
     const tier = d.sponsorship_tiers.find((t) => t.id === r.tier_id) ?? d.sponsorship_tiers.find((t) => t.id === mapped?.tier_id)
