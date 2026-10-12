@@ -83,7 +83,8 @@ export interface PreparedUpload {
 }
 
 const isCancelled = (r: PurchaseRow) =>
-  /refund|fail|cancel|void/i.test(r.status ?? '') || (r.refunded !== null && r.refunded > 0 && r.refunded >= r.gross)
+  // A partial refund keeps the order (spec case 19): "Partially Refunded" isn't a cancellation; "Refunded" alone, or a full refund by amount, is.
+  /fail|cancel|void|^\s*(fully\s+)?refund(ed)?\s*$/i.test(r.status ?? '') || (r.refunded !== null && r.refunded > 0 && r.refunded >= r.gross)
 
 export async function prepareUpload(csv: string, ctx: UploadContext): Promise<PreparedUpload> {
   const read = await readExport(csv)
