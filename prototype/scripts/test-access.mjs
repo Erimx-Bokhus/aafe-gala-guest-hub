@@ -103,7 +103,7 @@ const STAFF_FUNCTIONS = {
   staff_pipeline: MANAGERS, staff_save_prospect: MANAGERS, staff_set_prospect_stage: MANAGERS, staff_set_sponsorship_goal: ['gala_admin'],
   staff_set_sponsor_arrivals: ['gala_admin'], staff_update_gala_event: ['gala_admin'], staff_set_material_status: MANAGERS,
   staff_import_givelively: ['gala_admin'], staff_set_tier_mapping: ['gala_admin'], staff_set_gala_page: ['gala_admin'],
-  staff_export_salesforce: ['gala_admin'],
+  staff_export_salesforce: ['gala_admin'], staff_set_order_deadline: ['gala_admin'],
 }
 // Return who you are (or nothing), so they need no role check.
 const SELF = ['staff_me', 'staff_role']
