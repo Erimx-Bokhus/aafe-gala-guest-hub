@@ -8,6 +8,8 @@ const b = normalize({ id: 987, created_at: 1759327200000, donor: { first_name: '
 assert.equal(b.txn, '987'); assert.equal(b.email, 'l@example.org'); assert.equal(b.gross, 250); assert.equal(b.campaign, 'Annual Appeal'); assert.ok(b.date?.startsWith('2025-'))
 assert.equal(classify(b, ['AAFE Gala 2027']), 'not_gala')
 assert.equal(classify({ ...a, status: 'pending' }, ['AAFE Gala 2027']), 'not_settled')
+assert.equal(classify({ ...a, status: 'processing' }, ['AAFE Gala 2027']), 'not_settled')
+for (const s of ['failed', 'Declined', 'cancelled', 'ACH returned']) assert.equal(classify({ ...a, status: s }, ['AAFE Gala 2027']), 'failed')
 // The gala's page name matches exactly, not as a substring (docs/import-matching-spec.md, section 3)
 assert.equal(classify(a, ['AAFE Gala']), 'not_gala')
 assert.equal(classify(a, ['  aafe  gala 2027 ']), 'import')

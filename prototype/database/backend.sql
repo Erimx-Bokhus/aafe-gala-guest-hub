@@ -58,6 +58,7 @@ alter table email_log add column if not exists last_error  text;
 alter table email_log add column if not exists approved_by text;          -- staff name
 alter table email_log add column if not exists approved_at timestamptz;   -- null = draft awaiting approval
 alter table email_log add column if not exists created_at  timestamptz not null default now();
+alter table email_log add column if not exists claimed_at  timestamptz;   -- set while one send-emails run is sending it (email_claim)
 alter table email_log add column if not exists payment_id  text references payments(id);  -- payment_receipt: which payment
 alter table email_log drop constraint if exists email_log_status_check;
 alter table email_log add constraint email_log_status_check check (status in ('queued','sent','opened','bounced','cancelled'));
@@ -264,10 +265,35 @@ end $$;
 drop trigger if exists guests_void_qr on guests;
 create trigger guests_void_qr after update of first_name, last_name, email on guests for each row execute function guests_void_qr();
 
--- The gala being run now: the latest one not closed.
+-- A project holds demo galas or AAFE's real ones, never both. The demo sets carry hundreds of working
+-- sponsor links and QR codes, so a real gala added beside them would share a database with links anyone
+-- in the team has seen. npm run db:load already refuses to load demo data next to a real gala; this
+-- covers the other direction (a real gala added to a demo project) and flipping is_synthetic.
+create or replace function gala_events_no_mixing() returns trigger
+language plpgsql set search_path = public as $$
+begin
+  if exists (select 1 from gala_events where id <> new.id and is_synthetic <> new.is_synthetic) then
+    raise exception 'invalid_input: % gala can''t be added to a project that holds % galas. Demo data and AAFE''s real data never share a project: use a project without the demo sets for real data.',
+      case when new.is_synthetic then 'a demo' else 'a real (not synthetic)' end,
+      case when new.is_synthetic then 'real' else 'demo (synthetic)' end;
+  end if;
+  return new;
+end $$;
+drop trigger if exists gala_events_no_mixing on gala_events;
+create trigger gala_events_no_mixing before insert or update of is_synthetic on gala_events
+  for each row execute function gala_events_no_mixing();
+
+-- The gala being run now: the one marked live; else the next one coming up (from yesterday on, New York time),
+-- soonest first; else the newest one not closed. Creating next year's gala in planning must not take check-in,
+-- imports and exports away from this year's before it is closed (Oct 12 audit).
 create or replace function current_event_id() returns text
 language sql stable security definer set search_path = public as $$
-  select id from gala_events where status <> 'closed' order by year desc limit 1
+  select id from gala_events where status <> 'closed'
+   order by (status = 'live') desc,
+            (event_date >= (now() at time zone 'America/New_York')::date - 1) desc,
+            case when event_date >= (now() at time zone 'America/New_York')::date - 1 then event_date end asc nulls last,
+            year desc
+   limit 1
 $$;
 
 -- An order on the gala being run now; null passes (a walk-in with no sponsor).
@@ -1142,8 +1168,10 @@ begin
     end if;
     v_key := coalesce(nullif(r ->> 'purchase_key', ''), purchase_key(r ->> 'email', v_at));
     v_text := nullif(btrim(r ->> 'guest_text'), '');
-    v_cancel := coalesce((r ->> 'cancelled')::boolean, false)
-             or coalesce(r ->> 'status', '') ~* 'refund|fail|cancel|void'
+    v_cancel := coalesce((r ->> 'cancelled')::boolean, false) or coalesce((r ->> 'cancel_only')::boolean, false)
+             -- The failure words match the sync's classify() and the import engine's CANCELLED_STATUS (test-audit-fixes checks all three).
+             -- A partial refund keeps the order (spec case 19).
+             or coalesce(r ->> 'status', '') ~* 'fail|declin|cancel|void|revers|return|^\s*(fully\s+)?refund(ed)?\s*$'
              or (v_refunded > 0 and v_refunded >= v_gross);
 
     -- Already imported (by purchase key, or by Give Lively transaction ID from the sync).
@@ -1177,6 +1205,8 @@ begin
       if v_cancel and o.status <> 'cancelled' then
         update orders set status = 'cancelled', updated_at = now() where id = o.id;
         update seats set status = 'cancelled', updated_at = now() where order_id = o.id;
+        -- An unsent guest-list link would hand the sponsor a link to a cancelled order.
+        update email_log set status = 'cancelled' where order_id = o.id and status = 'queued';
         perform write_audit('system', p_actor, 'order', o.id, o.id, 'order.cancelled', o.status, 'cancelled', false,
           'Refunded or failed in Give Lively; seats cancelled.');
         if add_import_review(p_run_id, v_key, o.id, 'refund', jsonb_build_object('status', r ->> 'status', 'refunded', v_refunded)) then v_reviews := v_reviews + 1; end if;
@@ -1198,6 +1228,8 @@ begin
       if v_changed then v_updated := v_updated + 1; else v_skipped := v_skipped + 1; end if;
       continue;
     end if;
+    -- A failed donation from the sync (cancel_only) only undoes a purchase imported earlier; it never creates one.
+    if coalesce((r ->> 'cancel_only')::boolean, false) then v_skipped := v_skipped + 1; continue; end if;
 
     -- Package: the prepared tier, else this gala's tier mapping, else the longest tier name (before
     -- " — ") found in the Give Lively name. No match: staff review, nothing created until mapped.
@@ -1399,11 +1431,21 @@ end $$;
 -- Staff approve a draft (Give Lively purchase, pledge or payment links). Only then does it send.
 create or replace function staff_approve_email(p_email_id text) returns void
 language plpgsql security definer set search_path = public as $$
-declare me staff_users := require_staff(array['gala_admin','relationship_manager']); m email_log;
+declare me staff_users := require_staff(array['gala_admin','relationship_manager']); m email_log; v_deadline date;
 begin
-  update email_log set approved_by = me.name, approved_at = now()
-   where id = p_email_id and status = 'queued' and approved_at is null returning * into m;
+  select * into m from email_log where id = p_email_id and status = 'queued' and approved_at is null for update;
   if m.id is null then raise exception 'not_found: no draft with that id'; end if;
+  -- A guest-list link works through the end of the order's deadline day (email_mark_sent): after that day it would
+  -- arrive already expired. Staff extend that order's deadline first (staff_set_order_deadline).
+  if m.template in ('portal_link', 'guest_list_reminder') then
+    select coalesce(o.guest_list_deadline, e.guest_list_deadline, e.event_date) into v_deadline
+      from orders o join gala_events e on e.id = o.event_id where o.id = m.order_id;
+    if v_deadline < (now() at time zone 'America/New_York')::date then
+      raise exception 'invalid_input: this order''s guest-list deadline (%) has passed, so the link would arrive expired; extend the order''s deadline first',
+        to_char(v_deadline, 'Mon FMDD, YYYY');
+    end if;
+  end if;
+  update email_log set approved_by = me.name, approved_at = now() where id = m.id returning * into m;
   perform write_audit('staff', me.name, 'email', m.id, m.order_id, 'email.approved', 'draft', 'approved', false,
     format('%s to %s approved for sending.', replace(m.template, '_', ' '), m.to_name));
 end $$;
@@ -1429,7 +1471,7 @@ create or replace function email_mark_sent(p_email_id text, p_token_hash text de
 language plpgsql security definer set search_path = public as $$
 declare m email_log; v_deadline date;
 begin
-  update email_log set status = 'sent', sent_at = now(), attempts = attempts + 1, last_error = null
+  update email_log set status = 'sent', sent_at = now(), attempts = attempts + 1, last_error = null, claimed_at = null
    where id = p_email_id and status = 'queued' and approved_at is not null returning * into m;
   if m.id is null then return; end if;
   -- A reminder carries a fresh link too, so the newest email always has the one that works.
@@ -1511,7 +1553,23 @@ end $$;
 -- After 5 failed attempts the email stays 'queued' but the worker stops retrying.
 create or replace function email_mark_failed(p_email_id text, p_error text) returns void
 language sql security definer set search_path = public as $$
-  update email_log set attempts = attempts + 1, last_error = left(p_error, 1000) where id = p_email_id
+  update email_log set attempts = attempts + 1, last_error = left(p_error, 1000), claimed_at = null where id = p_email_id
+$$;
+
+-- The send-emails worker claims its batch before sending anything. The every-minute schedule and a
+-- staff member's "send now" can overlap; without a claim both runs would send the same email, and
+-- each would mint its own link, so the second run's email_mark_sent would replace the link the
+-- sponsor actually received. SKIP LOCKED hands each email to exactly one run. A claim older than
+-- 10 minutes belongs to a run that died mid-send, so the email can be claimed again.
+create or replace function email_claim(p_limit int default 25) returns setof email_log
+language sql security definer set search_path = public as $$
+  update email_log set claimed_at = now()
+   where id in (select id from email_log
+                 where status = 'queued' and approved_at is not null and attempts < 5
+                   and (claimed_at is null or claimed_at < now() - interval '10 minutes')
+                 order by id limit greatest(coalesce(p_limit, 25), 0)
+                 for update skip locked)
+  returning *
 $$;
 
 -- ---------------------------------------------------------------------
@@ -1876,6 +1934,25 @@ begin
     format('%s marked %s.', case when p_material = 'logo' then 'Logo' else 'Program ad' end, replace(p_status, '_', ' ')));
 end $$;
 
+-- One order's guest-list deadline (gala admins): a sponsor who bought after the gala's deadline, or needs more time.
+-- A link already sent moves with it: it works through the end of the new deadline day, New York time.
+create or replace function staff_set_order_deadline(p_order_id text, p_deadline date) returns void
+language plpgsql security definer set search_path = public as $$
+declare me staff_users := require_staff(array['gala_admin']); o orders; v_gala date;
+begin
+  if p_deadline is null then raise exception 'invalid_input: a deadline is required'; end if;
+  select * into o from orders where id = p_order_id and event_id = current_event_id() for update;
+  if o.id is null then raise exception 'not_found: order'; end if;
+  select event_date into v_gala from gala_events where id = o.event_id;
+  if p_deadline > v_gala then raise exception 'invalid_input: the deadline can''t be after the gala (%)', to_char(v_gala, 'Mon FMDD, YYYY'); end if;
+  update orders set guest_list_deadline = p_deadline, updated_at = now(),
+         portal_token_expires_at = case when portal_token is not null
+                                        then (p_deadline + 1)::timestamp at time zone 'America/New_York' else portal_token_expires_at end
+   where id = o.id;
+  perform write_audit('staff', me.name, 'order', o.id, o.id, 'order.deadline_changed', o.guest_list_deadline::text, p_deadline::text, true,
+    format('Guest-list deadline for this order moved to %s.', to_char(p_deadline, 'Mon FMDD, YYYY')));
+end $$;
+
 -- ---------------------------------------------------------------------
 -- 8. EXPORTS  (rows for the staff app to save as CSV; every export is logged)
 -- Columns are a first proposal until AAFE sends its badge and check-in templates.
@@ -1976,14 +2053,14 @@ begin
               'portal_release_seat','staff_me','staff_update_guest','staff_set_seat_status','staff_mark_printed',
               'staff_assign_seat','staff_seat_order_at_table','staff_record_payment','staff_add_pledge','staff_add_comp_guest',
               'staff_send_qr_invite','staff_resend_portal_link','staff_approve_email','staff_cancel_email','checkin_list','staff_check_in','staff_check_in_qr',
-              'staff_check_in_exception','gl_import','staff_import_givelively','email_mark_sent','email_mark_failed',
+              'staff_check_in_exception','gl_import','staff_import_givelively','email_mark_sent','email_mark_failed','email_claim',
               'purchase_key','name_key','add_import_review','import_fill_guests','staff_set_tier_mapping','staff_set_gala_page',
-              'staff_resolve_import_review','seats_void_qr','guests_void_qr','require_gala_order',
+              'staff_resolve_import_review','seats_void_qr','guests_void_qr','gala_events_no_mixing','require_gala_order',
               'staff_export_badges','staff_export_checkin','staff_export_salesforce',
               'staff_queue_guest_list_reminders','staff_email_queue','staff_checkin_snapshot','staff_sync_check_ins','staff_undo_check_in',
               'pipeline_stage_label','pipeline_apply_order','orders_pipeline','staff_pipeline','staff_save_prospect',
               'staff_set_prospect_stage','staff_set_sponsorship_goal','staff_set_sponsor_arrivals',
-              'staff_update_gala_event','staff_set_material_status')
+              'staff_update_gala_event','staff_set_material_status','staff_set_order_deadline')
   loop
     execute format('revoke all on function %s from public, anon, authenticated', f);
   end loop;
@@ -2005,7 +2082,7 @@ grant execute on function
   checkin_list(), staff_check_in(text, text), staff_check_in_qr(text), staff_check_in_exception(text, text, text, text),
   staff_checkin_snapshot(), staff_sync_check_ins(jsonb), staff_undo_check_in(text),
   staff_pipeline(), staff_save_prospect(jsonb), staff_set_prospect_stage(text, text), staff_set_sponsorship_goal(numeric),
-  staff_set_sponsor_arrivals(boolean, text), staff_update_gala_event(jsonb), staff_set_material_status(text, text, text),
+  staff_set_sponsor_arrivals(boolean, text), staff_update_gala_event(jsonb), staff_set_material_status(text, text, text), staff_set_order_deadline(text, date),
   staff_import_givelively(jsonb, jsonb), staff_set_tier_mapping(text, text), staff_set_gala_page(text),
   staff_resolve_import_review(text, text),
   staff_export_badges(boolean), staff_export_checkin(), staff_export_salesforce(),
@@ -2013,7 +2090,7 @@ grant execute on function
   to authenticated;
 
 -- Edge functions (service role)
-grant execute on function gl_import(jsonb, text, text), email_mark_sent(text, text), email_mark_failed(text, text), hash_token(text)
+grant execute on function gl_import(jsonb, text, text), email_mark_sent(text, text), email_mark_failed(text, text), email_claim(int), hash_token(text)
   to service_role;
 
 -- ---------------------------------------------------------------------
