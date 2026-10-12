@@ -61,7 +61,7 @@ The approval screen calls `staff_email_queue()`: every unsent email, drafts firs
 - **Payment confirmation** (`payment_receipt`): `staff_record_payment` drafts one for every check, ACH or wire payment staff record. It states the amount, date and balance, and says it is not a tax receipt (Give Lively sends its own receipts for online purchases).
 - **Guest-list reminder** (`guest_list_reminder`): `staff_queue_guest_list_reminders(p_min_days default 7)` drafts one for each sponsor of the current gala who still has unnamed seats, already got a link, and whose deadline hasn't passed. It skips sponsors with a link or reminder still waiting, or one sent in the last `p_min_days` days. A reminder carries a fresh private link, so the newest email always has the one that works. If every seat gets named before it goes out, the sender refuses it and it shows as failed for staff to discard.
 
-Until `RESEND_API_KEY` is set, approved emails wait in the queue and nothing is sent. Each `send-emails` run claims its batch first (`email_claim()`), so the every-minute schedule and a manual "send now" never send the same email twice or replace a link a sponsor already received. A claim older than 10 minutes, from a run that stopped mid-send, is released for the next run. Until the Give Lively secrets are set, the poller returns `not_configured`.
+Until `RESEND_API_KEY` is set, approved emails wait in the queue and nothing is sent. A guest-list link or reminder for an order whose deadline has passed can't be approved (it would arrive expired): extend that order's deadline first (`staff_set_order_deadline`), and the sender refuses one whose deadline passed after approval. Once Resend accepts an email, saving that is retried and never counts as a failed send, so a database hiccup can't send a second email whose new link replaces the first. Each `send-emails` run claims its batch first (`email_claim()`), so the every-minute schedule and a manual "send now" never send the same email twice or replace a link a sponsor already received. A claim older than 10 minutes, from a run that stopped mid-send, is released for the next run. Until the Give Lively secrets are set, the poller returns `not_configured`.
 
 ## Demo with a fake Give Lively (all synthetic)
 
@@ -136,7 +136,10 @@ In the demo it goes to `salesforce-mock`, a stand-in org that answers Salesforce
 - **Rules.**
   - No duplicates: a purchase is matched on its purchase key (buyer email + UTC purchase time), or its Give Lively transaction ID when the sync has one.
   - Refunds update the existing payment and flag it for review.
-  - Pending or failed bank payments are skipped until Give Lively reports them settled.
+  - Only a full refund cancels an order: by amount, or a status that says "Refunded" and nothing more. "Partially Refunded" keeps the order and its seats, as partly paid (import spec case 19).
+  - Pending bank payments are skipped until Give Lively reports them settled.
+  - A purchase that fails after it was imported (a bounced ACH, a cancelled or declined donation) is cancelled, as the CSV import does: the order, its seats and any unsent guest-list link, with a staff review item. A failed donation that was never imported creates nothing.
+  - The sync and the CSV upload use the same failure words (failed, declined, cancelled, voided, reversed, returned), so one donation can't be live in one and cancelled in the other.
   - Give Lively's own fee is stored as reported and never recomputed.
 - **Flagged for review** (`payments.reconciliation_status = 'needs_review'`, reason in `orders.internal_notes`):
   - (an unknown package no longer defaults to Community Ticket: nothing is created, and it goes to `import_review` as `unknown_tier`)
@@ -191,6 +194,7 @@ Guest edits (`staff_update_guest`, and a sponsor editing a named guest through `
 | Sponsors → logo or program ad status (new) | `staff_set_material_status(p_order_id, p_material, p_status)`: `logo` or `program_ad`; `not_required`, `pending`, `received` or `approved` | admin, RM |
 | Gala info → sponsor arrivals on/off (new) | `staff_set_sponsor_arrivals(p_on, p_note)`: off by default; switching on needs a note recording AAFE's privacy approval (who and when). See "Gala-night arrivals" below | admin |
 | `importGiveLively` (CSV) | `staff_import_givelively(p_rows)` | admin |
+| Sponsors → an order's guest-list deadline (new, Oct 12; screen to come) | `staff_set_order_deadline(p_order_id, p_deadline)`: for a sponsor who bought after the gala's deadline or needs more time; a link already sent moves with it; not after the gala; logged | admin |
 | Integrations "Pull now" | `functions.invoke('givelively-sync')` | admin |
 | Integrations "Sync now" (Salesforce) | `functions.invoke('salesforce-push')` | admin |
 | Approve / discard a draft email | `staff_approve_email(p_email_id)` / `staff_cancel_email(p_email_id)` | admin, RM |
@@ -240,6 +244,8 @@ Errors come back as the Postgres message: `forbidden`, `not_found`, `invalid_lin
 
 ## Changes to the schema (all in `backend.sql`)
 
+- **The current gala** (`current_event_id()`, Oct 12): the gala marked live; else the next one coming up, soonest first; else the newest not closed. Creating next year's gala in planning no longer takes check-in, imports and exports away from this year's before it's closed.
+
 - New tables: `givelively_sync_state` (poll cursor and last result) and `givelively_raw` (every gala donation as Give Lively sent it).
 - New `email_log` columns: `attempts`, `last_error`, `approved_by` and `approved_at`. New status: `cancelled`.
 - New unique index on `payments.givelively_transaction_id`.
@@ -254,7 +260,8 @@ Errors come back as the Postgres message: `forbidden`, `not_found`, `invalid_lin
 - **Guest Portal is connected** when `guest-portal/.env.local` is set, and runs offline on the synthetic data when it isn't (the `OPEN-*.html` files). The landing page's demo cards still come from the built-in data. Their links work against the backend only if `seed.sql` was loaded.
 - **Staff App is connected** when `staff-app/.env.local` is set (issues #8, #9). Every page action goes through `staff-app/src/api.ts`: one `staff_*` call from the table above, then a reload of what the role may read. Gala admins and relationship managers read the tables (RLS); a check-in volunteer loads only `staff_checkin_snapshot()`, with no emails, phones, payments, notes or QR codes. Without the env file the same actions run on the demo data with the same role rules.
   - Live, Sponsors shows "Resend portal link" only (links are stored hashed, so there is nothing to copy), and relationship guests show their invitation status instead of a QR code.
-  - Still simulated in both modes: the Give Lively "Pull now" and CSV import on Integrations (live imports come with the import upload screen).
+  - Live, the Give Lively "Pull now" on Integrations (gala admins) runs `givelively-sync` right away, as the 15-minute schedule does, and shows its counts or its reason when it can't run (secrets or the gala's page name not set). It needs the function deployed (step 3).
+  - Still simulated in both modes: the CSV import on Integrations (live CSV imports go through the Import page).
 - **QR e-tickets (hard rule 6).** A code is minted only when an approved `qr_invitation` email sends; the database keeps its SHA-256 hash on the guest's seat (`seats.qr_token_hash`), valid until 6 a.m. New York time the morning after gala night. Resending replaces the code; a different guest on the seat, a name or email change, or a cancelled seat voids it. Staff can't display a code, only resend it. The seed's QR codes are moved onto seats as hashes when `backend.sql` runs. The seed's demo sponsor links are short (8 characters), fine for the demo but below rule 6's 128 bits; real links are minted at 128 bits by `send-emails`.
 - **Email.** Templates (`_shared/emails.ts`) are in English: the guest-list link, guest-list reminders, payment confirmations, and QR invitations. The portal page itself has 中文, 한국어, and Español. Reminders are drafted when staff ask (`staff_queue_guest_list_reminders`), not on a schedule.
 - **Salesforce.** A stand-in only (the demo never talks to a real org): see "Demo with a stand-in Salesforce". `staff_export_salesforce()` gives a file shaped for a Contact and Campaign Member import, the real deliverable until AAFE connects its org.
