@@ -193,8 +193,10 @@ gala@aafe.org." Buyers type it however they like. Plain rules, in this order:
    their email.
 7. **Unclear → left for the sponsor to confirm** (the original text shows in the portal; no guest is
    created for that entry, and the clear names in the list are still pre-filled): an entry with an email
-   but no name, a one-word name, a couple ("John and Mary Smith", "J & M Smith"), or an entry that can't
-   be read. **More names than seats** pre-fills nothing at all, since there's no way to know who to leave
+   but no name, a one-word name, a couple ("John and Mary Smith", "J & M Smith"), an entry that can't
+   be read, or **four or more name words with nothing between them** ("Paul Marsh Ana Ruiz": likely two
+   people run together; titles like "Dr." and particles like "de la" don't count, so a real four-word
+   name is also left for the sponsor to confirm). **More names than seats** pre-fills nothing at all, since there's no way to know who to leave
    out (all names stay visible in the original text; nothing is dropped).
 
 Revisions arrive later through the portal or by email to gala@aafe.org (staff enter those in the staff
