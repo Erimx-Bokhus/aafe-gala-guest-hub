@@ -4,10 +4,11 @@
 // DEMO (no Supabase): the same actions run on the in-browser demo data (store.ts), with the same role rules, so the
 //   demo behaves like the real app, including what a check-in volunteer can and can't see.
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { addAudit, displayName, loadDB } from '@shared/data'
+import { addAudit, displayName, loadDB, uid } from '@shared/data'
 import type { Snapshot } from '@shared/offlineCheckin'
-import type { AuditEntry, DB, EmailLog, GalaEvent, Guest, Material, PayMethod, Role, StaffUser } from '@shared/types'
+import type { AuditEntry, DB, EmailLog, GalaEvent, Guest, Material, PayMethod, PipelineStage, Role, Sector, StaffUser } from '@shared/types'
 import * as store from './store'
+import { STAGES, type ProspectInput } from './store'
 import type { GlImportRow, GlImportRun, ImportResult } from './importer'
 import { demoBadgeRows, demoCheckinRows, demoSalesforceRows, type BadgeRow, type CheckinRow, type SalesforceRow } from './exports'
 
@@ -26,6 +27,20 @@ export interface QueuedEmail {
   order_id: string | null; organization: string | null; tier: string | null; deadline: string | null
   seats_unnamed: number; seats_total: number; guest: string | null
   payment: { amount: number; method: PayMethod; received_at: string; check_number: string | null } | null
+}
+/** One prospect on the pipeline board, as staff_pipeline() returns it (no emails or phone numbers). */
+export interface PipelineProspect {
+  id: string; sponsor_id: string; organization: string; contact: string; relationship_manager: string | null; follow_up: string | null
+  sector: Sector | null; stage: PipelineStage; stage_label: string; probability: number; stage_changed_at: string
+  ask: number | null; ask_tier: string | null; order_id: string | null; tier: string | null; commitment: number | null
+  received: number; balance: number; prior_years: { year: number; given: number }[]; notes: string | null
+}
+/** staff_pipeline(): totals against the goal, each stage's sums, and every prospect (by stage, then name). */
+export interface PipelineBoard {
+  event_id: string; event_name: string; goal: number | null
+  totals: { committed: number; received: number; weighted: number; open_ask: number; prospects: number }
+  stages: { ord: number; stage: PipelineStage; label: string; probability: number; count: number; ask: number; committed: number; received: number }[]
+  prospects: PipelineProspect[]
 }
 export type GalaPatch = Partial<Pick<GalaEvent, 'name' | 'event_date' | 'doors_time' | 'program_time' | 'venue_name' | 'venue_address' | 'dress_code' | 'guest_list_deadline' | 'program_ad_deadline'>>
 
@@ -59,6 +74,8 @@ export interface StaffApi {
   emailQueue(): Promise<QueuedEmail[]>
   /** Draft a guest-list reminder for each sponsor who needs one; returns how many. Drafts only: staff approve each. */
   queueReminders(minDays?: number): Promise<number>
+  /** Let sponsors see which of their guests have arrived (arrived or not, never a time). Switching on needs a note of AAFE's privacy approval. */
+  setSponsorArrivals(on: boolean, note: string): Promise<void>
   /** Write a prepared Give Lively upload (importer.ts): all of it, or nothing. Gala admins only. */
   importGiveLively(rows: GlImportRow[], run: GlImportRun): Promise<ImportResult>
   /** Ask Give Lively for new gala purchases now, as the 15-minute schedule does (the givelively-sync function). Gala admins only. */
@@ -69,6 +86,14 @@ export interface StaffApi {
   setTierMapping(givelivelyName: string, tierId: string): Promise<void>
   /** Close an import review item with what staff decided. */
   resolveImportReview(id: string, resolution: string): Promise<void>
+  /** The sponsor pipeline board (AAFE's prospect tracker). */
+  pipeline(): Promise<PipelineBoard>
+  /** Add a prospect (an existing sponsor, or a new organization) or edit one; returns its id. */
+  saveProspect(p: ProspectInput): Promise<string>
+  /** Move a prospect to a stage. Payment received comes from a recorded payment, never by hand. */
+  setProspectStage(id: string, stage: PipelineStage): Promise<void>
+  /** The board's sponsorship goal for this gala; null clears it. */
+  setSponsorshipGoal(amount: number | null): Promise<void>
 }
 
 // Who may do what. Mirrors require_staff(...) in each staff_* function, and scripts/test-access.mjs checks the server side.
@@ -82,8 +107,9 @@ export const ROLES: Record<Exclude<keyof StaffApi, 'live'>, Role[]> = {
   checkIn: ALL, checkInByCode: ALL, checkInException: ALL,
   updateGalaEvent: ADMIN, history: MANAGERS,
   exportBadges: MANAGERS, exportCheckin: ALL, exportSalesforce: ADMIN,
-  emailQueue: MANAGERS, queueReminders: MANAGERS,
+  emailQueue: MANAGERS, queueReminders: MANAGERS, setSponsorArrivals: ADMIN,
   importGiveLively: ADMIN, pullGiveLively: ADMIN, setGalaPage: ADMIN, setTierMapping: ADMIN, resolveImportReview: MANAGERS,
+  pipeline: MANAGERS, saveProspect: MANAGERS, setProspectStage: MANAGERS, setSponsorshipGoal: ADMIN,
 }
 export const canDo = (role: Role, action: keyof typeof ROLES) => ROLES[action].includes(role)
 
@@ -174,6 +200,18 @@ export function demoApi(user: StaffUser, update: (fn: (d: DB) => DB) => void, fu
       update((d) => { const r = store.queueGuestListReminders(d, user, minDays); n = r.n; return r.db })
       return n
     },
+    // Like staff_set_sponsor_arrivals: on needs AAFE's approval noted; off needs nothing; both logged, a repeat does nothing.
+    setSponsorArrivals: (on, note) => {
+      const why = note.trim()
+      if (on && !why) return Promise.reject(new Error("invalid_input: record AAFE's privacy approval (who and when) to switch arrivals on"))
+      return run('setSponsorArrivals', (d) => {
+        const ev = d.gala_events.find((x) => x.id === d.meta.current_event_id)!
+        if (!!ev.sponsor_arrivals_visible === on) return d
+        return addAudit({ ...d, gala_events: d.gala_events.map((x) => (x.id === ev.id ? { ...x, sponsor_arrivals_visible: on, sponsor_arrivals_note: on ? why : x.sponsor_arrivals_note ?? null } : x)) },
+          { actor_type: 'staff', actor: user.name, entity: 'gala_event', entity_id: ev.id, order_id: null, action: 'gala.sponsor_arrivals', from_state: String(!!ev.sponsor_arrivals_visible), to_state: String(on), guest_visible: false,
+            summary: on ? `Sponsors can now see which of their guests have arrived (approval: ${why}).` : 'Sponsors can no longer see which of their guests have arrived.' })
+      })
+    },
     importGiveLively: async (rows, run) => {
       if (!may('importGiveLively')) return forbidden()
       let result: ImportResult | null = null
@@ -194,6 +232,27 @@ export function demoApi(user: StaffUser, update: (fn: (d: DB) => DB) => void, fu
       if (!may('resolveImportReview')) return forbidden()
       if (!(full().import_review ?? []).some((v) => v.id === id && v.status === 'open')) return Promise.reject(new Error('not_found'))
       update((d) => store.resolveImportReview(d, user, id, resolution)); return Promise.resolve()
+    },
+    // The pipeline follows the orders first (syncPipeline: the orders_pipeline trigger), then checks and saves like staff_*.
+    pipeline: async () => (may('pipeline') ? demoPipeline(store.syncPipeline(full())) : forbidden()),
+    saveProspect: async (p) => {
+      if (!may('saveProspect')) return forbidden()
+      const err = store.prospectError(store.syncPipeline(full()), p)
+      if (err) throw new Error(err)
+      const ids = { prospect: uid('pr'), sponsor: uid('sp') }
+      update((d) => store.saveProspect(store.syncPipeline(d), user, p, ids))
+      return p.id ?? ids.prospect
+    },
+    setProspectStage: async (id, stage) => {
+      if (!may('setProspectStage')) return forbidden()
+      const err = store.stageError(store.syncPipeline(full()), id, stage)
+      if (err) throw new Error(err)
+      update((d) => store.setProspectStage(store.syncPipeline(d), user, id, stage))
+    },
+    setSponsorshipGoal: async (amount) => {
+      if (!may('setSponsorshipGoal')) return forbidden()
+      if (amount != null && !(amount >= 0)) throw new Error('invalid_input: the goal cannot be negative')
+      update((d) => store.setSponsorshipGoal(d, user, amount))
     },
   }
   // Like the staff_export_* functions: refused for the wrong role, otherwise logged with the row count.
@@ -248,6 +307,7 @@ export function liveApi(client: SupabaseClient, reload: () => Promise<void>): St
     exportSalesforce: () => call<SalesforceRow[]>('staff_export_salesforce', {}),
     emailQueue: () => call<QueuedEmail[]>('staff_email_queue', {}),
     queueReminders: async (minDays = 7) => { const n = await call<number>('staff_queue_guest_list_reminders', { p_min_days: minDays }); await reload(); return n },
+    setSponsorArrivals: (on, note) => write('staff_set_sponsor_arrivals', { p_on: on, p_note: note.trim() || null }),
     importGiveLively: async (rows, run) => { const r = await call<ImportResult>('staff_import_givelively', { p_rows: rows, p_run: run }); await reload(); return r },
     pullGiveLively: async () => {
       // The function checks the caller is a gala admin; it answers { error, message } when it can't run.
@@ -262,6 +322,10 @@ export function liveApi(client: SupabaseClient, reload: () => Promise<void>): St
     setGalaPage: (page) => write('staff_set_gala_page', { p_page_name: page }),
     setTierMapping: (name, tierId) => write('staff_set_tier_mapping', { p_givelively_name: name, p_tier_id: tierId }),
     resolveImportReview: (id, resolution) => write('staff_resolve_import_review', { p_id: id, p_resolution: resolution }),
+    pipeline: () => call<PipelineBoard>('staff_pipeline', {}),
+    saveProspect: async (p) => { const id = await call<string>('staff_save_prospect', { p }); await reload(); return id },
+    setProspectStage: (id, stage) => write('staff_set_prospect_stage', { p_id: id, p_stage: stage }),
+    setSponsorshipGoal: (amount) => write('staff_set_sponsorship_goal', { p_amount: amount }),
   }
 }
 
@@ -272,6 +336,49 @@ export function liveApi(client: SupabaseClient, reload: () => Promise<void>): St
  * data. One type with the iPad app (shared/src/offlineCheckin.ts), so the staff app reads what the database really returns.
  */
 export type CheckinSnapshot = Snapshot
+
+/** The pipeline board from the (synced) demo data, in staff_pipeline()'s shape and order. */
+export function demoPipeline(db: DB): PipelineBoard {
+  const ev = db.gala_events.find((e) => e.id === db.meta.current_event_id)!
+  const cents = (n: number) => Math.round(n * 100) / 100
+  const sum = (xs: (number | null)[]) => cents(xs.reduce<number>((a, x) => a + (x ?? 0), 0))
+  const staffName = (id: string | null) => (id && db.staff_users.find((u) => u.id === id)?.name) || null
+  const tierName = (id: string | null) => (id && db.sponsorship_tiers.find((t) => t.id === id)?.name) || null
+  const paidIn = (orderIds: string[]) => sum(db.payments.filter((x) => orderIds.includes(x.order_id)).map((x) => x.original_amount - x.refunded_amount))
+  const prior = db.gala_events.filter((e) => e.year === ev.year - 1 || e.year === ev.year - 2).sort((a, b) => b.year - a.year)
+  const ord = (s: PipelineStage) => STAGES.findIndex((x) => x.stage === s)
+  const prospects: PipelineProspect[] = (db.sponsor_prospects ?? []).filter((p) => p.event_id === ev.id).map((p) => {
+    const sp = db.sponsors.find((s) => s.id === p.sponsor_id)!
+    const st = STAGES[ord(p.stage)]
+    const o = db.orders.find((x) => x.id === p.order_id && x.status !== 'cancelled')
+    const commitment = o ? o.commitment_amount : null, received = o ? paidIn([o.id]) : 0
+    return {
+      id: p.id, sponsor_id: p.sponsor_id, organization: sp.organization_name, contact: sp.primary_contact_name,
+      relationship_manager: staffName(sp.relationship_owner_id), follow_up: staffName(p.follow_up_owner_id), sector: p.sector, stage: p.stage,
+      stage_label: st.label, probability: st.probability, stage_changed_at: p.stage_changed_at, ask: p.ask_amount, ask_tier: tierName(p.ask_tier_id),
+      order_id: p.order_id, tier: o ? tierName(o.tier_id) : null, commitment, received, balance: Math.max(cents((commitment ?? 0) - received), 0),
+      prior_years: prior.map((e) => ({ year: e.year, given: paidIn(db.orders.filter((x) => x.sponsor_id === p.sponsor_id && x.event_id === e.id && x.status !== 'cancelled').map((x) => x.id)) })),
+      notes: p.notes,
+    }
+  }).sort((a, b) => ord(a.stage) - ord(b.stage) || a.organization.localeCompare(b.organization))
+  const early = (s: PipelineStage) => s === 'not_started' || s === 'reached_out' || s === 'in_conversation'
+  return {
+    event_id: ev.id, event_name: ev.name, goal: ev.sponsorship_goal ?? null,
+    totals: {
+      committed: sum(prospects.filter((p) => p.stage === 'closed_won' || p.stage === 'payment_received').map((p) => p.commitment)),
+      received: sum(prospects.map((p) => p.received)),
+      weighted: sum(prospects.map((p) => p.probability * (p.commitment ?? p.ask ?? 0))),
+      open_ask: sum(prospects.filter((p) => early(p.stage)).map((p) => p.ask)),
+      prospects: prospects.length,
+    },
+    stages: STAGES.map((st, i) => {
+      const at = prospects.filter((p) => p.stage === st.stage)
+      return { ord: i + 1, stage: st.stage, label: st.label, probability: st.probability, count: at.length,
+        ask: sum(at.map((p) => p.ask)), committed: sum(at.map((p) => p.commitment)), received: sum(at.map((p) => p.received)) }
+    }),
+    prospects,
+  }
+}
 
 /** The approval list from the demo data, in staff_email_queue()'s shape and order (drafts first). Demo approval sends at once,
  *  so there are no approved-but-unsent or failed emails here; demo emails carry no payment link. */
