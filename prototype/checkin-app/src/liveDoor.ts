@@ -7,6 +7,7 @@ import { CheckInDesk, type KeyValueStore, type QueuedCheckIn, type Snapshot, typ
 import { supabase } from '@shared/supabase'
 import type { StaffUser } from '@shared/types'
 import { CATEGORY, seatLabel, type Arrival, type Door, type DoorGuest, type ExceptionRow, type Gala } from './door'
+import { checkSignOut } from './signOut'
 
 /** localStorage, or memory when the browser blocks it (the door keeps working either way). */
 function safeStore(): KeyValueStore {
@@ -37,6 +38,10 @@ const reason = (e: unknown) => { const m = String((e as { message?: string })?.m
 
 export const deskFor = (staff: StaffUser) =>
   new CheckInDesk({ store, device: deviceName(), staffName: staff.name, prefix: `aafe-checkin:${staff.id}:` })
+
+/** Before sign-out: sends the check-ins still waiting on this iPad and says whether anything would be lost (signOut.ts). */
+export const checkLiveSignOut = (staff: StaffUser) =>
+  checkSignOut(deskFor(staff), (items) => rpc<SyncResult[]>('staff_sync_check_ins', { p_items: items }), staff.role)
 
 /** Loads the list (or the one saved on this iPad, when offline). Null when the gala is closed: the saved list is cleared. */
 export async function loadDoor(staff: StaffUser): Promise<Door | null> {
