@@ -1,0 +1,200 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Gala Guest Journey</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap">
+<style>
+/* Layout: three lanes (how a guest gets on the list) pour into one guest list, then gala night, then after.
+   AAFE brand per docs/design.md: orange, black, cool grays, Poppins, square containers, pill chips. */
+:root {
+  --bg: #FFFFFF;
+  --panel: #F4F4F6;
+  --line: #EBEBEB;
+  --ink: #000000;
+  --ink-2: #4D4C4C;
+  --ink-3: #707070;
+  --orange: #C64C28;
+  --orange-ink: #FFFFFF;
+  --orange-soft: #F8E3D8;
+  --hub: #000000;
+  --hub-ink: #FFFFFF;
+  --sys: #E9EEF5;
+  --sys-ink: #24324A;
+  --spon: #EAF4EE;
+  --spon-ink: #1E5A36;
+  --font: "Poppins", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #121212; --panel: #1E1E1E; --line: #3A3A3A; --ink: #F5F5F5; --ink-2: #C9C9C9; --ink-3: #A3A3A3;
+  --orange: #E8956F; --orange-ink: #121212; --orange-soft: #3A2219; --hub: #F5F5F5; --hub-ink: #121212;
+  --sys: #1F2633; --sys-ink: #BFD0EA; --spon: #17291F; --spon-ink: #A6DBB9; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #121212; --panel: #1E1E1E; --line: #3A3A3A; --ink: #F5F5F5; --ink-2: #C9C9C9; --ink-3: #A3A3A3;
+  --orange: #E8956F; --orange-ink: #121212; --orange-soft: #3A2219; --hub: #F5F5F5; --hub-ink: #121212;
+  --sys: #1F2633; --sys-ink: #BFD0EA; --spon: #17291F; --spon-ink: #A6DBB9; color-scheme: dark }
+
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 15px; line-height: 1.55; margin: 0 }
+.wrap { max-width: 1180px; margin: 0 auto; padding-inline: 20px; padding-block: 36px 56px }
+h1, h2, h3 { text-wrap: balance; margin: 0 }
+.eyebrow { font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--orange) }
+.rule { width: 64px; height: 4px; background: var(--orange); margin-bottom: 14px }
+h1 { font-size: clamp(28px, 4vw, 40px); line-height: 1.15; margin-top: 6px }
+.lede { color: var(--ink-2); max-width: 68ch; margin: 12px 0 0 }
+
+.legend { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 20px; font-size: 13px; color: var(--ink-2) }
+.legend span { display: inline-flex; align-items: center; gap: 8px }
+
+.who { display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; padding: 2px 10px; border-radius: 50px; white-space: nowrap }
+.who.staff { background: var(--orange-soft); color: var(--orange) }
+.who.sponsor { background: var(--spon); color: var(--spon-ink) }
+.who.system { background: var(--sys); color: var(--sys-ink) }
+.who.approve { background: var(--orange); color: var(--orange-ink) }
+
+.lanes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 28px }
+.lane { border: 1px solid var(--line); background: var(--bg); display: flex; flex-direction: column; min-width: 0 }
+.lane > header { padding: 16px 18px; border-bottom: 1px solid var(--line); background: var(--panel) }
+.lane > header h2 { font-size: 18px; line-height: 1.3 }
+.lane > header p { margin: 4px 0 0; font-size: 13px; color: var(--ink-3) }
+ol.steps { list-style: none; margin: 0; padding: 8px 18px 18px; counter-reset: s; display: flex; flex-direction: column; gap: 0; flex: 1 }
+ol.steps li { counter-increment: s; position: relative; padding: 12px 0 12px 40px; border-bottom: 1px dashed var(--line) }
+ol.steps li:last-child { border-bottom: 0 }
+ol.steps li::before { content: counter(s); position: absolute; left: 0; top: 12px; width: 26px; height: 26px; border-radius: 50%;
+  border: 2px solid var(--ink-3); color: var(--ink-2); font-size: 12px; font-weight: 700; display: grid; place-items: center }
+ol.steps li.gate::before { border-color: var(--orange); background: var(--orange); color: var(--orange-ink) }
+ol.steps h3 { font-size: 15px; font-weight: 600; line-height: 1.35 }
+ol.steps p { margin: 4px 0 6px; font-size: 13.5px; color: var(--ink-2) }
+.where { font-size: 12px; color: var(--ink-3) }
+
+.pour { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px }
+.pour div { height: 28px; border-left: 2px solid var(--ink-3); margin-left: 50% }
+
+.hub { background: var(--hub); color: var(--hub-ink); padding: 22px 24px; display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 20px; align-items: center }
+.hub h2 { font-size: 22px }
+.hub p { margin: 6px 0 0; font-size: 14px; opacity: .85 }
+.hub ul { margin: 0; padding-left: 18px; font-size: 14px; opacity: .9; display: grid; gap: 4px }
+
+.down { height: 28px; border-left: 2px solid var(--ink-3); margin-left: 32px }
+
+.two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px }
+.block { border: 1px solid var(--line); padding: 18px 20px; min-width: 0 }
+.block h2 { font-size: 18px }
+.block ul { margin: 10px 0 0; padding-left: 18px; color: var(--ink-2); font-size: 14px; display: grid; gap: 6px }
+.block strong { color: var(--ink) }
+
+.qa { margin-top: 28px; background: var(--panel); padding: 22px 24px; border-left: 4px solid var(--orange) }
+.qa h2 { font-size: 20px }
+.qa dl { margin: 12px 0 0; display: grid; gap: 14px }
+.qa dt { font-weight: 600 }
+.qa dd { margin: 4px 0 0; color: var(--ink-2); max-width: 80ch }
+.foot { margin-top: 24px; font-size: 12.5px; color: var(--ink-3) }
+code { font-family: var(--font); font-size: .92em; background: var(--panel); padding: 0 4px }
+
+@media (max-width: 860px) {
+  .lanes, .two, .hub { grid-template-columns: minmax(0, 1fr) }
+  .pour { grid-template-columns: minmax(0, 1fr) }
+  .pour div:not(:first-child) { display: none }
+  .pour div { margin-left: 32px }
+}
+</style>
+
+<div class="wrap">
+  <div class="rule" aria-hidden="true"></div>
+  <div class="eyebrow">AAFE Gala Guest List Tool</div>
+  <h1>How a guest gets from purchase to the door</h1>
+  <p class="lede">Three ways onto the guest list: a Give Lively purchase, a check or pledge, or a comp. All three land on one guest list, which feeds gala night and the Salesforce file. Orange steps are where AAFE staff approve before anything goes out.</p>
+
+  <div class="legend" aria-label="Who does each step">
+    <span><span class="who staff">AAFE staff</span> does it in the staff app</span>
+    <span><span class="who sponsor">Sponsor</span> does it on their private link</span>
+    <span><span class="who system">Automatic</span> the tool does it</span>
+    <span><span class="who approve">Staff approve</span> nothing sends until staff approve</span>
+  </div>
+
+  <div class="lanes">
+    <section class="lane" aria-labelledby="l1">
+      <header><h2 id="l1">Ticket or sponsorship on Give Lively</h2><p>Paid online. Most guests come this way.</p></header>
+      <ol class="steps">
+        <li><h3>Buys on Give Lively</h3><p>Pays by card or bank. Give Lively sends the tax receipt.</p><span class="who sponsor">Sponsor</span></li>
+        <li><h3>Purchase comes into the tool</h3><p>Staff download Give Lively's export and upload it (later: an automatic pull). The order and its seats appear, with any names the buyer typed.</p><span class="who staff">AAFE staff</span> <span class="where">Give Lively import</span></li>
+        <li class="gate"><h3>"Add your guests" email is drafted</h3><p>Staff read it and approve it. Then it goes out with the sponsor's private link.</p><span class="who approve">Staff approve</span> <span class="where">Integrations &amp; email</span></li>
+        <li><h3>Sponsor names their guests</h3><p>Adds missing guests and fixes spelling, titles and organizations, until the guest-list deadline.</p><span class="who sponsor">Sponsor</span> <span class="where">Private link</span></li>
+        <li><h3>Staff review, seat and badge</h3><p>Confirm each name, assign table and seat, print badges.</p><span class="who staff">AAFE staff</span> <span class="where">Guest list, Seating, Badges</span></li>
+      </ol>
+    </section>
+
+    <section class="lane" aria-labelledby="l2">
+      <header><h2 id="l2">Check, direct deposit or pledge</h2><p>Sponsor pays AAFE directly, now or later.</p></header>
+      <ol class="steps">
+        <li><h3>Staff record the pledge</h3><p>Organization, contact, email and package. The seats appear right away; payment can follow.</p><span class="who staff">AAFE staff</span> <span class="where">Sponsors &amp; orders</span></li>
+        <li class="gate"><h3>"Add your guests" email is drafted</h3><p>Same as Give Lively: staff approve, then the private link goes out.</p><span class="who approve">Staff approve</span></li>
+        <li><h3>Sponsor names their guests</h3><p>Same private link and deadline.</p><span class="who sponsor">Sponsor</span></li>
+        <li><h3>Check or deposit arrives</h3><p>Staff record the amount and date. The balance updates on the sponsor's page.</p><span class="who staff">AAFE staff</span> <span class="where">Payments</span></li>
+        <li class="gate"><h3>Payment confirmation drafted</h3><p>Staff approve it before it sends. It is not a tax receipt.</p><span class="who approve">Staff approve</span></li>
+      </ol>
+    </section>
+
+    <section class="lane" aria-labelledby="l3">
+      <header><h2 id="l3">Comp guest</h2><p>Invited by the Executive Director, board or a relationship manager.</p></header>
+      <ol class="steps">
+        <li><h3>Staff add the guest</h3><p>Name, title, organization, email, and a note on who invited them. They are on the guest list from this moment.</p><span class="who staff">AAFE staff</span> <span class="where">Relationship guests</span></li>
+        <li class="gate"><h3>Staff send the QR invitation</h3><p>One button: "Send QR invite". The staff member who sends it is the approver, and the send is logged.</p><span class="who approve">Staff approve</span></li>
+        <li><h3>The tool makes a personal QR code</h3><p>Created at the moment the email sends, one per guest, attached as an image. Only a scrambled copy is kept, so a leaked list can't be used to get in.</p><span class="who system">Automatic</span></li>
+        <li><h3>Seat and badge</h3><p>Same as every other guest.</p><span class="who staff">AAFE staff</span></li>
+      </ol>
+    </section>
+  </div>
+
+  <div class="pour" aria-hidden="true"><div></div><div></div><div></div></div>
+
+  <section class="hub" aria-labelledby="hub">
+    <div>
+      <h2 id="hub">One guest list</h2>
+      <p>Every guest from all three lanes, with where each record came from and every change logged. Staff corrections survive the next Give Lively upload.</p>
+    </div>
+    <ul>
+      <li>Named guests go on the iPad list as soon as they're named, paid or not</li>
+      <li>Unnamed sponsor seats show at the door, for walk-ins on that sponsor's table</li>
+      <li>A refund or failed payment cancels the order and its seats</li>
+    </ul>
+  </section>
+
+  <div class="down" aria-hidden="true"></div>
+
+  <div class="two">
+    <section class="block" aria-labelledby="night">
+      <h2 id="night">Gala night: iPad check-in</h2>
+      <ul>
+        <li><strong>Scan the QR code</strong> on the guest's phone or printout, or <strong>search the name</strong>. Every guest can be found by name; a QR code is a shortcut.</li>
+        <li><strong>Walk-ins and exceptions</strong> are added at the door with a reason, on the sponsor's order if they have one.</li>
+        <li><strong>Works offline.</strong> Check-ins wait on the iPad and send when the internet is back. Signing out never deletes ones that haven't sent.</li>
+      </ul>
+    </section>
+    <section class="block" aria-labelledby="after">
+      <h2 id="after">After the gala</h2>
+      <ul>
+        <li><strong>Who came</strong> (still to build): arrivals and no-shows per sponsor.</li>
+        <li><strong>Salesforce attendee file:</strong> a file shaped for AAFE's Salesforce import. Nothing writes to Salesforce on its own.</li>
+        <li><strong>Clean-up</strong> (AAFE to decide): contact, dietary and access details deleted on AAFE's schedule.</li>
+      </ul>
+    </section>
+  </div>
+
+  <section class="qa" aria-labelledby="qa">
+    <h2 id="qa">How AAFE staff handle comps and QR codes</h2>
+    <dl>
+      <div><dt>How does a comp get into the app?</dt>
+        <dd>Staff add them on the <strong>Relationship guests</strong> page: name, title, organization, email and who invited them. That puts them on the guest list and on the iPad list at the same time.</dd></div>
+      <div><dt>Who generates the QR codes?</dt>
+        <dd>Nobody does it by hand. When staff press <strong>Send QR invite</strong>, the tool creates a new personal code, attaches it to the email, and sends it. Pressing it again sends a fresh code and the old one stops working.</dd></div>
+      <div><dt>What if a comp never gets the email or forgets the code?</dt>
+        <dd>The door finds them by name. The QR code only makes check-in faster.</dd></div>
+      <div><dt>The QR codes in the demo?</dt>
+        <dd>Those are invented demo codes so the iPad can be tried without sending email. In the real tool every code is made at send time.</dd></div>
+    </dl>
+  </section>
+
+  <p class="foot">Matches the prototype on main as of Oct 12, 2026. Demo data only. Written by Natalie Walker.</p>
+</div>
+
+</body></html>
