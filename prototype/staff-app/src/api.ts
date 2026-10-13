@@ -436,7 +436,7 @@ export function demoSnapshot(db: DB): CheckinSnapshot {
         id: g.id, order_id: g.order_id, first_name: g.first_name, last_name: g.last_name, display_name: displayName(g), title: g.title, organization: g.organization,
         sponsor: sponsorOf(g.order_id), package: db.sponsorship_tiers.find((t) => t.id === orders.get(g.order_id)!.tier_id)?.name ?? null,
         guest_type: g.guest_type, table_number: db.event_tables.find((t) => t.id === g.table_id)?.number ?? null, seat_number: g.seat_number,
-        accessibility_needs: g.accessibility_needs, qr_hash: null, qr_expires_at: null,
+        has_access_needs: !!g.accessibility_needs?.trim(), qr_hash: null, qr_expires_at: null,
         arrived: g.attendance_status === 'checked_in' || !!ci, checkin_id: ci?.id ?? null, checkin_client_id: null,
         checked_in_at: ci?.checked_in_at ?? null, checked_in_by: ci?.checked_in_by ?? null, device: null,
       }
@@ -469,7 +469,7 @@ export function volunteerDb(snap: CheckinSnapshot, user: StaffUser): DB {
     orders: orderIds.map((o) => ({ id: o, event_id: snap.event_id, sponsor_id: `sp-${o}`, tier_id: '', source: 'staff_entry' as const, commitment_amount: 0, status: 'pledged' as const, portal_token: null, portal_token_expires_at: null, portal_link_sent_at: null, guest_list_deadline: null, logo_status: 'not_required' as const, program_ad_status: 'not_required' as const, givelively_order_ref: null, salesforce_opportunity_id: null, internal_notes: '', created_at: at, updated_at: at })),
     payments: [],
     event_tables: [...new Set(snap.guests.map((g) => g.table_number).filter((n): n is number => n != null))].map((n) => ({ id: tableId(n)!, event_id: snap.event_id, number: n, label: null, capacity: 0, pos_x: 0, pos_y: 0 })),
-    guests: snap.guests.map((g) => ({ id: g.id, order_id: g.order_id, first_name: g.first_name, last_name: g.last_name, display_name: g.display_name ?? null, title: g.title ?? '', organization: g.organization ?? '', email: '', dietary_needs: null, accessibility_needs: g.accessibility_needs, guest_type: g.guest_type as Guest['guest_type'], relationship_note: null, table_id: tableId(g.table_number), seat_number: g.seat_number, badge_status: 'ready' as const, attendance_status: g.arrived ? 'checked_in' as const : 'expected' as const, qr_token: null, last_updated_by: 'staff' as const, created_at: at, updated_at: at })),
+    guests: snap.guests.map((g) => ({ id: g.id, order_id: g.order_id, first_name: g.first_name, last_name: g.last_name, display_name: g.display_name ?? null, title: g.title ?? '', organization: g.organization ?? '', email: '', dietary_needs: null, accessibility_needs: g.has_access_needs ? 'Access needs · ask a staff lead' : null, guest_type: g.guest_type as Guest['guest_type'], relationship_note: null, table_id: tableId(g.table_number), seat_number: g.seat_number, badge_status: 'ready' as const, attendance_status: g.arrived ? 'checked_in' as const : 'expected' as const, qr_token: null, last_updated_by: 'staff' as const, created_at: at, updated_at: at })),
     seats: [],
     check_ins: [
       ...snap.guests.filter((g) => g.arrived).map((g) => ({ id: g.checkin_id ?? `ci-${g.id}`, event_id: snap.event_id, guest_id: g.id, order_id: g.order_id, arrival_name: null, method: 'search' as const, type: 'standard', checked_in_by: g.checked_in_by ?? '', note: '', checked_in_at: g.checked_in_at ?? at })),

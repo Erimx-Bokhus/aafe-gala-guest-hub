@@ -25,7 +25,8 @@ export interface SnapshotGuest {
   guest_type: string
   table_number: number | null
   seat_number: number | null
-  accessibility_needs: string | null
+  /** The guest has accessibility needs: the door says "ask a staff lead". The details stay in the staff app. */
+  has_access_needs: boolean
   /** SHA-256 of the guest's QR code (upper-cased), or null when there is none or it expired. */
   qr_hash: string | null
   qr_expires_at: string | null

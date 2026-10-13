@@ -31,6 +31,17 @@ ok(snap.guests.find((g) => g.id === 'g-020').qr_hash === null, 'an expired code 
 ok(!text.includes('OFF1'), 'the code itself is never in the list')
 ok(snap.unnamed_seats.some((u) => u.order_id === 'ord-acme' && u.count === 3), 'unnamed sponsor seats are listed, for walk-ins')
 ok((await q(`select count(*)::int n from audit_log where actor = $1`, [VOL.name]))[0].n === 0, 'saving the list is a read, not logged')
+// Accessibility needs: a yes/no flag at the door, never the details (review item 2, Oct 13), from all three door functions.
+await db.exec(`update guests set accessibility_needs = 'Step-free entrance, test detail' where id = 'g-019'`)
+const withNeeds = (await as('authenticated', VOL.email, `select staff_checkin_snapshot() s`))[0].s
+ok(withNeeds.guests.find((g) => g.id === 'g-019').has_access_needs === true && withNeeds.guests.find((g) => g.id === 'g-020').has_access_needs === false,
+  'the saved list flags who has accessibility needs')
+const list = (await as('authenticated', VOL.email, `select checkin_list() l`))[0].l
+const sheet = await as('authenticated', VOL.email, `select * from staff_export_checkin()`)
+for (const [what, out] of [['saved list', withNeeds], ['check-in list', list], ['printed list', sheet]])
+  ok(!JSON.stringify(out).includes('Step-free entrance') && !JSON.stringify(out).includes('accessibility_needs'), `${what}: no accessibility details reach a volunteer`)
+ok(list.find((g) => g.id === 'g-019').has_access_needs === true && sheet.some((r) => r.access_needs === true), 'the check-in and printed lists carry the flag')
+await db.exec(`update guests set accessibility_needs = null where id = 'g-019'`)
 
 // ---- Sync: a check-in made offline
 const t1 = ago(30)

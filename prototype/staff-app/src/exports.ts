@@ -14,7 +14,7 @@ export interface BadgeRow {
 }
 export interface CheckinRow {
   last_name: string; first_name: string | null; display_name: string; organization: string | null; sponsor: string; table_number: number | null
-  seat_number: number | null; guest_type: GuestType | 'unnamed_seat'; accessibility_needs: string | null; arrived: boolean
+  seat_number: number | null; guest_type: GuestType | 'unnamed_seat'; /** A yes/no flag; the details stay staff-only. */ access_needs: boolean; arrived: boolean
 }
 export interface SalesforceRow {
   first_name: string | null; last_name: string; email: string | null; title: string | null; organization: string | null; sponsor: string | null
@@ -54,12 +54,12 @@ export function demoCheckinRows(db: DB): CheckinRow[] {
   const { orders, sponsor, table } = current(db)
   const named: CheckinRow[] = db.guests.filter((g) => orders.has(g.order_id)).map((g) => ({
     last_name: g.last_name, first_name: g.first_name, display_name: displayName(g), organization: g.organization, sponsor: sponsor(g.order_id)?.organization_name ?? '',
-    table_number: table(g.table_id), seat_number: g.seat_number, guest_type: g.guest_type, accessibility_needs: g.accessibility_needs,
+    table_number: table(g.table_id), seat_number: g.seat_number, guest_type: g.guest_type, access_needs: !!g.accessibility_needs?.trim(),
     arrived: g.attendance_status === 'checked_in',
   }))
   const unnamed: CheckinRow[] = db.seats.filter((s) => !s.guest_id && s.status !== 'cancelled' && orders.has(s.order_id)).map((s) => ({
     last_name: 'Unnamed seat', first_name: null, display_name: 'Unnamed seat', organization: null, sponsor: sponsor(s.order_id)?.organization_name ?? '',
-    table_number: null, seat_number: s.slot_number, guest_type: 'unnamed_seat', accessibility_needs: null, arrived: false,
+    table_number: null, seat_number: s.slot_number, guest_type: 'unnamed_seat', access_needs: false, arrived: false,
   }))
   const order = (a: CheckinRow, b: CheckinRow) => byText(a.last_name, b.last_name) || byText(a.first_name, b.first_name) || byText(a.sponsor, b.sponsor) || byNum(a.seat_number, b.seat_number)
   return [...named.sort(order), ...unnamed.sort(order)]
@@ -91,7 +91,7 @@ export const badgeCsv = (rows: BadgeRow[]) => [NOTICE, ['Name on badge', 'First'
 
 export const checkinCsv = (rows: CheckinRow[]) => [NOTICE, ['Last', 'First', 'Name', 'Organization', 'Sponsor', 'Table', 'Seat', 'Guest type', 'Access needs', 'Arrived'],
   ...rows.map((r) => [r.last_name, r.first_name, r.display_name, r.organization, r.sponsor, r.table_number, r.seat_number,
-    r.guest_type === 'unnamed_seat' ? 'Unnamed sponsor seat' : GUEST_TYPE_LABEL[r.guest_type], r.accessibility_needs, r.arrived ? 'Yes' : ''])]
+    r.guest_type === 'unnamed_seat' ? 'Unnamed sponsor seat' : GUEST_TYPE_LABEL[r.guest_type], r.access_needs ? 'Yes, ask a staff lead' : '', r.arrived ? 'Yes' : ''])]
 
 export const salesforceCsv = (rows: SalesforceRow[]) => [NOTICE, ['First Name', 'Last Name', 'Email', 'Title', 'Account Name', 'Sponsor',
   'Account ID', 'Opportunity ID', 'Guest Type', 'Checked In At', 'Check-in Method'],
