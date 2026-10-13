@@ -37,7 +37,7 @@ const snapshot = () => ({
     return {
       id: g.id, order_id: g.order_id, first_name: g.first_name, last_name: g.last_name, title: g.title, organization: g.organization,
       sponsor: g.sponsor, package: g.package, guest_type: g.category_key, table_number: g.table, seat_number: g.seat,
-      accessibility_needs: g.id === 'g-001' ? 'Step-free entrance' : null,
+      has_access_needs: g.id === 'g-001',
       qr_hash: g.qr_token ? sha(g.qr_token) : null, qr_expires_at: g.qr_token ? new Date(Date.now() + 86_400_000).toISOString() : null,
       arrived: !!a, checkin_id: a?.id ?? null, checkin_client_id: a?.client_id ?? null, checked_in_at: a?.at ?? null, checked_in_by: a?.by ?? null, device: a?.device ?? null,
     }

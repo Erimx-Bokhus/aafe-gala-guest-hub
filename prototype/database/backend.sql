@@ -832,7 +832,8 @@ begin
   return v_id;
 end $$;
 
--- Check-in screen data for all roles (volunteers cannot read tables directly).
+-- Check-in screen data for all roles (volunteers cannot read tables directly). Accessibility needs travel as a
+-- yes/no flag only ("ask a staff lead"): the details stay staff-only (data-handling.md, review item 2, Oct 13).
 create or replace function checkin_list() returns jsonb
 language sql stable security definer set search_path = public as $$
   select case when (require_staff(array['gala_admin','relationship_manager','check_in_volunteer'])).id is null then null else
@@ -840,7 +841,7 @@ language sql stable security definer set search_path = public as $$
       'id', g.id, 'order_id', g.order_id, 'first_name', g.first_name, 'last_name', g.last_name, 'title', g.title,
       'organization', g.organization, 'sponsor', sp.organization_name, 'guest_type', g.guest_type,
       'table_number', t.number, 'seat_number', g.seat_number, 'attendance_status', g.attendance_status,
-      'accessibility_needs', g.accessibility_needs) order by g.last_name, g.first_name), '[]') end
+      'has_access_needs', coalesce(btrim(g.accessibility_needs), '') <> '') order by g.last_name, g.first_name), '[]') end
   from guests g join orders o on o.id = g.order_id join sponsors sp on sp.id = o.sponsor_id
   left join event_tables t on t.id = g.table_id
   where o.event_id = current_event_id() and o.status <> 'cancelled'
@@ -900,7 +901,7 @@ end $$;
 
 -- The list the iPad saves: every guest of the current gala with what the desk needs, each seat's QR
 -- code hash (so a scanned code is checked on the iPad), and who has arrived. No email, phone, payment,
--- dietary needs or staff notes. A hash can't be turned back into a working code. Like checkin_list(),
+-- dietary needs, staff notes, or accessibility details: only a yes/no flag, since the list is saved on the iPad. A hash can't be turned back into a working code. Like checkin_list(),
 -- it is a read, so it isn't logged (the iPad refreshes it often).
 create or replace function staff_checkin_snapshot() returns jsonb
 language plpgsql stable security definer set search_path = public as $$
@@ -915,7 +916,7 @@ begin
       select jsonb_agg(jsonb_build_object(
         'id', g.id, 'order_id', g.order_id, 'first_name', g.first_name, 'last_name', g.last_name, 'display_name', g.display_name, 'title', g.title,
         'organization', g.organization, 'sponsor', sp.organization_name, 'package', tr.name, 'guest_type', g.guest_type,
-        'table_number', t.number, 'seat_number', g.seat_number, 'accessibility_needs', g.accessibility_needs,
+        'table_number', t.number, 'seat_number', g.seat_number, 'has_access_needs', coalesce(btrim(g.accessibility_needs), '') <> '',
         'qr_hash', case when s.qr_token_expires_at > now() then s.qr_token_hash end,
         'qr_expires_at', case when s.qr_token_expires_at > now() then s.qr_token_expires_at end,
         'arrived', g.attendance_status = 'checked_in' or ci.id is not null,
@@ -1984,24 +1985,25 @@ end $$;
 
 -- Printed check-in list: the fallback if the iPad or the venue's internet fails. Every named guest
 -- by last name, plus one row per unnamed sponsor seat so the desk knows who may bring a walk-in.
--- Volunteers may export it; it carries no email, phone, payment, dietary needs, or staff notes.
+-- Volunteers may export it; it carries no email, phone, payment, dietary needs, staff notes, or accessibility
+-- details (a yes/no flag only).
 drop function if exists public.staff_export_checkin();
 drop function if exists private.staff_export_checkin();
 create or replace function staff_export_checkin()
 returns table (last_name text, first_name text, display_name text, organization text, sponsor text, table_number int,
-               seat_number int, guest_type text, accessibility_needs text, arrived boolean)
+               seat_number int, guest_type text, access_needs boolean, arrived boolean)
 language plpgsql security definer set search_path = public as $$
 declare me staff_users := require_staff(array['gala_admin','relationship_manager','check_in_volunteer']); v_n int;
 begin
   return query
     select * from (
       select g.last_name, g.first_name, g.display_name, g.organization, sp.organization_name, t.number, g.seat_number,
-             g.guest_type, g.accessibility_needs, g.attendance_status = 'checked_in'
+             g.guest_type, coalesce(btrim(g.accessibility_needs), '') <> '', g.attendance_status = 'checked_in'
       from guests g join orders o on o.id = g.order_id join sponsors sp on sp.id = o.sponsor_id
       left join event_tables t on t.id = g.table_id
       where o.event_id = current_event_id() and o.status <> 'cancelled'
       union all
-      select 'Unnamed seat', null, 'Unnamed seat', null, sp.organization_name, null, s.slot_number, 'unnamed_seat', null, false
+      select 'Unnamed seat', null, 'Unnamed seat', null, sp.organization_name, null, s.slot_number, 'unnamed_seat', false, false
       from seats s join orders o on o.id = s.order_id join sponsors sp on sp.id = o.sponsor_id
       where o.event_id = current_event_id() and o.status <> 'cancelled' and s.guest_id is null and s.status <> 'cancelled'
     ) x
