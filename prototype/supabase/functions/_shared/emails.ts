@@ -92,12 +92,12 @@ const row = (label: string, value: string) =>
 export const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!)
 /** "$1,250.00" */
 export const money = (n: number) => '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-/** "October 21" from a date (YYYY-MM-DD) or a timestamp, read in New York time. */
 /** True once a guest-list deadline day (YYYY-MM-DD) is over in New York: a link minted now would arrive expired. */
 export function deadlinePassed(deadline: string | null, now = new Date()): boolean {
   return !!deadline && deadline < now.toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
 }
 
+/** "October 21" from a date (YYYY-MM-DD) or a timestamp, read in New York time. */
 export function longDay(d: string) {
   const at = /^\d{4}-\d{2}-\d{2}$/.test(d) ? new Date(d + 'T12:00:00Z') : new Date(d)
   return at.toLocaleDateString('en-US', { month: 'long', day: 'numeric', timeZone: 'America/New_York' })
