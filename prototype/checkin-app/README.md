@@ -77,4 +77,3 @@ server through Vite's `/api` proxy, so several iPads share check-ins. Or double-
 - **Demo data:** the door list's 553 invented guests are also the Full demo data sets (PR #66), so the demo and a
   Supabase project loaded with `npm run db:load -- full-fixed` show the same people.
 - **For true offline use:** a service worker, so the app itself opens with no internet.
-- AAFE's logo and event photos are internal until AAFE approves in writing (CLAUDE.md rule 8).
