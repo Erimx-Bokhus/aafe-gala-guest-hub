@@ -1,6 +1,15 @@
 const DISMISSED_IN_MEMORY = new Set<string>()
 
-export const portalWelcomeStorageKey = (token: string) => `aafe-portal-welcome:${token}`
+// The key holds a short fingerprint of the sponsor's link, never the link itself: the link is a secret (CLAUDE.md
+// rule 6) and browser storage outlives the page. FNV-1a, 32 bits: enough to tell one sponsor's links apart on one
+// device, and it can't be turned back into the link.
+function fingerprint(token: string) {
+  let h = 0x811c9dc5
+  for (let i = 0; i < token.length; i++) { h ^= token.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0 }
+  return h.toString(16).padStart(8, '0')
+}
+
+export const portalWelcomeStorageKey = (token: string) => `aafe-portal-welcome:${fingerprint(token)}`
 
 function welcomeIsForced() {
   if (typeof window === 'undefined') return false
