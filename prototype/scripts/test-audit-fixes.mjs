@@ -22,6 +22,15 @@ await db.exec(`update gala_events set status = 'planning' where id = 'ev-2028'; 
 ok(await current() === 'ev-2028', "once this year's gala is closed, next year's is current")
 await db.exec(`update gala_events set status = 'planning' where id = 'ev-2027'; delete from gala_events where id = 'ev-2028'`)
 ok(await current() === 'ev-2027', 'and back')
+// Just after the gala (never marked live, not closed yet): it stays current for 30 days, then next year's takes over.
+const { d: d2027 } = await one(`select event_date::text d from gala_events where id = 'ev-2027'`)
+await db.exec(`insert into gala_events (id, year, name, event_date, guest_list_deadline, status) values ('ev-2028', 2028, 'AAFE Gala 2028 (test)', (now() at time zone 'America/New_York')::date + 360, (now() at time zone 'America/New_York')::date + 330, 'planning')`)
+await db.exec(`update gala_events set event_date = (now() at time zone 'America/New_York')::date - 5 where id = 'ev-2027'`)
+ok(await current() === 'ev-2027', "5 days after this year's gala, it's still current, not next year's in planning")
+await db.exec(`update gala_events set event_date = (now() at time zone 'America/New_York')::date - 40 where id = 'ev-2027'`)
+ok(await current() === 'ev-2028', "40 days after (and never closed), next year's gala becomes current")
+await db.query(`update gala_events set event_date = $1 where id = 'ev-2027'`, [d2027]); await db.exec(`delete from gala_events where id = 'ev-2028'`)
+ok(await current() === 'ev-2027', 'and back again')
 
 // ---- A late purchase: no link that would arrive expired; staff extend that one order's deadline
 const order = (await one(`select id from orders where event_id = current_event_id() and status <> 'cancelled' and source <> 'givelively' order by id limit 1`)).id
@@ -68,6 +77,13 @@ for (const [i, status] of STATUSES.entries()) {
 }
 ok(disagree.length === 0, `the CSV upload, the sync and gl_import cancel on the same statuses ${disagree.join('; ')}`)
 ok(CANCELLED_STATUS.test('Declined') && CANCELLED_STATUS.test('ACH Returned'), 'a declined or returned payment is cancelled by the CSV upload too')
+// A full refund: the CSV path and gl_import cancel; the sync hands it to gl_import as an import (it isn't a failed payment).
+for (const [i, status] of ['Refunded', 'Fully Refunded', 'Refund'].entries()) {
+  const sync = classify({ txn: 'GL-X', email: 'x@example.org', gross: 100, original: 100, campaign: 'AAFE Gala 2027', status }, ['AAFE Gala 2027'])
+  await imp(row(`GL-REFUND-${i}`, { status }))
+  const sql = (await state(`GL-REFUND-${i}`)).status === 'cancelled'
+  ok(CANCELLED_STATUS.test(status) && sql && sync === 'import', `"${status}": the CSV upload and gl_import cancel, the sync passes it to gl_import (classify says ${sync})`)
+}
 
 // ---- The email sender's save is retried, not counted as a failed send
 let tries = 0

@@ -283,15 +283,16 @@ drop trigger if exists gala_events_no_mixing on gala_events;
 create trigger gala_events_no_mixing before insert or update of is_synthetic on gala_events
   for each row execute function gala_events_no_mixing();
 
--- The gala being run now: the one marked live; else the next one coming up (from yesterday on, New York time),
--- soonest first; else the newest one not closed. Creating next year's gala in planning must not take check-in,
--- imports and exports away from this year's before it is closed (Oct 12 audit).
+-- The gala being run now: the one marked live; else the soonest one dated from 30 days ago on (New York time), so a
+-- gala stays current for a month after its date for results, the Salesforce export and late check-in fixes; else
+-- the newest one not closed. Creating next year's gala in planning must not take check-in, imports and exports away
+-- from this year's before it is closed (Oct 12 audit; the 30 days from Cornell's #112 review).
 create or replace function current_event_id() returns text
 language sql stable security definer set search_path = public as $$
   select id from gala_events where status <> 'closed'
    order by (status = 'live') desc,
-            (event_date >= (now() at time zone 'America/New_York')::date - 1) desc,
-            case when event_date >= (now() at time zone 'America/New_York')::date - 1 then event_date end asc nulls last,
+            (event_date >= (now() at time zone 'America/New_York')::date - 30) desc,
+            case when event_date >= (now() at time zone 'America/New_York')::date - 30 then event_date end asc nulls last,
             year desc
    limit 1
 $$;

@@ -244,7 +244,7 @@ Errors come back as the Postgres message: `forbidden`, `not_found`, `invalid_lin
 
 ## Changes to the schema (all in `backend.sql`)
 
-- **The current gala** (`current_event_id()`, Oct 12): the gala marked live; else the next one coming up, soonest first; else the newest not closed. Creating next year's gala in planning no longer takes check-in, imports and exports away from this year's before it's closed.
+- **The current gala** (`current_event_id()`, Oct 12): the gala marked live; else the soonest one dated from 30 days ago on, so a gala stays current for a month after its date (results, the Salesforce export, late check-in fixes); else the newest not closed. Creating next year's gala in planning no longer takes check-in, imports and exports away from this year's before it's closed. Close a gala when its follow-up is done.
 
 - New tables: `givelively_sync_state` (poll cursor and last result) and `givelively_raw` (every gala donation as Give Lively sent it).
 - New `email_log` columns: `attempts`, `last_error`, `approved_by` and `approved_at`. New status: `cancelled`.
