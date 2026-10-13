@@ -3,7 +3,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const m = vi.hoisted(() => ({
-  auth: { signInWithOtp: vi.fn(), getSession: vi.fn(), signOut: vi.fn() },
+  auth: { signInWithOtp: vi.fn(), verifyOtp: vi.fn(), getSession: vi.fn(), signOut: vi.fn() },
   rpc: vi.fn(),
   createClient: vi.fn(),
 }))
@@ -48,6 +48,35 @@ describe('live mode', () => {
       email: 'mei.ortiz@aafe-demo.example.org',
       options: { shouldCreateUser: false, emailRedirectTo: window.location.origin + window.location.pathname },
     })
+  })
+
+  it('signs in with the 6-digit code from the same email', async () => {
+    const s = await load(true)
+    m.auth.verifyOtp.mockResolvedValue({ error: null })
+    await s.verifySignInCode(' mei.ortiz@aafe-demo.example.org ', '123 456')
+    expect(m.auth.verifyOtp).toHaveBeenCalledWith({ email: 'mei.ortiz@aafe-demo.example.org', token: '123456', type: 'email' })
+    m.auth.verifyOtp.mockResolvedValue({ error: new Error('Token has expired or is invalid') })
+    await expect(s.verifySignInCode('mei.ortiz@aafe-demo.example.org', '000000')).rejects.toThrow()
+  })
+
+  it('signs in from an admin-made link, then takes the token out of the address', async () => {
+    const s = await load(true)
+    m.auth.verifyOtp.mockResolvedValue({ error: null })
+    window.history.replaceState(null, '', '/?token_hash=abc123&type=magiclink#/checkin')
+    await expect(s.signInFromLink()).resolves.toBe(true)
+    expect(m.auth.verifyOtp).toHaveBeenCalledWith({ token_hash: 'abc123', type: 'magiclink' })
+    expect(window.location.search).toBe('')
+    expect(window.location.hash).toBe('#/checkin')
+  })
+
+  it('does nothing without a link token, and nothing in demo mode', async () => {
+    window.history.replaceState(null, '', '/#/')
+    const s = await load(true)
+    await expect(s.signInFromLink()).resolves.toBe(false)
+    expect(m.auth.verifyOtp).not.toHaveBeenCalled()
+    const d = await load(false)
+    await expect(d.signInFromLink()).resolves.toBe(false)
+    await expect(d.verifySignInCode('a@example.org', '123456')).rejects.toThrow('not_configured')
   })
 
   it('passes a sending error up to the login page', async () => {
