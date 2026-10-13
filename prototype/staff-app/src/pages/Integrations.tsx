@@ -46,6 +46,9 @@ export default function Integrations() {
   const { db, api, user, toast, act, demo } = useStaff()
   const file = useRef<HTMLInputElement>(null)
   const [lastPull, setLastPull] = useState<string | null>(null)
+  // One run at a time: a double click on Pull now or Sync now would run the sync twice (harmless, but pointless).
+  const [running, setRunning] = useState<'pull' | 'sync' | null>(null)
+  const once = (which: 'pull' | 'sync', run: () => Promise<unknown>) => { if (running) return; setRunning(which); void act(run().finally(() => setRunning(null))) }
   const [preview, setPreview] = useState<GLRow[] | null>(null)
   const [err, setErr] = useState('')
   const pending = db.salesforce_sync.filter((s) => s.status === 'pending').length
@@ -71,9 +74,9 @@ export default function Integrations() {
     demo(() => r.db)
     toast(`Give Lively: ${r.created} new, ${r.skipped} already imported — guest-list emails drafted for approval`)
   }
-  const pullNow = () => void act(api.pullGiveLively().then((c) => { setLastPull(new Date().toISOString()); toast(pullSummary(c)) }))
+  const pullNow = () => once('pull', () => api.pullGiveLively().then((c) => { setLastPull(new Date().toISOString()); toast(pullSummary(c)) }))
 
-  const syncNow = () => void act(api.syncSalesforce().then((r) => toast(r.failed ? `Salesforce: ${r.sent} sent, ${r.failed} failed (${r.first_error})` : `Salesforce: ${r.sent} record${r.sent === 1 ? '' : 's'} sent`)))
+  const syncNow = () => once('sync', () => api.syncSalesforce().then((r) => toast(r.failed ? `Salesforce: ${r.sent} sent, ${r.failed} failed (${r.first_error})` : `Salesforce: ${r.sent} record${r.sent === 1 ? '' : 's'} sent`)))
 
   return (
     <div>
@@ -89,7 +92,7 @@ export default function Integrations() {
           </ol>
           <div className="mt-4 flex flex-wrap gap-2">
             {!demo && <p className="w-full text-sm text-navy-600">Connected to the database. Pull now asks Give Lively for new gala purchases right away, as the 15-minute schedule does. To load a CSV export, use the Import page.</p>}
-            {canDo(user.role, 'pullGiveLively') && <button className="btn-primary" onClick={pullNow} data-testid="gl-pull"><CloudDownload size={16} /> {demo ? 'Pull now (simulated)' : 'Pull now'}</button>}
+            {canDo(user.role, 'pullGiveLively') && <button className="btn-primary" onClick={pullNow} disabled={running === 'pull'} aria-busy={running === 'pull'} data-testid="gl-pull"><CloudDownload size={16} /> {running === 'pull' ? 'Pulling…' : demo ? 'Pull now (simulated)' : 'Pull now'}</button>}
             <button className="btn-ghost" onClick={() => file.current?.click()} disabled={!demo}><Upload size={16} /> Import CSV</button>
             <button className="btn-ghost" onClick={() => downloadCsv('givelively-line-items-SAMPLE-SYNTHETIC.csv', [SAMPLE_HEAD, ...sampleRows()])}><Download size={16} /> Sample CSV</button>
             <input ref={file} type="file" accept=".csv,text/csv" className="hidden" onChange={async (e) => { const f = e.target.files?.[0]; if (!f) return; try { setErr(''); setPreview(toRows(await f.text())) } catch (x) { setErr((x as Error).message) } e.target.value = '' }} />
@@ -116,7 +119,7 @@ export default function Integrations() {
             <div className="rounded-lg bg-cream-100 p-2"><div className="text-sm font-semibold">{lastSync ? fmtDate(lastSync, 'en-US', true) : '—'}</div><div className="text-xs text-navy-500">last sync</div></div>
           </div>
           <div className="mt-4 flex flex-wrap gap-2">
-            {canDo(user.role, 'syncSalesforce') && <button className="btn-ghost" data-testid="sf-sync" onClick={syncNow}><RefreshCw size={15} /> {demo ? 'Sync now (simulated)' : 'Sync now'}</button>}
+            {canDo(user.role, 'syncSalesforce') && <button className="btn-ghost" data-testid="sf-sync" onClick={syncNow} disabled={running === 'sync'} aria-busy={running === 'sync'}><RefreshCw size={15} /> {running === 'sync' ? 'Syncing…' : demo ? 'Sync now (simulated)' : 'Sync now'}</button>}
             {/* Who actually came, for a Contact + Campaign Member import. Carries email, so gala admins only. */}
             {canDo(user.role, 'exportSalesforce') && <button className="btn-ghost" data-testid="export-salesforce" onClick={() => void act(api.exportSalesforce().then((rows) => downloadCsv('aafe-salesforce-attendees-SYNTHETIC.csv', salesforceCsv(rows))), 'Salesforce file downloaded')}><Download size={15} /> Download Salesforce file</button>}
           </div>
