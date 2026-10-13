@@ -26,7 +26,7 @@ technical partner.** Production hosting and real data are AAFE's decisions after
 5. **AI is optional and off by default.** No AI call may receive email addresses, phone numbers, or payment info. Nothing AI-generated goes out without staff approval.
 6. **Sponsor links and QR e-tickets are secrets.** Tokens are random (at least 128 bits) and stored hashed. Sponsor links are scoped to one order and expire at AAFE's deadline; QR e-tickets are scoped to one seat and expire after gala night. Never use readable slugs like an organization name.
 7. **Record source and history.** Every guest record keeps its source (Give Lively import, staff entry, sponsor portal, check-in desk for walk-ins) and a change log. Staff corrections must survive the next import.
-8. **AAFE's logo and real event photos stay internal until AAFE approves in writing.** They may be used in this private repo and in reviews with the team and AAFE. Anything public, including Demo Day, uses placeholders until approval is recorded in `docs/decisions.md`. Avoid photos where a real attendee's name badge is readable.
+8. **AAFE’s logo and event photos may appear in anything we build, including public links and Demo Day.** Decided Oct 13, 2026 by Natalie Walker (product lead), who owns this decision and its consequences; recorded in docs/decisions.md. AAFE sees the work at every review and can ask for anything to be taken down. Never use a photo where a real attendee’s name badge is readable (rule 1).
 9. **Maintainability over cleverness.** AAFE's tech capacity is "pretty low." Prefer mainstream, well-documented choices a future partner can pick up.
 
 ## Stack

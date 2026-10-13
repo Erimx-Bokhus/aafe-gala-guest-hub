@@ -40,10 +40,9 @@ Until the final PRDs (Natalie's and Pursuit's) arrive, this file plus the hub's 
 
 ## Required inputs before build
 
-The full list, with what each unlocks, is on the hub's Discovery page ("Required inputs before build"): an AAFE approval contact, 2027 tiers and seat counts, comp categories, spreadsheet column headers, Give Lively exports (Line Items and attendee reports), badge and check-in templates, deadlines, Give Lively screen recordings, sponsor email threads, and written approval for the logo, brand kit, and event photos.
+The full list, with what each unlocks, is on the hub's Discovery page ("Required inputs before build"): an AAFE approval contact, 2027 tiers and seat counts, comp categories, spreadsheet column headers, Give Lively exports (Line Items and attendee reports), badge and check-in templates, deadlines, Give Lively screen recordings, sponsor email threads, and AAFE’s brand kit.
 
 ## Open questions for AAFE
 - ~~**Seats per tier.**~~ Answered Oct 5 by AAFE's 2026 sponsorship flyer (`docs/decisions.md`). Only Champion and above guarantee a seat; Friend and Supporter tickets admit guests without a guaranteed table.
-- **Logo and photos.** Written approval to use AAFE's logo and event photos in the prototype and at Demo Day.
 - **Goals per category** for the dashboard (sponsorship dollars, tickets, attendance).
 - **Edits after the deadline.** Should sponsors be able to change names for a few days after the deadline? Until AAFE answers, links stop at the deadline and staff handle late swaps.
