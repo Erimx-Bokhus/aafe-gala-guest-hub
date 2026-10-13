@@ -183,7 +183,7 @@ Guest edits (`staff_update_guest`, and a sponsor editing a named guest through `
 | `resendPortalLink` | `staff_resend_portal_link(p_order_id)`; approved by the sender, and logged as `email.approved` in their name; the old link stops working | admin, RM |
 | `checkIn` | `staff_check_in(p_guest_id, 'search')` or `staff_check_in_qr(p_code)` | all |
 | `checkInException` | `staff_check_in_exception(p_name, p_order_id, p_type, p_note)` | all |
-| Check-in → save the list for offline use (new) | `staff_checkin_snapshot()`: every guest with table, seat, accessibility needs, arrival, and their QR code's hash; no email, phone, payment, dietary needs or notes. A read, not logged | all |
+| Check-in → save the list for offline use (new) | `staff_checkin_snapshot()`: every guest with table, seat, an accessibility flag (`has_access_needs`, never the details), arrival, and their QR code's hash; no email, phone, payment, dietary needs or notes. `checkin_list()` and `staff_export_checkin()` carry the same flag. A read, not logged | all |
 | Check-in → sync offline check-ins (new) | `staff_sync_check_ins(p_items)`: see "Offline check-in" below | all |
 | Check-in → undo (Oct 8) | `staff_undo_check_in(p_id)`: the check-in's id or the iPad's `client_id`. Only the staff member who made it (by account) or a gala admin; the guest goes back to expected and the seat to its status before check-in; logged as `checkin.undone` | all (own check-ins); admin (any) |
 | Sponsors → pipeline board (new) | `staff_pipeline()`: totals per stage against the goal, and every prospect with its ask, commitment, money received, balance, and the last two galas' giving; no emails or phones. A read, not logged | admin, RM |
