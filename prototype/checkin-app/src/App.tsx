@@ -327,10 +327,13 @@ function DoorScreen({ api, who, prefs, exitLabel, onExit }: { api: Door; who: st
                 {gs.map((g) => {
                   const a = byGuest.get(g.id); const on = sel.has(g.id)
                   return (
-                    <li key={g.id}>
+                    // One tap checks a guest in: the "Check in" button on the row (Undo appears for 10 seconds). Tapping the
+                    // rest of the row selects the guest, for a group arriving together (then "Check in N" at the bottom).
+                    <li key={g.id} className={`flex items-stretch ${a ? 'bg-emerald-50' : on ? 'bg-brand-50' : ''}`}>
                       <button type="button" data-testid={`row-${g.id}`} aria-pressed={a ? undefined : on}
+                        aria-label={a ? undefined : `${on ? 'Unselect' : 'Select'} ${g.first_name} ${g.last_name} for a group check-in`}
                         onClick={() => (a ? setConfirmUndo({ g, a }) : toggle(g.id))}
-                        className={`grid w-full grid-cols-[44px_minmax(0,1fr)_auto] items-center gap-x-4 px-5 py-3 text-left ${a ? 'bg-emerald-50' : on ? 'bg-brand-50' : ''}`}>
+                        className={`grid min-w-0 flex-1 grid-cols-[44px_minmax(0,1fr)_auto] items-center gap-x-4 py-3 pl-5 text-left ${a ? 'pr-5' : 'pr-2'}`}>
                         <span aria-hidden className={`flex h-9 w-9 items-center justify-center rounded-lg border-2 ${a ? 'border-emerald-600 bg-emerald-600 text-white' : on ? 'border-brand-500 bg-brand-500 text-white' : 'border-navy-300 bg-surface'}`}>{(a || on) && <CheckCircle2 size={22} />}</span>
                         <span className="min-w-0">
                           <span className="block truncate text-xl font-semibold text-navy-900"><span>{g.last_name}</span>, <span className="font-medium">{g.first_name}</span></span>
@@ -345,9 +348,15 @@ function DoorScreen({ api, who, prefs, exitLabel, onExit }: { api: Door; who: st
                         </span>
                         <span className="text-right">
                           {a ? <span className="block text-base font-semibold text-emerald-800" data-testid={`in-${g.id}`}>Checked in<span className="block text-lg tabular-nums">{time(a.at)}</span>{a.queued && <span className="block text-xs font-medium text-amber-700">waiting to sync</span>}</span>
-                            : <span className="block text-sm text-navy-500">{on ? 'Selected' : 'Not checked in'}</span>}
+                            : on ? <span className="block text-sm font-medium text-brand-700">Selected</span> : null}
                         </span>
                       </button>
+                      {!a && !on && (
+                        <span className="flex shrink-0 items-center pr-5">
+                          <button type="button" className="btn-primary tap h-14 px-6 text-base" onClick={() => checkIn([g.id])} data-testid={`checkin-${g.id}`}
+                            aria-label={`Check in ${g.first_name} ${g.last_name}`}><CheckCircle2 size={20} /> Check in</button>
+                        </span>
+                      )}
                     </li>
                   )
                 })}
@@ -370,7 +379,7 @@ function DoorScreen({ api, who, prefs, exitLabel, onExit }: { api: Door; who: st
           <div className="mx-auto flex max-w-3xl items-center gap-3">
             <div className="flex-1 text-lg text-navy-900"><strong className="tabular-nums">{selCount}</strong> selected</div>
             <button className="btn-ghost tap h-14 px-5 text-base" onClick={() => setSel(new Set())}>Clear</button>
-            <button className="btn-primary tap h-14 min-w-[200px] px-8 text-lg" onClick={() => checkIn([...sel])} data-testid="checked-in"><CheckCircle2 size={22} /> Checked in</button>
+            <button className="btn-primary tap h-14 min-w-[200px] px-8 text-lg" onClick={() => checkIn([...sel])} data-testid="checked-in"><CheckCircle2 size={22} /> Check in {selCount}</button>
           </div>
         </div>
       )}
