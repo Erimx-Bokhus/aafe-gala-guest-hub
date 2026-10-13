@@ -63,7 +63,6 @@ server through Vite's `/api` proxy, so several iPads share check-ins. Or double-
 | `make_door_list.mjs` | Rebuilds the door list from `shared/src/seed.json` (read the caution at the top first) |
 | `../shared/src/checkinSync.ts` | Sync client with the offline queue (demo: talks to `sync-server/`) |
 | `sync-server/server.mjs` | Demo-only sync server (plain Node, 127.0.0.1:8787, no sign-in); replaced by Supabase in production. `POST /api/reset` works only with `DEMO_RESET=1` |
-| `../OPEN-CheckIn-App.html` | Double-click copy with logo and photos built in |
 | `scripts/make_open_file.py` | Rebuilds `../OPEN-CheckIn-App.html` after `npm run build` (`python3 scripts/make_open_file.py`); an unchanged door list gives the same file byte for byte |
 | `scripts/screenshots.mjs` | Retakes the eight screenshots in `docs/screenshots/ipad-checkin/` that show guest rows (02, 05, 06, 09, 10, 11, 12, 13) with fixed steps and times; setup and run steps are at the top of the file |
 | `scripts/live-smoke.mjs` | Tries live mode with no Supabase project: a stand-in answers like the backend, nothing leaves the computer; 18 checks (sign-in, list, sync, QR hash, undo rules, exceptions, offline, conflicts, sign-out clears the iPad) |
