@@ -101,6 +101,33 @@ The flow is tested in `npm run test:backend` (fake feed → mapping → import �
 
 **For real AAFE use:** don't run `demo_givelively.sql` or deploy `givelively-mock`. Remove `GIVELIVELY_BASE_URL` and `EMAIL_REDIRECT_TO`.
 
+## Demo with a stand-in Salesforce (all synthetic)
+
+Give Lively's own Salesforce connector sends its online donations to AAFE's Salesforce (NPSP). `salesforce-push` sends what Give Lively doesn't know, for the current gala (`salesforce_outbox()` in `backend.sql`, mapped by `_shared/salesforce.ts`):
+
+| Here | Salesforce |
+| --- | --- |
+| The gala | Campaign |
+| A sponsor with a check, ACH, wire, comp or staff-entered order | Account |
+| That order (not Give Lively's) | Opportunity, in the gala's Campaign; paid and comp are Closed Won, cancelled Closed Lost, the rest Pledged |
+| A check, direct ACH or wire payment staff recorded | `npe01__OppPayment__c` |
+| Every named guest, Give Lively buyers' guests included | Contact (name and email), and a Campaign Member: Registered, Attended or No Show |
+
+No phones, dietary or accessibility details are sent. Records are upserted on our ids in a custom external-ID field, `AAFE_Gala_Id__c`, so a second sync updates them instead of adding duplicates, and a record whose parent is missing fails on its own while the rest go through. Each record's outcome is kept in `salesforce_sync`, the Account and Opportunity ids on the sponsor and order (the CSV export reads them), and one change-log line per run. A gala admin runs it from the staff app (Integrations, **Sync now**). Tested in `npm run test:backend` (`scripts/test-salesforce.mts`).
+
+In the demo it goes to `salesforce-mock`, a stand-in org that answers Salesforce's sObject Collections upsert and keeps the records in `demo_salesforce_records`; it never talks to a real org (requirements: Salesforce push, simulated).
+
+1. In the SQL editor (after `backend.sql`), run `database/demo_salesforce.sql`.
+2. Deploy and point the push at the stand-in:
+   ```bash
+   npx supabase functions deploy salesforce-mock
+   npx supabase functions deploy salesforce-push
+   npx supabase secrets set SALESFORCE_BASE_URL=https://<PROJECT-REF>.supabase.co/functions/v1/salesforce-mock      SALESFORCE_TOKEN=<any made-up string>
+   ```
+3. **Sync now** on Integrations, or `curl -X POST $F/salesforce-push -H "$H"` (as above). Then `select sobject, count(*) from demo_salesforce_records group by 1;` shows what "Salesforce" holds.
+
+**For real AAFE use:** don't run `demo_salesforce.sql` or deploy `salesforce-mock`. AAFE's org needs the `AAFE_Gala_Id__c` field (Text, External ID, Unique) on Campaign, Account, Opportunity, `npe01__OppPayment__c`, Contact and Campaign Member, and a connected app for the access token; then `SALESFORCE_BASE_URL` is the org's instance URL. Check first how Give Lively's connector names Accounts and Contacts, so the two don't create duplicates.
+
 ## Give Lively
 
 - **Credentials.** An AAFE admin creates the Zapier API key in the Give Lively Nonprofit Admin Portal. The org ID and key go into the URL `secure.givelively.org/nonprofits/<ORG_ID>/json_dataclips/<API_KEY>.json`, so treat that URL as a password. The function never logs it.
@@ -169,6 +196,7 @@ Guest edits (`staff_update_guest`, and a sponsor editing a named guest through `
 | `importGiveLively` (CSV) | `staff_import_givelively(p_rows)` | admin |
 | Sponsors → an order's guest-list deadline (new, Oct 12; screen to come) | `staff_set_order_deadline(p_order_id, p_deadline)`: for a sponsor who bought after the gala's deadline or needs more time; a link already sent moves with it; not after the gala; logged | admin |
 | Integrations "Pull now" | `functions.invoke('givelively-sync')` | admin |
+| Integrations "Sync now" (Salesforce) | `functions.invoke('salesforce-push')` | admin |
 | Approve / discard a draft email | `staff_approve_email(p_email_id)` / `staff_cancel_email(p_email_id)` | admin, RM |
 | List unsent emails for the approval screen | `staff_email_queue()` | admin, RM |
 | Draft guest-list reminders | `staff_queue_guest_list_reminders(p_min_days)` | admin, RM |
@@ -233,8 +261,8 @@ Errors come back as the Postgres message: `forbidden`, `not_found`, `invalid_lin
 - **Staff App is connected** when `staff-app/.env.local` is set (issues #8, #9). Every page action goes through `staff-app/src/api.ts`: one `staff_*` call from the table above, then a reload of what the role may read. Gala admins and relationship managers read the tables (RLS); a check-in volunteer loads only `staff_checkin_snapshot()`, with no emails, phones, payments, notes or QR codes. Without the env file the same actions run on the demo data with the same role rules.
   - Live, Sponsors shows "Resend portal link" only (links are stored hashed, so there is nothing to copy), and relationship guests show their invitation status instead of a QR code.
   - Live, the Give Lively "Pull now" on Integrations (gala admins) runs `givelively-sync` right away, as the 15-minute schedule does, and shows its counts or its reason when it can't run (secrets or the gala's page name not set). It needs the function deployed (step 3).
-  - Still simulated in both modes: the CSV import on Integrations (live CSV imports go through the Import page) and the Salesforce sync.
+  - Still simulated in both modes: the CSV import on Integrations (live CSV imports go through the Import page).
 - **QR e-tickets (hard rule 6).** A code is minted only when an approved `qr_invitation` email sends; the database keeps its SHA-256 hash on the guest's seat (`seats.qr_token_hash`), valid until 6 a.m. New York time the morning after gala night. Resending replaces the code; a different guest on the seat, a name or email change, or a cancelled seat voids it. Staff can't display a code, only resend it. The seed's QR codes are moved onto seats as hashes when `backend.sql` runs. The seed's demo sponsor links are short (8 characters), fine for the demo but below rule 6's 128 bits; real links are minted at 128 bits by `send-emails`.
 - **Email.** Templates (`_shared/emails.ts`) are in English: the guest-list link, guest-list reminders, payment confirmations, and QR invitations. The portal page itself has 中文, 한국어, and Español. Reminders are drafted when staff ask (`staff_queue_guest_list_reminders`), not on a schedule.
-- **Salesforce.** No direct sync (out of scope in the project scope doc). `staff_export_salesforce()` gives a file shaped for a Contact and Campaign Member import instead.
+- **Salesforce.** A stand-in only (the demo never talks to a real org): see "Demo with a stand-in Salesforce". `staff_export_salesforce()` gives a file shaped for a Contact and Campaign Member import, the real deliverable until AAFE connects its org.
 - **Edge functions** are type-checked in CI (`deno check`) and their logic is tested in Node (email wording, the Give Lively sync's per-donation rules), but they haven't run on Supabase yet: test them after the first deploy.
