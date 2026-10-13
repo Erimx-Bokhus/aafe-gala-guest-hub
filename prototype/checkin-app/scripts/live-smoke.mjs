@@ -2,7 +2,7 @@
 // stand-in Supabase address the way the backend does (staff_me, staff_checkin_snapshot, staff_sync_check_ins,
 // staff_undo_check_in), from the invented door list. Nothing leaves this computer. It checks the wiring the real
 // backend can't be tried on without keys: sign-in detection, the list, check-in and sync, QR codes matched on their
-// hash, undo (yours, and someone else's refused), exceptions, offline queueing, a first-arrival conflict notice,
+// hash, one-tap and group check-in, undo (yours, and someone else's refused), exceptions, offline queueing, a first-arrival conflict notice,
 // the access-needs flag, and that signing out clears the iPad.
 //
 // Setup (Playwright is not a project dependency):
@@ -111,6 +111,13 @@ ok(arrivals.get('g-002')?.by === ME.name && calls.at(-1)?.method === 'search', '
 await p.getByTestId('undo').click()
 await p.waitForFunction(() => !document.querySelector('[data-testid="in-g-002"]'))
 ok(!arrivals.has('g-002'), 'Undo right after takes a synced check-in back off the server')
+
+// One tap: the row's own Check in button checks the guest in at once, no selecting first.
+await p.getByTestId('search').fill(nameOf('g-007')); await p.getByTestId('checkin-g-007').click()
+await p.getByTestId('in-g-007').waitFor()
+await p.waitForFunction(() => document.querySelector('[data-testid="sync-status"]')?.textContent?.includes('Synced'))
+ok(arrivals.get('g-007')?.by === ME.name, 'one tap on Check in checks the guest in and syncs')
+await p.getByTestId('search').fill('')
 
 // QR: matched on its hash; a repeat scan is refused.
 const QR = door.guests.find((g) => g.qr_token && !['g-001', 'g-002', 'g-004', 'g-005', 'g-010'].includes(g.id)).id
