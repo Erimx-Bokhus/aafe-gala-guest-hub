@@ -68,7 +68,8 @@ function liveDoor(desk: CheckInDesk): Door {
   const guests: DoorGuest[] = s0.guests.map((g) => ({
     id: g.id, order_id: g.order_id, first_name: g.first_name, last_name: g.last_name, title: g.title, organization: g.organization,
     sponsor: g.sponsor, category: CATEGORY[g.guest_type] ?? g.guest_type, seat_label: seatLabel(g.guest_type, g.sponsor, g.package),
-    table: g.table_number, access: !!g.accessibility_needs?.trim(),
+    table: g.table_number, // A list saved before Oct 13 has the details instead of the flag; it is replaced on the next refresh.
+    access: g.has_access_needs ?? !!(g as { accessibility_needs?: string | null }).accessibility_needs?.trim(),
   }))
   const sponsors = [...new Map([...s0.guests.filter((g) => g.guest_type === 'sponsor_guest').map((g) => [g.order_id, g.sponsor] as const),
     ...s0.unnamed_seats.map((u) => [u.order_id, u.sponsor] as const)]).entries()].map(([order_id, name]) => ({ order_id, name }))

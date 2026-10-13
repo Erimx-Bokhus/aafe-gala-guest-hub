@@ -5,7 +5,7 @@ import { checkSignOut, waitingMessage } from './signOut'
 // Invented guests only (hard rule 1).
 const guest = (id: string, first: string, last: string): SnapshotGuest => ({
   id, order_id: 'ord-1', first_name: first, last_name: last, title: null, organization: 'Example Partners', sponsor: 'Example Partners',
-  guest_type: 'sponsor_guest', table_number: 4, seat_number: 1, accessibility_needs: null, qr_hash: null, qr_expires_at: null,
+  guest_type: 'sponsor_guest', table_number: 4, seat_number: 1, has_access_needs: false, qr_hash: null, qr_expires_at: null,
   arrived: false, checked_in_at: null, checked_in_by: null, device: null,
 })
 const SNAP: Snapshot = {
