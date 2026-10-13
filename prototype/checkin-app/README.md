@@ -13,7 +13,9 @@ staff working the door see check-in and nothing else: no sponsors, payments, or 
   ticket holders, comped, AAFE staff, event volunteers, event staff, government or VIP). The demo list
   has 553 invented guests, the size and shape of AAFE's 2026 gala.
 - Search by first or last name, organization, or sponsor; results appear as you type.
-- Scan a guest's QR code with the iPad camera. A ticket that was already used shows a warning with who checked it in and when.
+- Scan a guest's QR code with the iPad camera. Safari has no built-in QR reader, so `src/qrScan.ts` reads the camera
+  with jsQR (the built-in reader is used where a browser has one). A ticket that was already used shows a warning with
+  who checked it in and when.
 - Add an approved exception (walk-ins, unnamed sponsor seats). Tap "+N exceptions" to see them all and undo a mistake.
 - One tap on **Check in** checks a guest in (or tick several and tap **Check in N**); each row shows the time; tap again to undo. In live mode only the
   person who checked a guest in, or a gala admin, can undo it (the server checks).
@@ -53,6 +55,7 @@ server through Vite's `/api` proxy, so several iPads share check-ins. Or double-
 ## Files
 | Path | What |
 | --- | --- |
+| `src/qrScan.ts` | Reads QR codes from camera frames: jsQR on iPad Safari, the built-in reader where there is one |
 | `src/App.tsx` | The screens: sign-in (live or demo), A–Z list, multi-select check-in, QR, exceptions, undo, notices |
 | `../shared/public/checkin/` | The install file (`manifest.webmanifest`) and the app icons: AAFE's mark on white |
 | `../shared/public/checkin-sw.js` | The offline helper: keeps a copy of the app on the iPad, never guest data |
