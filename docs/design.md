@@ -170,8 +170,7 @@ Section headings are never larger than the page title, and a card's title is nev
 | 🆕 Footer | `black` background, white text, orange logo, as on aafe.org. *v2.0* |
 
 ## Logo and imagery
-- AAFE’s logo and event photos may be used anywhere, including Demo Day (decided Oct 13; decisions, CLAUDE.md rule 8).
-- Anything public, including Demo Day, uses a **placeholder**: an orange square mark plus the text "AAFE Gala" in Poppins.
+- AAFE’s logo and event photos may be used anywhere, including Demo Day (decided Oct 13; [decisions](decisions.md) CLAUDE.md rule 8).
 - 🆕 **Three official layouts** by Greybox, each in English, Spanish, Chinese and Korean. *v2.0*
 
   | Layout | Use |
@@ -220,6 +219,7 @@ In the prototype's code (`prototype/shared/src/theme.css`), the older class name
 ## Open with AAFE
 - Official brand kit (exact hex values, fonts, logo files). These tokens are matched from Greybox's brand boards and aafe.org; replace them if AAFE or Greybox supplies a kit.
 - Confirm with AAFE at the **Oct 19** meeting that the apps should follow aafe.org's black footer and pill buttons.
+
 ## Appendix A: Change log
 All times are New York time (ET). Earlier entries are kept as written, even when a later version replaced them.
 
