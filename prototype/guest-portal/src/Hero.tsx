@@ -16,25 +16,54 @@ export function useReducedMotion() {
   return r
 }
 
-export default function Hero({ lang, eyebrow, title, body, children }: { lang: Lang; eyebrow: string; title: string; body: string; children?: ReactNode }) {
+export default function Hero({ lang, eyebrow, title, body, children, compact }: { lang: Lang; eyebrow: string; title: string; body: string; children?: ReactNode; compact?: boolean }) {
   const t = DICT[lang]
   const reduced = useReducedMotion()
   const [i, setI] = useState(0)
-  const [playing, setPlaying] = useState(!reduced)
+  const [playing, setPlaying] = useState(!reduced && !compact)
   useEffect(() => {
     if (!playing) return
     const id = setInterval(() => setI((x) => (x + 1) % SLIDES.length), 6000)
     return () => clearInterval(id)
   }, [playing])
 
+  // Compact hero (sponsor page): the guest task must be visible without scrolling, so no slideshow here.
+  if (compact) return (
+    <section className="hero-glass-hero force-light relative overflow-hidden border-b border-cream-200 bg-cream-100">
+      <div className="hero-glass-blobs" aria-hidden="true">
+        <span className="hero-glass-blob hero-glass-blob-1" />
+        <span className="hero-glass-blob hero-glass-blob-2" />
+        <span className="hero-glass-blob hero-glass-blob-3" />
+        <span className="hero-glass-blob hero-glass-blob-4" />
+        <span className="hero-glass-blob hero-glass-blob-5" />
+      </div>
+      <div className="hero-glass-layer" aria-hidden="true" />
+      <div className="hero-glass-texture" aria-hidden="true">
+        <span className="hero-glass-noise-fine" />
+        <span className="hero-glass-noise-frost" />
+      </div>
+      <div className="hero-glass-highlight" aria-hidden="true" />
+      {/* Gala watercolor flowers (AAFE gala art), decorative only: top-right and bottom-left corners, behind the text */}
+      <img src="./brand/gala-flower-top-right.png" alt="" aria-hidden="true" className="pointer-events-none absolute right-0 top-0 z-10 w-44 select-none opacity-30 sm:w-72 md:w-96 lg:w-[26rem]" />
+      <img src="./brand/gala-flower-bottom-left.png" alt="" aria-hidden="true" className="pointer-events-none absolute bottom-0 left-0 z-10 hidden select-none opacity-30 md:block md:w-80 lg:w-96" />
+      <div className="relative z-20 mx-auto max-w-6xl px-5 py-8 md:py-10">
+        <div className="mb-4 h-1 w-16 rounded-full bg-brand-500" aria-hidden />
+        <p className="type-nav text-brand-600">{eyebrow}</p>
+        <h1 className="type-display mt-2 text-navy-900">{title}</h1>
+        {body && <p className="mt-3 max-w-2xl text-navy-600">{body}</p>}
+        {children}
+      </div>
+    </section>
+  )
+
   return (
     <section className="border-b border-cream-200 bg-cream-100">
       <div className="mx-auto grid max-w-6xl items-center gap-8 px-5 py-10 md:grid-cols-[1.05fr_1fr] md:gap-12 md:py-14">
         <div>
           <div className="mb-5 h-1 w-16 rounded-full bg-brand-500" aria-hidden />
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brand-600">{eyebrow}</p>
-          <h1 className="mt-3 font-serif text-[2.1rem] font-medium leading-[1.1] text-navy-900 sm:text-5xl">{title}</h1>
-          <p className="mt-4 max-w-xl font-body text-base leading-relaxed text-navy-600">{body}</p>
+          <p className="type-nav text-brand-600">{eyebrow}</p>
+          <h1 className="type-display mt-3 text-navy-900">{title}</h1>
+          <p className="type-lead mt-4 max-w-xl text-navy-600">{body}</p>
           {children}
         </div>
         <div className="relative">
@@ -66,7 +95,9 @@ export default function Hero({ lang, eyebrow, title, body, children }: { lang: L
   )
 }
 
-export function MissionStrip({ lang }: { lang: Lang }) {
+// `donate`: the sponsor portal shows AAFE's Donate button here, under the photos, and not in the header:
+// sponsors have just given, so the page thanks them first and offers a way to do more at the end.
+export function MissionStrip({ lang, donate = false }: { lang: Lang; donate?: boolean }) {
   const t = DICT[lang]
   const photos = [
     { src: './photos/community-youth-delivery.jpg', alt: 'Young AAFE volunteers delivering supplies to neighbors', pos: 'center 30%' },
@@ -76,13 +107,17 @@ export function MissionStrip({ lang }: { lang: Lang }) {
   return (
     <section className="border-y border-cream-200 bg-cream-100">
       <div className="mx-auto max-w-6xl px-5 py-10">
-        <p className="max-w-3xl font-serif text-xl leading-snug text-navy-800 sm:text-2xl">{t.mission}</p>
+        <p className="type-lead max-w-3xl text-navy-800">{t.mission}</p>
         <div className="mt-6 grid grid-cols-3 gap-2 sm:gap-4">
           {photos.map((p) => (
             <img key={p.src} src={p.src} alt={p.alt} loading="lazy" className="aspect-[4/5] w-full rounded-xl object-cover" style={{ objectPosition: p.pos }} />
           ))}
         </div>
-        <p className="mt-3 text-xs text-navy-600">{t.photoCredit}</p>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-xs text-navy-600">{t.photoCredit}</p>
+          {/* Goes to AAFE's donate page (Give Lively) */}
+          {donate && <a href="https://www.aafe.org/donate/" target="_blank" rel="noopener noreferrer" className="aafe-donate" data-testid="donate">{t.donate}</a>}
+        </div>
       </div>
     </section>
   )

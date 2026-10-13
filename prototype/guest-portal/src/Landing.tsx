@@ -26,14 +26,14 @@ export default function Landing({ db, lang }: { db: DB; lang: Lang }) {
         </div>
       </Hero>
       <section id="email" className="mx-auto max-w-3xl scroll-mt-20 px-5 pt-10">
-        <h2 className="text-lg font-semibold text-navy-900">{t.emailSample}</h2>
+        <h2 className="type-h2 text-navy-900">{t.emailSample}</h2>
         <div className="card mt-4 overflow-hidden" data-testid="sample-email">
           <dl className="grid grid-cols-[auto,1fr] gap-x-3 gap-y-1 border-b border-cream-200 bg-cream-100 px-5 py-3 text-sm">
             <dt className="text-navy-600">{t.emailFrom}</dt><dd className="text-navy-900">AAFE Gala Team &lt;gala-team@aafe-demo.example.org&gt;</dd>
             <dt className="text-navy-600">{t.emailTo}</dt><dd className="text-navy-900">{primarySponsor?.organization_name ?? 'Sponsor'}</dd>
             <dt className="text-navy-600">{t.emailSubject}</dt><dd className="font-semibold text-navy-900">{t.emailSubjectText}</dd>
           </dl>
-          <div className="px-5 py-5 text-[0.9375rem] leading-relaxed text-navy-700">
+          <div className="type-body-small px-5 py-5 text-navy-700">
             <img src="./brand/aafe-mark-orange.png" alt="" className="mb-4 h-9 w-9" />
             <p>{t.emailHi}</p>
             <p className="mt-3">{t.emailBody}</p>
@@ -48,14 +48,14 @@ export default function Landing({ db, lang }: { db: DB; lang: Lang }) {
         </div>
       </section>
       <section className="mx-auto max-w-6xl px-5 py-10">
-        <h2 className="text-lg font-semibold text-navy-900">{t.demoLinks}</h2>
+        <h2 className="type-h2 text-navy-900">{t.demoLinks}</h2>
         <ul className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {demo.slice(0, 15).map((o) => (   // the Full data sets have ~140 sponsors; the first 15 are enough to try
             <li key={o.id}>
               <a href={`#/s/${o.portal_token}`} className="card block p-4 transition-colors hover:border-brand-400" data-testid={`demo-${o.portal_token}`}>
-                <div className="font-semibold text-navy-900">{sponsorOf(db, o.sponsor_id).organization_name}</div>
+                <div className="type-h6 text-navy-900">{sponsorOf(db, o.sponsor_id).organization_name}</div>
                 <div className="mt-0.5 text-sm text-navy-500">{tierOf(db, o.tier_id).name}</div>
-                <div className="mt-2 truncate font-mono text-xs text-brand-600">#/s/{o.portal_token}</div>
+                <div className="mt-2 truncate text-xs text-brand-600">#/s/{o.portal_token}</div>
               </a>
             </li>
           ))}
