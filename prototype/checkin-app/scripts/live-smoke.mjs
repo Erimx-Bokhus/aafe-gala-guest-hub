@@ -3,7 +3,7 @@
 // staff_undo_check_in), from the invented door list. Nothing leaves this computer. It checks the wiring the real
 // backend can't be tried on without keys: sign-in detection, the list, check-in and sync, QR codes matched on their
 // hash, one-tap and group check-in, undo (yours, and someone else's refused), exceptions, offline queueing, a first-arrival conflict notice,
-// the access-needs flag, and that signing out clears the iPad.
+// the access-needs flag, that signing out never loses a waiting check-in, and that it clears the iPad.
 //
 // Setup (Playwright is not a project dependency):
 //   cd prototype && npm install --no-save playwright
@@ -156,9 +156,21 @@ ok(arrivals.get('g-004')?.by === ME.name, 'back online, the waiting check-ins sy
 const note = await text('[data-testid="notices"]')
 ok(note.includes(nameOf('g-005')) && note.includes('Already checked in') && note.includes('was not counted'), `a guest another door checked in first shows as a notice, not dropped (${note.trim()})`)
 
-// Sign out clears the iPad.
+// Signing out while a check-in is still waiting stops and keeps it (audit bug 1); Try again sends it, then signs out.
+down = true
+await checkInByName('g-006')
+await p.waitForFunction(() => document.querySelector('[data-testid="sync-status"]')?.textContent?.includes('Offline'), null, { timeout: 15000 })
 await p.getByTestId('sign-out').click()
+await p.getByTestId('signout-blocked').waitFor()
+ok((await text('[data-testid="signout-blocked"]')).includes('1 check-in hasn’t reached AAFE'), 'offline, sign-out stops and says 1 check-in would be lost')
+ok(await p.getByTestId('signout-anyway').count() === 0, 'a volunteer can’t sign out anyway (only a gala admin can)')
+ok(await p.evaluate(() => (localStorage.getItem('aafe-checkin:st-test:queue') ?? '').includes('g-006')), 'the waiting check-in is still on the iPad')
+down = false
+await p.getByTestId('signout-retry').click()
 await p.getByTestId('send-link').waitFor()
+ok(arrivals.get('g-006')?.by === ME.name, 'back online, Try again sends the waiting check-in before signing out')
+
+// Sign out clears the iPad.
 ok(await p.evaluate(() => !Object.keys(localStorage).some((k) => k.startsWith('aafe-checkin:st-test:'))), "signing out clears this person's saved list and queue from the iPad")
 ok(outside.length === 0, `no request left this computer (${outside.slice(0, 3).join(', ')})`)
 ok(errors.length === 0, `no page errors (${errors.join(' | ')})`)
