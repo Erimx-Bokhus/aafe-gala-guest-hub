@@ -15,12 +15,24 @@ staff working the door see check-in and nothing else: no sponsors, payments, or 
 - Search by first or last name, organization, or sponsor; results appear as you type.
 - Scan a guest's QR code with the iPad camera. A ticket that was already used shows a warning with who checked it in and when.
 - Add an approved exception (walk-ins, unnamed sponsor seats). Tap "+N exceptions" to see them all and undo a mistake.
-- Tick one or more names and tap **Checked in**; each row shows the time; tap again to undo. In live mode only the
+- One tap on **Check in** checks a guest in (or tick several and tap **Check in N**); each row shows the time; tap again to undo. In live mode only the
   person who checked a guest in, or a gala admin, can undo it (the server checks).
 - A guest with accessibility needs shows an **Access needs** flag; the details stay in the staff app.
 - Live "N of M checked in" bar and an offline banner with arrivals waiting to sync. While searching, the header shrinks so the list stays visible above the iPad keyboard.
-- Install on the iPad from Safari: Share → **Add to Home Screen**. It opens full screen like an app.
-  No App Store or Apple developer account needed.
+- **An installable app (PWA)** named "AAFE Check-in", with AAFE's mark as its icon. It opens full screen like an
+  app and **opens even with no Wi-Fi**, from a copy kept on the iPad. No App Store or Apple developer account needed.
+
+## Install on an iPad (for AAFE)
+The app must be hosted at a permanent **https** address (Cloudflare Pages or Vercel). Then, on each iPad:
+1. Open the address in **Safari** (it must be Safari).
+2. Tap **Share** (the square with the arrow) → **Add to Home Screen** → **Add**. The "AAFE Check-in" icon appears.
+3. Open it from the icon and sign in once. It stays signed in until someone taps **Sign out**.
+4. Before doors open, open it once while online, so the iPad has the newest app and tonight's guest list.
+
+After that the app opens from the icon even if the venue's Wi-Fi is down; check-ins wait on the iPad and send
+when the internet is back. The offline copy covers only the app itself (`../shared/public/checkin-sw.js`); the
+guest list and check-ins are kept by `../shared/src/offlineCheckin.ts`. A new version reaches each iPad the next
+time it opens the app while online.
 
 ## Run it
 **Live, on Supabase:** copy `.env.example` to `.env.local` with the project URL and anon key (never the service_role
@@ -42,6 +54,8 @@ server through Vite's `/api` proxy, so several iPads share check-ins. Or double-
 | Path | What |
 | --- | --- |
 | `src/App.tsx` | The screens: sign-in (live or demo), A–Z list, multi-select check-in, QR, exceptions, undo, notices |
+| `../shared/public/checkin/` | The install file (`manifest.webmanifest`) and the app icons: AAFE's mark on white |
+| `../shared/public/checkin-sw.js` | The offline helper: keeps a copy of the app on the iPad, never guest data |
 | `src/door.ts` | What the screen needs from either mode (`Door`), and `LIVE`, fixed at build time from the keys |
 | `src/liveDoor.ts` | Live: the list from `staff_checkin_snapshot()`, check-ins through `CheckInDesk` and `staff_sync_check_ins()` (works offline, first arrival wins), QR codes matched on their hash, undo through `staff_undo_check_in()`; the saved list is per person and cleared on sign-out or when the gala closes |
 | `src/demoDoor.ts` | Demo: the bundled door list and the demo sync server; left out of a build with keys |
