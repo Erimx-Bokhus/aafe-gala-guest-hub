@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { Pause, Play } from 'lucide-react'
 import { DICT, type Lang } from './i18n'
 
-// Hero slideshow — gala scenes from AAFE's 50th anniversary (images pending AAFE approval).
+// Hero slideshow — gala scenes from AAFE's 50th anniversary (allowed anywhere, CLAUDE.md rule 8).
 export const SLIDES = [
   { src: './photos/gala-rooftop-skyline.jpg', alt: 'An AAFE elder in a black jacket greets guests on the rooftop terrace, One World Trade Center behind', pos: 'center bottom' },
   { src: './photos/gala-50th-panel.jpg', alt: 'Speakers on stage at AAFE’s 50th anniversary gala', pos: 'center' },
