@@ -1,0 +1,166 @@
+/* Compact sponsor hero glass treatment. Guest portal only; all motion is CSS. */
+.brand-warm .hero-glass-hero {
+  isolation: isolate;
+  overflow: hidden;
+  overflow-x: clip;
+  overflow-y: clip;
+  background: #fff;
+}
+
+/* The sponsor hero is intentionally light in both themes. Reset only the
+   inherited guest-portal tokens here; the rest of the page keeps dark mode. */
+.brand-warm .hero-glass-hero.force-light {
+  --page: 255 255 255;
+  --surface: 255 255 255;
+  --muted: 244 244 246;
+  --line: 235 235 235;
+  --brand-50: 252 241 235;
+  --brand-100: 248 224 212;
+  --n50: 244 244 246;
+  --n100: 235 235 235;
+  --n300: 186 185 185;
+  --n500: 112 112 112;
+  --n600: 77 76 76;
+  --n700: 64 64 64;
+  --n800: 51 51 51;
+  --n900: 49 49 49;
+  --ink: 49 49 49;
+  --ink2: 61 56 53;
+  color-scheme: light;
+}
+
+/* The global dark-theme orange is too pale over the glass. This darker brand
+   orange retains at least 4.5:1 contrast even against white. */
+.brand-warm .hero-glass-hero.force-light .text-brand-600 {
+  color: #A63E1F;
+}
+
+/* In dark mode only, keep the two compact event tiles distinct from the
+   light glass while retaining the same white date and icon foregrounds. */
+.brand-warm.dark .hero-glass-hero.force-light .hero-glass-tile {
+  background-color: #4D4C4C;
+  color: #fff;
+}
+.brand-warm.dark .hero-glass-hero.force-light .hero-glass-date-month {
+  background-color: #4D4C4C;
+  color: #fff;
+}
+.brand-warm.dark .hero-glass-hero.force-light .hero-glass-date-day {
+  color: #fff;
+}
+
+.brand-warm .hero-glass-blobs {
+  position: absolute;
+  z-index: 0;
+  top: -20%;
+  left: -20%;
+  width: 140%;
+  height: 140%;
+  overflow: hidden;
+  filter: blur(20px);
+  background: #fff;
+}
+
+.brand-warm .hero-glass-blob {
+  position: absolute;
+  display: block;
+  opacity: .8;
+  will-change: transform, border-radius;
+  border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
+}
+
+.brand-warm .hero-glass-blob-1 {
+  top: 10%; left: 10%; width: 50%; height: 50%; background: #F2B8A2;
+  animation: hero-glass-morph-1 22s ease-in-out infinite alternate;
+}
+.brand-warm .hero-glass-blob-2 {
+  top: 20%; right: 10%; width: 60%; height: 60%; background: #F8D9C4;
+  animation: hero-glass-morph-2 28s ease-in-out infinite alternate-reverse;
+}
+.brand-warm .hero-glass-blob-3 {
+  bottom: 10%; left: 20%; width: 45%; height: 45%; background: #FBE7A8;
+  animation: hero-glass-morph-3 25s ease-in-out infinite alternate;
+}
+.brand-warm .hero-glass-blob-4 {
+  right: 20%; bottom: 5%; width: 55%; height: 55%; background: #F4F4F6;
+  animation: hero-glass-morph-4 30s ease-in-out infinite alternate-reverse;
+}
+.brand-warm .hero-glass-blob-5 {
+  top: 30%; left: 40%; width: 40%; height: 40%; background: rgb(198 76 40 / .4);
+  animation: hero-glass-morph-5 20s ease-in-out infinite alternate;
+}
+
+@keyframes hero-glass-morph-1 {
+  0% { transform: translate(0, 0) scale(1); border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; }
+  50% { transform: translate(15%, 10%) scale(1.1); border-radius: 60% 40% 30% 70% / 50% 60% 40% 50%; }
+  100% { transform: translate(-10%, 20%) scale(.9); border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; }
+}
+@keyframes hero-glass-morph-2 {
+  0% { transform: translate(0, 0) scale(1); border-radius: 50% 50% 40% 60% / 60% 40% 50% 50%; }
+  50% { transform: translate(-20%, 15%) scale(1.05); border-radius: 30% 70% 50% 50% / 40% 60% 40% 60%; }
+  100% { transform: translate(10%, -10%) scale(.95); border-radius: 60% 40% 70% 30% / 50% 50% 50% 50%; }
+}
+@keyframes hero-glass-morph-3 {
+  0% { transform: translate(0, 0) scale(1); border-radius: 70% 30% 50% 50% / 30% 30% 70% 70%; }
+  50% { transform: translate(25%, -20%) scale(.85); border-radius: 40% 60% 60% 40% / 60% 50% 50% 40%; }
+  100% { transform: translate(-15%, 10%) scale(1.15); border-radius: 50% 50% 40% 60% / 50% 60% 40% 50%; }
+}
+@keyframes hero-glass-morph-4 {
+  0% { transform: translate(0, 0) scale(1); border-radius: 30% 70% 70% 30% / 30% 70% 30% 70%; }
+  50% { transform: translate(-10%, -25%) scale(1.1); border-radius: 50% 50% 30% 70% / 50% 50% 60% 40%; }
+  100% { transform: translate(20%, 15%) scale(.9); border-radius: 60% 40% 50% 50% / 40% 60% 50% 50%; }
+}
+@keyframes hero-glass-morph-5 {
+  0% { transform: translate(0, 0) scale(1); border-radius: 50%; }
+  50% { transform: translate(10%, -10%) scale(1.2); border-radius: 40% 60% 50% 50% / 50% 50% 60% 40%; }
+  100% { transform: translate(-15%, 15%) scale(.8); border-radius: 60% 40% 30% 70% / 60% 40% 70% 30%; }
+}
+
+.brand-warm .hero-glass-layer {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  background: rgb(255 255 255 / .4);
+  -webkit-backdrop-filter: blur(40px);
+  backdrop-filter: blur(40px);
+  pointer-events: none;
+}
+
+.brand-warm .hero-glass-texture {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.brand-warm .hero-glass-noise-fine,
+.brand-warm .hero-glass-noise-frost {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+.brand-warm .hero-glass-noise-fine {
+  opacity: .25;
+  mix-blend-mode: soft-light;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.80' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.brand-warm .hero-glass-noise-frost {
+  opacity: .08;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.02' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
+}
+.brand-warm .hero-glass-highlight {
+  position: absolute;
+  z-index: 3;
+  inset: 0 0 auto;
+  height: 1px;
+  background: rgb(255 255 255 / .5);
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brand-warm .hero-glass-blobs {
+    background: linear-gradient(135deg, #F2B8A2, #FBE7A8, #F8D9C4);
+  }
+  .brand-warm .hero-glass-blob { display: none; animation: none; }
+}

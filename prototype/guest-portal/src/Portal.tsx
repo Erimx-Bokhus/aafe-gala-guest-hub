@@ -1,49 +1,136 @@
-import { useEffect, useMemo, useState, type ChangeEvent } from 'react'
-import { CalendarDays, CheckCircle2, Clock, History, Lock, MapPin, Pencil, Plus, Trash2, UserRound } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type MouseEvent } from 'react'
+import { Award, CheckCircle2, CircleDashed, Clock, Facebook, Instagram, Linkedin, Lock, Mail, MapPin, Pencil, Phone, Plus, Twitter, Youtube } from 'lucide-react'
 import { Field, Modal, Toast, fmtDate, money } from '@shared/ui'
 import type { DB } from '@shared/types'
+import { displayName } from '@shared/data'
 import { DICT, LOCALE, type Lang } from './i18n'
 import { isPastDeadline } from './deadline'
 import { namesLeftText } from './namesLeft'
+import { parseAccessibilityNeeds, parseDietaryNeeds, serializeAccessibilityNeeds, serializeDietaryNeeds, type AccessibilityOption, type DietaryOption } from './guestNeeds'
 import { LIVE, fetchPortalView, getPortalView, removeAttendee, removeAttendeeLive, saveAttendee, saveAttendeeLive, type AttendeeInput, type PortalView } from './portalApi'
 import Hero, { MissionStrip } from './Hero'
+import WelcomeScreen from './WelcomeScreen'
+import { dismissPortalWelcome, shouldShowPortalWelcome } from './portalWelcome'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const EMPTY: AttendeeInput = { first_name: '', last_name: '', title: '', organization: '', email: '', dietary_needs: '', accessibility_needs: '' }
 
+function scrollToContact(event: MouseEvent<HTMLButtonElement>) {
+  const doc = event.currentTarget.ownerDocument
+  const heading = doc.getElementById('contact')
+  const prefersReducedMotion = doc.defaultView?.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+  heading?.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'start' })
+  heading?.focus({ preventScroll: true })
+}
+
 function AttendeeForm({ lang, initial, onSave, onCancel }: { lang: Lang; initial: AttendeeInput; onSave: (v: AttendeeInput) => void; onCancel: () => void }) {
   const t = DICT[lang]
+  const familyFirst = lang === 'zh' || lang === 'ko'
   const [v, setV] = useState(initial)
+  const [fullName, setFullName] = useState(() => initial.display_name?.trim() || (familyFirst ? [initial.last_name, initial.first_name] : [initial.first_name, initial.last_name]).filter(Boolean).join(' '))
+  const dietaryNeeds = initial.dietary_needs ?? ''
+  const accessibilityNeeds = initial.accessibility_needs ?? ''
+  const initialDietary = parseDietaryNeeds(dietaryNeeds)
+  const [dietaryChoices, setDietaryChoices] = useState<DietaryOption[]>(initialDietary.selected)
+  const [dietaryOther, setDietaryOther] = useState(initialDietary.otherDetails)
+  const initialAccess = parseAccessibilityNeeds(accessibilityNeeds)
+  const [accessEnabled, setAccessEnabled] = useState(accessibilityNeeds.trim() !== '' && accessibilityNeeds.trim() !== 'No')
+  const [accessChoices, setAccessChoices] = useState<AccessibilityOption[]>(initialAccess.selected)
+  const [accessDetails, setAccessDetails] = useState(initialAccess.otherDetails)
   const [touched, setTouched] = useState(false)
-  const IDS = { first_name: 'fn', last_name: 'ln', title: 'ti', organization: 'or', email: 'em' } as const
-  const errs: Partial<Record<keyof AttendeeInput, string>> = {}
-  ;(['first_name', 'last_name', 'title', 'organization', 'email'] as const).forEach((k) => { if (!v[k].trim()) errs[k] = t.required })
+  const fullNameMode = !LIVE
+  const IDS = { full_name: 'full-name', first_name: 'fn', last_name: 'ln', title: 'ti', organization: 'or', email: 'em' } as const
+  const errs: Partial<Record<keyof AttendeeInput | 'full_name', string>> = {}
+  if (fullNameMode) {
+    if (!fullName.trim()) errs.full_name = t.fullNameRequired
+  } else {
+    ;(['first_name', 'last_name'] as const).forEach((k) => { if (!v[k].trim()) errs[k] = t.required })
+  }
+  ;(['title', 'organization', 'email'] as const).forEach((k) => { if (!v[k].trim()) errs[k] = t.required })
   if (v.email.trim() && !EMAIL_RE.test(v.email.trim())) errs.email = t.invalidEmail
   const set = (k: keyof AttendeeInput) => (e: ChangeEvent<HTMLInputElement>) => setV({ ...v, [k]: e.target.value })
-  const err = (k: keyof AttendeeInput) => (touched ? errs[k] : undefined)
+  const err = (k: keyof AttendeeInput | 'full_name') => (touched ? errs[k] : undefined)
+  const fullNameError = touched ? errs.full_name : undefined
   // Link each required field to its error / hint so screen readers read them with the field
   const a11y = (k: keyof typeof IDS, hint = false) => {
     const id = IDS[k]
     return { 'aria-required': true, 'aria-invalid': err(k) ? true : undefined, 'aria-describedby': err(k) ? `${id}-err` : hint ? `${id}-hint` : undefined }
   }
-  const trimmed = Object.fromEntries(Object.entries(v).map(([k, x]) => [k, x.trim()])) as unknown as AttendeeInput
+  const givenField = <Field key="fn" id="fn" label={t.firstName} error={err('first_name')}><input id="fn" className="input min-h-[44px]" value={v.first_name} onChange={set('first_name')} autoFocus={!familyFirst} autoComplete="off" {...a11y('first_name')} /></Field>
+  const familyField = <Field key="ln" id="ln" label={t.lastName} error={err('last_name')}><input id="ln" className="input min-h-[44px]" value={v.last_name} onChange={set('last_name')} autoFocus={familyFirst} autoComplete="off" {...a11y('last_name')} /></Field>
+  const fullNameField = <Field id="full-name" label={t.fullName} error={fullNameError}><input id="full-name" className="input min-h-[44px]" value={fullName} onChange={(e) => setFullName(e.target.value)} autoFocus autoComplete="name" aria-required="true" aria-invalid={fullNameError ? true : undefined} aria-describedby={fullNameError ? 'full-name-err' : undefined} /></Field>
+  const trimmed = Object.fromEntries(Object.entries(v).map(([k, x]) => [k, typeof x === 'string' ? x.trim() : x])) as unknown as AttendeeInput
+  const dietaryValue = serializeDietaryNeeds(dietaryChoices, dietaryOther)
+  const accessibilityValue = accessEnabled ? serializeAccessibilityNeeds(accessChoices, accessDetails) : ''
   return (
     <form noValidate className="space-y-4" onSubmit={(e) => {
       e.preventDefault(); setTouched(true)
-      const firstBad = (Object.keys(IDS) as (keyof typeof IDS)[]).find((k) => errs[k])
+      const order = (fullNameMode ? ['full_name', 'title', 'organization', 'email'] : familyFirst ? ['last_name', 'first_name', 'title', 'organization', 'email'] : ['first_name', 'last_name', 'title', 'organization', 'email']) as (keyof typeof IDS)[]
+      const firstBad = order.find((k) => errs[k])
       if (firstBad) document.getElementById(IDS[firstBad])?.focus() // jump to the first field that needs fixing
-      else onSave(trimmed)
+      else onSave({ ...trimmed, ...(fullNameMode ? { first_name: fullName.trim(), last_name: '', display_name: fullName.trim() } : {}), dietary_needs: dietaryValue, accessibility_needs: accessibilityValue })
     }}>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field id="fn" label={t.firstName} error={err('first_name')}><input id="fn" className="input" value={v.first_name} onChange={set('first_name')} autoFocus {...a11y('first_name')} /></Field>
-        <Field id="ln" label={t.lastName} error={err('last_name')}><input id="ln" className="input" value={v.last_name} onChange={set('last_name')} {...a11y('last_name')} /></Field>
-      </div>
-      <Field id="ti" label={t.title} hint={t.titleHint} error={err('title')}><input id="ti" className="input" value={v.title} onChange={set('title')} {...a11y('title', true)} /></Field>
-      <Field id="or" label={t.organization} hint={t.titleHint} error={err('organization')}><input id="or" className="input" value={v.organization} onChange={set('organization')} {...a11y('organization', true)} /></Field>
-      <Field id="em" label={t.email} error={err('email')}><input id="em" type="email" className="input" value={v.email} onChange={set('email')} placeholder="name@example.org" {...a11y('email')} /></Field>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field id="di" label={t.dietary}><input id="di" className="input" value={v.dietary_needs} onChange={set('dietary_needs')} /></Field>
-        <Field id="ac" label={t.access}><input id="ac" className="input" value={v.accessibility_needs} onChange={set('accessibility_needs')} /></Field>
+      {fullNameMode ? fullNameField : <div className="grid gap-4 sm:grid-cols-2">{(familyFirst ? [familyField, givenField] : [givenField, familyField])}</div>}
+      <Field id="ti" label={t.title} hint={t.titleHint} error={err('title')}><input id="ti" className="input min-h-[44px]" value={v.title} onChange={set('title')} {...a11y('title', true)} /></Field>
+      <Field id="or" label={t.organization} hint={t.titleHint} error={err('organization')}><input id="or" className="input min-h-[44px]" value={v.organization} onChange={set('organization')} {...a11y('organization', true)} /></Field>
+      <Field id="em" label={t.email} error={err('email')}><input id="em" type="email" className="input min-h-[44px]" value={v.email} onChange={set('email')} {...a11y('email')} /></Field>
+      <div className="grid gap-4">
+        <fieldset className="space-y-1" id="di">
+          <legend className="mb-1 text-sm font-medium text-navy-800">{t.dietary}</legend>
+          <div className="grid gap-1 sm:grid-cols-2">
+            {([
+              ['Vegetarian', t.dietaryVegetarian], ['Vegan', t.dietaryVegan], ['Halal', t.dietaryHalal], ['Kosher', t.dietaryKosher],
+              ['Gluten-free', t.dietaryGlutenFree], ['No pork', t.dietaryNoPork], ['No beef', t.dietaryNoBeef], ['No shellfish', t.dietaryNoShellfish],
+              ['Nut allergy', t.dietaryNutAllergy], ['Other', t.otherOption],
+            ] as [DietaryOption, string][]).map(([value, label]) => (
+              <label key={value} className={`flex min-h-[44px] cursor-pointer items-center gap-3 rounded-md border border-[#707070] px-3 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand-500 ${value === 'Other' ? 'sm:col-span-2' : ''}`}>
+                <input type="checkbox" className="h-5 w-5 accent-brand-500" checked={dietaryChoices.includes(value)} onChange={(e) => {
+                  setDietaryChoices((current) => e.target.checked ? [...current, value] : current.filter((choice) => choice !== value))
+                  if (!e.target.checked && value === 'Other') setDietaryOther('')
+                }} />
+                <span>{label}</span>
+              </label>
+            ))}
+          </div>
+          {dietaryChoices.includes('Other') && <Field id="di-other" label={t.pleaseDescribe}>
+            <input id="di-other" className="input min-h-[44px]" value={dietaryOther} onChange={(e) => setDietaryOther(e.target.value)} />
+          </Field>}
+        </fieldset>
+        <fieldset className="space-y-1" id="ac">
+          <legend className="mb-1 text-sm font-medium text-navy-800">{t.accessQuestion}</legend>
+          <div className="grid gap-1 sm:grid-cols-2">
+            {([['no', t.accessNo], ['yes', t.accessYes]] as const).map(([value, label]) => (
+              <label key={value} className="flex min-h-[44px] cursor-pointer items-center gap-3 rounded-md border border-[#707070] px-3 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand-500">
+                <input type="radio" name="accessibility-support" className="h-5 w-5 accent-brand-500" checked={accessEnabled === (value === 'yes')} onChange={() => {
+                  const enabled = value === 'yes'
+                  setAccessEnabled(enabled)
+                  if (!enabled) { setAccessChoices([]); setAccessDetails('') }
+                }} />
+                <span>{label}</span>
+              </label>
+            ))}
+          </div>
+          {accessEnabled && <fieldset className="space-y-1 pt-2">
+            <legend className="mb-1 text-sm font-medium text-navy-800">{t.accessNeedsPrompt}</legend>
+            <div className="grid gap-1 sm:grid-cols-2">
+              {([
+                ['Wheelchair access', t.accessWheelchair], ['Step-free seating', t.accessStepFree], ['Hearing support', t.accessHearing],
+                ['Visual support', t.accessVisual], ['Other', t.otherOption],
+              ] as [AccessibilityOption, string][]).map(([value, label]) => (
+                <label key={value} className={`flex min-h-[44px] cursor-pointer items-center gap-3 rounded-md border border-[#707070] px-3 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand-500 ${value === 'Other' ? 'sm:col-span-2' : ''}`}>
+                  <input type="checkbox" className="h-5 w-5 accent-brand-500" checked={accessChoices.includes(value)} onChange={(e) => {
+                    setAccessChoices((current) => e.target.checked ? [...current, value] : current.filter((choice) => choice !== value))
+                    if (!e.target.checked && value === 'Other') setAccessDetails('')
+                  }} />
+                  <span>{label}</span>
+                </label>
+              ))}
+            </div>
+            {accessChoices.includes('Other') && <Field id="ac-details" label={t.pleaseDescribe}>
+              <input id="ac-details" className="input min-h-[44px]" value={accessDetails} onChange={(e) => setAccessDetails(e.target.value)} />
+            </Field>}
+          </fieldset>}
+        </fieldset>
       </div>
       <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
         <button type="button" onClick={onCancel} className="btn-ghost">{t.cancel}</button>
@@ -52,6 +139,28 @@ function AttendeeForm({ lang, initial, onSave, onCancel }: { lang: Lang; initial
     </form>
   )
 }
+
+// "Send AAFE an email": AAFE's published gala inbox. The prototype can't send a message from here, so it shows the
+// address rather than a form that would say "sent" when nothing went out. A form can come back with a real send path.
+function ContactPanel({ lang, onClose }: { lang: Lang; onClose: () => void }) {
+  const t = DICT[lang]
+  return (
+    <div className="py-2 text-center" data-testid="contact-panel">
+      <Mail size={32} className="mx-auto text-brand-700" aria-hidden />
+      <a href="mailto:gala@aafe.org" className="type-h6 mt-3 inline-block text-navy-900 underline underline-offset-4" data-testid="contact-email">gala@aafe.org</a>
+      <div className="pt-6"><button type="button" className="aafe-submit" onClick={onClose}>{t.close}</button></div>
+    </div>
+  )
+}
+
+// AAFE's official social accounts (from aafe.org/contact)
+const SOCIAL = [
+  { name: 'Facebook', href: 'https://www.facebook.com/aafe1974', Icon: Facebook },
+  { name: 'Instagram', href: 'https://www.instagram.com/aafenyc/', Icon: Instagram },
+  { name: 'X (Twitter)', href: 'https://twitter.com/AAFE1974', Icon: Twitter },
+  { name: 'LinkedIn', href: 'https://www.linkedin.com/company/aafe/', Icon: Linkedin },
+  { name: 'YouTube', href: 'https://www.youtube.com/@aafe1974', Icon: Youtube },
+]
 
 function activityText(lang: Lang, a: PortalView['activity'][number]) {
   const t = DICT[lang]
@@ -77,9 +186,17 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
   // LIVE: undefined = loading, null = invalid link
   const [liveView, setLiveView] = useState<PortalView | null | undefined>(undefined)
   const [editing, setEditing] = useState<number | null>(null)
+  const [removing, setRemoving] = useState<number | null>(null)
+  const [contactOpen, setContactOpen] = useState(false)
+  const [welcomeOpen, setWelcomeOpen] = useState(() => shouldShowPortalWelcome(token))
   const [toast, setToast] = useState<string | null>(null)
   const [justSaved, setJustSaved] = useState(false)
   useEffect(() => { if (LIVE) { setLiveView(undefined); fetchPortalView(token).then(setLiveView, () => setLiveView(null)) } }, [token])
+  useEffect(() => { setWelcomeOpen(shouldShowPortalWelcome(token)) }, [token])
+  const closeWelcome = useCallback(() => {
+    dismissPortalWelcome(token)
+    setWelcomeOpen(false)
+  }, [token])
   const view = LIVE ? liveView : localView
   const save = (slot: number, v: AttendeeInput, after: () => void) => {
     if (!LIVE) { update((d) => saveAttendee(d, token, slot, v)); after(); return }
@@ -94,169 +211,246 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
   if (!view) return (
     <main className="mx-auto max-w-xl px-5 py-20 text-center">
       <Lock className="mx-auto text-navy-300" size={32} />
-      <h1 className="mt-4 text-2xl font-semibold text-navy-900">{t.notFound}</h1>
+      <h1 className="type-display mt-4 text-navy-900">{t.notFound}</h1>
       <p className="mt-2 text-navy-600">{t.notFoundHelp}</p>
     </main>
   )
 
   const closed = isPastDeadline(view.deadline, { live: LIVE, search: window.location.search })
   const seat = !closed && editing != null ? view.seats.find((s) => s.slot === editing)! : null
-  const pct = view.stats.total ? Math.round((view.stats.named / view.stats.total) * 100) : 0
-  const namesLeft = view.stats.total - view.stats.named
-  const namesLeftMessage = namesLeftText(namesLeft, t.namesLeft)
+  const removingSeat = !closed && removing != null ? view.seats.find((s) => s.slot === removing) : undefined
+  const openSeats = view.stats.total - view.stats.named
+  const namesLeftMessage = namesLeftText(openSeats, t.namesLeft)
+  const firstOpen = view.seats.find((s) => !s.guest)
+  // Short place, like an invitation: the venue name (before any comma) and the city/state, no street or ZIP
+  const venueName = view.event.venue.split(',')[0]!.trim()
+  const venueCity = view.event.address.replace(/\s*\(synthetic\)\s*/i, '').split(',').slice(1).join(',').replace(/\s*\d{5}(-\d{4})?\s*$/, '').trim()
+  const eventDate = new Date(view.event.date.length === 10 ? view.event.date + 'T12:00:00' : view.event.date)
   const statusText = { paid: t.stPaid, partial: t.stPartial, pledged: t.stPledged, comp: t.stComp }[view.money.status]
   const statusCls = { paid: 'bg-emerald-50 text-emerald-800', partial: 'bg-amber-50 text-amber-800', pledged: 'bg-amber-50 text-amber-800', comp: 'bg-brand-50 text-brand-600' }[view.money.status]
-
   return (
     <main>
-      <Hero lang={lang} eyebrow={t.eyebrow} title={`${t.welcome}, ${view.organization}`} body={t.heroBody}>
-        <div className="mt-6 grid max-w-md grid-cols-2 gap-3">
-          <div className="rounded-xl border border-cream-200 bg-surface p-3"><div className="text-[0.6875rem] font-semibold uppercase tracking-wide text-brand-600">{t.package}</div><div className="mt-1 text-sm font-semibold text-navy-900">{view.tierName}</div></div>
-          <div className="rounded-xl border border-cream-200 bg-surface p-3"><div className="text-[0.6875rem] font-semibold uppercase tracking-wide text-brand-600">{t.eventWhen}</div><div className="mt-1 text-sm font-semibold text-navy-900">{fmtDate(view.event.date, loc)}</div></div>
+      {/* 1. Short hero: who this is for, the package, and the gala date. The task starts right below it. */}
+      <Hero compact lang={lang} eyebrow={t.eyebrow} title={`${t.thankYou}, ${view.organization}`} body="">
+        {/* Like an event invitation (Luma): the sponsorship as a badge, then one fact per row with an icon tile */}
+        <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-brand-100 bg-brand-50 py-1.5 pl-2 pr-4" data-testid="sponsor-badge">
+          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-500 text-white"><Award size={16} aria-hidden /></span>
+          <span className="font-semibold text-navy-900">{view.tierName}</span>
         </div>
-        <button type="button" className="btn-primary mt-6" onClick={() => {
-          const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-          document.getElementById('seats')?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' })
-          document.getElementById('seats-h')?.focus({ preventScroll: true })
-        }}>{t.openList}</button>
+        <ul className="mt-5 flex min-w-0 flex-wrap gap-x-10 gap-y-3" aria-label={t.eventWhen}>
+          <li className="flex min-w-0 items-center gap-3">
+            <span className="hero-glass-tile flex h-11 w-11 shrink-0 flex-col overflow-hidden rounded-lg border border-navy-100 bg-surface text-center" aria-hidden>
+              <span className="hero-glass-date-month bg-cream-100 text-[10px] font-semibold uppercase leading-4 text-navy-600">{eventDate.toLocaleDateString(loc, { month: 'short' })}</span>
+              <span className="hero-glass-date-day flex-1 text-base font-bold leading-6 text-navy-900">{eventDate.getDate()}</span>
+            </span>
+            <div className="min-w-0">
+              <div className="font-semibold text-navy-900">{eventDate.toLocaleDateString(loc, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</div>
+              {view.event.doors && <div className="text-navy-600">{t.doorsAt(view.event.doors)}</div>}
+            </div>
+          </li>
+          <li className="flex min-w-0 items-center gap-3">
+            <span className="hero-glass-tile flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-navy-100 bg-surface text-navy-700" aria-hidden><MapPin size={20} /></span>
+            <div className="min-w-0">
+              <div className="font-semibold text-navy-900">{venueName}</div>
+              {venueCity && <div className="text-navy-600">{venueCity}</div>}
+            </div>
+          </li>
+        </ul>
+        <div className="mt-5 flex flex-wrap items-center gap-3">
+          <button type="button" className="aafe-contact" onClick={scrollToContact} data-testid="hero-contact">{t.contact}</button>
+        </div>
       </Hero>
 
-      <div className="mx-auto max-w-6xl space-y-8 px-5 py-10">
-        {/* Seats */}
+      <div className="mx-auto max-w-4xl space-y-6 px-5 py-8">
+        {/* 2. Guests: status first, one primary action, then one row per seat */}
         <section id="seats" className="scroll-mt-32 sm:scroll-mt-20" aria-labelledby="seats-h">
-          <h2 id="seats-h" tabIndex={-1} className="text-2xl font-semibold text-navy-900">{t.seatsTitle}</h2>
-          {closed ? (
-            <div role="status" className="mt-3 flex max-w-3xl items-start gap-3 rounded-xl border border-cream-200 bg-cream-100 p-4" data-testid="list-closed">
-              <Lock size={20} className="mt-0.5 shrink-0 text-brand-600" aria-hidden="true" />
-              <div>
-                <p className="font-semibold text-navy-900">{t.closedTitle}</p>
-                <p className="mt-1 text-navy-600">{t.closedBody}</p>
-                <a className="mt-2 inline-block font-medium text-brand-600 underline underline-offset-2" href="mailto:gala-team@aafe-demo.example.org">gala-team@aafe-demo.example.org</a>
+          <h2 id="seats-h" tabIndex={-1} className="type-h2 text-navy-900">{t.seatsTitle}</h2>
+          {!closed && <p className="mt-1 max-w-3xl text-navy-600">{t.seatsHelp}</p>}
+
+          <div className="card mt-4 p-5" data-testid="seat-status">
+            {closed && (
+              <div role="status" className="mb-4 flex items-start gap-3 rounded-xl bg-cream-100 p-4" data-testid="list-closed">
+                <Lock size={20} className="mt-0.5 shrink-0 text-navy-700" aria-hidden="true" />
+                <div>
+                  <p className="type-h6 text-navy-900">{t.closedTitle}</p>
+                  <p className="mt-1 text-navy-600">{t.closedBody}</p>
+                  <a className="mt-2 inline-block font-semibold text-brand-600 underline underline-offset-2" href="mailto:gala-team@aafe-demo.example.org">gala-team@aafe-demo.example.org</a>
+                </div>
               </div>
+            )}
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="w-full max-w-md">
+                <p className="type-h6 text-navy-900">{t.namedOf(view.stats.named, view.stats.total)}</p>
+                <div className="mt-3 flex gap-1" role="progressbar" aria-label={t.seatsTitle} aria-valuemin={0} aria-valuemax={view.stats.total} aria-valuenow={view.stats.named} aria-valuetext={t.namedOf(view.stats.named, view.stats.total)}>
+                  {view.seats.map((s) => <span key={s.slot} className={`h-2 flex-1 rounded-full ${s.guest ? 'bg-brand-500' : 'bg-navy-100'}`} />)}
+                </div>
+                {!closed && namesLeftMessage && <p className="mt-2 text-sm text-amber-800">{namesLeftMessage}</p>}
+              </div>
+              {!closed && firstOpen && (
+                <button type="button" className="btn-primary shrink-0" onClick={() => setEditing(firstOpen.slot)} data-testid="add-next">
+                  <Plus size={18} aria-hidden /> {t.addToSeat(firstOpen.slot)}
+                </button>
+              )}
             </div>
-          ) : <p className="mt-1 max-w-3xl text-navy-600">{t.seatsHelp}</p>}
-          <div className="card mt-5 p-5">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-navy-500">{t.seats}</h2>
-            <div className="mt-2 font-serif text-4xl text-navy-900">{view.stats.named}<span className="text-2xl text-navy-500"> / {view.stats.total}</span></div>
-            <div className="text-sm text-navy-500">{t.progress(view.stats.named, view.stats.total)}</div>
-            <div className="mt-3 h-2 overflow-hidden rounded-full bg-navy-50" role="progressbar" aria-label={t.seats} aria-valuemin={0} aria-valuemax={view.stats.total} aria-valuenow={view.stats.named} aria-valuetext={t.progress(view.stats.named, view.stats.total)}><div className="h-full rounded-full bg-brand-500" style={{ width: `${pct}%` }} /></div>
-            {namesLeftMessage && <div className="text-sm text-amber-800">{namesLeftMessage}</div>}
-            <dl className="mt-4 space-y-2 border-t border-navy-100 pt-4 text-sm">
-              {view.deadline && <div className="flex items-center gap-2 text-navy-700"><Clock size={15} className="text-brand-500" /> {t.deadline}: <strong className="text-navy-900">{fmtDate(view.deadline, loc)}</strong></div>}
-              <div className="flex items-center gap-2 text-navy-700"><CalendarDays size={15} className="text-brand-500" /> {fmtDate(view.event.date, loc)} · {view.event.doors}</div>
-              <div className="flex items-start gap-2 text-navy-700"><MapPin size={15} className="mt-0.5 shrink-0 text-brand-500" /> <span>{view.event.venue}<br /><span className="text-xs text-navy-500">{view.event.address}</span></span></div>
-            </dl>
           </div>
-          <ul className="mt-5 grid gap-3 md:grid-cols-2">
+
+          {/* Two guests per row on wider screens; cards share the row height, actions sit at the bottom so rows line up */}
+          <ul className="mt-4 grid gap-3 sm:grid-cols-2">
             {view.seats.map((s) => {
-              const named = !!s.guest
+              const g = s.guest
               const confirmed = s.status === 'reviewed' || s.status === 'badge_ready' || s.status === 'checked_in'
-              // Screen readers hear which seat a button is for, not just "Update attendee" five times
-              const seatName = `${t.seat} ${s.slot}${s.guest ? `, ${s.guest.first_name} ${s.guest.last_name}` : ''}`
+              // Screen readers hear which seat a button is for
+              const guestName = g ? displayName(g) : ''
+              const seatName = `${t.seat} ${s.slot}${g ? `, ${guestName}` : ''}`
               return (
-                <li key={s.slot} className={`card flex flex-col p-4 ${named ? '' : 'border-dashed'}`} data-testid={`seat-${s.slot}`}>
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-semibold uppercase tracking-wide text-navy-500">{t.seat} {s.slot}</span>
-                    {named ? <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${confirmed ? 'bg-emerald-50 text-emerald-800' : 'bg-brand-50 text-brand-600'}`}>{confirmed ? t.confirmed : t.received}</span>
-                      : <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800">{t.open}</span>}
-                  </div>
-                  {s.guest ? (
-                    <div className="mt-2 flex-1">
-                      <div className="flex items-center gap-2 text-lg font-semibold text-navy-900"><UserRound size={18} className="text-navy-300" /> {s.guest.first_name} {s.guest.last_name}</div>
-                      <div className="text-sm text-navy-600">{s.guest.title} · {s.guest.organization}</div>
-                      {(s.guest.dietary_needs || s.guest.accessibility_needs) && (
-                        <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
-                          {s.guest.dietary_needs && <span className="rounded bg-navy-50 px-2 py-0.5 text-navy-700">{t.dietaryShort}: {s.guest.dietary_needs}</span>}
-                          {s.guest.accessibility_needs && <span className="rounded bg-navy-50 px-2 py-0.5 text-navy-700">{t.accessShort}: {s.guest.accessibility_needs}</span>}
+                <li key={s.slot} className={`flex flex-col gap-3 rounded-xl p-4 ${g ? 'bg-cream-100' : 'border border-dashed border-navy-300 bg-surface'}`} data-testid={`seat-${s.slot}`}>
+                  <div className="min-w-0 flex-1">
+                    <div className="type-nav text-navy-500">{t.seat} {s.slot}</div>
+                    {g ? (
+                      <>
+                        <div className="type-h6 mt-1 text-navy-900">{guestName}</div>
+                        <div className="text-navy-600">{g.title}{g.organization && g.organization !== view.organization ? ` · ${g.organization}` : ''}</div>
+                        {(g.dietary_needs || g.accessibility_needs) && (
+                          <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
+                            {g.dietary_needs && <span className="rounded bg-surface px-2 py-0.5 text-navy-700">{t.dietaryShort}: {g.dietary_needs}</span>}
+                            {g.accessibility_needs && <span className="rounded bg-surface px-2 py-0.5 text-navy-700">{t.accessShort}: {g.accessibility_needs}</span>}
+                          </div>
+                        )}
+                        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+                          {confirmed
+                            ? <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-800"><CheckCircle2 size={14} aria-hidden /> {t.confirmed}</span>
+                            : <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-800"><Clock size={14} aria-hidden /> {t.received}</span>}
+                          <span className="text-xs text-navy-600">{t.lastUpdated}: {fmtDate(g.updated_at, loc)}</span>
                         </div>
-                      )}
-                      <div className="mt-2 text-xs text-navy-500">{t.lastUpdated}: {fmtDate(s.guest.updated_at, loc, true)}</div>
-                    </div>
-                  ) : <div className="flex-1" />}
-                  {!closed && <div className="mt-3 flex flex-wrap gap-2">
-                    <button className={named ? 'btn-ghost btn-sm' : 'btn-primary btn-sm'} onClick={() => setEditing(s.slot)} aria-label={`${named ? t.update : t.add}: ${seatName}`} data-testid={`edit-seat-${s.slot}`}>
-                      {named ? <><Pencil size={14} /> {t.update}</> : <><Plus size={14} /> {t.add}</>}
-                    </button>
-                    {named && s.status !== 'checked_in' && (
-                      <button className="btn-ghost btn-sm text-rose-700" aria-label={`${t.remove}: ${seatName}`} onClick={() => { if (window.confirm(t.confirmRemove)) remove(s.slot, () => setToast(t.saved)) }}>
-                        <Trash2 size={14} /> {t.remove}
-                      </button>
+                      </>
+                    ) : (
+                      <div className="mt-1 flex items-center gap-2 text-navy-600"><CircleDashed size={18} aria-hidden /> {t.open}</div>
                     )}
-                  </div>}
+                  </div>
+                  {!closed && (
+                    <div className="flex shrink-0 flex-wrap items-center gap-2">
+                      <button type="button" className="btn-ghost btn-sm" onClick={() => setEditing(s.slot)} aria-label={`${g ? t.update : t.add}: ${seatName}`} data-testid={`edit-seat-${s.slot}`}>
+                        {g ? <><Pencil size={14} aria-hidden /> {t.update}</> : <><Plus size={14} aria-hidden /> {t.add}</>}
+                      </button>
+                      {g && s.status !== 'checked_in' && (
+                        <button type="button" className="link-danger" aria-label={`${t.remove}: ${seatName}`} onClick={() => setRemoving(s.slot)} data-testid={`remove-seat-${s.slot}`}>
+                          {t.remove}
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </li>
               )
             })}
           </ul>
+
         </section>
 
         {justSaved && (
           <div role="status" className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800">
-            <CheckCircle2 size={20} /> <span className="font-medium">{t.saved}</span>
+            <CheckCircle2 size={20} aria-hidden /> <span className="font-medium">{t.saved}</span>
           </div>
         )}
 
-        {/* Activity */}
-        <section className="card p-5" aria-labelledby="act-h">
-          <h2 id="act-h" className="flex items-center gap-2 text-lg font-semibold text-navy-900"><History size={18} className="text-brand-500" /> {t.activityTitle}</h2>
+        {/* 3. Help, right after the task */}
+        <section className="card grid gap-5 border-[#EBEBEB] p-5 sm:grid-cols-2" aria-labelledby="contact">
+          <div>
+            <h2 id="contact" tabIndex={-1} className="type-h6 scroll-mt-32 text-navy-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 sm:scroll-mt-20">{t.help}</h2>
+            <button type="button" className="btn-ghost mt-3" onClick={() => setContactOpen(true)} data-testid="open-contact">{t.contact}</button>
+            <a href="tel:+12125550100" className="mt-3 flex w-fit items-center gap-2 text-sm text-navy-700 underline underline-offset-2">
+              <Phone size={16} aria-hidden /> (212) 555-0100
+            </a>
+          </div>
+          <div className="border-t border-[#EBEBEB] pt-4 sm:border-l sm:border-t-0 sm:pl-5 sm:pt-0" data-testid="follow-us">
+            <p className="text-sm font-semibold text-navy-700">{t.followUs}</p>
+            <ul className="mt-3 flex gap-3">
+              {SOCIAL.map(({ name, href, Icon }) => (
+                <li key={name}>
+                  <a href={href} target="_blank" rel="noopener noreferrer" aria-label={`AAFE ${name}`} title={name}
+                    className="flex h-11 w-11 items-center justify-center rounded-full bg-[#000] text-white hover:bg-brand-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500">
+                    <Icon size={18} aria-hidden />
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+
+        {/* 4. Contribution: secondary, leads with status and balance, never a big "$0" */}
+        <section className="card p-5" aria-labelledby="money-h">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 id="money-h" className="type-h6 text-navy-900">{t.contribution}</h2>
+            <span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusCls}`}>{statusText}</span>
+          </div>
+          <p className="mt-2 font-semibold tabular-nums text-navy-900" data-testid="balance">{t.balanceOf(money(view.money.balance), money(view.money.commitment))}</p>
+          <dl className="mt-4 grid grid-cols-2 gap-4 border-t border-navy-100 pt-4 sm:grid-cols-3">
+            <div><dt className="text-navy-500">{t.amountPaid}</dt><dd className="font-semibold tabular-nums text-navy-900" data-testid="amount-paid">{money(view.money.paid, view.money.paid % 1 !== 0)}</dd></div>
+            <div><dt className="text-navy-500">{t.commitment}</dt><dd className="font-semibold tabular-nums text-navy-900">{money(view.money.commitment)}</dd></div>
+            <div className="col-span-2 sm:col-span-1"><dt className="text-navy-500">{t.paymentsTitle}</dt>
+              <dd className="space-y-0.5">
+                {view.money.payments.length ? view.money.payments.map((p) => <div key={p.date} className="text-navy-900"><span className="font-semibold">{money(p.amount, p.amount % 1 !== 0)}</span> · {t.paidOn} {fmtDate(p.date, loc)}</div>) : <span className="text-navy-600">{t.noPayments}</span>}
+              </dd>
+            </div>
+          </dl>
+          <p className="mt-4 flex items-center gap-1.5 text-xs text-navy-500"><Lock size={12} aria-hidden /> {t.payNote}</p>
+        </section>
+
+        {/* 5. Activity: collapsed by default, the event first and the time on the right */}
+        <details className="card p-5" data-testid="activity-panel">
+          <summary className="type-h6 flex min-h-[44px] cursor-pointer items-center text-navy-900">{t.activityCount(view.activity.length)}</summary>
           <p className="text-sm text-navy-500">{t.activityHelp}</p>
-          <ol className="mt-4 max-h-80 space-y-0 overflow-y-auto" tabIndex={0} aria-labelledby="act-h" data-testid="activity">
+          <ol className="mt-3 max-h-80 divide-y divide-navy-100 overflow-y-auto" tabIndex={0} aria-label={t.activityTitle} data-testid="activity">
             {view.activity.map((a, k) => (
-              <li key={k} className="flex gap-3 border-l-2 border-cream-200 py-2 pl-4">
-                <time className="w-40 shrink-0 text-xs text-navy-500" dateTime={a.at}>{fmtDate(a.at, loc, true)}</time>
-                <span className="text-sm text-navy-800">{activityText(lang, a)}</span>
+              <li key={k} className="flex flex-col gap-0.5 py-2 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
+                <span className="text-navy-800">{activityText(lang, a)}</span>
+                <time className="shrink-0 whitespace-nowrap text-xs text-navy-500" dateTime={a.at}>{fmtDate(a.at, loc, true)}</time>
               </li>
             ))}
           </ol>
-        </section>
-
-        {/* Contribution */}
-        <section className="grid gap-4 lg:grid-cols-3" aria-label={t.contribution}>
-          <div className="card p-5 lg:col-span-2">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-navy-500">{t.contribution}</h2>
-                <div className="mt-2 font-serif text-4xl text-navy-900" data-testid="amount-paid">{money(view.money.paid, view.money.paid % 1 !== 0)}</div>
-                <div className="text-sm text-navy-500">{t.amountPaid}</div>
-              </div>
-              <span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusCls}`}>{statusText}</span>
-            </div>
-            <dl className="mt-5 grid grid-cols-2 gap-4 border-t border-navy-100 pt-4 text-sm sm:grid-cols-3">
-              <div><dt className="text-navy-500">{t.commitment}</dt><dd className="font-semibold text-navy-900">{money(view.money.commitment)}</dd></div>
-              <div><dt className="text-navy-500">{t.balance}</dt><dd className="font-semibold text-navy-900">{money(view.money.balance)}</dd></div>
-              <div className="col-span-2 sm:col-span-1"><dt className="text-navy-500">{t.paymentsTitle}</dt>
-                <dd className="space-y-0.5">
-                  {view.money.payments.length ? view.money.payments.map((p) => <div key={p.date} className="text-navy-900"><span className="font-semibold">{money(p.amount, p.amount % 1 !== 0)}</span> · {t.paidOn} {fmtDate(p.date, loc)}</div>) : <span className="text-navy-600">{t.noPayments}</span>}
-                </dd>
-              </div>
-            </dl>
-            <p className="mt-4 flex items-center gap-1.5 text-xs text-navy-500"><Lock size={12} aria-hidden /> {t.payNote}</p>
-          </div>
-        </section>
+        </details>
       </div>
 
       {/* Thank you */}
       <section className="bg-surface">
-        <div className="mx-auto grid max-w-6xl items-center gap-8 px-5 py-12 md:grid-cols-2">
-          <img src="./photos/gala-guests-dinner.jpg" alt="Guests sharing a table at the AAFE gala" className="aspect-[4/3] w-full rounded-2xl object-cover" style={{ objectPosition: 'center 35%' }} loading="lazy" />
-          <div>
-            <h2 className="font-serif text-3xl font-medium text-navy-900">{t.thanksTitle}</h2>
-            <p className="mt-3 leading-relaxed text-navy-600">{t.thanksBody}</p>
-            <div className="mt-6 rounded-xl bg-cream-100 p-4 text-sm">
-              <div className="font-semibold text-navy-900">{t.help}</div>
-              <a className="font-medium text-brand-600 underline underline-offset-2" href="mailto:gala-team@aafe-demo.example.org">{t.contact}</a>
-              <div className="text-navy-600">gala-team@aafe-demo.example.org · (212) 555-0100</div>
-            </div>
+        <div className="mx-auto max-w-6xl px-5 py-12">
+          <div className="max-w-2xl">
+            <h2 className="type-h2 text-navy-900">{t.thanksTitle}</h2>
+            <p className="type-lead mt-3 text-navy-600">{t.thanksBody}</p>
           </div>
         </div>
       </section>
-      <MissionStrip lang={lang} />
-      <footer className="mx-auto max-w-6xl px-5 py-8 text-xs leading-relaxed text-navy-500">{t.privacy}</footer>
+      <MissionStrip lang={lang} donate />
+      <footer className="mx-auto max-w-6xl px-5 py-8 text-xs text-navy-500">{t.privacy}</footer>
 
-      <Modal open={seat != null} onClose={() => setEditing(null)} title={seat?.guest ? t.formEditTitle : t.formAddTitle} closeLabel={t.close}>
+      <Modal open={seat != null} onClose={() => setEditing(null)} title={seat ? (seat.guest ? t.editInSeat(seat.slot) : t.addToSeat(seat.slot)) : ''} closeLabel={t.close}>
         {seat && <AttendeeForm lang={lang} initial={seat.guest ? { ...EMPTY, ...seat.guest } : { ...EMPTY, organization: view.organization }} onCancel={() => setEditing(null)}
           onSave={(v) => save(seat.slot, v, () => { setEditing(null); setJustSaved(true); setToast(t.saved) })} />}
       </Modal>
+
+      {/* Remove asks first, in the page's own dialog (not the browser's), and names the guest and the seat */}
+      <Modal open={removingSeat != null} onClose={() => setRemoving(null)} title={removingSeat?.guest ? t.removeTitle(displayName(removingSeat.guest), removingSeat.slot) : ''} closeLabel={t.close}>
+        <p className="text-navy-700">{t.removeBody}</p>
+        <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <button type="button" className="btn-ghost" onClick={() => setRemoving(null)} data-testid="keep-guest">{t.keepGuest}</button>
+          <button type="button" className="btn-danger-outline" onClick={() => { if (removingSeat) remove(removingSeat.slot, () => { setRemoving(null); setToast(t.saved) }) }} data-testid="confirm-remove">{t.removeGuest}</button>
+        </div>
+      </Modal>
+      <Modal open={contactOpen} onClose={() => setContactOpen(false)} title={t.contactTitle} closeLabel={t.close}>
+        {contactOpen && <ContactPanel lang={lang} onClose={() => setContactOpen(false)} />}
+      </Modal>
       <Toast msg={toast} onDone={() => setToast(null)} />
+      {welcomeOpen && <WelcomeScreen
+        lang={lang}
+        invitationText={t.invitationFallback}
+        title={t.invitationTitle(view.organization)}
+        description={t.invitationBody}
+        date={eventDate.toLocaleDateString(loc, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+        doors={view.event.doors ? t.doorsAt(view.event.doors) : undefined}
+        venue={venueName}
+        city={venueCity || undefined}
+        action={t.viewGuestList}
+        onClose={closeWelcome}
+      />}
     </main>
   )
 }

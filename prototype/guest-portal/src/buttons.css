@@ -1,0 +1,128 @@
+/* Guest portal action buttons measured from aafe.org. */
+.brand-warm :where(.btn-primary, .btn-navy, .btn-ghost) {
+  border-radius: 50px;
+  padding: 8px 24px;
+  font-family: "Poppins", "Noto Sans TC", "Noto Sans KR", system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+  text-transform: none; /* no ALL CAPS: Chinese and Korean have no capitals, and caps are harder to read */
+}
+
+.brand-warm :where(.btn-primary, .btn-navy) {
+  border: 2px solid transparent;
+}
+
+.brand-warm .btn-ghost {
+  border-width: 2px;
+}
+
+/* Redesign v2 proposal ---------------------------------------------------- */
+/* Destructive action as a quiet red text button (still 44px tall to tap) */
+.brand-warm .link-danger {
+  display: inline-flex; align-items: center; min-height: 44px; padding: 0 12px;
+  border-radius: 50px; color: #BE123C; font-weight: 600; text-decoration: underline; text-underline-offset: 4px;
+}
+.brand-warm .link-danger:hover { background: rgb(190 18 60 / 0.06); }
+.brand-warm .btn-danger-outline {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  border: 2px solid #BE123C; border-radius: 50px; padding: 8px 24px;
+  color: #BE123C; background: transparent; font-size: 16px; font-weight: 600; line-height: 24px;
+}
+.brand-warm .btn-danger-outline:hover { background: #BE123C; color: #fff; }
+.dark .brand-warm .link-danger, .brand-warm.dark .link-danger, .brand-warm.dark .btn-danger-outline { color: rgb(253 164 175); border-color: rgb(253 164 175); }
+.brand-warm.dark .btn-danger-outline:hover { background: rgb(253 164 175); color: #1a1715; }
+/* Inputs: visible borders for older eyes (WCAG 1.4.11, 3:1). Guest portal only; the staff app keeps its own. */
+.brand-warm .input { border-color: #707070; }
+.brand-warm.dark .input { border-color: rgb(170 160 150); }
+/* Dialog close button: 44px hit area */
+.brand-warm [role="dialog"] > div:first-child > button { min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+/* Activity summary: a clear disclosure marker */
+.brand-warm details > summary { list-style: none; }
+.brand-warm details > summary::before { content: "▸"; margin-right: 10px; color: #C64C28; transition: transform .15s; display: inline-block; }
+.brand-warm details[open] > summary::before { transform: rotate(90deg); }
+
+/* Official AAFE neutrals (aafe.org / Greybox Creative brand): white + light grey #F4F4F6 instead of cream.
+   Redesign v2 PROPOSAL for Natalie, guest portal only, light mode only (dark mode unchanged). */
+.brand-warm:not(.dark) {
+  --page: 255 255 255;   /* page background: white */
+  --muted: 244 244 246;  /* #F4F4F6: hero band, soft panels */
+  --line: 235 235 235;   /* #EBEBEB: section lines */
+  --n50: 244 244 246;    /* tag and panel fills */
+  --n100: 235 235 235;   /* card borders, empty progress segments */
+  --n300: 186 185 185;   /* #BAB9B9: decorative only, never text */
+  --n500: 112 112 112;   /* #707070: meta text (4.95:1 on white) */
+  --n600: 77 76 76;      /* #4D4C4C: secondary text */
+  --n700: 64 64 64;
+  --n800: 51 51 51;
+}
+
+/* "Send AAFE an email" form, measured from aafe.org/contact (Oct 2026) */
+.brand-warm .aafe-field {
+  display: block; width: 100%; height: 50px; padding: 0 14px;
+  background: #F4F4F6; border: 1px solid #B5B5B5; border-radius: 0;
+  font-family: "Poppins", "Noto Sans TC", "Noto Sans KR", sans-serif; font-size: 16px; font-weight: 400; color: #000;
+}
+.brand-warm .aafe-field::placeholder { color: #707070; opacity: 1; }
+.brand-warm .aafe-field:focus { outline: 2px solid #C64C28; outline-offset: 2px; }
+.brand-warm .aafe-field[aria-invalid="true"] { border-color: #BE123C; }
+.brand-warm .aafe-textarea { height: 138px; padding: 15px 14px; resize: vertical; }
+.brand-warm .aafe-submit {
+  display: inline-flex; align-items: center; justify-content: center; width: 210px; max-width: 100%; height: 46px;
+  background: #C64C28; color: #fff; border: 2px solid #C64C28; border-radius: 50px;
+  font-size: 16px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.02em;
+}
+.brand-warm .aafe-submit:hover { background: #fff; color: #C64C28; }
+.brand-warm.dark .aafe-field { background: rgb(46 41 37); color: #fff; border-color: rgb(120 110 102); }
+
+/* "Donate" button measured from the aafe.org header: 15px bold uppercase, 22px side padding, 30px radius.
+   Height raised from 38px to 44px for an accessible touch target. */
+.brand-warm .aafe-donate {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 22px;
+  background: #C64C28; color: #fff; border: 2px solid #C64C28; border-radius: 30px;
+  font-size: 15px; font-weight: 700; text-transform: uppercase; line-height: 1;
+}
+.brand-warm .aafe-donate:hover { background: #fff; color: #C64C28; }
+
+.brand-warm .aafe-contact {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 22px;
+  background: transparent; color: #000; border: 1px solid #000; border-radius: 30px;
+  font-size: 15px; font-weight: 700; text-transform: uppercase; line-height: 1;
+}
+.brand-warm .aafe-contact:hover { background: #000; color: #fff; }
+.brand-warm .aafe-contact:focus-visible { outline: 2px solid #C64C28; outline-offset: 2px; }
+
+/* Flat container proposal measured against aafe.org. Keep actions and social
+   icons rounded, and leave focus indicators untouched. Guest portal only. */
+.brand-warm :where([class*="rounded"]:not(button):not(.btn-primary):not(.btn-navy):not(.btn-ghost):not(.btn-danger-outline):not(.aafe-donate):not(.aafe-contact)) {
+  border-radius: 0;
+}
+
+.brand-warm [data-testid="follow-us"] a {
+  border-radius: 9999px;
+}
+
+html.brand-warm [class*="shadow"]:not(:focus):not(:focus-visible) {
+  box-shadow: none;
+}
+
+.brand-warm :where(.card, [data-testid^="seat-"], [role="dialog"], .input, select, input[type="text"], input[type="email"], input[type="tel"], textarea) {
+  border-radius: 0;
+  border-color: #EBEBEB;
+}
+
+.brand-warm:not(.dark) :where(.input, .aafe-field, input[type="text"], input[type="email"], input[type="tel"], select, textarea) {
+  border-color: #B5B5B5;
+  background-color: #F4F4F6;
+  color: #000;
+}
+
+.brand-warm:not(.dark) form label:has(input[type="checkbox"]),
+.brand-warm:not(.dark) form label:has(input[type="radio"]) {
+  border-color: #B5B5B5;
+  background-color: #F4F4F6;
+}
+
+.brand-warm:not(.dark) :where([data-testid^="seat-"] .bg-surface) {
+  background-color: #F4F4F6;
+}
