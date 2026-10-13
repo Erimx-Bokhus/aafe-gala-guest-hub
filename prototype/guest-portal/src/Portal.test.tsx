@@ -28,6 +28,25 @@ afterEach(() => {
   window.history.replaceState(null, '', '#/')
 })
 
+describe('the sponsor link stays a secret, and contact never pretends to send', () => {
+  it('keeps no copy of the sponsor link in browser storage', async () => {
+    localStorage.removeItem(portalWelcomeStorageKey(TOKEN))
+    expect(portalWelcomeStorageKey(TOKEN)).not.toContain(TOKEN)
+    render(<PortalHarness initialDb={loadDB()} onDbChange={() => undefined} />)
+    fireEvent.click(screen.getByRole('button', { name: 'View your guest list' }))
+    await waitFor(() => expect(localStorage.getItem(portalWelcomeStorageKey(TOKEN))).toBe('1'))
+    expect(Object.keys(localStorage).some((k) => k.includes(TOKEN) || localStorage.getItem(k)?.includes(TOKEN))).toBe(false)
+  })
+
+  it("contact shows AAFE's gala inbox instead of a form that says sent", () => {
+    render(<PortalHarness initialDb={loadDB()} onDbChange={() => undefined} />)
+    fireEvent.click(screen.getByTestId('open-contact'))
+    expect(screen.getByTestId('contact-email').getAttribute('href')).toBe('mailto:gala@aafe.org')
+    expect(screen.queryByTestId('contact-form')).toBeNull()
+    expect(screen.queryByTestId('contact-sent')).toBeNull()
+  })
+})
+
 describe('sponsor welcome invitation', () => {
   it('shows on the first visit, remembers closing, and focuses the guest-list heading', async () => {
     localStorage.removeItem(portalWelcomeStorageKey(TOKEN))
