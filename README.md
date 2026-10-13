@@ -10,6 +10,13 @@ Team ERIMX BOKHUS (Pursuit AI Native Fellowship): Natalie Walker, Aisling Leiva-
 
 Copyright 2026 the ERIMX BOKHUS team. All rights reserved. Licensing to be decided with AAFE and Pursuit.
 
+## How it works
+
+Two pages by Natalie Walker. Download one and open it in a browser:
+
+- [`docs/diagrams/gala-guest-journey.html`](docs/diagrams/gala-guest-journey.html): how a guest gets from purchase to the door. Three ways onto the list (Give Lively, a check or pledge, a comp) pour into one guest list, then gala night, then after the gala; the steps where staff approve are marked.
+- [`docs/diagrams/gala-system-map.html`](docs/diagrams/gala-system-map.html): where the information goes, with the guest list in the middle. Pick a story (a sponsor buys a table, a comp gets a QR code, gala night, after the gala) to follow one path.
+
 ## Run the checks on your own computer
 
 `node scripts/ci-local.mjs` runs the same six checks as GitHub Actions (real-data guard, secret scan, import engine, frontend tests and demo-file rebuild, backend tests, server-function type-check), with no Actions minutes. About 3 minutes; `--quick` skips the backend tests and the rebuild (about 15 seconds). Run it before you push, or `node scripts/ci-local.mjs --install-hook` to run `--quick` before every `git push`. Docker (secret scan) and Deno (server functions) are optional; a missing tool skips that check. Details at the top of the script.
