@@ -9,7 +9,7 @@ import type { DB, Role, StaffUser } from '@shared/types'
 import { StaffCtx } from './store'
 import { demoApi, demoSnapshot, errorText, liveApi, loadLiveDb, volunteerDb } from './api'
 import Login from './pages/Login'
-import { currentStaff, signOut, supabase } from '@shared/supabase'
+import { currentStaff, signInFromLink, signOut, supabase } from '@shared/supabase'
 import Dashboard from './pages/Dashboard'
 import GalaInfo from './pages/GalaInfo'
 import Sponsors, { SponsorDetail } from './pages/Sponsors'
@@ -100,7 +100,10 @@ export default function App() {
         setUser(null)
       } finally { setAuthChecked(true) }
     }
-    void refresh()
+    // A one-time link made with Supabase's admin tools (?token_hash=…) signs in first; then the usual check.
+    void signInFromLink()
+      .catch(() => setNotice('That sign-in link didn’t work. It works once and expires after about an hour: ask for a new one.'))
+      .finally(() => void refresh())
     // Supabase advises against awaiting other auth calls inside this callback, so defer the refresh.
     const { data } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') setTimeout(() => void refresh(), 0)

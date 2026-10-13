@@ -7,11 +7,11 @@
 // Shows ONLY: name, title, organization, category, seat type, table, and an "access needs" flag. Never payments,
 // emails, notes, dietary details or the accessibility details themselves.
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { AlertTriangle, ArrowLeft, Camera, CheckCircle2, CloudOff, LogOut, Mail, QrCode, RefreshCw, Search, Undo2, UserPlus, Wifi, X } from 'lucide-react'
+import { AlertTriangle, ArrowLeft, Camera, CheckCircle2, CloudOff, Lock, LogOut, Mail, QrCode, RefreshCw, Search, Undo2, UserPlus, Wifi, X } from 'lucide-react'
 import { AafeLogo } from '@shared/Logo'
 import { DisplayControls, Modal, PrototypeBanner, Toast, useDisplayPrefs } from '@shared/ui'
 import { EXCEPTION_TYPES } from '@shared/checkinSync'
-import { currentStaff, sendSignInLink, signOut, supabase } from '@shared/supabase'
+import { currentStaff, sendSignInLink, signInFromLink, signOut, supabase, verifySignInCode } from '@shared/supabase'
 import type { StaffUser } from '@shared/types'
 import { LIVE, type Arrival, type Door, type DoorGuest, type DoorStatus, type Gala } from './door'
 import { waitingMessage } from './signOut'
@@ -115,8 +115,9 @@ function LiveApp({ prefs }: { prefs: Prefs }) {
       setStaff(session && s && s.email.toLowerCase() === session.user.email?.toLowerCase() ? s : 'out')
     }
   }
+  const [linkFailed, setLinkFailed] = useState(false)
   useEffect(() => {
-    void check()
+    void signInFromLink().catch(() => setLinkFailed(true)).finally(() => void check())
     const { data } = supabase!.auth.onAuthStateChange((ev) => { if (ev === 'SIGNED_IN') void check() })
     return () => data.subscription.unsubscribe()
   }, [])
@@ -153,7 +154,8 @@ function LiveApp({ prefs }: { prefs: Prefs }) {
   )
 
   if (staff === 'checking') return <Waiting prefs={prefs} text="Checking your sign-in…" />
-  if (staff === 'out' || staff === 'not-staff') return <LiveSignIn prefs={prefs} notice={staff === 'not-staff' ? 'That account isn’t on the AAFE staff list. Ask the gala admin to add you.' : ''} />
+  if (staff === 'out' || staff === 'not-staff') return <LiveSignIn prefs={prefs} notice={staff === 'not-staff' ? 'That account isn’t on the AAFE staff list. Ask the gala admin to add you.'
+    : linkFailed ? 'That sign-in link didn’t work. It works once and expires after about an hour: ask for a new one.' : ''} />
   if (door === 'loading') return <Waiting prefs={prefs} text="Loading tonight’s guest list…" />
   if (door === 'closed' || door === 'error') return (
     <Shell prefs={prefs}>
@@ -178,14 +180,22 @@ function LiveSignIn({ prefs, notice }: { prefs: Prefs; notice: string }) {
   const [email, setEmail] = useState('')
   const [err, setErr] = useState(notice)
   const [sent, setSent] = useState(false)
+  const [code, setCode] = useState('')
   const [busy, setBusy] = useState(false)
   const submit = async () => {
     setErr('')
     if (!email.trim()) return setErr('Enter your work email.')
     setBusy(true)
+    if (sent) {
+      // The 6-digit code from the same email: signs this iPad in, even from the Home Screen app.
+      try { await verifySignInCode(email, code) }
+      catch { setErr('That code didn’t work. Codes work once and expire after an hour: send a new one.') }
+      finally { setBusy(false) }
+      return
+    }
     try { await sendSignInLink(email); setSent(true) }
     // Same message whether or not the email is invited, so the form doesn't reveal who is on the staff list.
-    catch { setErr('We couldn’t send a sign-in link. Check the email, or ask the gala admin to invite you.') }
+    catch { setErr('We couldn’t send a sign-in email. Check the email, or ask the gala admin to invite you.') }
     finally { setBusy(false) }
   }
   return (
@@ -195,11 +205,16 @@ function LiveSignIn({ prefs, notice }: { prefs: Prefs; notice: string }) {
         <h1 className="mt-1 text-[2rem] font-semibold leading-tight text-navy-900">Sign in to check guests in</h1>
         <p className="mt-2 text-lg text-navy-700">Use your AAFE staff account. Check-in volunteers see the door list only.</p>
         <label className="mt-8 block text-base font-medium text-navy-800" htmlFor="em">Work email</label>
-        <input id="em" type="email" className="input mt-1 h-14 text-lg" value={email} onChange={(e) => { setEmail(e.target.value); setSent(false) }} autoComplete="username" data-testid="email" />
+        <input id="em" type="email" className="input mt-1 h-14 text-lg" value={email} onChange={(e) => { setEmail(e.target.value); setSent(false); setCode('') }} autoComplete="username" data-testid="email" />
         {err && <p className="mt-3 text-base font-medium text-rose-700" role="alert">{err}</p>}
-        {sent
-          ? <p className="mt-6 rounded-xl bg-surface p-4 text-base text-navy-800" role="status" data-testid="link-sent">Check your email on this iPad for a sign-in link from AAFE Gala. It works once and expires in an hour.</p>
-          : <button className="btn-primary tap mt-6 h-16 w-full text-lg" type="submit" disabled={busy} data-testid="send-link"><Mail size={20} /> {busy ? 'Sending…' : 'Email me a sign-in link'}</button>}
+        {sent ? <>
+          <p className="mt-6 rounded-xl bg-surface p-4 text-base text-navy-800" role="status" data-testid="link-sent">Check your email for a message from AAFE Gala. Type its 6-digit code here, or open its link on this iPad. Both work once and expire in an hour.</p>
+          <label className="mt-5 block text-base font-medium text-navy-800" htmlFor="code">6-digit code</label>
+          <input id="code" className="input mt-1 h-14 text-center text-2xl tracking-[0.3em] tabular-nums" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 10))}
+            inputMode="numeric" autoComplete="one-time-code" data-testid="code" />
+          <button className="btn-primary tap mt-4 h-16 w-full text-lg" type="submit" disabled={busy || code.length < 6} data-testid="verify-code"><Lock size={20} /> {busy ? 'Signing in…' : 'Sign in'}</button>
+          <button type="button" className="btn-ghost tap mt-3 h-14 w-full text-base" onClick={() => { setSent(false); setCode(''); setErr('') }} data-testid="new-code">Send a new email</button>
+        </> : <button className="btn-primary tap mt-6 h-16 w-full text-lg" type="submit" disabled={busy} data-testid="send-link"><Mail size={20} /> {busy ? 'Sending…' : 'Email me a sign-in code'}</button>}
       </form>
     </Shell>
   )
