@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { BellRing, CloudDownload, Download, RefreshCw, Upload } from 'lucide-react'
 import { Pill, ago, downloadCsv, fmtDate } from '@shared/ui'
 import { PageHead } from '../App'
-import { SAMPLE_HEAD, importGiveLively, salesforceSyncNow, sampleRows, useStaff, type GLRow } from '../store'
+import { SAMPLE_HEAD, importGiveLively, sampleRows, useStaff, type GLRow } from '../store'
 import { canDo, type PullCounts, type QueuedEmail } from '../api'
 import { salesforceCsv } from '../exports'
 
@@ -73,6 +73,8 @@ export default function Integrations() {
   }
   const pullNow = () => void act(api.pullGiveLively().then((c) => { setLastPull(new Date().toISOString()); toast(pullSummary(c)) }))
 
+  const syncNow = () => void act(api.syncSalesforce().then((r) => toast(r.failed ? `Salesforce: ${r.sent} sent, ${r.failed} failed (${r.first_error})` : `Salesforce: ${r.sent} record${r.sent === 1 ? '' : 's'} sent`)))
+
   return (
     <div>
       <PageHead title="Integrations & email" sub={`How data gets in (Give Lively), goes out (Salesforce), and reaches guests (email). ${demo ? 'Connections here are simulated in the prototype.' : 'Salesforce is still simulated.'}`} />
@@ -103,22 +105,22 @@ export default function Integrations() {
         </section>
 
         <section className="card p-5">
-          <div className="flex items-start justify-between gap-3"><div><h2 className="text-lg font-semibold text-navy-900">Salesforce (Nonprofit Success Pack)</h2><p className="text-sm text-navy-600">The year-over-year historical ledger: who gave, how much, how, and who attended.</p></div><Pill tone="gray">Not connected</Pill></div>
-          <table className="mt-4 w-full text-sm"><thead><tr className="border-b border-navy-100"><th className="th pl-0">This app</th><th className="th">Salesforce object</th></tr></thead>
+          <div className="flex items-start justify-between gap-3"><div><h2 className="text-lg font-semibold text-navy-900">Salesforce (Nonprofit Success Pack)</h2><p className="text-sm text-navy-600">The year-over-year historical ledger: who gave, how much, how, and who attended.</p></div>{demo ? <Pill tone="amber">Simulated</Pill> : <Pill tone="amber">Stand-in org</Pill>}</div>
+          <div className="mt-4 overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b border-navy-100"><th className="th pl-0">This app</th><th className="th">Salesforce object</th></tr></thead>
             <tbody className="divide-y divide-navy-100">
-              {[['Sponsor', 'Account (Organization) + Contact'], ['Order (per gala)', 'Opportunity · Campaign = “AAFE Gala 2027”'], ['Payment', 'npe01__OppPayment__c (Payment)'], ['Guest', 'Contact + CampaignMember (status: Attended)'], ['Fees', 'Opportunity custom fields: Processor_Fee__c, Net_Amount__c']].map(([a, b]) => <tr key={a}><td className="py-2 pr-3 font-medium text-navy-800">{a}</td><td className="py-2 text-navy-600">{b}</td></tr>)}
-            </tbody></table>
+              {[['Gala', 'Campaign'], ['Sponsor with a check, ACH, wire or comp order', 'Account'], ['That order', 'Opportunity, in the gala’s Campaign'], ['Check, ACH or wire payment', 'npe01__OppPayment__c (Payment)'], ['Guest', 'Contact + Campaign Member: Registered, Attended or No Show']].map(([a, b]) => <tr key={a}><td className="py-2 pr-3 font-medium text-navy-800">{a}</td><td className="py-2 text-navy-600">{b}</td></tr>)}
+            </tbody></table></div>
           <div className="mt-4 grid grid-cols-3 gap-2 text-center text-sm">
             <div className="rounded-lg bg-cream-100 p-2"><div className="text-xl font-semibold tabular-nums">{synced}</div><div className="text-xs text-navy-500">synced</div></div>
             <div className="rounded-lg bg-cream-100 p-2"><div className="text-xl font-semibold tabular-nums text-amber-700" data-testid="sf-pending">{pending}</div><div className="text-xs text-navy-500">pending</div></div>
             <div className="rounded-lg bg-cream-100 p-2"><div className="text-sm font-semibold">{lastSync ? fmtDate(lastSync, 'en-US', true) : '—'}</div><div className="text-xs text-navy-500">last sync</div></div>
           </div>
           <div className="mt-4 flex flex-wrap gap-2">
-            <button className="btn-ghost" disabled={!demo} onClick={() => { if (!demo) return; const r = salesforceSyncNow(db); demo(() => r.db); toast(`${r.n} records pushed to Salesforce (simulated)`) }}><RefreshCw size={15} /> Sync now (simulated)</button>
+            {canDo(user.role, 'syncSalesforce') && <button className="btn-ghost" data-testid="sf-sync" onClick={syncNow}><RefreshCw size={15} /> {demo ? 'Sync now (simulated)' : 'Sync now'}</button>}
             {/* Who actually came, for a Contact + Campaign Member import. Carries email, so gala admins only. */}
             {canDo(user.role, 'exportSalesforce') && <button className="btn-ghost" data-testid="export-salesforce" onClick={() => void act(api.exportSalesforce().then((rows) => downloadCsv('aafe-salesforce-attendees-SYNTHETIC.csv', salesforceCsv(rows))), 'Salesforce file downloaded')}><Download size={15} /> Download Salesforce file</button>}
           </div>
-          <p className="mt-2 text-xs text-navy-500">Give Lively’s own free Salesforce integration can also sync donations hourly. This app adds what Give Lively doesn’t know: checks, direct ACH, comps, seats and attendance.</p>
+          <p className="mt-2 text-xs text-navy-500">Give Lively’s own Salesforce connector sends its online donations. Sync now sends what Give Lively doesn’t know: checks, direct ACH and wires, comps, guests and who came, never phones or dietary and accessibility notes. Live, it goes to a stand-in org, not AAFE’s Salesforce.</p>
         </section>
 
         <section className="card overflow-hidden xl:col-span-2">
