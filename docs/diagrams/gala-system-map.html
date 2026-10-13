@@ -1,0 +1,268 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Gala System Map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap">
+<style>
+/* Layout: the guest-list database in the middle; Give Lively and staff on the left, sponsor and iPad on the right,
+   email along the bottom. Each kind of traffic has its own moving line. AAFE brand (docs/design.md). */
+:root {
+  --bg: #FFFFFF; --panel: #F4F4F6; --line: #EBEBEB; --ink: #000000; --ink-2: #4D4C4C; --ink-3: #707070;
+  --orange: #C64C28; --orange-ink: #FFFFFF; --orange-soft: #F8E3D8;
+  --node: #FFFFFF; --node-line: #707070; --hub: #000000; --hub-ink: #FFFFFF;
+  --app: #9A9A9A; --later: #B5B5B5;
+  --font: "Poppins", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #121212; --panel: #1E1E1E; --line: #3A3A3A; --ink: #F5F5F5; --ink-2: #C9C9C9; --ink-3: #A3A3A3;
+  --orange: #E8956F; --orange-ink: #121212; --orange-soft: #3A2219; --node: #1E1E1E; --node-line: #8A8A8A;
+  --hub: #F5F5F5; --hub-ink: #121212; --app: #8A8A8A; --later: #5A5A5A; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #121212; --panel: #1E1E1E; --line: #3A3A3A; --ink: #F5F5F5; --ink-2: #C9C9C9; --ink-3: #A3A3A3;
+  --orange: #E8956F; --orange-ink: #121212; --orange-soft: #3A2219; --node: #1E1E1E; --node-line: #8A8A8A;
+  --hub: #F5F5F5; --hub-ink: #121212; --app: #8A8A8A; --later: #5A5A5A; color-scheme: dark }
+
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 15px; line-height: 1.55; margin: 0 }
+.wrap { max-width: 1240px; margin: 0 auto; padding-inline: 20px; padding-block: 32px 56px }
+h1, h2 { text-wrap: balance; margin: 0 }
+.rule { width: 64px; height: 4px; background: var(--orange); margin-bottom: 14px }
+.eyebrow { font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--orange) }
+h1 { font-size: clamp(26px, 3.6vw, 38px); line-height: 1.15; margin-top: 6px }
+.lede { color: var(--ink-2); max-width: 70ch; margin: 10px 0 0 }
+
+.controls { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px }
+.controls button { font: 600 14px var(--font); min-height: 44px; padding: 8px 20px; border-radius: 50px; border: 2px solid var(--ink-3);
+  background: var(--bg); color: var(--ink); cursor: pointer }
+.controls button[aria-pressed="true"] { background: var(--orange); border-color: var(--orange); color: var(--orange-ink) }
+.controls button:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px }
+
+.legend { display: flex; flex-wrap: wrap; gap: 10px 22px; margin-top: 16px; font-size: 13px; color: var(--ink-2) }
+.legend span { display: inline-flex; align-items: center; gap: 8px }
+.legend svg { flex: none }
+
+.map { margin-top: 18px; overflow-x: auto; border: 1px solid var(--line) }
+.map svg { display: block; width: 100%; min-width: 860px; height: auto }
+
+/* nodes */
+.node rect { fill: var(--node); stroke: var(--node-line); stroke-width: 1.5 }
+.node .t { font: 600 17px var(--font); fill: var(--ink) }
+.node .s { font: 400 12.5px var(--font); fill: var(--ink-2) }
+.node.hub rect { fill: var(--hub); stroke: var(--hub) }
+.node.hub .t { fill: var(--hub-ink); font-size: 19px }
+.node.hub .s { fill: var(--hub-ink); opacity: .85 }
+.node.outside rect { fill: var(--panel) }
+.node.later rect { stroke-dasharray: 5 5; stroke: var(--later) }
+.tag rect { fill: var(--orange) }
+.tag text { font: 700 10.5px var(--font); letter-spacing: .06em; fill: var(--orange-ink) }
+.tag.gray rect { fill: var(--later) }
+.tag.gray text { fill: var(--bg) }
+
+/* arrows: one look per kind of traffic */
+.arrow path { fill: none; stroke-width: 3; stroke-linecap: round }
+.k-purchase path { stroke: var(--orange); stroke-dasharray: 14 9 }
+.k-staff path { stroke: var(--ink); stroke-dasharray: 14 9 }
+.k-email path { stroke: var(--orange); stroke-dasharray: 1 9; stroke-width: 5 }
+.k-app path { stroke: var(--app); stroke-dasharray: 6 7; stroke-width: 2.5 }
+.k-later path { stroke: var(--later); stroke-dasharray: 2 7; stroke-width: 2.5 }
+.flow path { animation: run 1s linear infinite }
+.k-email.flow path { animation-duration: .8s }
+@keyframes run { to { stroke-dashoffset: -23 } }
+.k-app.flow path { animation-name: run-app }
+@keyframes run-app { to { stroke-dashoffset: -13 } }
+.k-email.flow path { animation-name: run-email }
+@keyframes run-email { to { stroke-dashoffset: -10 } }
+.mk-purchase, .mk-email { fill: var(--orange) } .mk-staff { fill: var(--ink) } .mk-app { fill: var(--app) } .mk-later { fill: var(--later) }
+.lbl { font: 600 13px var(--font); fill: var(--ink); paint-order: stroke; stroke: var(--bg); stroke-width: 6px; stroke-linejoin: round }
+.lbl .n { fill: var(--orange) }
+.lbl.muted { fill: var(--ink-3); font-weight: 400 }
+
+/* story highlight */
+.arrow, .node { transition: opacity .25s }
+svg[data-story] .arrow { opacity: .12 }
+svg[data-story="purchase"] .s-purchase, svg[data-story="comp"] .s-comp, svg[data-story="night"] .s-night,
+svg[data-story="after"] .s-after { opacity: 1 }
+@media (prefers-reduced-motion: reduce) { .flow path { animation: none } }
+
+.steps { margin-top: 26px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 28px }
+.steps ol { list-style: none; margin: 0; padding: 0 }
+.steps li { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 10px; padding: 11px 0; border-bottom: 1px solid var(--line) }
+.steps .n { width: 26px; height: 26px; border-radius: 50%; background: var(--orange); color: var(--orange-ink); font-size: 12px; font-weight: 700;
+  display: grid; place-items: center }
+.steps .n.g { background: var(--panel); color: var(--ink-2); border: 1px solid var(--line) }
+.steps strong { display: block; font-weight: 600 }
+.steps span.d { color: var(--ink-2); font-size: 14px }
+
+.qr { margin-top: 28px; background: var(--panel); border-left: 4px solid var(--orange); padding: 20px 24px }
+.qr h2 { font-size: 20px }
+.qr ol { margin: 10px 0 0; padding-left: 20px; color: var(--ink-2); display: grid; gap: 6px; max-width: 86ch }
+.qr strong { color: var(--ink) }
+.foot { margin-top: 22px; font-size: 12.5px; color: var(--ink-3) }
+
+@media (max-width: 760px) { .steps { grid-template-columns: minmax(0, 1fr) } }
+</style>
+
+<div class="wrap">
+  <div class="rule" aria-hidden="true"></div>
+  <div class="eyebrow">AAFE Gala Guest List Tool</div>
+  <h1>Where the information goes</h1>
+  <p class="lede">The guest-list database is in the middle. Purchases come in from Give Lively, AAFE staff approve what goes out, sponsors name their guests, and the iPad takes the door list to the gala. Each kind of line moves the way the information moves. Pick a story to follow one path.</p>
+
+  <div class="controls" role="group" aria-label="Follow one path">
+    <button type="button" id="st-all" data-story="" aria-pressed="true">Everything</button>
+    <button type="button" id="st-purchase" data-story="purchase" aria-pressed="false">A sponsor buys a table</button>
+    <button type="button" id="st-comp" data-story="comp" aria-pressed="false">A comp gets a QR code</button>
+    <button type="button" id="st-night" data-story="night" aria-pressed="false">Gala night</button>
+    <button type="button" id="st-after" data-story="after" aria-pressed="false">After the gala</button>
+  </div>
+
+  <div class="legend" aria-label="Kinds of lines">
+    <span><svg width="46" height="10" aria-hidden="true"><g class="arrow k-purchase flow"><path d="M2 5 H44"/></g></svg>Purchases coming in</span>
+    <span><svg width="46" height="10" aria-hidden="true"><g class="arrow k-staff flow"><path d="M2 5 H44"/></g></svg>A person acts (staff or sponsor)</span>
+    <span><svg width="46" height="10" aria-hidden="true"><g class="arrow k-email flow"><path d="M3 5 H44"/></g></svg>Email going out, after staff approve</span>
+    <span><svg width="46" height="10" aria-hidden="true"><g class="arrow k-app flow"><path d="M2 5 H44"/></g></svg>An app reading the list</span>
+    <span><svg width="46" height="10" aria-hidden="true"><g class="arrow k-later"><path d="M2 5 H44"/></g></svg>Later, not switched on yet</span>
+  </div>
+
+  <div class="map">
+    <svg id="map" viewBox="0 0 1200 790" role="img" aria-labelledby="map-title map-desc">
+      <title id="map-title">System map of the AAFE gala guest list tool</title>
+      <desc id="map-desc">Give Lively purchases reach the guest-list database through a file staff upload in the staff app. Staff approve emails, which the email sender delivers with a private guest-list link or a personal QR code. Sponsors name guests on their private link. The iPad downloads the door list and sends back check-ins. After the gala the staff app produces the Salesforce attendee file.</desc>
+      <defs>
+        <marker id="m-purchase" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path class="mk-purchase" d="M0 0 L10 5 L0 10 z"/></marker>
+        <marker id="m-staff" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path class="mk-staff" d="M0 0 L10 5 L0 10 z"/></marker>
+        <marker id="m-email" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse"><path class="mk-email" d="M0 0 L10 5 L0 10 z"/></marker>
+        <marker id="m-app" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path class="mk-app" d="M0 0 L10 5 L0 10 z"/></marker>
+        <marker id="m-later" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path class="mk-later" d="M0 0 L10 5 L0 10 z"/></marker>
+      </defs>
+
+      <!-- arrows first, so boxes sit on top of line ends -->
+      <g class="arrow k-later s-purchase"><path d="M270 92 H462" marker-end="url(#m-later)"/>
+        <text class="lbl muted" x="366" y="82" text-anchor="middle">Later: automatic pull</text></g>
+      <g class="arrow k-later s-purchase"><path d="M600 140 V292" marker-end="url(#m-later)"/></g>
+
+      <g class="arrow k-purchase flow s-purchase"><path d="M155 140 V302" marker-end="url(#m-purchase)"/>
+        <text class="lbl" x="166" y="226"><tspan class="n">1 </tspan>Export file</text></g>
+
+      <g class="arrow k-purchase flow s-purchase"><path d="M270 345 H462" marker-end="url(#m-purchase)"/>
+        <text class="lbl" x="366" y="336" text-anchor="middle"><tspan class="n">2 </tspan>Upload</text></g>
+
+      <g class="arrow k-staff flow s-purchase s-comp"><path d="M270 385 H462" marker-end="url(#m-staff)"/>
+        <text class="lbl" x="366" y="376" text-anchor="middle"><tspan class="n">3 </tspan>Approve · comps</text></g>
+
+      <g class="arrow k-app flow s-purchase s-comp"><path d="M470 428 H278" marker-end="url(#m-app)"/>
+        <text class="lbl muted" x="366" y="448" text-anchor="middle">Guest list, drafts</text></g>
+
+      <g class="arrow k-email flow s-purchase s-comp"><path d="M560 470 V592" marker-end="url(#m-email)"/>
+        <text class="lbl" x="550" y="536" text-anchor="end"><tspan class="n">4 </tspan>Approved only</text></g>
+
+      <g class="arrow k-app flow s-purchase s-comp"><path d="M640 600 V478" marker-end="url(#m-app)"/>
+        <text class="lbl muted" x="650" y="536">Scrambled copy</text></g>
+
+      <g class="arrow k-email flow s-purchase s-comp"><path d="M730 690 H932" marker-end="url(#m-email)"/>
+        <text class="lbl" x="835" y="680" text-anchor="middle"><tspan class="n">5 </tspan>Link · QR code</text></g>
+
+      <g class="arrow k-staff flow s-purchase"><path d="M1160 700 H1186 V132 H1168" marker-end="url(#m-staff)"/>
+        <text class="lbl" x="1178" y="420" text-anchor="middle" transform="rotate(-90 1178 420)"><tspan class="n">6 </tspan>Opens link</text></g>
+
+      <g class="arrow k-staff flow s-purchase"><path d="M940 150 H835 V340 H738" marker-end="url(#m-staff)"/>
+        <text class="lbl" x="928" y="140" text-anchor="end"><tspan class="n">7 </tspan>Names guests</text></g>
+
+      <g class="arrow k-app flow s-night s-comp s-purchase"><path d="M730 398 H860 V522 H932" marker-end="url(#m-app)"/>
+        <text class="lbl" x="795" y="389" text-anchor="middle"><tspan class="n">8 </tspan>Door list</text></g>
+
+      <g class="arrow k-staff flow s-night"><path d="M940 560 H800 V455 H738" marker-end="url(#m-staff)"/>
+        <text class="lbl" x="870" y="578" text-anchor="middle"><tspan class="n">9 </tspan>Check-ins</text></g>
+
+      <g class="arrow k-staff flow s-night s-comp"><path d="M1050 650 V598" marker-end="url(#m-staff)"/>
+        <text class="lbl" x="1060" y="630"><tspan class="n">10 </tspan>Shows QR</text></g>
+
+      <g class="arrow k-staff flow s-after"><path d="M155 460 V642" marker-end="url(#m-staff)"/>
+        <text class="lbl" x="166" y="556"><tspan class="n">11 </tspan>Attendee file</text></g>
+
+      <!-- boxes -->
+      <g class="node outside"><rect x="40" y="40" width="230" height="100"/>
+        <text class="t" x="58" y="78">Give Lively</text><text class="s" x="58" y="102">Tickets and sponsorships,</text><text class="s" x="58" y="120">paid online</text></g>
+
+      <g class="node later"><rect x="470" y="40" width="260" height="100"/>
+        <text class="t" x="488" y="78">Give Lively sync</text><text class="s" x="488" y="102">Pulls new purchases every</text><text class="s" x="488" y="120">15 minutes</text>
+        <g class="tag gray"><rect x="654" y="52" width="62" height="20"/><text x="685" y="66" text-anchor="middle">LATER</text></g></g>
+
+      <g class="node"><rect x="40" y="300" width="230" height="160"/>
+        <text class="t" x="58" y="336">Staff app</text>
+        <text class="s" x="58" y="360">AAFE staff upload purchases,</text><text class="s" x="58" y="378">approve every email, add comps,</text>
+        <text class="s" x="58" y="396">send QR invites, seat guests,</text><text class="s" x="58" y="414">print badges</text>
+        <g class="tag"><rect x="58" y="428" width="118" height="20"/><text x="117" y="442" text-anchor="middle">STAFF APPROVE</text></g></g>
+
+      <g class="node hub"><rect x="470" y="300" width="260" height="170"/>
+        <text class="t" x="600" y="352" text-anchor="middle">Guest list</text>
+        <text class="s" x="600" y="380" text-anchor="middle">Orders, seats, guests,</text><text class="s" x="600" y="398" text-anchor="middle">payments, check-ins,</text>
+        <text class="s" x="600" y="416" text-anchor="middle">and a log of every change</text>
+        <text class="s" x="600" y="446" text-anchor="middle">(Supabase database)</text></g>
+
+      <g class="node"><rect x="940" y="80" width="220" height="110"/>
+        <text class="t" x="958" y="116">Sponsor portal</text><text class="s" x="958" y="140">One private link per sponsor.</text><text class="s" x="958" y="158">Add guests, fix spelling</text></g>
+
+      <g class="node"><rect x="940" y="480" width="220" height="110"/>
+        <text class="t" x="958" y="516">iPad check-in</text><text class="s" x="958" y="540">Scan QR or search name.</text><text class="s" x="958" y="558">Works offline</text></g>
+
+      <g class="node"><rect x="470" y="600" width="260" height="140"/>
+        <text class="t" x="488" y="636">Email sender</text>
+        <text class="s" x="488" y="660">Sends approved emails only.</text><text class="s" x="488" y="678">Makes each private link and</text>
+        <text class="s" x="488" y="696">each QR code as it sends</text>
+        <text class="s" x="488" y="722">(through Resend)</text></g>
+
+      <g class="node outside"><rect x="940" y="650" width="220" height="100"/>
+        <text class="t" x="958" y="688">Inboxes</text><text class="s" x="958" y="712">Sponsors and comp guests</text></g>
+
+      <g class="node outside"><rect x="40" y="650" width="230" height="100"/>
+        <text class="t" x="58" y="688">Salesforce</text><text class="s" x="58" y="712">Attendee file, imported</text><text class="s" x="58" y="730">by AAFE after the gala</text></g>
+    </svg>
+  </div>
+
+  <div class="steps">
+    <ol>
+      <li><span class="n">1</span><div><strong>Export file</strong><span class="d">Staff download the ticket export from Give Lively.</span></div></li>
+      <li><span class="n">2</span><div><strong>Upload</strong><span class="d">Staff upload it in the staff app. Orders, seats and any names the buyer typed land on the guest list. Refunds cancel seats.</span></div></li>
+      <li><span class="n">3</span><div><strong>Approve · comps</strong><span class="d">Staff approve each drafted email, add comp guests, and press "Send QR invite". Nothing goes out without this step.</span></div></li>
+      <li><span class="n">4</span><div><strong>Approved only</strong><span class="d">The email sender picks up approved emails and nothing else.</span></div></li>
+      <li><span class="n">5</span><div><strong>Link · QR code</strong><span class="d">It makes a new private link (sponsors) or a new personal QR code (comps) and emails it. The database keeps only a scrambled copy.</span></div></li>
+      <li><span class="n">6</span><div><strong>Opens link</strong><span class="d">The sponsor opens their private link from the email.</span></div></li>
+    </ol>
+    <ol>
+      <li><span class="n">7</span><div><strong>Names guests</strong><span class="d">The sponsor adds guests and fixes names, titles and organizations until the deadline.</span></div></li>
+      <li><span class="n">8</span><div><strong>Door list</strong><span class="d">The iPad downloads every named guest, and the scrambled QR copies to check codes against, so it works without internet.</span></div></li>
+      <li><span class="n">9</span><div><strong>Check-ins</strong><span class="d">Arrivals go back to the guest list, right away or when the internet returns.</span></div></li>
+      <li><span class="n">10</span><div><strong>Shows QR</strong><span class="d">The guest shows the QR code from their email. No code? The door searches by name.</span></div></li>
+      <li><span class="n">11</span><div><strong>Attendee file</strong><span class="d">After the gala, staff download the file for AAFE's Salesforce. Nothing writes to Salesforce on its own.</span></div></li>
+      <li><span class="n g">·</span><div><strong>Later: automatic pull</strong><span class="d">Give Lively purchases arrive without the upload. Built, not switched on for Demo Day.</span></div></li>
+    </ol>
+  </div>
+
+  <section class="qr" aria-labelledby="qr-h">
+    <h2 id="qr-h">How a QR code is made</h2>
+    <ol>
+      <li>Staff add the comp on <strong>Relationship guests</strong> in the staff app. The guest is on the door list from now on.</li>
+      <li>Staff press <strong>Send QR invite</strong>. The person who presses it is the approver, and it's logged.</li>
+      <li>The <strong>email sender</strong> makes a brand-new random code, attaches it to the email as a QR image, and sends it.</li>
+      <li>The database keeps only a <strong>scrambled copy</strong>. The iPad gets that copy with the door list and checks scanned codes against it, even offline.</li>
+      <li>Sending again makes a new code, and the old one stops working. Codes expire the morning after the gala.</li>
+    </ol>
+  </section>
+
+  <p class="foot">Matches the prototype on main as of Oct 12, 2026. Demo data only. Written by Natalie Walker.</p>
+</div>
+
+<script>
+(function () {
+  var map = document.getElementById('map')
+  var buttons = Array.prototype.slice.call(document.querySelectorAll('.controls button'))
+  function show(story) {
+    if (story) map.setAttribute('data-story', story); else map.removeAttribute('data-story')
+    buttons.forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-story') === story)) })
+  }
+  buttons.forEach(function (b) { b.addEventListener('click', function () { show(b.getAttribute('data-story')) }) })
+})()
+</script>
+
+</body></html>
