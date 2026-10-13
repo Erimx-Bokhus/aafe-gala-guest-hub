@@ -1,7 +1,9 @@
 {
   "name": "aafe-gala-apps",
   "private": true,
-  "engines": { "node": ">=22.18" },
+  "engines": {
+    "node": ">=22.18"
+  },
   "workspaces": [
     "guest-portal",
     "staff-app",
@@ -21,6 +23,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.109.0",
+    "jsqr": "^1.4.0",
     "lucide-react": "^0.460.0",
     "qrcode": "^1.5.4",
     "react": "^19.0.0",
