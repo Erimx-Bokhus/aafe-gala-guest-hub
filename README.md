@@ -10,6 +10,10 @@ Team ERIMX BOKHUS (Pursuit AI Native Fellowship): Natalie Walker, Aisling Leiva-
 
 Copyright 2026 the ERIMX BOKHUS team. All rights reserved. Licensing to be decided with AAFE and Pursuit.
 
+## Project board
+
+The team's plan and task board, created and run by Natalie Walker (product lead): [ERIMX BOKHUS on Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus). It's updated every day. The board is private: ask Natalie to be added.
+
 ## How it works
 
 Two pages by Natalie Walker. Download one and open it in a browser:
