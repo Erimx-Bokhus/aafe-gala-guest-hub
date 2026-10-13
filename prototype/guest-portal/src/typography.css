@@ -1,0 +1,138 @@
+/* Guest portal typography measured from aafe.org. Scoped so the staff app is unchanged. */
+.brand-warm body {
+  font-family: "Poppins", "Noto Sans TC", "Noto Sans KR", system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 26px;
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
+}
+
+.brand-warm .font-zh,
+.brand-warm .font-zh * {
+  font-family: "Noto Sans TC", "Poppins", sans-serif;
+}
+
+.brand-warm .font-ko,
+.brand-warm .font-ko * {
+  font-family: "Noto Sans KR", "Poppins", sans-serif;
+}
+
+.brand-warm :where(button, input, select, textarea) {
+  font-family: inherit;
+}
+
+.brand-warm .font-medium {
+  font-weight: 600;
+}
+
+.brand-warm .text-base {
+  font-size: 16px;
+  line-height: 26px;
+}
+
+.brand-warm .type-body {
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 26px;
+}
+
+.brand-warm .type-lead {
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 28px;
+}
+
+.brand-warm .text-sm {
+  font-size: 16px;
+  line-height: 26px;
+}
+
+.brand-warm .type-body-small {
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 26px;
+}
+
+.brand-warm .text-xs {
+  font-size: 14px;
+  line-height: 21px;
+}
+
+.brand-warm .type-display {
+  font-size: 44px;
+  font-weight: 700;
+  line-height: 56px;
+  letter-spacing: -1px;
+}
+
+.brand-warm .type-h2 {
+  font-size: 40px;
+  font-weight: 700;
+  line-height: 48px;
+}
+
+.brand-warm .type-h6 {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 25px;
+}
+
+.brand-warm .type-nav {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 21px;
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+}
+
+/* Form labels and data labels: sentence case, readable size (redesign v2) */
+.brand-warm dt,
+.brand-warm form label {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+}
+
+.brand-warm .type-number {
+  font-family: inherit;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.brand-warm :where(.btn-primary, .btn-navy, .btn-ghost, button) {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+  text-transform: none;
+}
+
+.brand-warm :where(input, select, textarea) {
+  font-size: 16px;
+  line-height: 26px;
+}
+
+.brand-warm [role="dialog"] h2 {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 25px;
+}
+
+.brand-warm header :where(label, select) {
+  font-size: 14px;
+  line-height: 21px;
+}
+
+@media (max-width: 639px) {
+  .brand-warm .type-display {
+    font-size: 32px;
+    line-height: 40px;
+    letter-spacing: -0.5px;
+  }
+
+  .brand-warm .type-h2 {
+    font-size: 30px;
+    line-height: 39px;
+  }
+}

@@ -28,6 +28,14 @@ export const SAMPLES: Record<string, unknown[]> = {
   actRemoved: ['Ana Díaz', '4'],
   actConfirmed: ['Ana Díaz'],
   actPayment: ['$5,000.00'],
+  activityCount: [7],
+  addToSeat: [6],
+  balanceOf: ['$15,000', '$25,000'],
+  doorsAt: ['6:00 PM'],
+  editInSeat: [3],
+  invitationTitle: ['AAFE Foundation'],
+  namedOf: [5, 8],
+  removeTitle: ['Ana Díaz', 3],
 }
 
 type Entry = string | ((...args: never[]) => string)
