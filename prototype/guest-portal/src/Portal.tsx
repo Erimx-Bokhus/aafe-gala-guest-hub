@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type MouseEvent } from 'react'
-import { Award, CheckCircle2, CircleDashed, Clock, Facebook, Instagram, Linkedin, Lock, MapPin, Pencil, Phone, Plus, Twitter, Youtube } from 'lucide-react'
+import { Award, CheckCircle2, CircleDashed, Clock, Facebook, Instagram, Linkedin, Lock, Mail, MapPin, Pencil, Phone, Plus, Twitter, Youtube } from 'lucide-react'
 import { Field, Modal, Toast, fmtDate, money } from '@shared/ui'
 import type { DB } from '@shared/types'
 import { displayName } from '@shared/data'
@@ -140,50 +140,16 @@ function AttendeeForm({ lang, initial, onSave, onCancel }: { lang: Lang; initial
   )
 }
 
-// Contact form, styled like "Send AAFE an email" on aafe.org/contact (same fields, sizes and button).
-// Prototype: nothing is sent yet. In production this posts to the team's email service.
-function ContactForm({ lang, onClose }: { lang: Lang; onClose: () => void }) {
+// "Send AAFE an email": AAFE's published gala inbox. The prototype can't send a message from here, so it shows the
+// address rather than a form that would say "sent" when nothing went out. A form can come back with a real send path.
+function ContactPanel({ lang, onClose }: { lang: Lang; onClose: () => void }) {
   const t = DICT[lang]
-  const [v, setV] = useState({ name: '', email: '', phone: '', message: '' })
-  const [touched, setTouched] = useState(false)
-  const [sent, setSent] = useState(false)
-  const errs: Partial<Record<keyof typeof v, string>> = {}
-  if (!v.name.trim()) errs.name = t.required
-  if (!v.email.trim()) errs.email = t.required
-  else if (!EMAIL_RE.test(v.email.trim())) errs.email = t.invalidEmail
-  if (!v.message.trim()) errs.message = t.required
-  const err = (k: keyof typeof v) => (touched ? errs[k] : undefined)
-  const set = (k: keyof typeof v) => (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setV({ ...v, [k]: e.target.value })
-  if (sent) return (
-    <div className="py-4 text-center" role="status" data-testid="contact-sent">
-      <CheckCircle2 size={36} className="mx-auto text-emerald-700" aria-hidden />
-      <p className="type-h6 mt-3 text-navy-900">{t.cSentTitle}</p>
-      <p className="mt-1 text-navy-600">{t.cSentBody}</p>
-      <button type="button" className="aafe-submit mt-6" onClick={onClose}>{t.close}</button>
-    </div>
-  )
-  const field = (k: keyof typeof v, label: string, ph: string, type = 'text') => (
-    <div>
-      <label htmlFor={`c-${k}`} className="sr-only">{label}</label>
-      {k === 'message'
-        ? <textarea id={`c-${k}`} className="aafe-field aafe-textarea" placeholder={ph} value={v[k]} onChange={set(k)} aria-invalid={err(k) ? true : undefined} aria-describedby={err(k) ? `c-${k}-err` : undefined} />
-        : <input id={`c-${k}`} type={type} className="aafe-field" placeholder={ph} value={v[k]} onChange={set(k)} autoComplete={k === 'name' ? 'name' : k === 'email' ? 'email' : 'tel'} aria-invalid={err(k) ? true : undefined} aria-describedby={err(k) ? `c-${k}-err` : undefined} />}
-      {err(k) && <p id={`c-${k}-err`} className="mt-1 text-sm font-medium text-rose-700">{err(k)}</p>}
-    </div>
-  )
   return (
-    <form noValidate className="space-y-5" data-testid="contact-form" onSubmit={(e) => {
-      e.preventDefault(); setTouched(true)
-      const firstBad = (['name', 'email', 'message'] as const).find((k) => errs[k])
-      if (firstBad) document.getElementById(`c-${firstBad}`)?.focus()
-      else setSent(true)
-    }}>
-      {field('name', t.cName, t.phName)}
-      {field('email', t.cEmail, t.phEmail, 'email')}
-      {field('phone', t.cPhone, t.phPhone, 'tel')}
-      {field('message', t.cMessage, t.phMessage)}
-      <div className="pt-2 text-center"><button type="submit" className="aafe-submit" data-testid="contact-submit">{t.cSubmit}</button></div>
-    </form>
+    <div className="py-2 text-center" data-testid="contact-panel">
+      <Mail size={32} className="mx-auto text-brand-700" aria-hidden />
+      <a href="mailto:gala@aafe.org" className="type-h6 mt-3 inline-block text-navy-900 underline underline-offset-4" data-testid="contact-email">gala@aafe.org</a>
+      <div className="pt-6"><button type="button" className="aafe-submit" onClick={onClose}>{t.close}</button></div>
+    </div>
   )
 }
 
@@ -470,7 +436,7 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
         </div>
       </Modal>
       <Modal open={contactOpen} onClose={() => setContactOpen(false)} title={t.contactTitle} closeLabel={t.close}>
-        {contactOpen && <ContactForm lang={lang} onClose={() => setContactOpen(false)} />}
+        {contactOpen && <ContactPanel lang={lang} onClose={() => setContactOpen(false)} />}
       </Modal>
       <Toast msg={toast} onDone={() => setToast(null)} />
       {welcomeOpen && <WelcomeScreen
