@@ -14,6 +14,7 @@ import { EXCEPTION_TYPES } from '@shared/checkinSync'
 import { currentStaff, sendSignInLink, signInFromLink, signOut, supabase, verifySignInCode } from '@shared/supabase'
 import type { StaffUser } from '@shared/types'
 import { LIVE, type Arrival, type Door, type DoorGuest, type DoorStatus, type Gala } from './door'
+import { frameReader, onceEvery } from './qrScan'
 import { waitingMessage } from './signOut'
 import type * as DemoModule from './demoDoor'
 
@@ -490,35 +491,38 @@ function SyncPill({ s }: { s: DoorStatus }) {
   return <span className={`${base} bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200`} data-testid="sync-status"><Wifi size={18} /> Synced · live</span>
 }
 
-type Detector = { detect: (v: HTMLVideoElement) => Promise<{ rawValue: string }[]> }
 function ScanModal({ onClose, onCode }: { onClose: () => void; onCode: (c: string) => Promise<string | null> }) {
   const video = useRef<HTMLVideoElement>(null)
   const [code, setCode] = useState('')
   const [err, setErr] = useState('')
   const [camState, setCamState] = useState<'starting' | 'on' | 'unsupported' | 'denied'>('starting')
   const onCodeRef = useRef(onCode); onCodeRef.current = onCode
+  // The camera reads codes on its own (qrScan.ts: jsQR on iPad Safari, the built-in reader where a browser has
+  // one). The same ticket is read once every 3 seconds, so a refused code shows its message once, not on repeat.
   useEffect(() => {
-    const BD = (window as unknown as { BarcodeDetector?: new (o: object) => Detector }).BarcodeDetector
-    if (!BD || !navigator.mediaDevices?.getUserMedia) { setCamState('unsupported'); return }
-    let stream: MediaStream | null = null, raf = 0, stop = false
-    const det = new BD({ formats: ['qr_code'] })
+    if (!navigator.mediaDevices?.getUserMedia) { setCamState('unsupported'); return }
+    let stream: MediaStream | null = null, timer = 0, stop = false
+    const read = frameReader(), fresh = onceEvery(3000)
     navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }).then((s) => {
       stream = s; if (stop || !video.current) { s.getTracks().forEach((t) => t.stop()); return }
       video.current.srcObject = s; void video.current.play(); setCamState('on')
       const loop = async () => {
         if (stop || !video.current) return
-        try { const r = await det.detect(video.current); if (r[0]) { const e = await onCodeRef.current(r[0].rawValue); if (!e) return; setErr(e) } } catch { /* keep scanning */ }
-        raf = requestAnimationFrame(() => setTimeout(loop, 250) as unknown as void)
+        try {
+          const c = await read(video.current)
+          if (c && fresh(c)) { const e = await onCodeRef.current(c); if (!e) return; setErr(e) }
+        } catch { /* keep scanning */ }
+        timer = window.setTimeout(loop, 200)
       }
       void loop()
     }).catch(() => setCamState('denied'))
-    return () => { stop = true; cancelAnimationFrame(raf); stream?.getTracks().forEach((t) => t.stop()) }
+    return () => { stop = true; clearTimeout(timer); stream?.getTracks().forEach((t) => t.stop()) }
   }, [])
   return (
     <Modal open onClose={onClose} title="Scan QR code" wide>
       {camState === 'on' || camState === 'starting'
         ? <div className="relative overflow-hidden rounded-xl bg-cream-100"><video ref={video} className="aspect-video w-full object-cover" muted playsInline /><div className="pointer-events-none absolute inset-[18%] rounded-2xl border-4 border-brand-500/80" />{camState === 'starting' && <div className="absolute inset-0 flex items-center justify-center text-navy-700"><Camera size={22} className="mr-2" /> Starting camera…</div>}</div>
-        : <div className="rounded-xl bg-cream-100 p-5 text-navy-800"><Camera size={22} className="mb-1 text-brand-600" />{camState === 'unsupported' ? 'Camera scanning isn’t available in this browser.' : 'Camera permission was not given.'} Type the code printed under the guest’s QR instead.</div>}
+        : <div className="rounded-xl bg-cream-100 p-5 text-navy-800"><Camera size={22} className="mb-1 text-brand-600" />{camState === 'unsupported' ? 'This browser can’t open the camera.' : 'Camera permission was not given. Allow the camera for this app in Settings.'} Or type the code printed under the guest’s QR.</div>}
       <form className="mt-4 flex flex-wrap gap-3" onSubmit={(ev) => { ev.preventDefault(); if (!code.trim()) return; void onCodeRef.current(code).then((m) => { if (m) setErr(m) }) }}>
         <label htmlFor="qr" className="sr-only">QR code</label>
         <input id="qr" value={code} onChange={(e) => { setCode(e.target.value); setErr('') }} placeholder="e.g. AAFE-3F9C…" autoCapitalize="characters" autoComplete="off" data-testid="qr-input"
