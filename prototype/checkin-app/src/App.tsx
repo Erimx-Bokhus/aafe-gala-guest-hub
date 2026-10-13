@@ -14,6 +14,7 @@ import { EXCEPTION_TYPES } from '@shared/checkinSync'
 import { currentStaff, sendSignInLink, signOut, supabase } from '@shared/supabase'
 import type { StaffUser } from '@shared/types'
 import { LIVE, type Arrival, type Door, type DoorGuest, type DoorStatus, type Gala } from './door'
+import { waitingMessage } from './signOut'
 import type * as DemoModule from './demoDoor'
 
 type Prefs = ReturnType<typeof useDisplayPrefs>
@@ -124,11 +125,32 @@ function LiveApp({ prefs }: { prefs: Prefs }) {
     setDoor('loading')
     import('./liveDoor').then((m) => m.loadDoor(staff)).then((d) => setDoor(d ?? 'closed'), () => setDoor('error'))
   }, [staff])
-  const leave = async () => {
-    if (typeof staff === 'object') (await import('./liveDoor')).deskFor(staff).clear()   // the saved list and queue leave the iPad
+  // Sign-out sends waiting check-ins first; if some can't be sent, it stops and says so (signOut.ts).
+  const [blocked, setBlocked] = useState<{ waiting: number; canForce: boolean } | null>(null)
+  const [leaving, setLeaving] = useState(false)
+  const leave = async (force = false) => {
+    const m = typeof staff === 'object' ? await import('./liveDoor') : null
+    if (m && typeof staff === 'object' && !force) {
+      setLeaving(true)
+      const r = await m.checkLiveSignOut(staff).finally(() => setLeaving(false))
+      if (!r.ok) { setBlocked({ waiting: r.waiting, canForce: r.canForce }); return }
+    }
+    setBlocked(null)
+    // Close the guest-list screen before its saved list goes, so nothing redraws from a list that's gone.
     if (typeof door === 'object') door.stop()
-    remember(null); await signOut(); setStaff('out'); setDoor('loading')
+    setDoor('loading')
+    if (m && typeof staff === 'object') m.deskFor(staff).clear()   // the saved list and queue leave the iPad
+    remember(null); await signOut(); setStaff('out')
   }
+  const blockedModal = blocked && (
+    <Modal open onClose={() => setBlocked(null)} title="Check-ins not sent yet">
+      <p className="text-lg text-navy-900" data-testid="signout-blocked">{waitingMessage(blocked.waiting, blocked.canForce)}</p>
+      <div className="mt-6 flex flex-wrap justify-end gap-3">
+        {blocked.canForce && <button className="btn-ghost tap h-14 px-6 text-base" onClick={() => void leave(true)} data-testid="signout-anyway"><LogOut size={18} /> Sign out anyway</button>}
+        <button className="btn-primary tap h-14 px-8 text-base" onClick={() => { setBlocked(null); void leave() }} data-testid="signout-retry"><RefreshCw size={18} /> Try again</button>
+      </div>
+    </Modal>
+  )
 
   if (staff === 'checking') return <Waiting prefs={prefs} text="Checking your sign-in…" />
   if (staff === 'out' || staff === 'not-staff') return <LiveSignIn prefs={prefs} notice={staff === 'not-staff' ? 'That account isn’t on the AAFE staff list. Ask the gala admin to add you.' : ''} />
@@ -140,12 +162,16 @@ function LiveApp({ prefs }: { prefs: Prefs }) {
         <p className="mt-2 text-lg text-navy-700">{door === 'closed' ? 'The guest list has been cleared from this iPad.' : 'Check the internet connection, then try again. Nothing was lost.'}</p>
         <div className="mt-6 flex flex-wrap gap-3">
           {door === 'error' && <button className="btn-primary tap h-14 px-6 text-base" onClick={() => setStaff({ ...staff })}><RefreshCw size={18} /> Try again</button>}
-          <button className="btn-ghost tap h-14 px-6 text-base" onClick={() => void leave()}><LogOut size={18} /> Sign out</button>
+          <button className="btn-ghost tap h-14 px-6 text-base" disabled={leaving} onClick={() => void leave()}><LogOut size={18} /> {leaving ? 'Sending check-ins…' : 'Sign out'}</button>
         </div>
       </div>
+      {blockedModal}
     </Shell>
   )
-  return <DoorScreen api={door} who={staff.name} prefs={prefs} exitLabel="Sign out" onExit={() => void leave()} />
+  return <>
+    <DoorScreen api={door} who={staff.name} prefs={prefs} exitLabel={leaving ? 'Sending check-ins…' : 'Sign out'} onExit={() => { if (!leaving) void leave() }} />
+    {blockedModal}
+  </>
 }
 
 function LiveSignIn({ prefs, notice }: { prefs: Prefs; notice: string }) {
