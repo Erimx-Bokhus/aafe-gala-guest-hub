@@ -65,6 +65,7 @@ h1 { font-size: clamp(26px, 3.6vw, 38px); line-height: 1.15; margin-top: 6px }
 .k-email path { stroke: var(--orange); stroke-dasharray: 1 9; stroke-width: 5 }
 .k-app path { stroke: var(--app); stroke-dasharray: 6 7; stroke-width: 2.5 }
 .k-later path { stroke: var(--later); stroke-dasharray: 2 7; stroke-width: 2.5 }
+.k-outside path { stroke: var(--ink-3); stroke-dasharray: 10 6; stroke-width: 2 }
 .flow path { animation: run 1s linear infinite }
 .k-email.flow path { animation-duration: .8s }
 @keyframes run { to { stroke-dashoffset: -23 } }
@@ -72,7 +73,7 @@ h1 { font-size: clamp(26px, 3.6vw, 38px); line-height: 1.15; margin-top: 6px }
 @keyframes run-app { to { stroke-dashoffset: -13 } }
 .k-email.flow path { animation-name: run-email }
 @keyframes run-email { to { stroke-dashoffset: -10 } }
-.mk-purchase, .mk-email { fill: var(--orange) } .mk-staff { fill: var(--ink) } .mk-app { fill: var(--app) } .mk-later { fill: var(--later) }
+.mk-purchase, .mk-email { fill: var(--orange) } .mk-staff { fill: var(--ink) } .mk-app { fill: var(--app) } .mk-later { fill: var(--later) } .mk-outside { fill: var(--ink-3) }
 .lbl { font: 600 13px var(--font); fill: var(--ink); paint-order: stroke; stroke: var(--bg); stroke-width: 6px; stroke-linejoin: round }
 .lbl .n { fill: var(--orange) }
 .lbl.muted { fill: var(--ink-3); font-weight: 400 }
@@ -121,19 +122,21 @@ svg[data-story="after"] .s-after { opacity: 1 }
     <span><svg width="46" height="10" aria-hidden="true"><g class="arrow k-staff flow"><path d="M2 5 H44"/></g></svg>A person acts (staff or sponsor)</span>
     <span><svg width="46" height="10" aria-hidden="true"><g class="arrow k-email flow"><path d="M3 5 H44"/></g></svg>Email going out, after staff approve</span>
     <span><svg width="46" height="10" aria-hidden="true"><g class="arrow k-app flow"><path d="M2 5 H44"/></g></svg>An app reading the list</span>
+    <span><svg width="46" height="10" aria-hidden="true"><g class="arrow k-outside"><path d="M2 5 H44"/></g></svg>Give Lively's own sync, outside our tool</span>
     <span><svg width="46" height="10" aria-hidden="true"><g class="arrow k-later"><path d="M2 5 H44"/></g></svg>Later, not switched on yet</span>
   </div>
 
   <div class="map">
     <svg id="map" viewBox="0 0 1200 790" role="img" aria-labelledby="map-title map-desc">
       <title id="map-title">System map of the AAFE gala guest list tool</title>
-      <desc id="map-desc">Give Lively purchases reach the guest-list database through a file staff upload in the staff app. Staff approve emails, which the email sender delivers with a private guest-list link or a personal QR code. Sponsors name guests on their private link. The iPad downloads the door list and sends back check-ins. After the gala the staff app produces the Salesforce attendee file.</desc>
+      <desc id="map-desc">Give Lively purchases reach the guest-list database through a file staff upload in the staff app. Staff approve emails, which the email sender delivers with a private guest-list link or a personal QR code. Sponsors name guests on their private link. The iPad downloads the door list and sends back check-ins. After the gala the staff app produces the Salesforce attendee file, or sends it with Sync now. Give Lively's own app sends its donations to Salesforce every hour.</desc>
       <defs>
         <marker id="m-purchase" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path class="mk-purchase" d="M0 0 L10 5 L0 10 z"/></marker>
         <marker id="m-staff" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path class="mk-staff" d="M0 0 L10 5 L0 10 z"/></marker>
         <marker id="m-email" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse"><path class="mk-email" d="M0 0 L10 5 L0 10 z"/></marker>
         <marker id="m-app" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path class="mk-app" d="M0 0 L10 5 L0 10 z"/></marker>
         <marker id="m-later" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path class="mk-later" d="M0 0 L10 5 L0 10 z"/></marker>
+        <marker id="m-outside" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path class="mk-outside" d="M0 0 L10 5 L0 10 z"/></marker>
       </defs>
 
       <!-- arrows first, so boxes sit on top of line ends -->
@@ -177,8 +180,11 @@ svg[data-story="after"] .s-after { opacity: 1 }
       <g class="arrow k-staff flow s-night s-comp"><path d="M1050 650 V598" marker-end="url(#m-staff)"/>
         <text class="lbl" x="1060" y="630"><tspan class="n">10 </tspan>Shows QR</text></g>
 
+      <g class="arrow k-outside s-purchase s-after"><path d="M40 115 H24 V705 H32" marker-end="url(#m-outside)"/>
+        <text class="lbl muted" x="13" y="420" text-anchor="middle" transform="rotate(-90 13 420)">Give Lively's own Salesforce sync, hourly</text></g>
+
       <g class="arrow k-staff flow s-after"><path d="M155 460 V642" marker-end="url(#m-staff)"/>
-        <text class="lbl" x="166" y="556"><tspan class="n">11 </tspan>Attendee file</text></g>
+        <text class="lbl" x="166" y="556"><tspan class="n">11 </tspan>Attendee file · Sync now</text></g>
 
       <!-- boxes -->
       <g class="node outside"><rect x="40" y="40" width="230" height="100"/>
@@ -216,14 +222,14 @@ svg[data-story="after"] .s-after { opacity: 1 }
         <text class="t" x="958" y="688">Inboxes</text><text class="s" x="958" y="712">Sponsors and comp guests</text></g>
 
       <g class="node outside"><rect x="40" y="650" width="230" height="100"/>
-        <text class="t" x="58" y="688">Salesforce</text><text class="s" x="58" y="712">Attendee file, imported</text><text class="s" x="58" y="730">by AAFE after the gala</text></g>
+        <text class="t" x="58" y="688">Salesforce</text><text class="s" x="58" y="712">Attendee file or Sync now;</text><text class="s" x="58" y="730">donations from Give Lively</text></g>
     </svg>
   </div>
 
   <div class="steps">
     <ol>
       <li><span class="n">1</span><div><strong>Export file</strong><span class="d">Staff download the ticket export from Give Lively.</span></div></li>
-      <li><span class="n">2</span><div><strong>Upload</strong><span class="d">Staff upload it in the staff app. Orders, seats and any names the buyer typed land on the guest list. Refunds cancel seats.</span></div></li>
+      <li><span class="n">2</span><div><strong>Upload</strong><span class="d">Staff upload it in the staff app. Orders, seats and any names the buyer typed land on the guest list. A full refund or a failed payment cancels the order and its seats; a partial refund keeps them, as partly paid.</span></div></li>
       <li><span class="n">3</span><div><strong>Approve · comps</strong><span class="d">Staff approve each drafted email, add comp guests, and press "Send QR invite". Nothing goes out without this step.</span></div></li>
       <li><span class="n">4</span><div><strong>Approved only</strong><span class="d">The email sender picks up approved emails and nothing else.</span></div></li>
       <li><span class="n">5</span><div><strong>Link · QR code</strong><span class="d">It makes a new private link (sponsors) or a new personal QR code (comps) and emails it. The database keeps only a scrambled copy.</span></div></li>
@@ -234,7 +240,8 @@ svg[data-story="after"] .s-after { opacity: 1 }
       <li><span class="n">8</span><div><strong>Door list</strong><span class="d">The iPad downloads every named guest, and the scrambled QR copies to check codes against, so it works without internet.</span></div></li>
       <li><span class="n">9</span><div><strong>Check-ins</strong><span class="d">Arrivals go back to the guest list, right away or when the internet returns.</span></div></li>
       <li><span class="n">10</span><div><strong>Shows QR</strong><span class="d">The guest shows the QR code from their email. No code? The door searches by name.</span></div></li>
-      <li><span class="n">11</span><div><strong>Attendee file</strong><span class="d">After the gala, staff download the file for AAFE's Salesforce. Nothing writes to Salesforce on its own.</span></div></li>
+      <li><span class="n">11</span><div><strong>Attendee file · Sync now</strong><span class="d">After the gala, staff download the file for AAFE's Salesforce, or press Sync now to send it (in the demo, to a stand-in Salesforce). Nothing writes to Salesforce on its own.</span></div></li>
+      <li><span class="n g">·</span><div><strong>Give Lively's own sync</strong><span class="d">Give Lively's free Salesforce app sends its donations to AAFE's Salesforce every hour. Our tool adds what Give Lively doesn't know: who came, and who each sponsor brought.</span></div></li>
       <li><span class="n g">·</span><div><strong>Later: automatic pull</strong><span class="d">Give Lively purchases arrive without the upload. Built, not switched on for Demo Day.</span></div></li>
     </ol>
   </div>
@@ -250,7 +257,7 @@ svg[data-story="after"] .s-after { opacity: 1 }
     </ol>
   </section>
 
-  <p class="foot">Matches the prototype on main as of Oct 12, 2026. Demo data only. Written by Natalie Walker.</p>
+  <p class="foot">Matches the prototype on main as of Oct 13, 2026. Demo data only. Written by Natalie Walker; review fixes Oct 13.</p>
 </div>
 
 <script>
