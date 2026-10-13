@@ -135,9 +135,9 @@ const forbidden = () => Promise.reject(new Error('forbidden'))
 
 /** What one Salesforce sync did (salesforce-push's summary; _shared/salesforce.ts). */
 export interface SalesforceSyncResult { sent: number; failed: number; by_object: Record<string, number>; first_error: string | null }
-/** What one Give Lively pull did (givelively-sync's counts; failed arrives with PR #109). */
-export interface PullCounts { seen: number; created: number; updated: number; skipped: number; needs_review: number; not_gala: number; not_settled: number; unmapped: number; failed?: number }
-const NO_PULL: PullCounts = { seen: 0, created: 0, updated: 0, skipped: 0, needs_review: 0, not_gala: 0, not_settled: 0, unmapped: 0 }
+/** What one Give Lively pull did (givelively-sync's counts). */
+export interface PullCounts { seen: number; created: number; updated: number; skipped: number; needs_review: number; not_gala: number; not_settled: number; unmapped: number; failed: number }
+const NO_PULL: PullCounts = { seen: 0, created: 0, updated: 0, skipped: 0, needs_review: 0, not_gala: 0, not_settled: 0, unmapped: 0, failed: 0 }
 
 // ---- DEMO ------------------------------------------------------------------------------------------------
 
