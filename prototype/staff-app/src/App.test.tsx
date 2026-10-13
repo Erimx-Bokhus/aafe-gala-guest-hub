@@ -26,6 +26,7 @@ async function renderApp(opts: { session: boolean; staff: StaffUser | null }) {
       rpc,
       from: tableRead,
     },
+    signInFromLink: vi.fn().mockResolvedValue(false),   // no admin-made link in the address
     // A fresh object on every call, as Supabase gives: the app must key on who it is, not on the object.
     currentStaff: vi.fn(async () => (opts.staff ? { ...opts.staff } : null)),
     signOut,
@@ -43,12 +44,12 @@ describe('staff app session (live mode)', () => {
     expect(await screen.findByRole('alert')).toBeTruthy()
     expect(screen.getByRole('alert').textContent).toContain('isn’t on the AAFE staff list')
     expect(signOut).toHaveBeenCalledOnce()
-    expect(screen.getByRole('button', { name: /Email me a sign-in link/ })).toBeTruthy()
+    expect(screen.getByRole('button', { name: /Email me a sign-in code/ })).toBeTruthy()
   })
 
   it('shows the sign-in page, without signing anyone out, when nobody is signed in', async () => {
     await renderApp({ session: false, staff: null })
-    expect(await screen.findByRole('button', { name: /Email me a sign-in link/ })).toBeTruthy()
+    expect(await screen.findByRole('button', { name: /Email me a sign-in code/ })).toBeTruthy()
     expect(signOut).not.toHaveBeenCalled()
   })
 
@@ -72,7 +73,7 @@ describe('staff app session (live mode)', () => {
 
   it('stops listening for sign-in changes when the app closes', async () => {
     const { unmount } = await renderApp({ session: false, staff: null })
-    await screen.findByRole('button', { name: /Email me a sign-in link/ })
+    await screen.findByRole('button', { name: /Email me a sign-in code/ })
     unmount()
     expect(unsubscribe).toHaveBeenCalledOnce()
   })
