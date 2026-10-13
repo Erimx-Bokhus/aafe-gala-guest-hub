@@ -70,6 +70,8 @@ export interface StaffApi {
   exportBadges(includePrinted: boolean): Promise<BadgeRow[]>
   exportCheckin(): Promise<CheckinRow[]>
   exportSalesforce(): Promise<SalesforceRow[]>
+  /** Send Salesforce what Give Lively doesn't know (the salesforce-push function; a stand-in org in the demo). Gala admins only. */
+  syncSalesforce(): Promise<SalesforceSyncResult>
   /** Every unsent email, drafts first, with its sponsor, seats and payment. */
   emailQueue(): Promise<QueuedEmail[]>
   /** Draft a guest-list reminder for each sponsor who needs one; returns how many. Drafts only: staff approve each. */
@@ -106,7 +108,7 @@ export const ROLES: Record<Exclude<keyof StaffApi, 'live'>, Role[]> = {
   approveEmail: MANAGERS, cancelEmail: MANAGERS, setMaterialStatus: MANAGERS,
   checkIn: ALL, checkInByCode: ALL, checkInException: ALL,
   updateGalaEvent: ADMIN, history: MANAGERS,
-  exportBadges: MANAGERS, exportCheckin: ALL, exportSalesforce: ADMIN,
+  exportBadges: MANAGERS, exportCheckin: ALL, exportSalesforce: ADMIN, syncSalesforce: ADMIN,
   emailQueue: MANAGERS, queueReminders: MANAGERS, setSponsorArrivals: ADMIN,
   importGiveLively: ADMIN, pullGiveLively: ADMIN, setGalaPage: ADMIN, setTierMapping: ADMIN, resolveImportReview: MANAGERS,
   pipeline: MANAGERS, saveProspect: MANAGERS, setProspectStage: MANAGERS, setSponsorshipGoal: ADMIN,
@@ -123,7 +125,7 @@ export function errorText(e: unknown): string {
   if (m === 'seat_taken') return 'That seat is already taken.'
   if (m === 'not_found' || m.startsWith('not_found')) return 'That record wasn’t found. It may have changed; the page has been refreshed.'
   if (m.startsWith('expired')) return 'That QR code has expired.'
-  // not_configured / givelively_error: the givelively-sync function's own explanation (secrets not set, Give Lively unreachable).
+  // not_configured / givelively_error: a server function's own explanation (its settings aren't set, Give Lively unreachable).
   const detail = m.match(/^(?:invalid_input|invalid_transition|seat_locked|not_configured|givelively_error):\s*(.+)$/)
   if (detail) return detail[1].charAt(0).toUpperCase() + detail[1].slice(1) + '.'
   return 'Something went wrong. Try again, or ask the gala admin.'
@@ -131,6 +133,8 @@ export function errorText(e: unknown): string {
 
 const forbidden = () => Promise.reject(new Error('forbidden'))
 
+/** What one Salesforce sync did (salesforce-push's summary; _shared/salesforce.ts). */
+export interface SalesforceSyncResult { sent: number; failed: number; by_object: Record<string, number>; first_error: string | null }
 /** What one Give Lively pull did (givelively-sync's counts; failed arrives with PR #109). */
 export interface PullCounts { seen: number; created: number; updated: number; skipped: number; needs_review: number; not_gala: number; not_settled: number; unmapped: number; failed?: number }
 const NO_PULL: PullCounts = { seen: 0, created: 0, updated: 0, skipped: 0, needs_review: 0, not_gala: 0, not_settled: 0, unmapped: 0 }
@@ -193,6 +197,12 @@ export function demoApi(user: StaffUser, update: (fn: (d: DB) => DB) => void, fu
     exportBadges: (inc) => exported('exportBadges', 'badges', demoBadgeRows(full(), inc), (n) => `Badge file exported: ${n} badge(s)${inc ? ', including printed' : ''}.`),
     exportCheckin: () => exported('exportCheckin', 'checkin', demoCheckinRows(full()), (n) => `Check-in list exported: ${n} row(s).`),
     exportSalesforce: () => exported('exportSalesforce', 'salesforce', demoSalesforceRows(full()), (n) => `Salesforce attendee file exported: ${n} attendee(s).`),
+    syncSalesforce: async () => {
+      if (!may('syncSalesforce')) return forbidden()
+      let n = 0
+      update((d) => { const r = store.salesforceSyncNow(d); n = r.n; return r.db })
+      return { sent: n, failed: 0, by_object: {}, first_error: null }
+    },
     emailQueue: async () => (may('emailQueue') ? demoEmailQueue(full()) : forbidden()),
     queueReminders: async (minDays = 7) => {
       if (!may('queueReminders')) return forbidden()
@@ -305,6 +315,16 @@ export function liveApi(client: SupabaseClient, reload: () => Promise<void>): St
     exportBadges: (inc) => call<BadgeRow[]>('staff_export_badges', { p_include_printed: inc }),
     exportCheckin: () => call<CheckinRow[]>('staff_export_checkin', {}),
     exportSalesforce: () => call<SalesforceRow[]>('staff_export_salesforce', {}),
+    syncSalesforce: async () => {
+      // The function checks the caller is a gala admin; it answers { error, message } when it can't run.
+      const { data, error } = await client.functions.invoke<SalesforceSyncResult>('salesforce-push', { method: 'POST' })
+      if (error) {
+        const body = await (error as { context?: Response }).context?.json?.().catch(() => null) as { error?: string; message?: string } | null
+        throw new Error(body?.error ? (body.message ? `${body.error}: ${body.message.replace(/\.$/, '')}` : body.error) : error.message)
+      }
+      await reload()
+      return data!
+    },
     emailQueue: () => call<QueuedEmail[]>('staff_email_queue', {}),
     queueReminders: async (minDays = 7) => { const n = await call<number>('staff_queue_guest_list_reminders', { p_min_days: minDays }); await reload(); return n },
     setSponsorArrivals: (on, note) => write('staff_set_sponsor_arrivals', { p_on: on, p_note: note.trim() || null }),
