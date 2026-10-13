@@ -252,10 +252,12 @@ function DoorScreen({ api, who, prefs, exitLabel, onExit }: { api: Door; who: st
   const jump = (l: string) => { const el = listRef.current?.querySelector<HTMLElement>(`[data-letter="${l}"]`); if (el && listRef.current) listRef.current.scrollTo({ top: el.offsetTop, behavior: 'auto' }) }
   const toggle = (id: string) => { setUndo(null); setSel((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n }) }
 
-  const checkIn = (ids: string[], method: 'search' | 'qr' = 'search') => {
+  // keepSearch: a one-tap check-in leaves the search as it is, so the list doesn't jump under the volunteer's finger
+  // and a quick second tap can't land on another guest's Check in button. Group and QR check-ins clear it as before.
+  const checkIn = (ids: string[], method: 'search' | 'qr' = 'search', keepSearch = false) => {
     const fresh = ids.filter((id) => !byGuest.has(id))
     const made = api.checkIn(fresh, method)
-    setSel(new Set()); setQ('')
+    setSel(new Set()); if (!keepSearch) setQ('')
     if (made.length) {
       const first = ALL.find((x) => x.id === fresh[0]), now = new Date().toISOString()
       setUndo({ handles: made, guestIds: fresh, label: made.length === 1 && first ? `${first.first_name} ${first.last_name} · ${first.table ? `Table ${first.table}` : 'no assigned table'} · ${time(now)}` : `${made.length} guests · ${time(now)}`, until: Date.now() + 10000 })
@@ -379,7 +381,7 @@ function DoorScreen({ api, who, prefs, exitLabel, onExit }: { api: Door; who: st
                       </button>
                       {!a && !on && (
                         <span className="flex shrink-0 items-center pr-5">
-                          <button type="button" className="btn-primary tap h-14 px-6 text-base" onClick={() => checkIn([g.id])} data-testid={`checkin-${g.id}`}
+                          <button type="button" className="btn-primary tap h-14 px-6 text-base" onClick={() => checkIn([g.id], 'search', true)} data-testid={`checkin-${g.id}`}
                             aria-label={`Check in ${g.first_name} ${g.last_name}`}><CheckCircle2 size={20} /> Check in</button>
                         </span>
                       )}
