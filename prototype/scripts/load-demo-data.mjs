@@ -3,7 +3,7 @@
 //   full-as-sent   553 guests in Natalie's shape, as she sent it
 //   full-fixed     the same 553 guests with the team's fixes
 // It refuses if the database holds a gala that isn't marked synthetic, keeps the staff list (test sign-in
-// emails survive), clears the demo tables, loads the set, then re-runs backend.sql so sponsor links and QR
+// emails survive) and each gala's Give Lively page name (Pull now needs it), clears the demo tables, loads the set, then re-runs backend.sql so sponsor links and QR
 // codes are stored as hashes. Run from prototype/ after `npx supabase link`.
 import { execFileSync } from 'node:child_process'
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs'
