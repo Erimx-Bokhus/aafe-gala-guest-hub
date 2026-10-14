@@ -82,5 +82,26 @@ await asAdmin(`select staff_add_comp_guest($1)`, [JSON.stringify({ first_name: '
 ok((await one(`select t.event_id from orders o join sponsorship_tiers t on t.id = o.tier_id where o.event_id = 'ev-2028' and t.tier_category = 'complimentary'`))?.event_id === 'ev-2028',
   "a comp guest on the new gala gets that gala's own complimentary level")
 
+// AAFE's real project starts with 2026's flyer levels (database/start-levels-2026.sql) and no demo data; a gala
+// admin's first job is "Start from 2026's levels" for 2027.
+{
+  const { PGlite } = await import('@electric-sql/pglite')
+  const real = new PGlite()
+  await real.exec(`create role anon nologin; create role authenticated nologin; create role service_role nologin bypassrls; create schema auth;
+    create function auth.jwt() returns jsonb language sql stable as $$ select coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb $$;`)
+  for (const f of ['schema.sql', 'backend.sql', 'start-levels-2026.sql']) await real.exec(readFileSync(D + f, 'utf8'))
+  const lv = (await real.query(`select name, contribution_amount::int a, included_seat_count n, guaranteed_seating t from sponsorship_tiers where event_id = 'ev-2026' order by sort_order`)).rows
+  ok(lv.length === 9 && lv[0].name === 'Platinum' && lv[0].a === 50000 && lv[0].n === 12 && lv[0].t && !lv[5].t, "the real project starts with 2026's flyer levels")
+  await real.exec(`insert into gala_events (id, year, name, event_date, status, is_synthetic) values ('ev-2027', 2027, 'AAFE 53rd Annual Gala', '2027-05-20', 'planning', false);
+    insert into staff_users (id, name, email, role) values ('st-admin', 'Real Admin', 'admin@example.org', 'gala_admin')`)
+  await real.exec(`set role authenticated; select set_config('request.jwt.claims', '{"email":"admin@example.org"}', false)`)
+  const n = (await real.query(`select staff_copy_levels('ev-2026', 'ev-2027') n`)).rows[0].n
+  await real.exec('reset role')
+  ok(n === 9, `"Start from 2026's levels" gives 2027 the flyer's ${n} levels`)
+  let refused = false
+  try { await real.exec(readFileSync(D + 'seed.sql', 'utf8')) } catch { refused = true }
+  ok(refused, 'demo data is refused in the real project')
+}
+
 console.log(`sponsorship levels: ${count.pass} passed, ${count.fail} failed`)
 if (count.fail) process.exitCode = 1

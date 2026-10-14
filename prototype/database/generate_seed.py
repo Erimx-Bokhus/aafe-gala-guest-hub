@@ -326,7 +326,9 @@ for p in payments:
 # copies ("gold-2026") with the values its orders were bought at, so editing this year's levels never rewrites history.
 YEAR = {e['id']: e['year'] for e in events}
 for i, t in enumerate(tiers):
-    t.update(event_id=CUR, sort_order=i + 1, retired=False)
+    # AAFE's flyer: Champion and above come with a guaranteed table; Friend and Supporter are admittance only.
+    t.update(event_id=CUR, sort_order=i + 1, retired=False,
+             guaranteed_seating=t['tier_category'] == 'sponsorship' and t['id'] not in ('friend', 'supporter'))
 past_tiers = {}
 for o in history_orders:
     nid = f"{o['tier_id']}-{YEAR[o['event_id']]}"

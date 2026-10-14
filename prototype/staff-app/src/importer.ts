@@ -1,6 +1,7 @@
 // The Give Lively upload, on the staff app's side (docs/import-matching-spec.md). The import engine (import-engine/) reads the
 // export and decides what each row means, in the browser; staff_import_givelively() is still the only place that writes.
 // This file gives the engine what it needs from the gala's data, in demo and live mode alike.
+import { levelsOf } from '@shared/data'
 import {
   GalaPageNotSetError, prepareUpload, tierMappingKey, toGlImport,
   type GlImportRow, type GlImportRun, type PreparedUpload, type UploadContext,
@@ -23,7 +24,7 @@ export function importContext(db: DB): UploadContext {
   const bought = db.payments.filter((p) => p.purchase_key && orderIds.has(p.order_id))
   return {
     galaPageName: ev?.givelively_page_name ?? null,
-    tiers: db.sponsorship_tiers.map((t) => ({ id: t.id, name: t.name, tierCategory: t.tier_category, includedSeatCount: t.included_seat_count })),
+    tiers: levelsOf(db, db.meta.current_event_id, true).map((t) => ({ id: t.id, name: t.name, tierCategory: t.tier_category, includedSeatCount: t.included_seat_count })),
     tierMappings: (db.tier_mappings ?? []).filter((m) => m.event_id === db.meta.current_event_id).map((m) => ({ givelivelyName: m.givelively_name, tierId: m.tier_id })),
     sponsors: db.sponsors.map((s) => ({ id: s.id, organizationName: s.organization_name, primaryContactName: s.primary_contact_name, primaryContactEmail: s.primary_contact_email })),
     existingGuests: db.guests.filter((g) => orderIds.has(g.order_id))
@@ -61,7 +62,7 @@ const cell = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v
 
 /** Four purchases in Give Lively's export format: two tickets with guest names, a refund, and one from another page. */
 export function sampleExport(db: DB): { csv: string; fileName: string } {
-  const sponsorTier = db.sponsorship_tiers.find((t) => t.tier_category === 'sponsorship' && t.included_seat_count >= 4)
+  const sponsorTier = levelsOf(db).find((t) => t.tier_category === 'sponsorship' && t.included_seat_count >= 4)
   const page = "AAFE's 53rd Annual Gala"
   const row = (r: Record<string, string>) => HEADERS.map((h) => cell(r[h] ?? '')).join(',')
   const base = { 'Payment Method': 'Stripe Card', Status: 'succeeded', 'Page Name': page, 'Amount Refunded': '$0.00', 'Transaction Fee Covered': '$0.00' }

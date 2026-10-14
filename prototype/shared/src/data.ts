@@ -58,6 +58,10 @@ export const GUEST_TYPE_LABEL: Record<GuestType, string> = {
 export const hasSponsor = (t: GuestType) => t === 'sponsor_guest' || t === 'ticket_holder'
 
 export const tierOf = (db: DB, id: string) => db.sponsorship_tiers.find((t) => t.id === id)!
+/** A gala's sponsorship levels, in order (one list per gala, decided Oct 14). Retired levels only when asked for. */
+export const levelsOf = (db: DB, eventId: string = db.meta.current_event_id, withRetired = false) =>
+  db.sponsorship_tiers.filter((t) => (t.event_id ?? db.meta.current_event_id) === eventId && (withRetired || !t.retired))
+    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
 export const sponsorOf = (db: DB, id: string) => db.sponsors.find((s) => s.id === id)!
 /** A guest's printed name: the display name, or "First Last" for guests saved before display names (the database backfills the same). */
 export const displayName = (g: { display_name?: string | null; first_name: string; last_name: string }) =>
