@@ -36,6 +36,9 @@ create table if not exists staff_users (
 
 create table if not exists sponsorship_tiers (
   id                   text primary key,
+  event_id             text references gala_events(id),   -- each gala has its own levels (decided Oct 14)
+  sort_order           int  not null default 0,
+  retired              boolean not null default false,    -- no longer offered; past orders keep it
   name                 text not null,
   contribution_amount  numeric(12,2) not null,
   included_seat_count  int not null,
