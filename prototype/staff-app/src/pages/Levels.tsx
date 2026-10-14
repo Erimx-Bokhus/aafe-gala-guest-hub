@@ -115,7 +115,7 @@ function LevelForm({ eventId, level, onClose }: { eventId: string; level: Tier |
       <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); if (ok) save() }}>
         <Field id="lv-name" label="Name"><input id="lv-name" className="input" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="e.g. Gold — Documentary Screening Sponsor" /></Field>
         <div className="grid gap-3 sm:grid-cols-3">
-          <Field id="lv-kind" label="Kind"><select id="lv-kind" className="input" value={f.kind} onChange={(e) => setF({ ...f, kind: e.target.value as Tier['tier_category'] })}>
+          <Field id="lv-kind" label="Kind"><select id="lv-kind" className="input" value={f.kind} onChange={(e) => { const kind = e.target.value as Tier['tier_category']; setF({ ...f, kind, materials: kind === 'ticket' ? [] : f.materials }) }}>
             <option value="sponsorship">Sponsorship</option><option value="ticket">Ticket</option><option value="advertising_only">Advertising only</option>
           </select></Field>
           <Field id="lv-amount" label="Amount ($)"><input id="lv-amount" className="input tabular-nums" inputMode="decimal" value={f.amount} onChange={(e) => setF({ ...f, amount: e.target.value.replace(/[^0-9.]/g, '') })} /></Field>

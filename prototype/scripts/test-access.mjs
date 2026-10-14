@@ -30,8 +30,8 @@ const blocked = (e) => /row-level security|permission denied/.test(e ?? '')
 
 // ---- Tables: who reads, who writes directly
 // Policy: admins and relationship managers read every table; nobody else reads any. Only admins write
-// directly, and only to the four setup tables; every other change goes through an audited function.
-const SETUP_TABLES = ['gala_events', 'sponsorship_tiers', 'event_tables', 'staff_users']
+// directly, and only to the three setup tables; every other change, sponsorship levels included, goes through an audited function.
+const SETUP_TABLES = ['gala_events', 'event_tables', 'staff_users']
 const READERS = ['relationship_manager', 'gala_admin']
 
 // One invented row in each table that starts empty, so every table is really probed.
@@ -93,7 +93,7 @@ const PORTAL = ['portal_get_view', 'portal_release_seat', 'portal_save_guest']
 const ALL_STAFF = ['gala_admin', 'relationship_manager', 'check_in_volunteer']
 const MANAGERS = ['gala_admin', 'relationship_manager']
 const STAFF_FUNCTIONS = {
-  checkin_list: ALL_STAFF, staff_check_in: ALL_STAFF, staff_check_in_qr: ALL_STAFF, staff_check_in_exception: ALL_STAFF,
+  staff_current_event: ALL_STAFF, checkin_list: ALL_STAFF, staff_check_in: ALL_STAFF, staff_check_in_qr: ALL_STAFF, staff_check_in_exception: ALL_STAFF,
   staff_export_checkin: ALL_STAFF, staff_checkin_snapshot: ALL_STAFF, staff_sync_check_ins: ALL_STAFF, staff_undo_check_in: ALL_STAFF,
   staff_update_guest: MANAGERS, staff_set_seat_status: MANAGERS, staff_mark_printed: MANAGERS, staff_assign_seat: MANAGERS,
   staff_seat_order_at_table: MANAGERS, staff_record_payment: MANAGERS, staff_add_pledge: MANAGERS, staff_add_comp_guest: MANAGERS,
@@ -105,7 +105,7 @@ const STAFF_FUNCTIONS = {
   staff_import_givelively: ['gala_admin'], staff_set_tier_mapping: ['gala_admin'], staff_set_gala_page: ['gala_admin'],
   staff_export_salesforce: ['gala_admin'], staff_set_order_deadline: ['gala_admin'],
   staff_save_level: ['gala_admin'], staff_copy_levels: ['gala_admin'], staff_retire_level: ['gala_admin'], staff_start_gala: ['gala_admin'],
-  staff_report_attendance: ['gala_admin'], staff_report_sponsors: MANAGERS, staff_report_needs: MANAGERS, staff_report_payments: MANAGERS, staff_report_guests: MANAGERS,
+  staff_report_attendance: ['gala_admin'], staff_report_sponsors: MANAGERS, staff_report_needs: MANAGERS, staff_report_payments: MANAGERS, staff_report_guests: ['gala_admin'],
 }
 // Return who you are (or nothing), so they need no role check.
 const SELF = ['staff_me', 'staff_role']

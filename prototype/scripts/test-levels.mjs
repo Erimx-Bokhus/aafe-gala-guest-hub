@@ -25,6 +25,15 @@ await db.exec(`update orders set tier_id = 'gold' where id = 'ord-26-meri'; upda
 await db.exec(readFileSync(D + 'backend.sql', 'utf8'))
 ok((await one(`select tier_id from orders where id = 'ord-26-meri'`)).tier_id === 'gold-2026', 'upgrade: a 2026 order on a shared level moves to 2026\'s copy')
 ok((await one(`select count(*)::int n from sponsorship_tiers where event_id is null`)).n === 0, 'upgrade: no level is left without a gala')
+// With next year's gala already in planning, the upgrade still gives shared levels to this year's gala, by the same rule
+// as current_event_id(), and orders them by amount (review of #133).
+await db.exec(`insert into gala_events (id, year, name, event_date, status, is_synthetic) values ('ev-2099', 2099, 'Planning test gala (demo)', '2099-05-21', 'planning', true);
+  update sponsorship_tiers set event_id = null, sort_order = 0 where id = 'silver'`)
+await db.exec(readFileSync(D + 'backend.sql', 'utf8'))
+const silver = await one(`select event_id, sort_order from sponsorship_tiers where id = 'silver'`)
+ok(silver.event_id === cur, `upgrade with a planning gala: shared levels go to this year's gala, not next year's (${silver.event_id})`)
+ok(silver.sort_order > 0, 'upgraded levels are ordered by amount, not alphabetically')
+await db.exec(`delete from gala_events where id = 'ev-2099'`)
 
 // Gala admins add a level; nobody else can.
 ok((await err('authenticated', RM.email, `select staff_save_level($1)`, [JSON.stringify({ name: 'X', contribution_amount: 1, included_seat_count: 1 })])) === 'forbidden',
@@ -58,6 +67,20 @@ ok((await err('authenticated', ADMIN.email, `select staff_add_pledge('Old Year C
   "a pledge cannot use another gala's level")
 ok((await err('authenticated', ADMIN.email, `select staff_set_tier_mapping('Gold Sponsor', 'gold-2026')`))?.startsWith('not_found'),
   "a Give Lively tier cannot be matched to another gala's level")
+ok((await err('authenticated', RM.email, `select staff_save_prospect($1)`, [JSON.stringify({ organization: 'Old Year Prospect Co', contact_name: 'Kim Lee', ask_tier_id: 'gold-2026' })]))
+  ?.startsWith('not_found'), "a prospect cannot ask for another gala's level")
+// Give Lively purchases land only on this gala's levels still offered: a prepared level from another gala is ignored and
+// the name decides; a retired level takes no new orders, by prepared id or by name (CSV, sync and mapping alike).
+const glRow = (txn, over) => ({ txn, email: `${txn.toLowerCase()}@levels.example.org`, date: '2026-10-07T15:00:00Z', first: 'Robin', last: 'Levels', company: '',
+  campaign: 'AAFE Gala 2027', ticket_level: 'Gold Sponsor', method: 'Credit Card', status: 'succeeded', quantity: 1, original: 100, gross: 100, fee: 0, net: 100, refunded: 0, ...over })
+const glImp = (r) => as('service_role', null, `select gl_import($1::jsonb, 'levels test') r`, [JSON.stringify([r])])
+const tierOf = async (txn) => (await one(`select o.tier_id from payments p join orders o on o.id = p.order_id where p.givelively_transaction_id = $1`, [txn]))?.tier_id ?? null
+await glImp(glRow('GL-LV-OLD', { tier_id: 'gold-2026' }))
+const curGold = (await one(`select id from sponsorship_tiers where event_id = $1 and name like 'Gold%' and not retired`, [cur])).id
+ok((await tierOf('GL-LV-OLD')) === curGold, `a prepared level from another gala is ignored; the name picks this gala's Gold (${await tierOf('GL-LV-OLD')})`)
+await glImp(glRow('GL-LV-RETIRED-ID', { tier_id: id, ticket_level: 'Diamond — Presenting Sponsor' }))
+await glImp(glRow('GL-LV-RETIRED-NAME', { ticket_level: 'Diamond Presenting Sponsor' }))
+ok((await tierOf('GL-LV-RETIRED-ID')) === null && (await tierOf('GL-LV-RETIRED-NAME')) === null, 'a retired level takes no new Give Lively order, by id or by name')
 
 // A new gala starts from last year's levels, once; comps get the new gala's own complimentary level.
 // Next year's levels are set up while this year's gala is still the current one.
@@ -98,6 +121,10 @@ ok((await one(`select t.event_id from orders o join sponsorship_tiers t on t.id 
   ok(levels === (await one(`select count(*)::int n from sponsorship_tiers where event_id = 'ev-2028' and not retired and tier_category <> 'complimentary'`)).n && levels > 0, `it starts with last year's levels (${levels})`)
   ok((await one(`select count(*)::int n from audit_log where action = 'gala.started' and entity_id = 'ev-2029'`)).n === 1, 'starting a gala is logged')
   ok((await err('authenticated', ADMIN.email, `select staff_start_gala($1)`, [JSON.stringify(g)]))?.includes('already a 2029 gala'), 'one gala per year')
+  ok((await err('authenticated', ADMIN.email, `select staff_start_gala($1)`, [JSON.stringify({ ...g, year: 2023, event_date: '2023-05-01', guest_list_deadline: '' })]))?.includes('before the newest gala'),
+    'a past year is refused')
+  ok((await err('authenticated', ADMIN.email, `select staff_start_gala($1)`, [JSON.stringify({ ...g, year: 2031, event_date: '2031-05-01', program_ad_deadline: '2031-09-01' })]))
+    ?.includes('program-ad deadline is after'), 'a program-ad deadline after the gala is refused')
 }
 
 // AAFE's real project starts with 2026's flyer levels (database/start-levels-2026.sql) and no demo data; a gala
@@ -110,8 +137,8 @@ ok((await one(`select t.event_id from orders o join sponsorship_tiers t on t.id 
   for (const f of ['schema.sql', 'backend.sql', 'start-levels-2026.sql']) await real.exec(readFileSync(D + f, 'utf8'))
   const lv = (await real.query(`select name, contribution_amount::int a, included_seat_count n, guaranteed_seating t from sponsorship_tiers where event_id = 'ev-2026' order by sort_order`)).rows
   ok(lv.length === 9 && lv[0].name === 'Platinum' && lv[0].a === 50000 && lv[0].n === 12 && lv[0].t && !lv[5].t, "the real project starts with 2026's flyer levels")
-  await real.exec(`insert into gala_events (id, year, name, event_date, status, is_synthetic) values ('ev-2027', 2027, 'AAFE 53rd Annual Gala', '2027-05-20', 'planning', false);
-    insert into staff_users (id, name, email, role) values ('st-admin', 'Real Admin', 'admin@example.org', 'gala_admin')`)
+  ok((await real.query(`select current_event_id() id`)).rows[0].id === 'ev-2027', 'it opens on 2027, so the staff app loads on day one')
+  await real.exec(`insert into staff_users (id, name, email, role) values ('st-admin', 'Real Admin', 'admin@example.org', 'gala_admin')`)
   await real.exec(`set role authenticated; select set_config('request.jwt.claims', '{"email":"admin@example.org"}', false)`)
   const n = (await real.query(`select staff_copy_levels('ev-2026', 'ev-2027') n`)).rows[0].n
   await real.exec('reset role')

@@ -162,23 +162,10 @@ end $$;
 -- Sponsorship levels, one list per gala (decided Oct 14): levels change every year, so each belongs to one gala.
 -- A database loaded before this change has levels with no gala: they become the current gala's, and each past
 -- gala gets its own copies ("gold-2026") for the orders it holds, so editing this year's levels never rewrites history.
+-- (The upgrade itself runs further down, right after current_event_id(), so it uses the same rule.)
 alter table sponsorship_tiers add column if not exists event_id   text references gala_events(id);
 alter table sponsorship_tiers add column if not exists sort_order int not null default 0;
 alter table sponsorship_tiers add column if not exists retired    boolean not null default false;
-do $$
-declare cur text := (select id from gala_events where status <> 'closed' order by year desc limit 1); r record;
-begin
-  if not exists (select 1 from sponsorship_tiers where event_id is null) then return; end if;
-  for r in select distinct o.event_id, o.tier_id, e.year from orders o join gala_events e on e.id = o.event_id
-            join sponsorship_tiers t on t.id = o.tier_id where t.event_id is null and o.event_id is distinct from cur loop
-    insert into sponsorship_tiers (id, event_id, sort_order, retired, name, contribution_amount, included_seat_count, tier_category, required_materials, guaranteed_seating)
-    select r.tier_id || '-' || r.year, r.event_id, sort_order, false, name, contribution_amount, included_seat_count, tier_category, required_materials, guaranteed_seating
-      from sponsorship_tiers where id = r.tier_id
-    on conflict (id) do nothing;
-    update orders set tier_id = r.tier_id || '-' || r.year where event_id = r.event_id and tier_id = r.tier_id;
-  end loop;
-  update sponsorship_tiers set event_id = cur where event_id is null;
-end $$;
 
 -- One row per upload (or sync run that records one).
 create table if not exists import_runs (
@@ -318,6 +305,26 @@ language sql stable security definer set search_path = public as $$
    limit 1
 $$;
 
+-- The per-gala levels upgrade (columns added near the top): levels with no gala go to the gala being run now, by the same rule as
+-- every other function, so a planning gala for next year doesn't receive this year's levels (review of #133).
+do $$
+declare cur text := current_event_id(); r record;
+begin
+  if not exists (select 1 from sponsorship_tiers where event_id is null) then return; end if;
+  for r in select distinct o.event_id, o.tier_id, e.year from orders o join gala_events e on e.id = o.event_id
+            join sponsorship_tiers t on t.id = o.tier_id where t.event_id is null and o.event_id is distinct from cur loop
+    insert into sponsorship_tiers (id, event_id, sort_order, retired, name, contribution_amount, included_seat_count, tier_category, required_materials, guaranteed_seating)
+    select r.tier_id || '-' || r.year, r.event_id, sort_order, false, name, contribution_amount, included_seat_count, tier_category, required_materials, guaranteed_seating
+      from sponsorship_tiers where id = r.tier_id
+    on conflict (id) do nothing;
+    update orders set tier_id = r.tier_id || '-' || r.year where event_id = r.event_id and tier_id = r.tier_id;
+  end loop;
+  update sponsorship_tiers set event_id = cur where event_id is null;
+  -- Upgraded levels have sort_order 0: order them by amount, as the seeds do, not alphabetically by id.
+  update sponsorship_tiers t set sort_order = r2.n from (select id, row_number() over (partition by event_id order by contribution_amount desc, id) n
+    from sponsorship_tiers) r2 where t.id = r2.id and t.sort_order = 0;
+end $$;
+
 -- An order on the gala being run now; null passes (a walk-in with no sponsor).
 create or replace function require_gala_order(p_order_id text) returns void
 language plpgsql stable security definer set search_path = public as $$
@@ -410,7 +417,7 @@ begin
                      using (staff_role() in ('gala_admin','relationship_manager'))$p$, t);
   end loop;
 
-  foreach t in array array['gala_events','sponsorship_tiers','event_tables','staff_users']
+  foreach t in array array['gala_events','event_tables','staff_users']
   loop
     -- Separate insert/update/delete policies: a FOR ALL policy would also cover SELECT and
     -- overlap staff_read (Supabase advisor: multiple permissive policies).
@@ -424,6 +431,11 @@ begin
                      using (staff_role() = 'gala_admin') with check (staff_role() = 'gala_admin')$p$, t);
     execute format($p$create policy admin_delete on %I for delete to authenticated
                      using (staff_role() = 'gala_admin')$p$, t);
+  end loop;
+  -- Sponsorship levels change only through staff_save_level / staff_copy_levels / staff_retire_level, which log every
+  -- change and lock a closed gala's levels (Oct 14). Projects set up earlier lose the old direct-write rules.
+  foreach t in array array['admin_write','admin_insert','admin_update','admin_delete'] loop
+    execute format('drop policy if exists %I on sponsorship_tiers', t);
   end loop;
 end $$;
 
@@ -606,6 +618,14 @@ end $$;
 create or replace function staff_me() returns jsonb
 language sql stable security definer set search_path = public as $$
   select to_jsonb(s) from (select (current_staff()).*) s where s.id is not null
+$$;
+
+-- The gala the server treats as this year's (current_event_id), so the staff app shows the gala its saves go to.
+-- A planning gala for next year (Start next year's gala) must not take over the pages (review of #133/#134, Oct 14).
+create or replace function staff_current_event() returns text
+language sql stable security definer set search_path = public as $$
+  select case when (require_staff(array['gala_admin','relationship_manager','check_in_volunteer'])).id is null then null
+              else current_event_id() end
 $$;
 
 -- updateGuest
@@ -1258,13 +1278,14 @@ begin
 
     -- Package: the prepared tier, else this gala's tier mapping, else the longest tier name (before
     -- " — ") found in the Give Lively name. No match: staff review, nothing created until mapped.
+    -- A retired level takes no new orders, whichever way the purchase arrives (CSV, sync or mapping).
     t := null;
     if coalesce(r ->> 'tier_id', '') <> '' then
-      select * into t from sponsorship_tiers where id = r ->> 'tier_id' and event_id = e.id;
+      select * into t from sponsorship_tiers where id = r ->> 'tier_id' and event_id = e.id and not retired;
     end if;
     if t.id is null then
       select st.* into t from tier_mappings m join sponsorship_tiers st on st.id = m.tier_id
-       where m.event_id = e.id and m.name_key = name_key(r ->> 'ticket_level');
+       where m.event_id = e.id and m.name_key = name_key(r ->> 'ticket_level') and not st.retired;
     end if;
     if t.id is null then
       select * into t from sponsorship_tiers
@@ -2102,6 +2123,10 @@ begin
   if extract(year from v_date) <> v_year then raise exception 'invalid_input: the date isn''t in %', v_year; end if;
   if v_dl is not null and v_dl > v_date then raise exception 'invalid_input: the guest-list deadline is after the gala'; end if;
   if exists (select 1 from gala_events where year = v_year) then raise exception 'invalid_input: there is already a % gala', v_year; end if;
+  -- Only the next one: a past year would sit in planning for ever, and could even take over as the current gala.
+  if v_year < (select max(year) from gala_events) then
+    raise exception 'invalid_input: % is before the newest gala (%)', v_year, (select max(year) from gala_events); end if;
+  if v_ad is not null and v_ad > v_date then raise exception 'invalid_input: the program-ad deadline is after the gala'; end if;
   v_id := 'ev-' || v_year;
   v_demo := coalesce((select bool_or(is_synthetic) from gala_events), false);
   insert into gala_events (id, year, name, event_date, doors_time, program_time, venue_name, venue_address, dress_code,
@@ -2280,7 +2305,7 @@ language sql immutable set search_path = public as $$ select to_char(t at time z
 -- What each order has paid so far (refunds taken off).
 create or replace function report_paid(p_order_id text) returns numeric
 language sql stable security definer set search_path = public as $$
-  select coalesce(sum(original_amount - refunded_amount), 0) from payments where order_id = p_order_id
+  select coalesce(sum(greatest(original_amount - refunded_amount, 0)), 0) from payments where order_id = p_order_id
 $$;
 
 -- Who came, the end-of-night report: one row per guest of this gala and one per walk-in. Includes guests' emails,
@@ -2325,7 +2350,7 @@ begin
       'level', t.name, 'kind', t.tier_category, 'source', o.source, 'status', o.status,
       'committed', o.commitment_amount, 'paid', report_paid(o.id),
       'refunded', (select coalesce(sum(refunded_amount), 0) from payments where order_id = o.id),
-      'balance', greatest(o.commitment_amount - report_paid(o.id), 0),
+      'balance', case when o.status in ('cancelled', 'comp') then 0 else greatest(o.commitment_amount - report_paid(o.id), 0) end,
       'paid_by', (select string_agg(distinct method, ', ') from payments where order_id = o.id),
       'guests_included', (select count(*) from seats where order_id = o.id and status <> 'cancelled'),
       'guests_named', (select count(*) from seats where order_id = o.id and status <> 'cancelled' and guest_id is not null),
@@ -2341,7 +2366,7 @@ begin
 end $$;
 
 -- Food and accessibility: one row per guest of this gala, the answers as written (the staff app splits them into
--- one column per choice). Staff-only details: kept from year to year, never sent to Salesforce or AI (Oct 14).
+-- one column per choice). Staff-only details, never sent to Salesforce or AI; deleted after the gala unless AAFE decides to keep them (data-handling.md).
 create or replace function staff_report_needs() returns jsonb
 language plpgsql security definer set search_path = public as $$
 declare me staff_users := require_staff(array['gala_admin','relationship_manager']); v jsonb;
@@ -2377,10 +2402,11 @@ begin
   return v;
 end $$;
 
--- Full guest list: everyone on this gala's list with every detail staff may see.
+-- Full guest list: everyone on this gala's list with every detail staff may see. It has guests' emails, so gala
+-- admins only, like Who came (review of #135).
 create or replace function staff_report_guests() returns jsonb
 language plpgsql security definer set search_path = public as $$
-declare me staff_users := require_staff(array['gala_admin','relationship_manager']); v jsonb;
+declare me staff_users := require_staff(array['gala_admin']); v jsonb;
 begin
   select coalesce(jsonb_agg(jsonb_build_object(
       'name', coalesce(nullif(g.display_name, ''), btrim(g.first_name || ' ' || g.last_name)), 'first_name', g.first_name, 'last_name', g.last_name,
@@ -2409,7 +2435,7 @@ begin
             where n.nspname = 'public' and p.proname in (
               'hash_token','new_id','new_qr_token','qr_expiry','current_event_id','current_staff','staff_role','require_staff',
               'write_audit','audit_changes','enqueue_email','create_seats','money_fmt','portal_order','portal_get_view','portal_save_guest',
-              'portal_release_seat','staff_me','staff_update_guest','staff_set_seat_status','staff_mark_printed',
+              'portal_release_seat','staff_me','staff_current_event','staff_update_guest','staff_set_seat_status','staff_mark_printed',
               'staff_assign_seat','staff_seat_order_at_table','staff_record_payment','staff_add_pledge','staff_add_comp_guest',
               'staff_send_qr_invite','staff_resend_portal_link','staff_approve_email','staff_cancel_email','checkin_list','staff_check_in','staff_check_in_qr',
               'staff_check_in_exception','gl_import','staff_import_givelively','email_mark_sent','email_mark_failed','email_claim',
@@ -2436,7 +2462,7 @@ grant execute on function portal_get_view(text), portal_save_guest(text, int, js
 
 -- Staff App
 grant execute on function
-  staff_me(), staff_update_guest(text, jsonb), staff_set_seat_status(text, text), staff_mark_printed(text[]),
+  staff_me(), staff_current_event(), staff_update_guest(text, jsonb), staff_set_seat_status(text, text), staff_mark_printed(text[]),
   staff_assign_seat(text, text, int), staff_seat_order_at_table(text, text),
   staff_record_payment(text, text, numeric, date, text), staff_add_pledge(text, text, text, text, text),
   staff_add_comp_guest(jsonb), staff_send_qr_invite(text), staff_resend_portal_link(text), staff_approve_email(text), staff_cancel_email(text),

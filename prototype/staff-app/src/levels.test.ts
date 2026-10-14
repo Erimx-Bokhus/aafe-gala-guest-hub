@@ -72,6 +72,7 @@ describe("start next year's gala", () => {
     const g = { year: 2027, name: 'Again', event_date: '2027-05-27', doors_time: '', program_time: '', venue_name: '', venue_address: '', dress_code: '', guest_list_deadline: '', program_ad_deadline: '', copy_levels_from: null }
     await expect(api.startGala(g)).rejects.toThrow('already a 2027 gala')
     await expect(api.startGala({ ...g, year: 2030 })).rejects.toThrow("isn't in 2030")
+    await expect(api.startGala({ ...g, year: 2023, event_date: '2023-05-01' })).rejects.toThrow('before the newest gala')
     await expect(demo(RM).api.startGala({ ...g, year: 2031, event_date: '2031-05-22' })).rejects.toThrow('forbidden')
   })
 })

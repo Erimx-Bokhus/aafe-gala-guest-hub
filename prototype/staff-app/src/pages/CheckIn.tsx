@@ -5,7 +5,6 @@ import { Field, Modal, downloadCsv, fmtDate } from '@shared/ui'
 import { useStaff } from '../store'
 import { curOrders } from './Dashboard'
 import { canDo, errorText } from '../api'
-import { downloadReport } from './Reports'
 import { checkinCsv } from '../exports'
 
 // iPad check-in. Volunteers see ONLY name, title, organization, sponsor, table/seat and status.
@@ -70,7 +69,8 @@ export default function CheckIn() {
           {/* The fallback if the iPad or the venue's internet fails: print it before doors open. */}
           <button className="btn-ghost" data-testid="export-checkin" onClick={() => void act(api.exportCheckin().then((rows) => downloadCsv('aafe-checkin-list-SYNTHETIC.csv', checkinCsv(rows))), 'Check-in list downloaded')}><Download size={15} /> Printed check-in list</button>
           {/* The end-of-night report: who came, with their sponsor and what was paid (Reports page, Oct 14). */}
-          {canDo(user.role, 'reportAttendance') && <button className="btn-primary" data-testid="download-who-came" onClick={() => void act(downloadReport(db, api, 'reportAttendance'), 'Who came downloaded')}><Download size={15} /> Download who came</button>}
+          {/* It has guests' emails, so it opens the Reports page rather than saving a file on a shared door iPad (review of #135). */}
+          {canDo(user.role, 'reportAttendance') && <a className="btn-primary" data-testid="download-who-came" href="#/reports"><Download size={15} /> Who came (Reports)</a>}
           <div className="text-right"><div className="text-3xl font-semibold tabular-nums text-navy-900" data-testid="arrived-count">{arrived}</div><div className="text-xs text-navy-500">arrived</div></div>
         </div>
       </div>

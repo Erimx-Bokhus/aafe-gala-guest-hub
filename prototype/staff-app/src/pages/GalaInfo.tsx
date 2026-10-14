@@ -131,7 +131,8 @@ function StartGala({ onClose }: { onClose: () => void }) {
     dress_code: latest.dress_code ?? '', guest_list_deadline: gap ? addDays(date, -gap) : '', program_ad_deadline: '', copy_levels_from: cur.id,
   })
   const set = (k: keyof NewGala) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: k === 'year' ? Number(e.target.value) : e.target.value })
-  const ok = f.year > 0 && f.name.trim() && f.event_date && f.event_date.startsWith(String(f.year)) && (!f.guest_list_deadline || f.guest_list_deadline <= f.event_date)
+  const ok = f.year > latest.year && f.name.trim() && f.event_date && f.event_date.startsWith(String(f.year)) && (!f.guest_list_deadline || f.guest_list_deadline <= f.event_date)
+    && (!f.program_ad_deadline || f.program_ad_deadline <= f.event_date)
   return (
     <Modal open onClose={onClose} title="Start next year's gala" wide>
       <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); if (ok) void act(api.startGala(f), `${f.name} started`).then((done) => { if (done) onClose() }) }}>
