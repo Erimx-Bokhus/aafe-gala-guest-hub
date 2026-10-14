@@ -41,7 +41,18 @@ const sheet = await as('authenticated', VOL.email, `select * from staff_export_c
 for (const [what, out] of [['saved list', withNeeds], ['check-in list', list], ['printed list', sheet]])
   ok(!JSON.stringify(out).includes('Step-free entrance') && !JSON.stringify(out).includes('accessibility_needs'), `${what}: no accessibility details reach a volunteer`)
 ok(list.find((g) => g.id === 'g-019').has_access_needs === true && sheet.some((r) => r.access_needs === true), 'the check-in and printed lists carry the flag')
-await db.exec(`update guests set accessibility_needs = null where id = 'g-019'`)
+// "None" (the portal's "No", PR #128) or "No" is an answer, not a need: no flag in any of the three.
+await db.exec(`update guests set accessibility_needs = null where id = 'g-019';
+  update guests set accessibility_needs = 'None' where id = 'g-020'; update guests set accessibility_needs = ' no ' where id = 'g-021'`)
+const noneSnap = (await as('authenticated', VOL.email, `select staff_checkin_snapshot() s`))[0].s
+const noneList = (await as('authenticated', VOL.email, `select checkin_list() l`))[0].l
+const noneSheet = await as('authenticated', VOL.email, `select * from staff_export_checkin()`)
+const flagged = (rows, k) => rows.filter((g) => ['g-020', 'g-021'].includes(g.id) && g[k])
+const n20 = (await q(`select last_name from guests where id = 'g-020'`))[0].last_name, n21 = (await q(`select last_name from guests where id = 'g-021'`))[0].last_name
+ok(noneSnap.guests.filter((g) => ['g-020', 'g-021'].includes(g.id)).length === 2 && !flagged(noneSnap.guests, 'has_access_needs').length
+  && !flagged(noneList, 'has_access_needs').length && !noneSheet.some((r) => [n20, n21].includes(r.last_name) && r.access_needs),
+  '"None" or "No" is not flagged as an access need')
+await db.exec(`update guests set accessibility_needs = null where id in ('g-020', 'g-021')`)
 
 // ---- Sync: a check-in made offline
 const t1 = ago(30)
