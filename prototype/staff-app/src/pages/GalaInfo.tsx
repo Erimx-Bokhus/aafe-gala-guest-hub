@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { Pill, fmtDate, money } from '@shared/ui'
+import { CalendarPlus } from 'lucide-react'
+import { Field, Modal, Pill, fmtDate, money } from '@shared/ui'
 import type { GalaEvent, Seat } from '@shared/types'
 import { PageHead } from '../App'
 import { useStaff } from '../store'
-import { canDo } from '../api'
+import { canDo, type NewGala } from '../api'
 
 const RUN = [
   ['5:00 PM', 'Staff & volunteer call time; check-in iPads charged and synced'],
@@ -49,7 +50,10 @@ export default function GalaInfo() {
   const [f, setF] = useState<GalaEvent>(ev)
   const set = (k: keyof GalaEvent) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.value })
   const canEdit = user.role === 'gala_admin'
-  const past = db.gala_events.filter((e) => e.id !== ev.id).sort((a, b) => b.year - a.year)
+  const [starting, setStarting] = useState(false)
+  // Galas started for a later year: in planning until this year's gala is over (current_event_id).
+  const upcoming = db.gala_events.filter((e) => e.status !== 'closed' && e.year > ev.year).sort((a, b) => a.year - b.year)
+  const past = db.gala_events.filter((e) => e.year < ev.year).sort((a, b) => b.year - a.year)   // a gala in planning isn't past
   // What saving moves (staff_update_gala_event): QR e-ticket expiry follows the date; sponsors on the gala's deadline
   // follow the new deadline, with their links. Live seats carry the code's hash; demo data keeps codes on guests.
   const orders = db.orders.filter((o) => o.event_id === ev.id)
@@ -63,7 +67,16 @@ export default function GalaInfo() {
   ].filter(Boolean) as string[]
   return (
     <div>
-      <PageHead title="Gala information" sub="The single source for date, venue and deadlines. Guest-portal pages and emails read from here." />
+      <PageHead title="Gala information" sub="The single source for date, venue and deadlines. Guest-portal pages and emails read from here."
+        actions={canDo(user.role, 'startGala') && <button className="btn-ghost" onClick={() => setStarting(true)} data-testid="start-gala"><CalendarPlus size={16} /> Start next year's gala</button>} />
+      {upcoming.length > 0 && (
+        <div className="card mb-6 flex flex-wrap items-center gap-x-4 gap-y-2 p-4" data-testid="galas-planning">
+          <span className="font-semibold text-navy-900">Coming up:</span>
+          {upcoming.map((g) => <span key={g.id} className="text-navy-700">{g.name} · {fmtDate(g.event_date)} <Pill tone="gray">In planning</Pill></span>)}
+          <a className="ml-auto text-sm font-semibold text-brand-700 underline underline-offset-2" href="#/levels">Set up its sponsorship levels</a>
+        </div>
+      )}
+      {starting && <StartGala onClose={() => setStarting(false)} />}
       <div className="grid gap-6 xl:grid-cols-[1.3fr_1fr]">
         <form className="card space-y-4 p-5" onSubmit={(e) => { e.preventDefault(); const { name, event_date, doors_time, program_time, venue_name, venue_address, dress_code, guest_list_deadline, program_ad_deadline } = f; void act(api.updateGalaEvent({ name, event_date, doors_time, program_time, venue_name, venue_address, dress_code, guest_list_deadline, program_ad_deadline }), 'Gala information saved') }}>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -98,5 +111,56 @@ export default function GalaInfo() {
         </div>
       </div>
     </div>
+  )
+}
+
+// Start next year's gala (staff_start_gala): filled in from this year's (same venue and times, the date a year on,
+// on the same weekday), with its sponsorship levels started from this year's. Everything can be changed later.
+const ORDINAL = (n: number) => n + (n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th')
+const addDays = (iso: string, days: number) => { if (!iso) return ''; const d = new Date(iso + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + days); return d.toISOString().slice(0, 10) }
+function StartGala({ onClose }: { onClose: () => void }) {
+  const { db, api, act } = useStaff()
+  const latest = [...db.gala_events].sort((a, b) => b.year - a.year)[0]
+  const cur = db.gala_events.find((e) => e.id === db.meta.current_event_id)!
+  const n = Number(/(\d+)(st|nd|rd|th)/.exec(latest.name)?.[1])
+  const date = addDays(latest.event_date, 364)   // a year on, same weekday
+  const gap = latest.guest_list_deadline ? Math.round((+new Date(latest.event_date) - +new Date(latest.guest_list_deadline)) / 864e5) : 0
+  const [f, setF] = useState<NewGala>({
+    year: latest.year + 1, name: n ? latest.name.replace(/\d+(st|nd|rd|th)/, ORDINAL(n + 1)).replace(/ \(demo\)$/, '') + (latest.name.endsWith('(demo)') ? ' (demo)' : '') : '',
+    event_date: date, doors_time: latest.doors_time ?? '', program_time: latest.program_time ?? '', venue_name: latest.venue_name ?? '', venue_address: latest.venue_address ?? '',
+    dress_code: latest.dress_code ?? '', guest_list_deadline: gap ? addDays(date, -gap) : '', program_ad_deadline: '', copy_levels_from: cur.id,
+  })
+  const set = (k: keyof NewGala) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: k === 'year' ? Number(e.target.value) : e.target.value })
+  const ok = f.year > 0 && f.name.trim() && f.event_date && f.event_date.startsWith(String(f.year)) && (!f.guest_list_deadline || f.guest_list_deadline <= f.event_date)
+  return (
+    <Modal open onClose={onClose} title="Start next year's gala" wide>
+      <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); if (ok) void act(api.startGala(f), `${f.name} started`).then((done) => { if (done) onClose() }) }}>
+        <p className="text-sm text-navy-600">It starts in planning: this year's gala stays the current one for check-in, imports and reports until it's over. Filled in from {latest.year}; change anything.</p>
+        <div className="grid gap-3 sm:grid-cols-[120px_1fr]">
+          <Field id="sg-year" label="Year"><input id="sg-year" className="input tabular-nums" inputMode="numeric" value={f.year || ''} onChange={set('year')} /></Field>
+          <Field id="sg-name" label="Name"><input id="sg-name" className="input" value={f.name} onChange={set('name')} /></Field>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <Field id="sg-date" label="Date"><input id="sg-date" type="date" className="input" value={f.event_date} onChange={set('event_date')} /></Field>
+          <Field id="sg-doors" label="Doors"><input id="sg-doors" className="input" value={f.doors_time} onChange={set('doors_time')} /></Field>
+          <Field id="sg-program" label="Program"><input id="sg-program" className="input" value={f.program_time} onChange={set('program_time')} /></Field>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field id="sg-venue" label="Venue"><input id="sg-venue" className="input" value={f.venue_name} onChange={set('venue_name')} /></Field>
+          <Field id="sg-address" label="Address"><input id="sg-address" className="input" value={f.venue_address} onChange={set('venue_address')} /></Field>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <Field id="sg-dress" label="Dress code"><input id="sg-dress" className="input" value={f.dress_code} onChange={set('dress_code')} /></Field>
+          <Field id="sg-deadline" label="Guest names due"><input id="sg-deadline" type="date" className="input" value={f.guest_list_deadline} onChange={set('guest_list_deadline')} /></Field>
+          <Field id="sg-ad" label="Program ads due"><input id="sg-ad" type="date" className="input" value={f.program_ad_deadline} onChange={set('program_ad_deadline')} /></Field>
+        </div>
+        <label className="flex min-h-[44px] items-center gap-3 text-sm text-navy-800">
+          <input type="checkbox" checked={!!f.copy_levels_from} onChange={(e) => setF({ ...f, copy_levels_from: e.target.checked ? cur.id : null })} data-testid="sg-copy" />
+          Start its sponsorship levels from {cur.year}'s (change them on Sponsorship levels)
+        </label>
+        <div className="flex justify-end gap-2"><button type="button" className="btn-ghost" onClick={onClose}>Cancel</button>
+          <button className="btn-primary" disabled={!ok} data-testid="sg-save">Start the {f.year || ''} gala</button></div>
+      </form>
+    </Modal>
   )
 }
