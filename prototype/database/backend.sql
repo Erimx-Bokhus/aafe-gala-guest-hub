@@ -875,6 +875,11 @@ begin
   return v_id;
 end $$;
 
+-- Does a food or access answer name a need? Blank means nobody answered; "None" (PR #128) or "No" means the guest
+-- answered and has none. Same rule as needStatus() in shared/src/guestNeeds.ts.
+create or replace function has_need(p text) returns boolean
+language sql immutable set search_path = public as $$ select lower(btrim(coalesce(p, ''))) not in ('', 'none', 'no') $$;
+
 -- Check-in screen data for all roles (volunteers cannot read tables directly). Accessibility needs travel as a
 -- yes/no flag only ("ask a staff lead"): the details stay staff-only (data-handling.md, review item 2, Oct 13).
 create or replace function checkin_list() returns jsonb
@@ -884,7 +889,7 @@ language sql stable security definer set search_path = public as $$
       'id', g.id, 'order_id', g.order_id, 'first_name', g.first_name, 'last_name', g.last_name, 'title', g.title,
       'organization', g.organization, 'sponsor', sp.organization_name, 'guest_type', g.guest_type,
       'table_number', t.number, 'seat_number', g.seat_number, 'attendance_status', g.attendance_status,
-      'has_access_needs', coalesce(btrim(g.accessibility_needs), '') <> '') order by g.last_name, g.first_name), '[]') end
+      'has_access_needs', has_need(g.accessibility_needs)) order by g.last_name, g.first_name), '[]') end
   from guests g join orders o on o.id = g.order_id join sponsors sp on sp.id = o.sponsor_id
   left join event_tables t on t.id = g.table_id
   where o.event_id = current_event_id() and o.status <> 'cancelled'
@@ -959,7 +964,7 @@ begin
       select jsonb_agg(jsonb_build_object(
         'id', g.id, 'order_id', g.order_id, 'first_name', g.first_name, 'last_name', g.last_name, 'display_name', g.display_name, 'title', g.title,
         'organization', g.organization, 'sponsor', sp.organization_name, 'package', tr.name, 'guest_type', g.guest_type,
-        'table_number', t.number, 'seat_number', g.seat_number, 'has_access_needs', coalesce(btrim(g.accessibility_needs), '') <> '',
+        'table_number', t.number, 'seat_number', g.seat_number, 'has_access_needs', has_need(g.accessibility_needs),
         'qr_hash', case when s.qr_token_expires_at > now() then s.qr_token_hash end,
         'qr_expires_at', case when s.qr_token_expires_at > now() then s.qr_token_expires_at end,
         'arrived', g.attendance_status = 'checked_in' or ci.id is not null,
@@ -2185,7 +2190,7 @@ begin
   return query
     select * from (
       select g.last_name, g.first_name, g.display_name, g.organization, sp.organization_name, t.number, g.seat_number,
-             g.guest_type, coalesce(btrim(g.accessibility_needs), '') <> '', g.attendance_status = 'checked_in'
+             g.guest_type, has_need(g.accessibility_needs), g.attendance_status = 'checked_in'
       from guests g join orders o on o.id = g.order_id join sponsors sp on sp.id = o.sponsor_id
       left join event_tables t on t.id = g.table_id
       where o.event_id = current_event_id() and o.status <> 'cancelled'
@@ -2439,7 +2444,7 @@ begin
               'staff_assign_seat','staff_seat_order_at_table','staff_record_payment','staff_add_pledge','staff_add_comp_guest',
               'staff_send_qr_invite','staff_resend_portal_link','staff_approve_email','staff_cancel_email','checkin_list','staff_check_in','staff_check_in_qr',
               'staff_check_in_exception','gl_import','staff_import_givelively','email_mark_sent','email_mark_failed','email_claim',
-              'purchase_key','name_key','add_import_review','import_fill_guests','staff_set_tier_mapping','staff_set_gala_page',
+              'purchase_key','name_key','has_need','add_import_review','import_fill_guests','staff_set_tier_mapping','staff_set_gala_page',
               'staff_resolve_import_review','seats_void_qr','guests_void_qr','gala_events_no_mixing','require_gala_order',
               'staff_export_badges','staff_export_checkin','staff_export_salesforce',
               'staff_queue_guest_list_reminders','staff_email_queue','staff_checkin_snapshot','staff_sync_check_ins','staff_undo_check_in',
