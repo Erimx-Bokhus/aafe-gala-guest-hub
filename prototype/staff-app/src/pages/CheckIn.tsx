@@ -4,7 +4,8 @@ import { GUEST_TYPE_LABEL, hasSponsor, sponsorOf } from '@shared/data'
 import { Field, Modal, downloadCsv, fmtDate } from '@shared/ui'
 import { useStaff } from '../store'
 import { curOrders } from './Dashboard'
-import { errorText } from '../api'
+import { canDo, errorText } from '../api'
+import { downloadReport } from './Reports'
 import { checkinCsv } from '../exports'
 
 // iPad check-in. Volunteers see ONLY name, title, organization, sponsor, table/seat and status.
@@ -12,7 +13,7 @@ const EXCEPTIONS = ['Arrived with sponsor', 'Sponsor seat was not previously nam
 type Detector = { detect: (v: HTMLVideoElement) => Promise<{ rawValue: string }[]> }
 
 export default function CheckIn() {
-  const { db, api, toast, act } = useStaff()
+  const { db, api, user, toast, act } = useStaff()
   const [q, setQ] = useState('')
   const [code, setCode] = useState('')
   const [scan, setScan] = useState(false)
@@ -68,6 +69,8 @@ export default function CheckIn() {
         <div className="flex flex-wrap items-end gap-4">
           {/* The fallback if the iPad or the venue's internet fails: print it before doors open. */}
           <button className="btn-ghost" data-testid="export-checkin" onClick={() => void act(api.exportCheckin().then((rows) => downloadCsv('aafe-checkin-list-SYNTHETIC.csv', checkinCsv(rows))), 'Check-in list downloaded')}><Download size={15} /> Printed check-in list</button>
+          {/* The end-of-night report: who came, with their sponsor and what was paid (Reports page, Oct 14). */}
+          {canDo(user.role, 'reportAttendance') && <button className="btn-primary" data-testid="download-who-came" onClick={() => void act(downloadReport(db, api, 'reportAttendance'), 'Who came downloaded')}><Download size={15} /> Download who came</button>}
           <div className="text-right"><div className="text-3xl font-semibold tabular-nums text-navy-900" data-testid="arrived-count">{arrived}</div><div className="text-xs text-navy-500">arrived</div></div>
         </div>
       </div>

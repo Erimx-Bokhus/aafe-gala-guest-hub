@@ -10,6 +10,7 @@ import type { AuditEntry, DB, EmailLog, GalaEvent, Guest, Material, PayMethod, P
 import * as store from './store'
 import { STAGES, type ProspectInput } from './store'
 import type { GlImportRow, GlImportRun, ImportResult } from './importer'
+import { demoAttendance, demoGuests, demoNeeds, demoPayments, demoSponsors, type AttendanceRow, type GuestRow, type NeedsRow, type PaymentRow, type SponsorRow } from './reports'
 import { demoBadgeRows, demoCheckinRows, demoSalesforceRows, type BadgeRow, type CheckinRow, type SalesforceRow } from './exports'
 
 export type OfflineMethod = Extract<PayMethod, 'check' | 'ach_direct' | 'wire'>
@@ -80,6 +81,12 @@ export interface StaffApi {
   copyLevels(fromEventId: string, toEventId: string): Promise<void>
   /** Stop offering a level, or offer it again; orders already on it keep it. */
   retireLevel(id: string, retired: boolean): Promise<void>
+  /** Reports (CSV, decided Oct 14), for the current gala; each download is logged. Who came has guests' emails: gala admins only. */
+  reportAttendance(): Promise<AttendanceRow[]>
+  reportSponsors(): Promise<SponsorRow[]>
+  reportNeeds(): Promise<NeedsRow[]>
+  reportPayments(): Promise<PaymentRow[]>
+  reportGuests(): Promise<GuestRow[]>
   /** Start next year's gala, in planning (it doesn't take over until this year's is over). Gala admins only. */
   startGala(g: NewGala): Promise<void>
   /** Every unsent email, drafts first, with its sponsor, seats and payment. */
@@ -123,6 +130,7 @@ export const ROLES: Record<Exclude<keyof StaffApi, 'live'>, Role[]> = {
   importGiveLively: ADMIN, pullGiveLively: ADMIN, setGalaPage: ADMIN, setTierMapping: ADMIN, resolveImportReview: MANAGERS,
   pipeline: MANAGERS, saveProspect: MANAGERS, setProspectStage: MANAGERS, setSponsorshipGoal: ADMIN,
   saveLevel: ADMIN, copyLevels: ADMIN, retireLevel: ADMIN, startGala: ADMIN,
+  reportAttendance: ADMIN, reportSponsors: MANAGERS, reportNeeds: MANAGERS, reportPayments: MANAGERS, reportGuests: MANAGERS,
 }
 export const canDo = (role: Role, action: keyof typeof ROLES) => ROLES[action].includes(role)
 
@@ -268,6 +276,11 @@ export function demoApi(user: StaffUser, update: (fn: (d: DB) => DB) => void, fu
     exportBadges: (inc) => exported('exportBadges', 'badges', demoBadgeRows(full(), inc), (n) => `Badge file exported: ${n} badge(s)${inc ? ', including printed' : ''}.`),
     exportCheckin: () => exported('exportCheckin', 'checkin', demoCheckinRows(full()), (n) => `Check-in list exported: ${n} row(s).`),
     exportSalesforce: () => exported('exportSalesforce', 'salesforce', demoSalesforceRows(full()), (n) => `Salesforce attendee file exported: ${n} attendee(s).`),
+    reportAttendance: () => exported('reportAttendance', 'report_attendance', demoAttendance(full()), (n) => `Who-came report downloaded: ${n} row(s).`),
+    reportSponsors: () => exported('reportSponsors', 'report_sponsors', demoSponsors(full()), (n) => `Sponsors-and-money report downloaded: ${n} row(s).`),
+    reportNeeds: () => exported('reportNeeds', 'report_needs', demoNeeds(full()), (n) => `Food-and-access report downloaded: ${n} guest(s).`),
+    reportPayments: () => exported('reportPayments', 'report_payments', demoPayments(full()), (n) => `Payments report downloaded: ${n} payment(s).`),
+    reportGuests: () => exported('reportGuests', 'report_guests', demoGuests(full()), (n) => `Full guest list downloaded: ${n} guest(s).`),
     syncSalesforce: async () => {
       if (!may('syncSalesforce')) return forbidden()
       let n = 0
@@ -391,6 +404,11 @@ export function liveApi(client: SupabaseClient, reload: () => Promise<void>): St
     exportBadges: (inc) => call<BadgeRow[]>('staff_export_badges', { p_include_printed: inc }),
     exportCheckin: () => call<CheckinRow[]>('staff_export_checkin', {}),
     exportSalesforce: () => call<SalesforceRow[]>('staff_export_salesforce', {}),
+    reportAttendance: () => call<AttendanceRow[]>('staff_report_attendance', {}),
+    reportSponsors: () => call<SponsorRow[]>('staff_report_sponsors', {}),
+    reportNeeds: () => call<NeedsRow[]>('staff_report_needs', {}),
+    reportPayments: () => call<PaymentRow[]>('staff_report_payments', {}),
+    reportGuests: () => call<GuestRow[]>('staff_report_guests', {}),
     syncSalesforce: async () => {
       // The function checks the caller is a gala admin; it answers { error, message } when it can't run.
       const { data, error } = await client.functions.invoke<SalesforceSyncResult>('salesforce-push', { method: 'POST' })
