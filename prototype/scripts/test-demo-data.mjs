@@ -16,6 +16,8 @@ const backend = readFileSync(D + 'backend.sql', 'utf8')
 // A real person's test sign-in email, set the way Aisling sets one up for a live test.
 await db.query(`update staff_users set email = 'tester@example.org' where id = 'st-daniel'`)
 await db.query(`insert into staff_users (id, name, email, role) values ('st-extra', 'Extra Tester', 'extra@example.org', 'relationship_manager')`)
+// The gala's Give Lively page name, set in the staff app (or by demo_givelively.sql). Pull now needs it.
+await db.query(`update gala_events set givelively_page_name = 'AAFE Gala 2027' where id = 'ev-2027'`)
 
 for (const [set, meta] of Object.entries(SETS)) {
   const data = json(meta.json)
@@ -34,6 +36,8 @@ for (const [set, meta] of Object.entries(SETS)) {
   ok(view.organization === 'Acme Community Partners', `${set}: Acme's sponsor link from the set's data opens its portal`)
   ok((await one(`select email from staff_users where id = 'st-daniel'`)).email === 'tester@example.org', `${set}: a test sign-in email survives the reload`)
   ok((await one(`select count(*)::int n from staff_users where id = 'st-extra'`)).n === 1, `${set}: a staff member added by hand survives the reload`)
+  ok((await one(`select givelively_page_name p from gala_events where id = 'ev-2027'`)).p === 'AAFE Gala 2027',
+    `${set}: the gala's Give Lively page name survives the reload, so Pull now keeps working`)
   ok((await one(`select count(*)::int n from gala_events where not is_synthetic`)).n === 0, `${set}: every gala is marked synthetic`)
   if (set !== 'small') {
     const ids = (await db.query(`select id, guest_type, table_id from guests order by id`)).rows
