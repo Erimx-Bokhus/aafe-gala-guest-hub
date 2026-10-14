@@ -230,7 +230,9 @@ function useDoor(api: Door) {
 
 function DoorScreen({ api, who, prefs, exitLabel, onExit }: { api: Door; who: string; prefs: Prefs; exitLabel: string; onExit: () => void }) {
   useDoor(api)
-  const ALL = useMemo(() => [...api.guests].sort((a, b) => sortKey(a).localeCompare(sortKey(b))), [api])
+  // api.guests is a new list only when a refresh brought added or changed guests (liveDoor.ts), so this re-sorts then.
+  const guests = api.guests
+  const ALL = useMemo(() => [...guests].sort((a, b) => sortKey(a).localeCompare(sortKey(b))), [guests])
   const GALA = api.gala
   const [q, setQ] = useState('')
   const [cat, setCat] = useState<string>('all')
