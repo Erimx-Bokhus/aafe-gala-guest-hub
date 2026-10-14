@@ -49,7 +49,7 @@ const GENERATED = ['database/seed.sql', 'shared/src/seed.json', 'database/seed.f
 
 const SKIP = Symbol('skip')
 const checks = {
-  'real-data': () => sh('node scripts/check-no-real-data.mjs'),
+  'real-data': () => sh('node scripts/check-no-real-data.mjs') && sh('node scripts/test-check-no-real-data.mjs'),
 
   // .github/workflows/gitleaks.yml: your commits not yet on main (merge commits included), or everything with --full-scan.
   secrets: () => {
@@ -97,6 +97,11 @@ const checks = {
 
 const unknown = named.filter((n) => !checks[n])
 if (unknown.length) { console.error(`Unknown check: ${unknown.join(', ')}. Choose from: ${Object.keys(checks).join(', ')}`); process.exit(2) }
+
+// The real-data and secret scans read your commits, as GitHub does. Tests and builds read the files on disk.
+const changed = quiet('git status --porcelain --untracked-files=no').stdout.split('\n').filter(Boolean).length
+if (changed) console.log(`Note: ${changed} file(s) differ from your last commit. The real-data and secret scans check what's committed, as GitHub does;`
+  + ' tests and builds use the files on disk. Commit first for results that match GitHub\'s.')
 
 const results = []
 for (const name of named.length ? named : Object.keys(checks)) {
