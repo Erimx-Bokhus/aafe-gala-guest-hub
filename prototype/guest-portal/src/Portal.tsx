@@ -6,7 +6,7 @@ import { displayName } from '@shared/data'
 import { DICT, LOCALE, type Lang } from './i18n'
 import { isPastDeadline } from './deadline'
 import { namesLeftText } from './namesLeft'
-import { parseAccessibilityNeeds, parseDietaryNeeds, serializeAccessibilityNeeds, serializeDietaryNeeds, type AccessibilityOption, type DietaryOption } from './guestNeeds'
+import { NONE, parseAccessibilityNeeds, parseDietaryNeeds, serializeAccessibilityNeeds, serializeDietaryNeeds, type AccessibilityOption, type DietaryOption } from '@shared/guestNeeds'
 import { LIVE, fetchPortalView, getPortalView, removeAttendee, removeAttendeeLive, saveAttendee, saveAttendeeLive, type AttendeeInput, type PortalView } from './portalApi'
 import Hero, { MissionStrip } from './Hero'
 import WelcomeScreen from './WelcomeScreen'
@@ -34,7 +34,12 @@ function AttendeeForm({ lang, initial, onSave, onCancel }: { lang: Lang; initial
   const [dietaryChoices, setDietaryChoices] = useState<DietaryOption[]>(initialDietary.selected)
   const [dietaryOther, setDietaryOther] = useState(initialDietary.otherDetails)
   const initialAccess = parseAccessibilityNeeds(accessibilityNeeds)
-  const [accessEnabled, setAccessEnabled] = useState(accessibilityNeeds.trim() !== '' && accessibilityNeeds.trim() !== 'No')
+  // Accessibility: unanswered until the sponsor picks No or Yes, so "No" (saved as None) is told apart from "not asked yet".
+  const [accessAnswer, setAccessAnswer] = useState<'unset' | 'no' | 'yes'>(() => {
+    const a = accessibilityNeeds.trim()
+    return !a ? 'unset' : a === NONE || a === 'No' ? 'no' : 'yes'
+  })
+  const accessEnabled = accessAnswer === 'yes'
   const [accessChoices, setAccessChoices] = useState<AccessibilityOption[]>(initialAccess.selected)
   const [accessDetails, setAccessDetails] = useState(initialAccess.otherDetails)
   const [touched, setTouched] = useState(false)
@@ -61,7 +66,7 @@ function AttendeeForm({ lang, initial, onSave, onCancel }: { lang: Lang; initial
   const fullNameField = <Field id="full-name" label={t.fullName} error={fullNameError}><input id="full-name" className="input min-h-[44px]" value={fullName} onChange={(e) => setFullName(e.target.value)} autoFocus autoComplete="name" aria-required="true" aria-invalid={fullNameError ? true : undefined} aria-describedby={fullNameError ? 'full-name-err' : undefined} /></Field>
   const trimmed = Object.fromEntries(Object.entries(v).map(([k, x]) => [k, typeof x === 'string' ? x.trim() : x])) as unknown as AttendeeInput
   const dietaryValue = serializeDietaryNeeds(dietaryChoices, dietaryOther)
-  const accessibilityValue = accessEnabled ? serializeAccessibilityNeeds(accessChoices, accessDetails) : ''
+  const accessibilityValue = accessAnswer === 'yes' ? serializeAccessibilityNeeds(accessChoices, accessDetails) : accessAnswer === 'no' ? NONE : ''
   return (
     <form noValidate className="space-y-4" onSubmit={(e) => {
       e.preventDefault(); setTouched(true)
@@ -79,13 +84,16 @@ function AttendeeForm({ lang, initial, onSave, onCancel }: { lang: Lang; initial
           <legend className="mb-1 text-sm font-medium text-navy-800">{t.dietary}</legend>
           <div className="grid gap-1 sm:grid-cols-2">
             {([
+              [NONE, t.dietaryNone],
               ['Vegetarian', t.dietaryVegetarian], ['Vegan', t.dietaryVegan], ['Halal', t.dietaryHalal], ['Kosher', t.dietaryKosher],
               ['Gluten-free', t.dietaryGlutenFree], ['No pork', t.dietaryNoPork], ['No beef', t.dietaryNoBeef], ['No shellfish', t.dietaryNoShellfish],
               ['Nut allergy', t.dietaryNutAllergy], ['Other', t.otherOption],
             ] as [DietaryOption, string][]).map(([value, label]) => (
-              <label key={value} className={`flex min-h-[44px] cursor-pointer items-center gap-3 rounded-md border border-[#707070] px-3 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand-500 ${value === 'Other' ? 'sm:col-span-2' : ''}`}>
-                <input type="checkbox" className="h-5 w-5 accent-brand-500" checked={dietaryChoices.includes(value)} onChange={(e) => {
-                  setDietaryChoices((current) => e.target.checked ? [...current, value] : current.filter((choice) => choice !== value))
+              <label key={value} className={`flex min-h-[44px] cursor-pointer items-center gap-3 rounded-md border border-[#707070] px-3 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand-500 ${value === 'Other' || value === NONE ? 'sm:col-span-2' : ''}`}>
+                <input type="checkbox" className="h-5 w-5 accent-brand-500" checked={dietaryChoices.includes(value)} data-testid={value === NONE ? 'dietary-none' : undefined} onChange={(e) => {
+                  // "No dietary restrictions" and the needs exclude each other.
+                  if (value === NONE) { setDietaryChoices(e.target.checked ? [NONE] : []); if (e.target.checked) setDietaryOther(''); return }
+                  setDietaryChoices((current) => e.target.checked ? [...current.filter((choice) => choice !== NONE), value] : current.filter((choice) => choice !== value))
                   if (!e.target.checked && value === 'Other') setDietaryOther('')
                 }} />
                 <span>{label}</span>
@@ -101,10 +109,9 @@ function AttendeeForm({ lang, initial, onSave, onCancel }: { lang: Lang; initial
           <div className="grid gap-1 sm:grid-cols-2">
             {([['no', t.accessNo], ['yes', t.accessYes]] as const).map(([value, label]) => (
               <label key={value} className="flex min-h-[44px] cursor-pointer items-center gap-3 rounded-md border border-[#707070] px-3 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand-500">
-                <input type="radio" name="accessibility-support" className="h-5 w-5 accent-brand-500" checked={accessEnabled === (value === 'yes')} onChange={() => {
-                  const enabled = value === 'yes'
-                  setAccessEnabled(enabled)
-                  if (!enabled) { setAccessChoices([]); setAccessDetails('') }
+                <input type="radio" name="accessibility-support" className="h-5 w-5 accent-brand-500" checked={accessAnswer === value} data-testid={`access-${value}`} onChange={() => {
+                  setAccessAnswer(value)
+                  if (value === 'no') { setAccessChoices([]); setAccessDetails('') }
                 }} />
                 <span>{label}</span>
               </label>
@@ -114,7 +121,7 @@ function AttendeeForm({ lang, initial, onSave, onCancel }: { lang: Lang; initial
             <legend className="mb-1 text-sm font-medium text-navy-800">{t.accessNeedsPrompt}</legend>
             <div className="grid gap-1 sm:grid-cols-2">
               {([
-                ['Wheelchair access', t.accessWheelchair], ['Step-free seating', t.accessStepFree], ['Hearing support', t.accessHearing],
+                ['Wheelchair access', t.accessWheelchair], ['Step-free access', t.accessStepFree], ['Hearing support', t.accessHearing],
                 ['Visual support', t.accessVisual], ['Other', t.otherOption],
               ] as [AccessibilityOption, string][]).map(([value, label]) => (
                 <label key={value} className={`flex min-h-[44px] cursor-pointer items-center gap-3 rounded-md border border-[#707070] px-3 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand-500 ${value === 'Other' ? 'sm:col-span-2' : ''}`}>
@@ -312,8 +319,8 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
                         <div className="text-navy-600">{g.title}{g.organization && g.organization !== view.organization ? ` · ${g.organization}` : ''}</div>
                         {(g.dietary_needs || g.accessibility_needs) && (
                           <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
-                            {g.dietary_needs && <span className="rounded bg-surface px-2 py-0.5 text-navy-700">{t.dietaryShort}: {g.dietary_needs}</span>}
-                            {g.accessibility_needs && <span className="rounded bg-surface px-2 py-0.5 text-navy-700">{t.accessShort}: {g.accessibility_needs}</span>}
+                            {g.dietary_needs && <span className="rounded bg-surface px-2 py-0.5 text-navy-700">{g.dietary_needs === NONE ? t.dietaryNone : `${t.dietaryShort}: ${g.dietary_needs}`}</span>}
+                            {g.accessibility_needs && g.accessibility_needs !== NONE && <span className="rounded bg-surface px-2 py-0.5 text-navy-700">{t.accessShort}: {g.accessibility_needs}</span>}
                           </div>
                         )}
                         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">

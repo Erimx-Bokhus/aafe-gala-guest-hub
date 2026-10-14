@@ -17,7 +17,7 @@ Run after generate_seed.py (npm run seed runs both). Outputs, for each set:
   ./seed.<set>.sql                load with: npm run db:load -- <set>   (needs backend.sql loaded first)
 Every person, organization, email and payment is FICTIONAL. Same inputs give the same files byte for byte.
 """
-import copy, json, os, random, re
+import copy, json, os, random, re, zlib
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -40,6 +40,10 @@ INTERNAL = {  # door-list orders that aren't purchases: (sponsor id, organizatio
 RMS = ['st-daniel', 'st-priya', 'st-grace', 'st-mei']
 STAFF_NAME = {s['id']: s['name'] for s in SMALL['staff_users']}
 
+
+# Same rule as generate_seed.py: most guests with no need answered "None"; about 1 in 7 hasn't answered yet.
+def answered_none(guest_id, what):
+    return 'None' if zlib.crc32(f'{what}-{guest_id}'.encode()) % 100 < 85 else None
 
 def money(x): return round(x + 1e-9, 2)
 
@@ -221,8 +225,9 @@ def build(name):
             when = f'2026-09-{10 + g_rng.randrange(19):02d}T{14 + g_rng.randrange(6):02d}:{g_rng.randrange(60):02d}:00Z'
             g = dict(id=d['id'], order_id=oid, first_name=d['first_name'], last_name=d['last_name'], title=d['title'], organization=d['organization'],
                      email=guest_email(d['first_name'], d['last_name']),
-                     dietary_needs=g_rng.choice(['Vegetarian', 'Vegan', 'Halal', 'Kosher', 'No shellfish', 'Gluten-free']) if g_rng.random() < 0.12 else None,
-                     accessibility_needs=g_rng.choice(['Step-free seating', 'Aisle seat', 'Hearing loop']) if g_rng.random() < 0.04 else None,
+                     # Need names from shared/src/guestNeeds.ts; most guests without a need answered "None" (answered_none).
+                     dietary_needs=(g_rng.choice(['Vegetarian', 'Vegan', 'Halal', 'Kosher', 'No shellfish', 'Gluten-free']) if g_rng.random() < 0.12 else None) or answered_none(d['id'], 'food'),
+                     accessibility_needs=(g_rng.choice(['Step-free access', 'Wheelchair access', 'Hearing support']) if g_rng.random() < 0.04 else None) or answered_none(d['id'], 'access'),
                      guest_type=d['category_key'], relationship_note=g_rng.choice(notes) if d['category_key'] == 'comp_relationship' else None,
                      table_id=f"tb-{d['table']}" if seated else None, seat_number=d['seat'],
                      badge_status='ready' if status == 'badge_ready' else 'needs_review', attendance_status='expected', qr_token=d['qr_token'],
