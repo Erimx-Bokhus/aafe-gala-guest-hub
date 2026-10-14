@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { levelsOf } from '@shared/data'
 import { FileUp, Sparkles } from 'lucide-react'
 import { Pill, fmtDate } from '@shared/ui'
 import type { DB, ImportReview } from '@shared/types'
@@ -111,7 +112,7 @@ function PagePicker({ pages, onPick }: { pages: Pages; onPick: (p: string) => vo
 
 function TierLink({ name, db, onMap }: { name: string; db: DB; onMap: (name: string, tierId: string) => void }) {
   const [tier, setTier] = useState('')
-  const tiers = db.sponsorship_tiers.filter((t) => t.tier_category !== 'complimentary')
+  const tiers = levelsOf(db).filter((t) => t.tier_category !== 'complimentary')
   return (
     <span className="flex flex-wrap items-center gap-2">
       <label className="sr-only" htmlFor={`tier-${name}`}>Package for {name}</label>
