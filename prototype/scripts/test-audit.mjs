@@ -55,7 +55,7 @@ const ACTIONS = [
   ['staff_set_order_deadline', ADMIN, `select staff_set_order_deadline('ord-acme', '2027-04-01')`, 'order.deadline_changed'],
   ['staff_save_level', ADMIN, `select staff_save_level('{"name": "Audit Test Level", "contribution_amount": 1500, "included_seat_count": 2}'::jsonb)`, 'level.created'],
   ['staff_retire_level', ADMIN, `select staff_retire_level('half_page_ad', true)`, 'level.retired'],
-  ['staff_start_gala', ADMIN, `select staff_start_gala('{"year": 2098, "name": "Audit start test (demo)", "event_date": "2098-05-21"}'::jsonb)`, 'gala.started'],
+  ['staff_start_gala', ADMIN, `select staff_start_gala('{"year": 2100, "name": "Audit start test (demo)", "event_date": "2100-05-21"}'::jsonb)`, 'gala.started'],
   ['staff_copy_levels', ADMIN, `select staff_copy_levels('ev-2027', 'ev-audit-next')`, 'level.copied'],
   ['staff_export_badges', RM, `select * from staff_export_badges(true)`, 'export.badges'],
   ['staff_export_checkin', VOL, `select * from staff_export_checkin()`, 'export.checkin'],
@@ -64,10 +64,10 @@ const ACTIONS = [
   ['staff_report_sponsors', RM, `select staff_report_sponsors()`, 'report.sponsors'],
   ['staff_report_needs', RM, `select staff_report_needs()`, 'report.needs'],
   ['staff_report_payments', RM, `select staff_report_payments()`, 'report.payments'],
-  ['staff_report_guests', RM, `select staff_report_guests()`, 'report.guests'],
+  ['staff_report_guests', ADMIN, `select staff_report_guests()`, 'report.guests'],
 ]
 // Only read, so nothing to log.
-const READS = ['staff_me', 'staff_role', 'staff_email_queue', 'checkin_list', 'staff_checkin_snapshot', 'staff_pipeline']
+const READS = ['staff_me', 'staff_current_event', 'staff_role', 'staff_email_queue', 'checkin_list', 'staff_checkin_snapshot', 'staff_pipeline']
 
 // Some staff reminders only draft when a sponsor's deadline is ahead; keep them ahead of today.
 await db.exec(`update orders set guest_list_deadline = (now() + interval '30 days')::date where event_id = current_event_id()`)
