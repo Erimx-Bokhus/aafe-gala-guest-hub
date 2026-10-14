@@ -82,6 +82,24 @@ await asAdmin(`select staff_add_comp_guest($1)`, [JSON.stringify({ first_name: '
 ok((await one(`select t.event_id from orders o join sponsorship_tiers t on t.id = o.tier_id where o.event_id = 'ev-2028' and t.tier_category = 'complimentary'`))?.event_id === 'ev-2028',
   "a comp guest on the new gala gets that gala's own complimentary level")
 
+// "Start next year's gala" (staff_start_gala): a gala admin starts a gala in planning, with last year's levels.
+{
+  const start = (p, who = ADMIN.email) => as('authenticated', who, `select staff_start_gala($1) id`, [JSON.stringify(p)])
+  const g = { year: 2029, name: 'AAFE 55th Annual Gala (demo)', event_date: '2029-05-24', doors_time: '6:00 PM', venue_name: 'Example Hall', guest_list_deadline: '2029-05-04' }
+  ok((await err('authenticated', RM.email, `select staff_start_gala($1)`, [JSON.stringify(g)])) === 'forbidden', 'a relationship manager cannot start a gala')
+  ok((await err('authenticated', ADMIN.email, `select staff_start_gala($1)`, [JSON.stringify({ ...g, event_date: '2030-05-24' })]))?.includes("isn't in 2029"), 'the date must be in the gala year')
+  ok((await err('authenticated', ADMIN.email, `select staff_start_gala($1)`, [JSON.stringify({ ...g, guest_list_deadline: '2029-06-01' })]))?.includes('after the gala'), 'the guest-list deadline must come before the gala')
+  const id = (await start({ ...g, copy_levels_from: 'ev-2028' }))[0].id
+  const row = await one(`select status, is_synthetic, event_date::text d, doors_time, venue_name from gala_events where id = $1`, [id])
+  ok(id === 'ev-2029' && row.status === 'planning' && row.d === '2029-05-24' && row.doors_time === '6:00 PM' && row.venue_name === 'Example Hall', 'a gala admin starts the 2029 gala, in planning')
+  ok(row.is_synthetic === true, 'a demo project gets a demo gala (demo and real never mix)')
+  ok((await one(`select current_event_id() id`)).id === 'ev-2028', "the gala in planning doesn't take over from the current one")
+  const levels = (await one(`select count(*)::int n from sponsorship_tiers where event_id = 'ev-2029'`)).n
+  ok(levels === (await one(`select count(*)::int n from sponsorship_tiers where event_id = 'ev-2028' and not retired and tier_category <> 'complimentary'`)).n && levels > 0, `it starts with last year's levels (${levels})`)
+  ok((await one(`select count(*)::int n from audit_log where action = 'gala.started' and entity_id = 'ev-2029'`)).n === 1, 'starting a gala is logged')
+  ok((await err('authenticated', ADMIN.email, `select staff_start_gala($1)`, [JSON.stringify(g)]))?.includes('already a 2029 gala'), 'one gala per year')
+}
+
 // AAFE's real project starts with 2026's flyer levels (database/start-levels-2026.sql) and no demo data; a gala
 // admin's first job is "Start from 2026's levels" for 2027.
 {

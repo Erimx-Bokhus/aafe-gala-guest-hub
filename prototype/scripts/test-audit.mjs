@@ -55,6 +55,7 @@ const ACTIONS = [
   ['staff_set_order_deadline', ADMIN, `select staff_set_order_deadline('ord-acme', '2027-04-01')`, 'order.deadline_changed'],
   ['staff_save_level', ADMIN, `select staff_save_level('{"name": "Audit Test Level", "contribution_amount": 1500, "included_seat_count": 2}'::jsonb)`, 'level.created'],
   ['staff_retire_level', ADMIN, `select staff_retire_level('half_page_ad', true)`, 'level.retired'],
+  ['staff_start_gala', ADMIN, `select staff_start_gala('{"year": 2098, "name": "Audit start test (demo)", "event_date": "2098-05-21"}'::jsonb)`, 'gala.started'],
   ['staff_copy_levels', ADMIN, `select staff_copy_levels('ev-2027', 'ev-audit-next')`, 'level.copied'],
   ['staff_export_badges', RM, `select * from staff_export_badges(true)`, 'export.badges'],
   ['staff_export_checkin', VOL, `select * from staff_export_checkin()`, 'export.checkin'],
