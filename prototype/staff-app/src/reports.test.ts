@@ -36,10 +36,19 @@ describe('reports', () => {
 
   it('sponsors and money: paid adds up and balance never goes below zero; money stays numbers', () => {
     const rows = demoSponsors(db)
-    const paid = db.payments.filter((p) => db.orders.some((o) => o.id === p.order_id && o.event_id === cur)).reduce((t, p) => t + p.original_amount - p.refunded_amount, 0)
+    const paid = db.payments.filter((p) => db.orders.some((o) => o.id === p.order_id && o.event_id === cur)).reduce((t, p) => t + Math.max(p.original_amount - p.refunded_amount, 0), 0)
     expect(rows.reduce((t, r) => t + r.paid, 0)).toBeCloseTo(paid, 2)
-    expect(rows.every((r) => r.balance === Math.max(r.committed - r.paid, 0))).toBe(true)
+    expect(rows.every((r) => r.balance === (['cancelled', 'comp'].includes(r.status) ? 0 : Math.max(r.committed - r.paid, 0)))).toBe(true)
     expect(typeof sponsorsCsv(rows)[2][9]).toBe('number')
+  })
+
+  it('a refunded, cancelled purchase shows nothing paid and nothing owed', () => {
+    const pay = db.payments.find((p) => db.orders.some((o) => o.id === p.order_id && o.event_id === cur && o.status === 'paid'))!
+    const refunded: DB = { ...db, orders: db.orders.map((o) => o.id === pay.order_id ? { ...o, status: 'cancelled' } : o),
+      payments: db.payments.map((p) => p.order_id === pay.order_id ? { ...p, refunded_amount: p.original_amount + 11.3 } : p) }
+    const row = demoSponsors(refunded).find((r) => r.status === 'cancelled' && r.committed === db.orders.find((o) => o.id === pay.order_id)!.commitment_amount)!
+    expect(row.paid).toBe(0)
+    expect(row.balance).toBe(0)
   })
 
   it('food and access: one column per choice, so a spreadsheet counts each in one click', () => {

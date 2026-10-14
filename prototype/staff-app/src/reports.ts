@@ -37,7 +37,7 @@ export function ny(iso: string | null | undefined): string | null {
     .formatToParts(new Date(iso)).map((x) => [x.type, x.value]))
   return `${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute}`
 }
-const paidOf = (db: DB, orderId: string) => db.payments.filter((p) => p.order_id === orderId).reduce((t, p) => t + Number(p.original_amount) - Number(p.refunded_amount), 0)
+const paidOf = (db: DB, orderId: string) => db.payments.filter((p) => p.order_id === orderId).reduce((t, p) => t + Math.max(Number(p.original_amount) - Number(p.refunded_amount), 0), 0)
 const nameOf = (g: DB['guests'][number]) => displayName(g)
 const byText = (a: string | null | undefined, b: string | null | undefined) => (a ?? '').localeCompare(b ?? '')
 
@@ -81,7 +81,7 @@ export function demoSponsors(db: DB): SponsorRow[] {
     const seats = db.seats.filter((x) => x.order_id === o.id && x.status !== 'cancelled'), ins = db.check_ins.filter((c) => c.order_id === o.id && c.event_id === cur)
     return { sponsor: s?.organization_name ?? '', buyer_type: buyerType(o), contact: s?.primary_contact_name ?? '', contact_email: s?.primary_contact_email ?? '',
       relationship_manager: db.staff_users.find((u) => u.id === s?.relationship_owner_id)?.name ?? null, level: t?.name ?? '', kind: t?.tier_category ?? '', source: o.source, status: o.status,
-      committed: o.commitment_amount, paid, refunded: pays.reduce((x, p) => x + Number(p.refunded_amount), 0), balance: Math.max(o.commitment_amount - paid, 0),
+      committed: o.commitment_amount, paid, refunded: pays.reduce((x, p) => x + Number(p.refunded_amount), 0), balance: o.status === 'cancelled' || o.status === 'comp' ? 0 : Math.max(o.commitment_amount - paid, 0),
       paid_by: [...new Set(pays.map((p) => p.method))].sort().join(', ') || null, guests_included: seats.length, guests_named: seats.filter((x) => x.guest_id).length,
       guests_came: ins.filter((c) => c.guest_id).length, walk_ins: ins.filter((c) => !c.guest_id).length, logo: o.logo_status, program_ad: o.program_ad_status, created: ny(o.created_at) ?? '' }
   }).sort((a, b) => b.committed - a.committed || byText(a.sponsor, b.sponsor))
