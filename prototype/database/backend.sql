@@ -2268,6 +2268,136 @@ begin
 end $$;
 
 -- ---------------------------------------------------------------------
+-- 8b. REPORTS  (CSV downloads AAFE charts itself; no charts in the app; decided Oct 14)
+-- Each returns a JSON list of rows for the current gala; the staff app writes the CSV. Every download is logged.
+-- Times are New York time, 24-hour ("2027-05-20 19:04"), so they sort; money is plain numbers, so a spreadsheet can add them up.
+-- "Individual": a ticket bought by a person, not an organization (the buyer's name is the sponsor record's name).
+-- ---------------------------------------------------------------------
+
+create or replace function report_ny(t timestamptz) returns text
+language sql immutable set search_path = public as $$ select to_char(t at time zone 'America/New_York', 'YYYY-MM-DD HH24:MI') $$;   -- sorts as text; spreadsheets read it as a date and time
+
+-- What each order has paid so far (refunds taken off).
+create or replace function report_paid(p_order_id text) returns numeric
+language sql stable security definer set search_path = public as $$
+  select coalesce(sum(original_amount - refunded_amount), 0) from payments where order_id = p_order_id
+$$;
+
+-- Who came, the end-of-night report: one row per guest of this gala and one per walk-in. Includes guests' emails,
+-- so gala admins only.
+create or replace function staff_report_attendance() returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare me staff_users := require_staff(array['gala_admin']); v jsonb;
+begin
+  select coalesce(jsonb_agg(r order by r ->> 'last_name', r ->> 'first_name'), '[]') into v from (
+    select jsonb_build_object(
+      'name', coalesce(nullif(g.display_name, ''), btrim(g.first_name || ' ' || g.last_name)), 'first_name', g.first_name, 'last_name', g.last_name,
+      'email', g.email, 'title', g.title, 'organization', g.organization, 'category', g.guest_type,
+      'sponsor', sp.organization_name, 'buyer_type', case when t.tier_category = 'ticket' and sp.organization_name = sp.primary_contact_name then 'Individual' else 'Organization' end,
+      'level', t.name, 'committed', o.commitment_amount, 'paid', report_paid(o.id), 'table', et.number,
+      'came', ci.id is not null, 'checked_in_at', report_ny(ci.checked_in_at), 'method', ci.method, 'device', ci.device, 'checked_in_by', ci.checked_in_by) r
+    from guests g join orders o on o.id = g.order_id join sponsors sp on sp.id = o.sponsor_id join sponsorship_tiers t on t.id = o.tier_id
+    left join event_tables et on et.id = g.table_id
+    left join check_ins ci on ci.guest_id = g.id and ci.event_id = o.event_id
+    where o.event_id = current_event_id() and o.status <> 'cancelled'
+    union all
+    select jsonb_build_object(
+      'name', ci.arrival_name, 'first_name', null, 'last_name', ci.arrival_name, 'email', null, 'title', null, 'organization', null,
+      'category', 'walk_in', 'sponsor', sp.organization_name, 'buyer_type', null, 'level', t.name, 'committed', null, 'paid', null, 'table', null,
+      'came', true, 'checked_in_at', report_ny(ci.checked_in_at), 'method', ci.method, 'device', ci.device, 'checked_in_by', ci.checked_in_by,
+      'walk_in_reason', ci.type)
+    from check_ins ci left join orders o on o.id = ci.order_id left join sponsors sp on sp.id = o.sponsor_id left join sponsorship_tiers t on t.id = o.tier_id
+    where ci.event_id = current_event_id() and ci.guest_id is null) x;
+  perform write_audit('staff', me.name, 'export', 'report_attendance', null, 'report.attendance', null, null, false,
+    format('Who-came report downloaded: %s row(s).', jsonb_array_length(v)));
+  return v;
+end $$;
+
+-- Sponsors and money: one row per sponsorship or ticket purchase on this gala, cancelled ones included (marked).
+create or replace function staff_report_sponsors() returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare me staff_users := require_staff(array['gala_admin','relationship_manager']); v jsonb;
+begin
+  select coalesce(jsonb_agg(r order by (r ->> 'committed')::numeric desc nulls last, r ->> 'sponsor'), '[]') into v from (
+    select jsonb_build_object(
+      'sponsor', sp.organization_name, 'buyer_type', case when t.tier_category = 'ticket' and sp.organization_name = sp.primary_contact_name then 'Individual' else 'Organization' end,
+      'contact', sp.primary_contact_name, 'contact_email', sp.primary_contact_email, 'relationship_manager', rm.name,
+      'level', t.name, 'kind', t.tier_category, 'source', o.source, 'status', o.status,
+      'committed', o.commitment_amount, 'paid', report_paid(o.id),
+      'refunded', (select coalesce(sum(refunded_amount), 0) from payments where order_id = o.id),
+      'balance', greatest(o.commitment_amount - report_paid(o.id), 0),
+      'paid_by', (select string_agg(distinct method, ', ') from payments where order_id = o.id),
+      'guests_included', (select count(*) from seats where order_id = o.id and status <> 'cancelled'),
+      'guests_named', (select count(*) from seats where order_id = o.id and status <> 'cancelled' and guest_id is not null),
+      'guests_came', (select count(*) from check_ins where order_id = o.id and guest_id is not null),
+      'walk_ins', (select count(*) from check_ins where order_id = o.id and guest_id is null),
+      'logo', o.logo_status, 'program_ad', o.program_ad_status, 'created', report_ny(o.created_at)) r
+    from orders o join sponsors sp on sp.id = o.sponsor_id join sponsorship_tiers t on t.id = o.tier_id
+    left join staff_users rm on rm.id = sp.relationship_owner_id
+    where o.event_id = current_event_id() and t.tier_category <> 'complimentary') x;
+  perform write_audit('staff', me.name, 'export', 'report_sponsors', null, 'report.sponsors', null, null, false,
+    format('Sponsors-and-money report downloaded: %s row(s).', jsonb_array_length(v)));
+  return v;
+end $$;
+
+-- Food and accessibility: one row per guest of this gala, the answers as written (the staff app splits them into
+-- one column per choice). Staff-only details: kept from year to year, never sent to Salesforce or AI (Oct 14).
+create or replace function staff_report_needs() returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare me staff_users := require_staff(array['gala_admin','relationship_manager']); v jsonb;
+begin
+  select coalesce(jsonb_agg(jsonb_build_object(
+      'name', coalesce(nullif(g.display_name, ''), btrim(g.first_name || ' ' || g.last_name)), 'last_name', g.last_name, 'organization', g.organization,
+      'sponsor', sp.organization_name, 'category', g.guest_type, 'table', et.number,
+      'dietary_needs', g.dietary_needs, 'accessibility_needs', g.accessibility_needs)
+      order by sp.organization_name, g.last_name, g.first_name), '[]') into v
+    from guests g join orders o on o.id = g.order_id join sponsors sp on sp.id = o.sponsor_id left join event_tables et on et.id = g.table_id
+   where o.event_id = current_event_id() and o.status <> 'cancelled';
+  perform write_audit('staff', me.name, 'export', 'report_needs', null, 'report.needs', null, null, false,
+    format('Food-and-access report downloaded: %s guest(s).', jsonb_array_length(v)));
+  return v;
+end $$;
+
+-- Payments: one row per payment on this gala's orders.
+create or replace function staff_report_payments() returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare me staff_users := require_staff(array['gala_admin','relationship_manager']); v jsonb;
+begin
+  select coalesce(jsonb_agg(jsonb_build_object(
+      'received', report_ny(p.received_at), 'sponsor', sp.organization_name, 'level', t.name, 'method', p.method, 'check_number', p.check_number,
+      'amount', p.original_amount, 'fee_covered_by_donor', p.covered_fee_amount, 'gross', p.gross_amount, 'processor_fee', p.transaction_fee_amount,
+      'refunded', p.refunded_amount, 'net', p.net_amount, 'givelively_transaction', p.givelively_transaction_id,
+      'recorded_by', coalesce(rb.name, p.recorded_by), 'reconciliation', p.reconciliation_status)
+      order by p.received_at), '[]') into v
+    from payments p join orders o on o.id = p.order_id join sponsors sp on sp.id = o.sponsor_id join sponsorship_tiers t on t.id = o.tier_id
+    left join staff_users rb on rb.id = p.recorded_by
+   where o.event_id = current_event_id();
+  perform write_audit('staff', me.name, 'export', 'report_payments', null, 'report.payments', null, null, false,
+    format('Payments report downloaded: %s payment(s).', jsonb_array_length(v)));
+  return v;
+end $$;
+
+-- Full guest list: everyone on this gala's list with every detail staff may see.
+create or replace function staff_report_guests() returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare me staff_users := require_staff(array['gala_admin','relationship_manager']); v jsonb;
+begin
+  select coalesce(jsonb_agg(jsonb_build_object(
+      'name', coalesce(nullif(g.display_name, ''), btrim(g.first_name || ' ' || g.last_name)), 'first_name', g.first_name, 'last_name', g.last_name,
+      'title', g.title, 'organization', g.organization, 'email', g.email, 'category', g.guest_type,
+      'sponsor', sp.organization_name, 'level', t.name, 'table', et.number, 'name_status', s.status, 'badge', g.badge_status,
+      'dietary_needs', g.dietary_needs, 'accessibility_needs', g.accessibility_needs, 'relationship_note', g.relationship_note,
+      'came', g.attendance_status = 'checked_in', 'source', g.last_updated_by, 'added', report_ny(g.created_at), 'updated', report_ny(g.updated_at))
+      order by g.last_name, g.first_name), '[]') into v
+    from guests g join orders o on o.id = g.order_id join sponsors sp on sp.id = o.sponsor_id join sponsorship_tiers t on t.id = o.tier_id
+    left join event_tables et on et.id = g.table_id left join seats s on s.guest_id = g.id and s.status <> 'cancelled'
+   where o.event_id = current_event_id() and o.status <> 'cancelled';
+  perform write_audit('staff', me.name, 'export', 'report_guests', null, 'report.guests', null, null, false,
+    format('Full guest list downloaded: %s guest(s).', jsonb_array_length(v)));
+  return v;
+end $$;
+
+-- ---------------------------------------------------------------------
 -- 9. Who may call what
 -- ---------------------------------------------------------------------
 
@@ -2290,7 +2420,8 @@ begin
               'pipeline_stage_label','pipeline_apply_order','orders_pipeline','staff_pipeline','staff_save_prospect',
               'staff_set_prospect_stage','staff_set_sponsorship_goal','staff_set_sponsor_arrivals',
               'staff_update_gala_event','staff_set_material_status','staff_set_order_deadline','salesforce_outbox','salesforce_mark_synced',
-              'comp_level','staff_save_level','staff_copy_levels','staff_retire_level','staff_start_gala')
+              'comp_level','staff_save_level','staff_copy_levels','staff_retire_level','staff_start_gala',
+              'report_ny','report_paid','staff_report_attendance','staff_report_sponsors','staff_report_needs','staff_report_payments','staff_report_guests')
   loop
     execute format('revoke all on function %s from public, anon, authenticated', f);
   end loop;
@@ -2314,6 +2445,7 @@ grant execute on function
   staff_pipeline(), staff_save_prospect(jsonb), staff_set_prospect_stage(text, text), staff_set_sponsorship_goal(numeric),
   staff_set_sponsor_arrivals(boolean, text), staff_update_gala_event(jsonb), staff_set_material_status(text, text, text), staff_set_order_deadline(text, date),
   staff_save_level(jsonb), staff_copy_levels(text, text), staff_retire_level(text, boolean), staff_start_gala(jsonb),
+  staff_report_attendance(), staff_report_sponsors(), staff_report_needs(), staff_report_payments(), staff_report_guests(),
   staff_import_givelively(jsonb, jsonb), staff_set_tier_mapping(text, text), staff_set_gala_page(text),
   staff_resolve_import_review(text, text),
   staff_export_badges(boolean), staff_export_checkin(), staff_export_salesforce(),

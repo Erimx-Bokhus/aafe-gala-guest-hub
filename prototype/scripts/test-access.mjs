@@ -105,6 +105,7 @@ const STAFF_FUNCTIONS = {
   staff_import_givelively: ['gala_admin'], staff_set_tier_mapping: ['gala_admin'], staff_set_gala_page: ['gala_admin'],
   staff_export_salesforce: ['gala_admin'], staff_set_order_deadline: ['gala_admin'],
   staff_save_level: ['gala_admin'], staff_copy_levels: ['gala_admin'], staff_retire_level: ['gala_admin'], staff_start_gala: ['gala_admin'],
+  staff_report_attendance: ['gala_admin'], staff_report_sponsors: MANAGERS, staff_report_needs: MANAGERS, staff_report_payments: MANAGERS, staff_report_guests: MANAGERS,
 }
 // Return who you are (or nothing), so they need no role check.
 const SELF = ['staff_me', 'staff_role']

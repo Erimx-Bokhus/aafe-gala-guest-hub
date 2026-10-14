@@ -60,6 +60,11 @@ const ACTIONS = [
   ['staff_export_badges', RM, `select * from staff_export_badges(true)`, 'export.badges'],
   ['staff_export_checkin', VOL, `select * from staff_export_checkin()`, 'export.checkin'],
   ['staff_export_salesforce', ADMIN, `select * from staff_export_salesforce()`, 'export.salesforce'],
+  ['staff_report_attendance', ADMIN, `select staff_report_attendance()`, 'report.attendance'],
+  ['staff_report_sponsors', RM, `select staff_report_sponsors()`, 'report.sponsors'],
+  ['staff_report_needs', RM, `select staff_report_needs()`, 'report.needs'],
+  ['staff_report_payments', RM, `select staff_report_payments()`, 'report.payments'],
+  ['staff_report_guests', RM, `select staff_report_guests()`, 'report.guests'],
 ]
 // Only read, so nothing to log.
 const READS = ['staff_me', 'staff_role', 'staff_email_queue', 'checkin_list', 'staff_checkin_snapshot', 'staff_pipeline']
