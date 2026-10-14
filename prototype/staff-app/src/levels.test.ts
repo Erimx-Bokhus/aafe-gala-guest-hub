@@ -54,3 +54,24 @@ describe('sponsorship levels in the staff app', () => {
     await expect(api.copyLevels(cur, 'ev-2028')).rejects.toThrow('already has levels')
   })
 })
+
+describe("start next year's gala", () => {
+  it("a gala admin starts it in planning, with this year's levels; it doesn't take over", async () => {
+    const { api, db } = demo(ADMIN)
+    const cur = db().meta.current_event_id
+    await api.startGala({ year: 2028, name: 'AAFE 54th Annual Gala (demo)', event_date: '2028-05-25', doors_time: '6:00 PM', program_time: '', venue_name: 'Example Hall', venue_address: '', dress_code: '', guest_list_deadline: '2028-05-05', program_ad_deadline: '', copy_levels_from: cur })
+    const g = db().gala_events.find((e) => e.id === 'ev-2028')!
+    expect(g.status).toBe('planning')
+    expect(db().meta.current_event_id).toBe(cur)
+    expect(levelsOf(db(), 'ev-2028').length).toBe(levelsOf(db(), cur).filter((t) => t.tier_category !== 'complimentary').length)
+    expect(db().audit_log.some((a) => a.action === 'gala.started' && a.entity_id === 'ev-2028')).toBe(true)
+  })
+
+  it('one gala per year; the date must be in that year; relationship managers cannot', async () => {
+    const { api } = demo(ADMIN)
+    const g = { year: 2027, name: 'Again', event_date: '2027-05-27', doors_time: '', program_time: '', venue_name: '', venue_address: '', dress_code: '', guest_list_deadline: '', program_ad_deadline: '', copy_levels_from: null }
+    await expect(api.startGala(g)).rejects.toThrow('already a 2027 gala')
+    await expect(api.startGala({ ...g, year: 2030 })).rejects.toThrow("isn't in 2030")
+    await expect(demo(RM).api.startGala({ ...g, year: 2031, event_date: '2031-05-22' })).rejects.toThrow('forbidden')
+  })
+})

@@ -2084,6 +2084,39 @@ begin
     format('Sponsorship level "%s" %s.', t.name, case when p_retired then 'no longer offered' else 'offered again' end));
 end $$;
 
+-- Start next year's gala (gala admins). p: { year, name, event_date, doors_time?, program_time?, venue_name?,
+-- venue_address?, dress_code?, guest_list_deadline?, program_ad_deadline?, copy_levels_from? }. The new gala is in
+-- planning: it doesn't take check-in, imports or exports away from this year's gala (current_event_id), and its levels
+-- can be set up at once. Demo or real follows the galas already in the project (demo and real never mix).
+-- With copy_levels_from (normally this year's gala), it starts with that gala's levels still offered.
+create or replace function staff_start_gala(p jsonb) returns text
+language plpgsql security definer set search_path = public as $$
+declare
+  me staff_users := require_staff(array['gala_admin']);
+  v_year int := nullif(p ->> 'year', '')::int; v_name text := btrim(coalesce(p ->> 'name', ''));
+  v_date date := nullif(p ->> 'event_date', '')::date; v_dl date := nullif(p ->> 'guest_list_deadline', '')::date;
+  v_ad date := nullif(p ->> 'program_ad_deadline', '')::date; v_id text; v_demo boolean; v_copied int := 0;
+begin
+  if v_year is null or v_year < 2000 or v_year > 2200 then raise exception 'invalid_input: the gala needs a year'; end if;
+  if v_name = '' or v_date is null then raise exception 'invalid_input: the gala needs a name and a date'; end if;
+  if extract(year from v_date) <> v_year then raise exception 'invalid_input: the date isn''t in %', v_year; end if;
+  if v_dl is not null and v_dl > v_date then raise exception 'invalid_input: the guest-list deadline is after the gala'; end if;
+  if exists (select 1 from gala_events where year = v_year) then raise exception 'invalid_input: there is already a % gala', v_year; end if;
+  v_id := 'ev-' || v_year;
+  v_demo := coalesce((select bool_or(is_synthetic) from gala_events), false);
+  insert into gala_events (id, year, name, event_date, doors_time, program_time, venue_name, venue_address, dress_code,
+                           guest_list_deadline, program_ad_deadline, status, is_synthetic)
+  values (v_id, v_year, v_name, v_date, nullif(btrim(p ->> 'doors_time'), ''), nullif(btrim(p ->> 'program_time'), ''),
+          nullif(btrim(p ->> 'venue_name'), ''), nullif(btrim(p ->> 'venue_address'), ''), nullif(btrim(p ->> 'dress_code'), ''),
+          v_dl, v_ad, 'planning', v_demo);
+  perform write_audit('staff', me.name, 'gala_event', v_id, null, 'gala.started', null, 'planning', false,
+    format('%s started for %s (in planning).', v_name, to_char(v_date, 'FMMonth FMDD, YYYY')));
+  if nullif(p ->> 'copy_levels_from', '') is not null then
+    v_copied := staff_copy_levels(p ->> 'copy_levels_from', v_id);
+  end if;
+  return v_id;
+end $$;
+
 -- ---------------------------------------------------------------------
 -- 8. EXPORTS  (rows for the staff app to save as CSV; every export is logged)
 -- Columns are a first proposal until AAFE sends its badge and check-in templates.
@@ -2257,7 +2290,7 @@ begin
               'pipeline_stage_label','pipeline_apply_order','orders_pipeline','staff_pipeline','staff_save_prospect',
               'staff_set_prospect_stage','staff_set_sponsorship_goal','staff_set_sponsor_arrivals',
               'staff_update_gala_event','staff_set_material_status','staff_set_order_deadline','salesforce_outbox','salesforce_mark_synced',
-              'comp_level','staff_save_level','staff_copy_levels','staff_retire_level')
+              'comp_level','staff_save_level','staff_copy_levels','staff_retire_level','staff_start_gala')
   loop
     execute format('revoke all on function %s from public, anon, authenticated', f);
   end loop;
@@ -2280,7 +2313,7 @@ grant execute on function
   staff_checkin_snapshot(), staff_sync_check_ins(jsonb), staff_undo_check_in(text),
   staff_pipeline(), staff_save_prospect(jsonb), staff_set_prospect_stage(text, text), staff_set_sponsorship_goal(numeric),
   staff_set_sponsor_arrivals(boolean, text), staff_update_gala_event(jsonb), staff_set_material_status(text, text, text), staff_set_order_deadline(text, date),
-  staff_save_level(jsonb), staff_copy_levels(text, text), staff_retire_level(text, boolean),
+  staff_save_level(jsonb), staff_copy_levels(text, text), staff_retire_level(text, boolean), staff_start_gala(jsonb),
   staff_import_givelively(jsonb, jsonb), staff_set_tier_mapping(text, text), staff_set_gala_page(text),
   staff_resolve_import_review(text, text),
   staff_export_badges(boolean), staff_export_checkin(), staff_export_salesforce(),
