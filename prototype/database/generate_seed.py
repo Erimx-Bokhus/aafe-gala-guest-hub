@@ -321,6 +321,20 @@ for s in sponsors:
 for p in payments:
     sf.append(dict(entity='payment', entity_id=p['id'], sf_object='Opportunity', sf_id=p['salesforce_opportunity_id'], status='synced' if p['salesforce_opportunity_id'] else 'pending', last_synced_at='2026-09-30T13:30:00Z' if p['salesforce_opportunity_id'] else None, error_message=None))
 
+# ---------------- sponsorship levels, one list per gala (decided Oct 14) ----------------
+# Levels change every year, so each belongs to one gala. This gala's keep their ids; each past gala gets its own
+# copies ("gold-2026") with the values its orders were bought at, so editing this year's levels never rewrites history.
+YEAR = {e['id']: e['year'] for e in events}
+for i, t in enumerate(tiers):
+    t.update(event_id=CUR, sort_order=i + 1, retired=False)
+past_tiers = {}
+for o in history_orders:
+    nid = f"{o['tier_id']}-{YEAR[o['event_id']]}"
+    if nid not in past_tiers:
+        past_tiers[nid] = dict(TIER[o['tier_id']], id=nid, event_id=o['event_id'])
+    o['tier_id'] = nid
+tiers = tiers + sorted(past_tiers.values(), key=lambda t: (t['event_id'], t['sort_order']))
+
 data = dict(meta=dict(generated_for='AAFE Gala Guest Operations capstone (ERIMX BOKHUS)', synthetic=True, current_event_id=CUR,
                       fee_rates=dict(card='2.2% + $0.30', amex='3.5%', givelively_ach='0.8% capped at $5', offline='$0 processor fee'),
                       fee_source='https://www.givelively.org/fees-and-disbursement'),

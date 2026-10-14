@@ -159,6 +159,27 @@ do $$ begin
   end if;
 end $$;
 
+-- Sponsorship levels, one list per gala (decided Oct 14): levels change every year, so each belongs to one gala.
+-- A database loaded before this change has levels with no gala: they become the current gala's, and each past
+-- gala gets its own copies ("gold-2026") for the orders it holds, so editing this year's levels never rewrites history.
+alter table sponsorship_tiers add column if not exists event_id   text references gala_events(id);
+alter table sponsorship_tiers add column if not exists sort_order int not null default 0;
+alter table sponsorship_tiers add column if not exists retired    boolean not null default false;
+do $$
+declare cur text := (select id from gala_events where status <> 'closed' order by year desc limit 1); r record;
+begin
+  if not exists (select 1 from sponsorship_tiers where event_id is null) then return; end if;
+  for r in select distinct o.event_id, o.tier_id, e.year from orders o join gala_events e on e.id = o.event_id
+            join sponsorship_tiers t on t.id = o.tier_id where t.event_id is null and o.event_id is distinct from cur loop
+    insert into sponsorship_tiers (id, event_id, sort_order, retired, name, contribution_amount, included_seat_count, tier_category, required_materials, guaranteed_seating)
+    select r.tier_id || '-' || r.year, r.event_id, sort_order, false, name, contribution_amount, included_seat_count, tier_category, required_materials, guaranteed_seating
+      from sponsorship_tiers where id = r.tier_id
+    on conflict (id) do nothing;
+    update orders set tier_id = r.tier_id || '-' || r.year where event_id = r.event_id and tier_id = r.tier_id;
+  end loop;
+  update sponsorship_tiers set event_id = cur where event_id is null;
+end $$;
+
 -- One row per upload (or sync run that records one).
 create table if not exists import_runs (
   id                text primary key,
@@ -749,9 +770,9 @@ begin
   if coalesce(trim(p_org), '') = '' or coalesce(trim(p_contact), '') = '' or coalesce(trim(p_email), '') = '' then
     raise exception 'invalid_input: organization, contact and email are required';
   end if;
-  select * into t from sponsorship_tiers where id = p_tier_id;
+  select * into t from sponsorship_tiers where id = p_tier_id and event_id = current_event_id() and not retired;
   select * into e from gala_events where id = current_event_id();
-  if t.id is null or e.id is null then raise exception 'not_found'; end if;
+  if t.id is null or e.id is null then raise exception 'not_found: no such level on this gala'; end if;
 
   insert into sponsors (id, organization_name, primary_contact_name, primary_contact_email, phone, relationship_owner_id)
   values (v_sp, trim(p_org), trim(p_contact), trim(p_email), '', me.id);
@@ -782,13 +803,15 @@ begin
     from name_parts(p_guest ->> 'display_name', p_guest ->> 'first_name', p_guest ->> 'last_name') n;
   if v_display = '' then raise exception 'invalid_input: a name is required'; end if;
   select id into v_order from orders
-   where event_id = current_event_id() and tier_id = 'comp_relationship' and status <> 'cancelled' order by created_at limit 1;
+   where event_id = current_event_id() and status <> 'cancelled'
+     and tier_id in (select id from sponsorship_tiers where event_id = current_event_id() and tier_category = 'complimentary')
+   order by created_at limit 1;
   if v_order is null then
     v_sp := new_id('sp'); v_order := new_id('ord');
     insert into sponsors (id, organization_name, primary_contact_name, primary_contact_email, phone, relationship_owner_id)
     values (v_sp, 'AAFE — Relationship guests', me.name, me.email, '', me.id);
     insert into orders (id, event_id, sponsor_id, tier_id, source, commitment_amount, status, internal_notes)
-    values (v_order, current_event_id(), v_sp, 'comp_relationship', 'comp', 0, 'comp', 'Complimentary relationship guests.');
+    values (v_order, current_event_id(), v_sp, comp_level(), 'comp', 0, 'comp', 'Complimentary relationship guests.');
   end if;
   select coalesce(max(slot_number), 0) + 1 into v_slot from seats where order_id = v_order;
 
@@ -1237,7 +1260,7 @@ begin
     -- " — ") found in the Give Lively name. No match: staff review, nothing created until mapped.
     t := null;
     if coalesce(r ->> 'tier_id', '') <> '' then
-      select * into t from sponsorship_tiers where id = r ->> 'tier_id';
+      select * into t from sponsorship_tiers where id = r ->> 'tier_id' and event_id = e.id;
     end if;
     if t.id is null then
       select st.* into t from tier_mappings m join sponsorship_tiers st on st.id = m.tier_id
@@ -1245,7 +1268,7 @@ begin
     end if;
     if t.id is null then
       select * into t from sponsorship_tiers
-       where tier_category <> 'complimentary' and coalesce(r ->> 'ticket_level', '') <> ''
+       where event_id = e.id and not retired and tier_category <> 'complimentary' and coalesce(r ->> 'ticket_level', '') <> ''
          and position(name_key(split_part(name, ' — ', 1)) in name_key(r ->> 'ticket_level')) > 0
        order by length(split_part(name, ' — ', 1)) desc limit 1;
     end if;
@@ -1391,7 +1414,7 @@ language plpgsql security definer set search_path = public as $$
 declare me staff_users := require_staff(array['gala_admin']); v_old text;
 begin
   if name_key(p_givelively_name) = '' then raise exception 'invalid_input: tier name is required'; end if;
-  if not exists (select 1 from sponsorship_tiers where id = p_tier_id) then raise exception 'not_found: tier'; end if;
+  if not exists (select 1 from sponsorship_tiers where id = p_tier_id and event_id = current_event_id()) then raise exception 'not_found: tier'; end if;
   select tier_id into v_old from tier_mappings where event_id = current_event_id() and name_key = name_key(p_givelively_name);
   insert into tier_mappings (id, event_id, givelively_name, name_key, tier_id, created_by)
   values (new_id('tm'), current_event_id(), btrim(p_givelively_name), name_key(p_givelively_name), p_tier_id, me.name)
@@ -1723,7 +1746,7 @@ begin
     raise exception 'invalid_input: sector must be board, community, corporate, foundation, individual or small_business';
   end if;
   if nullif(p ->> 'ask_amount', '') is not null and (p ->> 'ask_amount')::numeric < 0 then raise exception 'invalid_input: the ask cannot be negative'; end if;
-  if nullif(p ->> 'ask_tier_id', '') is not null and not exists (select 1 from sponsorship_tiers where id = p ->> 'ask_tier_id') then
+  if nullif(p ->> 'ask_tier_id', '') is not null and not exists (select 1 from sponsorship_tiers where id = p ->> 'ask_tier_id' and event_id = current_event_id()) then
     raise exception 'not_found: tier';
   end if;
   if nullif(p ->> 'follow_up_owner_id', '') is not null and not exists (select 1 from staff_users where id = p ->> 'follow_up_owner_id') then
@@ -1956,6 +1979,112 @@ begin
 end $$;
 
 -- ---------------------------------------------------------------------
+-- 7d. SPONSORSHIP LEVELS  (one list per gala, decided Oct 14; gala admins)
+-- ---------------------------------------------------------------------
+
+-- This gala's complimentary level, for comp guests. A new gala without one gets it on the first comp.
+create or replace function comp_level() returns text
+language plpgsql security definer set search_path = public as $$
+declare e gala_events; v text;
+begin
+  select * into e from gala_events where id = current_event_id();
+  select id into v from sponsorship_tiers where event_id = e.id and tier_category = 'complimentary' order by sort_order limit 1;
+  if v is null then
+    v := 'comp-' || e.year;
+    insert into sponsorship_tiers (id, event_id, sort_order, name, contribution_amount, included_seat_count, tier_category, required_materials)
+    values (v, e.id, 999, 'Complimentary — Relationship Guests', 0, 0, 'complimentary', '{}');
+  end if;
+  return v;
+end $$;
+
+-- Add or edit a level of a gala that isn't closed. p: { event_id? (default: the current gala), id? (edit), name, contribution_amount, included_seat_count, tier_category,
+-- guaranteed_seating, required_materials[] }. A level already bought keeps its orders' amounts and guests; a new
+-- guest count applies to pledges and purchases made after the change. Logged with old and new values.
+create or replace function staff_save_level(p jsonb) returns text
+language plpgsql security definer set search_path = public as $$
+declare
+  me staff_users := require_staff(array['gala_admin']);
+  e gala_events; old sponsorship_tiers; v_id text; v_name text := btrim(coalesce(p ->> 'name', ''));
+  v_amount numeric := nullif(p ->> 'contribution_amount', '')::numeric; v_guests int := nullif(p ->> 'included_seat_count', '')::int;
+  v_cat text := coalesce(nullif(p ->> 'tier_category', ''), 'sponsorship'); v_seated boolean := coalesce((p ->> 'guaranteed_seating')::boolean, false);
+  v_mats text[] := coalesce(array(select jsonb_array_elements_text(p -> 'required_materials')), '{}');
+  new_row sponsorship_tiers; v_changes jsonb;
+begin
+  -- Any gala not closed: next year's levels can be set up while this year's gala is still running.
+  select * into e from gala_events where id = coalesce(nullif(p ->> 'event_id', ''), current_event_id()) and status <> 'closed';
+  if e.id is null then raise exception 'not_found: no open gala with that id'; end if;
+  if v_name = '' then raise exception 'invalid_input: the level needs a name'; end if;
+  if v_amount is null or v_amount < 0 then raise exception 'invalid_input: the amount must be 0 or more'; end if;
+  if v_guests is null or v_guests < 0 or v_guests > 500 then raise exception 'invalid_input: guests included must be between 0 and 500'; end if;
+  if v_cat not in ('sponsorship','ticket','advertising_only','complimentary') then raise exception 'invalid_input: unknown kind of level'; end if;
+  if exists (select 1 from sponsorship_tiers where event_id = e.id and lower(btrim(name)) = lower(v_name) and id is distinct from nullif(p ->> 'id', '')) then
+    raise exception 'invalid_input: this gala already has a level called %', v_name;
+  end if;
+
+  if nullif(p ->> 'id', '') is null then
+    v_id := 'lv-' || e.year || '-' || left(replace(gen_random_uuid()::text, '-', ''), 8);
+    insert into sponsorship_tiers (id, event_id, sort_order, name, contribution_amount, included_seat_count, tier_category, guaranteed_seating, required_materials)
+    values (v_id, e.id, coalesce((select max(sort_order) from sponsorship_tiers where event_id = e.id), 0) + 1,
+            v_name, v_amount, v_guests, v_cat, v_seated, v_mats)
+    returning * into new_row;
+    perform write_audit('staff', me.name, 'sponsorship_level', v_id, null, 'level.created', null, null, false,
+      format('Sponsorship level "%s" added for %s: %s, %s guest(s).', v_name, e.name, money_fmt(v_amount), v_guests));
+  else
+    select * into old from sponsorship_tiers where id = p ->> 'id' and event_id = e.id for update;
+    if old.id is null then raise exception 'not_found: no such level on that gala'; end if;
+    update sponsorship_tiers set name = v_name, contribution_amount = v_amount, included_seat_count = v_guests, tier_category = v_cat,
+           guaranteed_seating = v_seated, required_materials = v_mats
+     where id = old.id returning * into new_row;
+    v_changes := audit_changes(to_jsonb(old), to_jsonb(new_row),
+      array['name','contribution_amount','included_seat_count','tier_category','guaranteed_seating','required_materials']);
+    if v_changes is null then return old.id; end if;
+    v_id := old.id;
+    perform write_audit('staff', me.name, 'sponsorship_level', v_id, null, 'level.updated', null, null, false,
+      format('Sponsorship level "%s" edited (%s).', v_name, (select string_agg(k, ', ') from jsonb_object_keys(v_changes) k)), v_changes);
+  end if;
+  return v_id;
+end $$;
+
+-- Start a gala's levels (default: the current gala; any gala not closed) from another gala's, normally last year's.
+-- Only while that gala has no levels of its own besides comps, so nothing is doubled. Retired levels aren't copied. Returns how many were copied.
+drop function if exists staff_copy_levels(text);
+create or replace function staff_copy_levels(p_from_event text, p_to_event text default null) returns int
+language plpgsql security definer set search_path = public as $$
+declare me staff_users := require_staff(array['gala_admin']); e gala_events; src gala_events; v_n int;
+begin
+  select * into e from gala_events where id = coalesce(p_to_event, current_event_id()) and status <> 'closed';
+  select * into src from gala_events where id = p_from_event;
+  if e.id is null or src.id is null or src.id = e.id then raise exception 'not_found: choose an earlier gala to copy from'; end if;
+  if exists (select 1 from sponsorship_tiers where event_id = e.id and tier_category <> 'complimentary') then
+    raise exception 'invalid_input: % already has levels; edit them instead', e.name;
+  end if;
+  with ins as (
+    insert into sponsorship_tiers (id, event_id, sort_order, name, contribution_amount, included_seat_count, tier_category, guaranteed_seating, required_materials)
+    select 'lv-' || e.year || '-' || left(replace(gen_random_uuid()::text, '-', ''), 8), e.id, sort_order, name, contribution_amount,
+           included_seat_count, tier_category, guaranteed_seating, required_materials
+      from sponsorship_tiers where event_id = src.id and not retired and tier_category <> 'complimentary'
+    returning 1)
+  select count(*) into v_n from ins;
+  perform write_audit('staff', me.name, 'sponsorship_level', e.id, null, 'level.copied', null, null, false,
+    format('%s level(s) copied from %s to %s.', v_n, src.name, e.name));
+  return v_n;
+end $$;
+
+-- Stop offering a level (or offer it again). Orders already on it keep it; it just leaves the pickers.
+create or replace function staff_retire_level(p_id text, p_retired boolean) returns void
+language plpgsql security definer set search_path = public as $$
+declare me staff_users := require_staff(array['gala_admin']); t sponsorship_tiers;
+begin
+  select * into t from sponsorship_tiers where id = p_id and event_id in (select id from gala_events where status <> 'closed') for update;
+  if t.id is null then raise exception 'not_found: no such level on an open gala'; end if;
+  if p_retired is null or t.retired = p_retired then return; end if;
+  update sponsorship_tiers set retired = p_retired where id = t.id;
+  perform write_audit('staff', me.name, 'sponsorship_level', t.id, null, case when p_retired then 'level.retired' else 'level.restored' end,
+    t.retired::text, p_retired::text, false,
+    format('Sponsorship level "%s" %s.', t.name, case when p_retired then 'no longer offered' else 'offered again' end));
+end $$;
+
+-- ---------------------------------------------------------------------
 -- 8. EXPORTS  (rows for the staff app to save as CSV; every export is logged)
 -- Columns are a first proposal until AAFE sends its badge and check-in templates.
 -- ---------------------------------------------------------------------
@@ -2127,7 +2256,8 @@ begin
               'staff_queue_guest_list_reminders','staff_email_queue','staff_checkin_snapshot','staff_sync_check_ins','staff_undo_check_in',
               'pipeline_stage_label','pipeline_apply_order','orders_pipeline','staff_pipeline','staff_save_prospect',
               'staff_set_prospect_stage','staff_set_sponsorship_goal','staff_set_sponsor_arrivals',
-              'staff_update_gala_event','staff_set_material_status','staff_set_order_deadline','salesforce_outbox','salesforce_mark_synced')
+              'staff_update_gala_event','staff_set_material_status','staff_set_order_deadline','salesforce_outbox','salesforce_mark_synced',
+              'comp_level','staff_save_level','staff_copy_levels','staff_retire_level')
   loop
     execute format('revoke all on function %s from public, anon, authenticated', f);
   end loop;
@@ -2150,6 +2280,7 @@ grant execute on function
   staff_checkin_snapshot(), staff_sync_check_ins(jsonb), staff_undo_check_in(text),
   staff_pipeline(), staff_save_prospect(jsonb), staff_set_prospect_stage(text, text), staff_set_sponsorship_goal(numeric),
   staff_set_sponsor_arrivals(boolean, text), staff_update_gala_event(jsonb), staff_set_material_status(text, text, text), staff_set_order_deadline(text, date),
+  staff_save_level(jsonb), staff_copy_levels(text, text), staff_retire_level(text, boolean),
   staff_import_givelively(jsonb, jsonb), staff_set_tier_mapping(text, text), staff_set_gala_page(text),
   staff_resolve_import_review(text, text),
   staff_export_badges(boolean), staff_export_checkin(), staff_export_salesforce(),
