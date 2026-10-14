@@ -1,7 +1,7 @@
 // AAFE STAFF APP (the "client app": AAFE's gala team)
 // Reads everything the guest portal writes (same database), plus Give Lively + Salesforce data.
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { Activity, Armchair, BadgeCheck, CalendarDays, ClipboardList, CreditCard, FileUp, Heart, LayoutDashboard, LogOut, Menu, Plug, ScanLine, Table2, TrendingUp, X } from 'lucide-react'
+import { Activity, Armchair, BadgeCheck, CalendarDays, ClipboardList, CreditCard, FileUp, Heart, LayoutDashboard, LogOut, Menu, Plug, ScanLine, Table2, TrendingUp, X, Layers } from 'lucide-react'
 import { loadDB } from '@shared/data'
 import { AafeLogo } from '@shared/Logo'
 import { DisplayControls, go, Link, PrototypeBanner, Toast, useDisplayPrefs, useRoute } from '@shared/ui'
@@ -13,6 +13,7 @@ import Login from './pages/Login'
 import { currentStaff, signInFromLink, signOut, supabase } from '@shared/supabase'
 import Dashboard from './pages/Dashboard'
 import GalaInfo from './pages/GalaInfo'
+import Levels from './pages/Levels'
 import Sponsors, { SponsorDetail } from './pages/Sponsors'
 import GuestList from './pages/GuestList'
 import Payments from './pages/Payments'
@@ -28,6 +29,7 @@ import AuditLog from './pages/AuditLog'
 const NAV: { to: string; label: string; icon: typeof LayoutDashboard; roles: Role[] }[] = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['gala_admin', 'relationship_manager'] },
   { to: '/gala', label: 'Gala information', icon: CalendarDays, roles: ['gala_admin', 'relationship_manager'] },
+  { to: '/levels', label: 'Sponsorship levels', icon: Layers, roles: ['gala_admin', 'relationship_manager'] },
   { to: '/sponsors', label: 'Sponsors & orders', icon: ClipboardList, roles: ['gala_admin', 'relationship_manager'] },
   { to: '/pipeline', label: 'Sponsor pipeline', icon: TrendingUp, roles: ['gala_admin', 'relationship_manager'] },
   { to: '/guests', label: 'Guest list', icon: Table2, roles: ['gala_admin', 'relationship_manager'] },
@@ -126,6 +128,7 @@ export default function App() {
   let page: ReactNode
   if (p === '/') page = <Dashboard />
   else if (p === '/gala') page = <GalaInfo />
+  else if (p === '/levels') page = <Levels />
   else if (p.startsWith('/sponsors/')) page = <SponsorDetail key={p.split('/')[2]} id={p.split('/')[2]} />
   else if (p === '/sponsors') page = <Sponsors />
   else if (p === '/guests') page = <GuestList />

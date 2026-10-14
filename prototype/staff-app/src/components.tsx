@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { orderMoney, sponsorOf } from '@shared/data'
+import { levelsOf, orderMoney, sponsorOf } from '@shared/data'
 import { Field, Modal, Pill, money, type Tone } from '@shared/ui'
 import type { SeatStatus } from '@shared/types'
 import { useStaff } from './store'
@@ -77,8 +77,10 @@ export function RecordPaymentModal({ open, onClose, orderId }: { open: boolean; 
 export function AddPledgeModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { db, api } = useStaff()
   const { saving, save } = useSave()
-  const [f, setF] = useState({ org: '', contact: '', email: '', tierId: 'silver', source: 'check' as 'check' | 'ach_direct' | 'wire' })
-  const ok = f.org.trim() && f.contact.trim() && /\S+@\S+\.\S+/.test(f.email)
+  // This gala's levels only (one list per gala); each shows its amount and how many guests it includes.
+  const levels = levelsOf(db).filter((t) => t.tier_category !== 'complimentary')
+  const [f, setF] = useState(() => ({ org: '', contact: '', email: '', tierId: levels.find((t) => t.tier_category === 'sponsorship')?.id ?? levels[0]?.id ?? '', source: 'check' as 'check' | 'ach_direct' | 'wire' }))
+  const ok = f.org.trim() && f.contact.trim() && /\S+@\S+\.\S+/.test(f.email) && f.tierId
   return (
     <Modal open={open} onClose={onClose} title="New pledge (check, ACH or wire)">
       <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); if (!ok) return; void save(() => api.addPledge(f), 'Pledge recorded — guest-list email drafted for approval').then((done) => { if (done) { onClose(); setF({ ...f, org: '', contact: '', email: '' }) } }) }}>
@@ -88,7 +90,7 @@ export function AddPledgeModal({ open, onClose }: { open: boolean; onClose: () =
           <Field id="pe" label="Contact email"><input id="pe" className="input" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></Field>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
-          <Field id="pt" label="Package"><select id="pt" className="input" value={f.tierId} onChange={(e) => setF({ ...f, tierId: e.target.value })}>{db.sponsorship_tiers.filter((t) => t.tier_category !== 'complimentary').map((t) => <option key={t.id} value={t.id}>{t.name} — {money(t.contribution_amount)}</option>)}</select></Field>
+          <Field id="pt" label="Package"><select id="pt" className="input" value={f.tierId} onChange={(e) => setF({ ...f, tierId: e.target.value })}>{levels.map((t) => <option key={t.id} value={t.id}>{t.name} — {money(t.contribution_amount)} · {t.included_seat_count} {t.included_seat_count === 1 ? 'guest' : 'guests'}</option>)}</select></Field>
           <Field id="ps" label="Will pay by"><select id="ps" className="input" value={f.source} onChange={(e) => setF({ ...f, source: e.target.value as 'check' })}><option value="check">Check</option><option value="ach_direct">ACH to AAFE bank</option><option value="wire">Wire</option></select></Field>
         </div>
         <p className="rounded-md bg-cream-100 p-3 text-xs text-navy-600">Give Lively purchases arrive automatically — use this only for donors paying outside Give Lively. Seats are created from the package and a guest-list email is drafted for staff approval.</p>

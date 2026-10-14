@@ -121,7 +121,8 @@
    ],
    "event_id": "ev-2027",
    "sort_order": 1,
-   "retired": false
+   "retired": false,
+   "guaranteed_seating": true
   },
   {
    "id": "gold",
@@ -135,7 +136,8 @@
    ],
    "event_id": "ev-2027",
    "sort_order": 2,
-   "retired": false
+   "retired": false,
+   "guaranteed_seating": true
   },
   {
    "id": "silver",
@@ -149,7 +151,8 @@
    ],
    "event_id": "ev-2027",
    "sort_order": 3,
-   "retired": false
+   "retired": false,
+   "guaranteed_seating": true
   },
   {
    "id": "bronze",
@@ -163,7 +166,8 @@
    ],
    "event_id": "ev-2027",
    "sort_order": 4,
-   "retired": false
+   "retired": false,
+   "guaranteed_seating": true
   },
   {
    "id": "champion",
@@ -176,7 +180,8 @@
    ],
    "event_id": "ev-2027",
    "sort_order": 5,
-   "retired": false
+   "retired": false,
+   "guaranteed_seating": true
   },
   {
    "id": "friend",
@@ -189,7 +194,8 @@
    ],
    "event_id": "ev-2027",
    "sort_order": 6,
-   "retired": false
+   "retired": false,
+   "guaranteed_seating": false
   },
   {
    "id": "supporter",
@@ -202,7 +208,8 @@
    ],
    "event_id": "ev-2027",
    "sort_order": 7,
-   "retired": false
+   "retired": false,
+   "guaranteed_seating": false
   },
   {
    "id": "corporate_ticket",
@@ -213,7 +220,8 @@
    "required_materials": [],
    "event_id": "ev-2027",
    "sort_order": 8,
-   "retired": false
+   "retired": false,
+   "guaranteed_seating": false
   },
   {
    "id": "community_ticket",
@@ -224,7 +232,8 @@
    "required_materials": [],
    "event_id": "ev-2027",
    "sort_order": 9,
-   "retired": false
+   "retired": false,
+   "guaranteed_seating": false
   },
   {
    "id": "full_page_ad",
@@ -237,7 +246,8 @@
    ],
    "event_id": "ev-2027",
    "sort_order": 10,
-   "retired": false
+   "retired": false,
+   "guaranteed_seating": false
   },
   {
    "id": "half_page_ad",
@@ -250,7 +260,8 @@
    ],
    "event_id": "ev-2027",
    "sort_order": 11,
-   "retired": false
+   "retired": false,
+   "guaranteed_seating": false
   },
   {
    "id": "comp_relationship",
@@ -261,7 +272,8 @@
    "required_materials": [],
    "event_id": "ev-2027",
    "sort_order": 12,
-   "retired": false
+   "retired": false,
+   "guaranteed_seating": false
   },
   {
    "id": "gold-2024",
@@ -275,7 +287,8 @@
    ],
    "event_id": "ev-2024",
    "sort_order": 2,
-   "retired": false
+   "retired": false,
+   "guaranteed_seating": true
   },
   {
    "id": "champion-2024",
@@ -288,7 +301,8 @@
    ],
    "event_id": "ev-2024",
    "sort_order": 5,
-   "retired": false
+   "retired": false,
+   "guaranteed_seating": true
   },
   {
    "id": "gold-2025",
@@ -302,7 +316,8 @@
    ],
    "event_id": "ev-2025",
    "sort_order": 2,
-   "retired": false
+   "retired": false,
+   "guaranteed_seating": true
   },
   {
    "id": "bronze-2025",
@@ -316,7 +331,8 @@
    ],
    "event_id": "ev-2025",
    "sort_order": 4,
-   "retired": false
+   "retired": false,
+   "guaranteed_seating": true
   },
   {
    "id": "friend-2025",
@@ -329,7 +345,8 @@
    ],
    "event_id": "ev-2025",
    "sort_order": 6,
-   "retired": false
+   "retired": false,
+   "guaranteed_seating": false
   },
   {
    "id": "platinum-2026",
@@ -343,7 +360,8 @@
    ],
    "event_id": "ev-2026",
    "sort_order": 1,
-   "retired": false
+   "retired": false,
+   "guaranteed_seating": true
   },
   {
    "id": "gold-2026",
@@ -357,7 +375,8 @@
    ],
    "event_id": "ev-2026",
    "sort_order": 2,
-   "retired": false
+   "retired": false,
+   "guaranteed_seating": true
   },
   {
    "id": "silver-2026",
@@ -371,7 +390,8 @@
    ],
    "event_id": "ev-2026",
    "sort_order": 3,
-   "retired": false
+   "retired": false,
+   "guaranteed_seating": true
   },
   {
    "id": "champion-2026",
@@ -384,7 +404,8 @@
    ],
    "event_id": "ev-2026",
    "sort_order": 5,
-   "retired": false
+   "retired": false,
+   "guaranteed_seating": true
   },
   {
    "id": "friend-2026",
@@ -397,7 +418,8 @@
    ],
    "event_id": "ev-2026",
    "sort_order": 6,
-   "retired": false
+   "retired": false,
+   "guaranteed_seating": false
   },
   {
    "id": "supporter-2026",
@@ -410,7 +432,8 @@
    ],
    "event_id": "ev-2026",
    "sort_order": 7,
-   "retired": false
+   "retired": false,
+   "guaranteed_seating": false
   }
  ],
  "sponsors": [
