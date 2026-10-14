@@ -33,9 +33,17 @@ ok(att.some((r) => r.buyer_type === 'Individual'), 'a ticket bought by a person 
 const sp = await report('staff_report_sponsors', RM)
 const orders = (await one(`select count(*)::int n from orders o join sponsorship_tiers t on t.id = o.tier_id where o.event_id = $1 and t.tier_category <> 'complimentary'`, [cur])).n
 ok(sp.length === orders, `one row per sponsorship or ticket purchase (${sp.length})`)
-const paid = (await one(`select coalesce(sum(p.original_amount - p.refunded_amount), 0)::numeric n from payments p join orders o on o.id = p.order_id where o.event_id = $1`, [cur])).n
+const paid = (await one(`select coalesce(sum(greatest(p.original_amount - p.refunded_amount, 0)), 0)::numeric n from payments p join orders o on o.id = p.order_id where o.event_id = $1`, [cur])).n
 ok(Math.abs(sp.reduce((t, r) => t + Number(r.paid), 0) - Number(paid)) < 0.01, 'paid adds up to every payment on the gala')
-ok(sp.every((r) => Number(r.balance) === Math.max(Number(r.committed) - Number(r.paid), 0)), 'balance = committed - paid, never below 0')
+ok(sp.every((r) => Number(r.balance) === (['cancelled', 'comp'].includes(r.status) ? 0 : Math.max(Number(r.committed) - Number(r.paid), 0))), 'balance = committed - paid, never below 0; nothing owed on a cancelled order')
+// A full Give Lively refund returns the covered fee too, so refunded > original: paid stays 0 and nothing is owed.
+{
+  const p = await one(`select p.id, p.order_id from payments p join orders o on o.id = p.order_id where o.event_id = $1 and o.status = 'paid' limit 1`, [cur])
+  await db.exec(`begin; update payments set refunded_amount = original_amount + 11.30 where id = '${p.id}'; update orders set status = 'cancelled' where id = '${p.order_id}'`)
+  const row = (await report('staff_report_sponsors', RM)).find((r) => r.status === 'cancelled' && Number(r.refunded) > 0)
+  await db.exec('rollback')
+  ok(row && Number(row.paid) === 0 && Number(row.balance) === 0, `a refunded, cancelled purchase: paid 0, balance 0 (${row?.paid}, ${row?.balance})`)
+}
 ok(sp.find((r) => r.sponsor === att.find((a) => a.came && a.category !== 'walk_in').sponsor)?.guests_came >= 1, "the guest who came counts for their sponsor")
 
 // Food and access, payments, full guest list
@@ -43,7 +51,8 @@ const needs = await report('staff_report_needs', RM)
 ok(needs.length === guests && needs.some((r) => r.dietary_needs) && !('email' in needs[0]), 'food and access: every guest, the answers as written, no email')
 const pays = await report('staff_report_payments', RM)
 ok(pays.length === (await one(`select count(*)::int n from payments p join orders o on o.id = p.order_id where o.event_id = $1`, [cur])).n, 'payments: one row per payment')
-const full = await report('staff_report_guests', RM)
+ok((await err('authenticated', RM.email, `select staff_report_guests()`)) === 'forbidden', "the full guest list has guests' emails: a relationship manager can't download it")
+const full = await report('staff_report_guests')
 ok(full.length === guests && full.some((r) => r.came), 'full guest list: every guest, with who came')
 ok((await err('authenticated', VOL.email, `select staff_report_guests()`)) === 'forbidden', 'volunteers cannot download the guest list')
 

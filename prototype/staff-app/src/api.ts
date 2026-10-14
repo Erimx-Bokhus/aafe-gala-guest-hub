@@ -130,7 +130,7 @@ export const ROLES: Record<Exclude<keyof StaffApi, 'live'>, Role[]> = {
   importGiveLively: ADMIN, pullGiveLively: ADMIN, setGalaPage: ADMIN, setTierMapping: ADMIN, resolveImportReview: MANAGERS,
   pipeline: MANAGERS, saveProspect: MANAGERS, setProspectStage: MANAGERS, setSponsorshipGoal: ADMIN,
   saveLevel: ADMIN, copyLevels: ADMIN, retireLevel: ADMIN, startGala: ADMIN,
-  reportAttendance: ADMIN, reportSponsors: MANAGERS, reportNeeds: MANAGERS, reportPayments: MANAGERS, reportGuests: MANAGERS,
+  reportAttendance: ADMIN, reportSponsors: MANAGERS, reportNeeds: MANAGERS, reportPayments: MANAGERS, reportGuests: ADMIN,
 }
 export const canDo = (role: Role, action: keyof typeof ROLES) => ROLES[action].includes(role)
 
@@ -243,6 +243,9 @@ export function demoApi(user: StaffUser, update: (fn: (d: DB) => DB) => void, fu
       if (Number(g.event_date.slice(0, 4)) !== g.year) throw new Error(`invalid_input: the date isn't in ${g.year}`)
       if (g.guest_list_deadline && g.guest_list_deadline > g.event_date) throw new Error('invalid_input: the guest-list deadline is after the gala')
       if (d.gala_events.some((e) => e.year === g.year)) throw new Error(`invalid_input: there is already a ${g.year} gala`)
+      const newest = Math.max(...d.gala_events.map((e) => e.year))
+      if (g.year < newest) throw new Error(`invalid_input: ${g.year} is before the newest gala (${newest})`)
+      if (g.program_ad_deadline && g.program_ad_deadline > g.event_date) throw new Error('invalid_input: the program-ad deadline is after the gala')
       const id = `ev-${g.year}`, blank = (v: string) => v.trim() || null
       // The gala and its copied levels in one change, as staff_start_gala does in one transaction.
       update((db) => {
@@ -596,14 +599,18 @@ export async function loadLiveDb(client: SupabaseClient, user: StaffUser): Promi
     if (error) throw new Error(error.message)
     return volunteerDb(data as CheckinSnapshot, user)
   }
-  const [lists, audit] = await Promise.all([
+  const [lists, audit, cur] = await Promise.all([
     Promise.all(TABLES.map((t) => selectAll(client, t))),
     // The change log only grows; the Activity page shows the latest, so load the newest 1,000.
     client.from('audit_log').select('*').order('id', { ascending: false }).limit(PAGE),
+    // This year's gala is the server's answer (current_event_id), never worked out here: with next year's gala in
+    // planning, the newest open year would show 2028 while every save still goes to 2027.
+    client.rpc('staff_current_event'),
   ])
   if (audit.error) throw new Error(audit.error.message)
+  if (cur.error) throw new Error(cur.error.message)
   const db = Object.fromEntries(TABLES.map((t, i) => [t, lists[i]])) as unknown as Omit<DB, 'meta' | 'audit_log'>
-  const current = [...db.gala_events].filter((e) => e.status !== 'closed').sort((a, b) => b.year - a.year)[0]
+  const current = db.gala_events.find((e) => e.id === cur.data)
   if (!current) throw new Error('not_found: no open gala in the database')
   // Numbers come back from Postgres numeric columns as strings in some setups; the pages do arithmetic on them.
   const num = <T extends object>(rows: T[], keys: (keyof T)[]) => rows.map((r) => ({ ...r, ...Object.fromEntries(keys.map((k) => [k, Number(r[k] ?? 0)])) }))

@@ -40,7 +40,7 @@ const REPORTS: { action: Action; slug: string; title: string; perRow: string; wh
     who: 'Gala admins and relationship managers', rows: (api) => api.reportPayments(), csv: paymentsCsv as never },
   { action: 'reportGuests', slug: 'guest-list', title: 'Full guest list', perRow: 'Guest',
     what: 'Everything staff can see about each guest: name, title, organization, email, sponsor, level, table, badge, food, accessibility, note, came',
-    who: 'Gala admins and relationship managers', rows: (api) => api.reportGuests(), csv: guestsCsv as never },
+    who: 'Gala admins (it has guests’ emails)', rows: (api) => api.reportGuests(), csv: guestsCsv as never },
 ]
 
 export default function Reports() {
@@ -72,7 +72,7 @@ export default function Reports() {
           </tbody>
         </table>
       </div>
-      <p className="mt-4 text-sm text-navy-600">Also: badges and the printed door list (Badges, iPad check-in) and the Salesforce attendee file (Integrations). Food and access details are staff-only and are never sent to Salesforce.</p>
+      <p className="mt-4 text-sm text-navy-600">Also: badges and the printed door list (Badges, iPad check-in) and the Salesforce attendee file (Integrations). Food and access details are staff-only and are never sent to Salesforce. Files with guests’ emails or needs: download them on a staff computer, not a shared iPad, keep them in AAFE’s drive, and delete them under the same rule as the tool’s data.</p>
     </div>
   )
 }

@@ -24,7 +24,7 @@ export function importContext(db: DB): UploadContext {
   const bought = db.payments.filter((p) => p.purchase_key && orderIds.has(p.order_id))
   return {
     galaPageName: ev?.givelively_page_name ?? null,
-    tiers: levelsOf(db, db.meta.current_event_id, true).map((t) => ({ id: t.id, name: t.name, tierCategory: t.tier_category, includedSeatCount: t.included_seat_count })),
+    tiers: levelsOf(db).map((t) => ({ id: t.id, name: t.name, tierCategory: t.tier_category, includedSeatCount: t.included_seat_count })),
     tierMappings: (db.tier_mappings ?? []).filter((m) => m.event_id === db.meta.current_event_id).map((m) => ({ givelivelyName: m.givelively_name, tierId: m.tier_id })),
     sponsors: db.sponsors.map((s) => ({ id: s.id, organizationName: s.organization_name, primaryContactName: s.primary_contact_name, primaryContactEmail: s.primary_contact_email })),
     existingGuests: db.guests.filter((g) => orderIds.has(g.order_id))
