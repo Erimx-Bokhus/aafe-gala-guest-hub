@@ -8,7 +8,7 @@ Outputs:
 Fee math follows Give Lively's published third-party (Stripe) nonprofit rates:
   card 2.2% + $0.30 | Amex 3.5% | Give Lively ACH 0.8% capped at $5 | offline (check/direct ACH/wire) $0
 """
-import json, random, os
+import json, random, os, zlib
 from datetime import datetime, timedelta, timezone
 
 random.seed(2027)
@@ -183,12 +183,18 @@ FIRST = ['Evelyn', 'Marcus', 'Sofia', 'Hao', 'Amara', 'Liam', 'Rachel', 'Joseph'
          'Chidi', 'Maria', 'Joyce', 'Daniel', 'Ken', 'Alisha', 'Leah', 'Councilmember', 'Rev. Peter', 'Dr. Annie', 'Victor', 'Yolanda', 'Eddie', 'Mabel', 'Thomas']
 gid = 0
 guests, seats = [], []
+# Most guests with no need said so ("None", shared/src/guestNeeds.ts); about 1 in 7 hasn't answered yet, so the
+# staff app's Food & access counts show who to follow up with. Fixed per guest id, so the data doesn't change between runs.
+def answered_none(guest_id, what):
+    return 'None' if zlib.crc32(f'{what}-{guest_id}'.encode()) % 100 < 85 else None
+
 def add_guest(oid, slot, first, last, title, org, status, table=None, seat=None, gtype='sponsor_guest', dietary=None, access=None, by='staff', updated='2026-09-26T15:00:00Z', qr=None, rel_note=None):
     global gid
     gid += 1
     g = dict(id=f'g-{gid:03d}', order_id=oid, first_name=first, last_name=last, title=title, organization=org,
              email=f"{first}.{last}".lower().replace(' ', '').replace('.', '', first.count('.')).replace('é', 'e').replace('á', 'a').replace('í', 'i').replace('ó', 'o').replace("’", '') + '@guest.example.org',
-             dietary_needs=dietary, accessibility_needs=access, guest_type=gtype, relationship_note=rel_note,
+             dietary_needs=dietary or answered_none(f'g-{gid:03d}', 'food'), accessibility_needs=access or answered_none(f'g-{gid:03d}', 'access'),
+             guest_type=gtype, relationship_note=rel_note,
              table_id=f'tb-{table}' if table else None, seat_number=seat,
              badge_status='ready' if status in ('badge_ready', 'checked_in') else 'needs_review',
              attendance_status='checked_in' if status == 'checked_in' else 'expected', qr_token=qr,
@@ -220,7 +226,7 @@ add_guest('ord-acme', 1, 'Jordan', 'Lee', 'Managing Director', 'Acme Community P
 add_guest('ord-acme', 2, 'Alicia', 'Moreno', 'Partner', 'Acme Community Partners', 'badge_ready', 5, 2, updated='2026-09-12T15:00:00Z')
 add_guest('ord-acme', 3, 'Samuel', 'Chen', 'Director of Community Programs', 'Acme Community Partners', 'submitted', dietary='Vegetarian', by='guest_portal', updated='2026-09-28T14:10:00Z')
 add_guest('ord-acme', 4, 'Fatima', 'Haddad', 'Senior Associate', 'Acme Community Partners', 'submitted', dietary='Halal', by='guest_portal', updated='2026-09-28T14:11:00Z')
-add_guest('ord-acme', 5, 'Brian', 'O’Connell', 'Associate', 'Acme Community Partners', 'submitted', access='Step-free seating', by='guest_portal', updated='2026-09-28T14:12:00Z')
+add_guest('ord-acme', 5, 'Brian', 'O’Connell', 'Associate', 'Acme Community Partners', 'submitted', access='Step-free access', by='guest_portal', updated='2026-09-28T14:12:00Z')
 for i in range(6, 9): unnamed('ord-acme', i)
 
 add_guest('ord-northgate', 1, 'Ingrid', 'Larsen', 'Medical Director', 'Northgate Health Collective', 'reviewed', 7, 1)
