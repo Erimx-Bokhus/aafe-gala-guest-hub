@@ -8,6 +8,7 @@ import { DisplayControls, go, Link, PrototypeBanner, Toast, useDisplayPrefs, use
 import type { DB, Role, StaffUser } from '@shared/types'
 import { StaffCtx } from './store'
 import { demoApi, demoSnapshot, errorText, liveApi, loadLiveDb, volunteerDb } from './api'
+import { useRefreshWhileOpen } from './useRefreshWhileOpen'
 import Login from './pages/Login'
 import { currentStaff, signInFromLink, signOut, supabase } from '@shared/supabase'
 import Dashboard from './pages/Dashboard'
@@ -72,6 +73,8 @@ export default function App() {
     catch (e) { if (n === latest.current) setLoadError(errorText(e)) }
   }, [userKey]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { setLiveDb(null); void reload() }, [reload])
+  // ...and while the app stays open, so sponsors' names, door check-ins and other staff's changes show up.
+  useRefreshWhileOpen(useMemo(() => (supabase && userKey ? () => void reload() : null), [reload, userKey]))
   const api = useMemo(() => (!userRef.current ? null : supabase ? liveApi(supabase, reload) : demoApi(userRef.current, update, () => full.current)), [userKey, reload, update]) // eslint-disable-line react-hooks/exhaustive-deps
   const act = useCallback(async (p: Promise<unknown>, done?: string) => {
     try { await p; if (done) toast(done); return true }
