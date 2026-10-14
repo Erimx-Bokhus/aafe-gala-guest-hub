@@ -32,10 +32,23 @@ do $$ begin
 end $$;
 -- Keep the staff list: test sign-in emails set for a real person must survive a reload.
 create temp table _keep_staff on commit drop as select * from staff_users;
+-- Keep each gala's Give Lively page name: staff set it in the app, and Pull now imports nothing without it.
+-- The column comes from backend.sql, so a project that hasn't run backend.sql yet has none to keep.
+create temp table _keep_pages (id text, page text) on commit drop;
+do $$ begin
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'gala_events' and column_name = 'givelively_page_name') then
+    insert into _keep_pages select id, givelively_page_name from gala_events where givelively_page_name is not null;
+  end if;
+end $$;
 truncate table ${DEMO_TABLES.join(', ')} restart identity cascade;
 ${setSql}
 update staff_users s set name = k.name, email = k.email, role = k.role from _keep_staff k where s.id = k.id;
 insert into staff_users select k.* from _keep_staff k where not exists (select 1 from staff_users s where s.id = k.id);
+do $$ begin
+  if exists (select 1 from _keep_pages) then
+    update gala_events g set givelively_page_name = k.page from _keep_pages k where g.id = k.id and g.givelively_page_name is null;
+  end if;
+end $$;
 commit;
 `
 }
