@@ -6,7 +6,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { addAudit, displayName, loadDB, uid } from '@shared/data'
 import type { Snapshot } from '@shared/offlineCheckin'
-import type { AuditEntry, DB, EmailLog, GalaEvent, Guest, Material, PayMethod, PipelineStage, Role, Sector, StaffUser } from '@shared/types'
+import type { AuditEntry, DB, EmailLog, GalaEvent, Guest, Material, PayMethod, PipelineStage, Role, Sector, StaffUser, Tier } from '@shared/types'
 import * as store from './store'
 import { STAGES, type ProspectInput } from './store'
 import type { GlImportRow, GlImportRun, ImportResult } from './importer'
@@ -17,6 +17,7 @@ export interface PaymentInput { method: OfflineMethod; amount: number; received:
 export interface PledgeInput { org: string; contact: string; email: string; tierId: string; source: OfflineMethod }
 export interface CompGuestInput { first_name: string; last_name: string; title: string; organization: string; email: string; relationship_note: string }
 export interface ExceptionInput { name: string; orderId: string | null; type: string; note: string }
+export interface LevelInput { id?: string; name: string; contribution_amount: number; included_seat_count: number; tier_category: Tier['tier_category']; guaranteed_seating: boolean; required_materials: string[] }
 export type GuestPatch = Partial<Pick<Guest, 'first_name' | 'last_name' | 'display_name' | 'title' | 'organization' | 'email' | 'dietary_needs' | 'accessibility_needs' | 'relationship_note'>>
 /** One unsent email as staff_email_queue() returns it: what staff need to judge a draft before approving it. */
 export interface QueuedEmail {
@@ -72,6 +73,12 @@ export interface StaffApi {
   exportSalesforce(): Promise<SalesforceRow[]>
   /** Send Salesforce what Give Lively doesn't know (the salesforce-push function; a stand-in org in the demo). Gala admins only. */
   syncSalesforce(): Promise<SalesforceSyncResult>
+  /** Sponsorship levels, one list per gala (decided Oct 14), for any gala not closed. Gala admins only. Add or edit a level. */
+  saveLevel(eventId: string, level: LevelInput): Promise<void>
+  /** Start a gala's levels from another gala's (normally last year's), while it has none of its own. */
+  copyLevels(fromEventId: string, toEventId: string): Promise<void>
+  /** Stop offering a level, or offer it again; orders already on it keep it. */
+  retireLevel(id: string, retired: boolean): Promise<void>
   /** Every unsent email, drafts first, with its sponsor, seats and payment. */
   emailQueue(): Promise<QueuedEmail[]>
   /** Draft a guest-list reminder for each sponsor who needs one; returns how many. Drafts only: staff approve each. */
@@ -112,6 +119,7 @@ export const ROLES: Record<Exclude<keyof StaffApi, 'live'>, Role[]> = {
   emailQueue: MANAGERS, queueReminders: MANAGERS, setSponsorArrivals: ADMIN,
   importGiveLively: ADMIN, pullGiveLively: ADMIN, setGalaPage: ADMIN, setTierMapping: ADMIN, resolveImportReview: MANAGERS,
   pipeline: MANAGERS, saveProspect: MANAGERS, setProspectStage: MANAGERS, setSponsorshipGoal: ADMIN,
+  saveLevel: ADMIN, copyLevels: ADMIN, retireLevel: ADMIN,
 }
 export const canDo = (role: Role, action: keyof typeof ROLES) => ROLES[action].includes(role)
 
@@ -192,6 +200,46 @@ export function demoApi(user: StaffUser, update: (fn: (d: DB) => DB) => void, fu
       if (order[k] === status) return d
       return addAudit({ ...d, orders: d.orders.map((x) => (x.id === o ? { ...x, [k]: status } : x)) },
         { actor_type: 'staff', actor: user.name, entity: 'order', entity_id: o, order_id: o, action: 'materials.updated', from_state: order[k], to_state: status, guest_visible: false, summary: `${material === 'logo' ? 'Logo' : 'Program ad'} marked ${status.replace(/_/g, ' ')}.` })
+    }),
+    // Same rules as staff_save_level, staff_copy_levels and staff_retire_level (database/backend.sql).
+    saveLevel: async (eventId, lv) => {
+      if (!may('saveLevel')) return forbidden()
+      const d = full(), ev = d.gala_events.find((e) => e.id === eventId && e.status !== 'closed')
+      if (!ev) throw new Error('not_found: no open gala with that id')
+      const name = lv.name.trim()
+      if (!name) throw new Error('invalid_input: the level needs a name')
+      if (!(lv.contribution_amount >= 0)) throw new Error('invalid_input: the amount must be 0 or more')
+      if (!(lv.included_seat_count >= 0 && lv.included_seat_count <= 500)) throw new Error('invalid_input: guests included must be between 0 and 500')
+      const mine = d.sponsorship_tiers.filter((t) => (t.event_id ?? d.meta.current_event_id) === eventId)
+      if (mine.some((t) => t.id !== lv.id && t.name.trim().toLowerCase() === name.toLowerCase())) throw new Error(`invalid_input: this gala already has a level called ${name}`)
+      const fields = { name, contribution_amount: lv.contribution_amount, included_seat_count: lv.included_seat_count, tier_category: lv.tier_category, guaranteed_seating: lv.guaranteed_seating, required_materials: lv.required_materials }
+      if (lv.id && !mine.some((t) => t.id === lv.id)) throw new Error('not_found: no such level on that gala')
+      update((db) => {
+        if (lv.id) {
+          return addAudit({ ...db, sponsorship_tiers: db.sponsorship_tiers.map((t) => (t.id === lv.id ? { ...t, ...fields } : t)) },
+            { actor_type: 'staff', actor: user.name, entity: 'sponsorship_level', entity_id: lv.id, order_id: null, action: 'level.updated', from_state: null, to_state: null, guest_visible: false, summary: `Sponsorship level "${name}" edited.` })
+        }
+        const id = uid(`lv-${ev.year}`)
+        const sort_order = Math.max(0, ...mine.map((t) => t.sort_order ?? 0)) + 1
+        return addAudit({ ...db, sponsorship_tiers: [...db.sponsorship_tiers, { id, event_id: eventId, sort_order, retired: false, ...fields }] },
+          { actor_type: 'staff', actor: user.name, entity: 'sponsorship_level', entity_id: id, order_id: null, action: 'level.created', from_state: null, to_state: null, guest_visible: false, summary: `Sponsorship level "${name}" added for ${ev.name}.` })
+      })
+    },
+    copyLevels: async (from, to) => {
+      if (!may('copyLevels')) return forbidden()
+      const d = full(), target = d.gala_events.find((e) => e.id === to && e.status !== 'closed'), src = d.gala_events.find((e) => e.id === from)
+      if (!target || !src || from === to) throw new Error('not_found: choose an earlier gala to copy from')
+      if (d.sponsorship_tiers.some((t) => t.event_id === to && t.tier_category !== 'complimentary')) throw new Error(`invalid_input: ${target.name} already has levels; edit them instead`)
+      const copies = d.sponsorship_tiers.filter((t) => (t.event_id ?? d.meta.current_event_id) === from && !t.retired && t.tier_category !== 'complimentary')
+        .map((t) => ({ ...t, id: uid(`lv-${target.year}`), event_id: to }))
+      update((db) => addAudit({ ...db, sponsorship_tiers: [...db.sponsorship_tiers, ...copies] },
+        { actor_type: 'staff', actor: user.name, entity: 'sponsorship_level', entity_id: to, order_id: null, action: 'level.copied', from_state: null, to_state: null, guest_visible: false, summary: `${copies.length} level(s) copied from ${src.name} to ${target.name}.` }))
+    },
+    retireLevel: (id, retired) => run('retireLevel', (d) => {
+      const t = d.sponsorship_tiers.find((x) => x.id === id)
+      if (!t || !!t.retired === retired) return d
+      return addAudit({ ...d, sponsorship_tiers: d.sponsorship_tiers.map((x) => (x.id === id ? { ...x, retired } : x)) },
+        { actor_type: 'staff', actor: user.name, entity: 'sponsorship_level', entity_id: id, order_id: null, action: retired ? 'level.retired' : 'level.restored', from_state: String(!!t.retired), to_state: String(retired), guest_visible: false, summary: `Sponsorship level "${t.name}" ${retired ? 'no longer offered' : 'offered again'}.` })
     }),
     history: async (o) => (may('history') ? full().audit_log.filter((a) => a.order_id === o) : forbidden()),
     exportBadges: (inc) => exported('exportBadges', 'badges', demoBadgeRows(full(), inc), (n) => `Badge file exported: ${n} badge(s)${inc ? ', including printed' : ''}.`),
@@ -311,6 +359,9 @@ export function liveApi(client: SupabaseClient, reload: () => Promise<void>): St
       if (error) throw new Error(error.message)
       return data as AuditEntry[]
     },
+    saveLevel: (eventId, lv) => write('staff_save_level', { p: { ...lv, event_id: eventId } }),
+    copyLevels: (from, to) => write('staff_copy_levels', { p_from_event: from, p_to_event: to }),
+    retireLevel: (id, retired) => write('staff_retire_level', { p_id: id, p_retired: retired }),
     // Reads that also write a change-log entry; no reload: nothing on screen changes.
     exportBadges: (inc) => call<BadgeRow[]>('staff_export_badges', { p_include_printed: inc }),
     exportCheckin: () => call<CheckinRow[]>('staff_export_checkin', {}),
