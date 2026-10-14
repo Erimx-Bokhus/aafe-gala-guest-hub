@@ -1,7 +1,7 @@
 // AAFE STAFF APP (the "client app": AAFE's gala team)
 // Reads everything the guest portal writes (same database), plus Give Lively + Salesforce data.
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { Activity, Armchair, BadgeCheck, CalendarDays, ClipboardList, CreditCard, FileUp, Heart, LayoutDashboard, LogOut, Menu, Plug, ScanLine, Table2, TrendingUp, X, Layers } from 'lucide-react'
+import { Activity, Armchair, BadgeCheck, CalendarDays, ClipboardList, CreditCard, FileUp, Heart, LayoutDashboard, LogOut, Menu, Plug, ScanLine, Table2, TrendingUp, X, Layers, FileSpreadsheet } from 'lucide-react'
 import { loadDB } from '@shared/data'
 import { AafeLogo } from '@shared/Logo'
 import { DisplayControls, go, Link, PrototypeBanner, Toast, useDisplayPrefs, useRoute } from '@shared/ui'
@@ -14,6 +14,7 @@ import { currentStaff, signInFromLink, signOut, supabase } from '@shared/supabas
 import Dashboard from './pages/Dashboard'
 import GalaInfo from './pages/GalaInfo'
 import Levels from './pages/Levels'
+import Reports from './pages/Reports'
 import Sponsors, { SponsorDetail } from './pages/Sponsors'
 import GuestList from './pages/GuestList'
 import Payments from './pages/Payments'
@@ -40,6 +41,7 @@ const NAV: { to: string; label: string; icon: typeof LayoutDashboard; roles: Rol
   { to: '/checkin', label: 'iPad check-in', icon: ScanLine, roles: ['gala_admin', 'relationship_manager', 'check_in_volunteer'] },
   { to: '/import', label: 'Give Lively import', icon: FileUp, roles: ['gala_admin', 'relationship_manager'] },
   { to: '/integrations', label: 'Integrations & email', icon: Plug, roles: ['gala_admin'] },
+  { to: '/reports', label: 'Reports', icon: FileSpreadsheet, roles: ['gala_admin', 'relationship_manager'] },
   { to: '/activity', label: 'Activity log', icon: Activity, roles: ['gala_admin', 'relationship_manager'] },
 ]
 const ROLE_LABEL: Record<Role, string> = { gala_admin: 'Gala admin', relationship_manager: 'Relationship manager', check_in_volunteer: 'Check-in volunteer' }
@@ -129,6 +131,7 @@ export default function App() {
   if (p === '/') page = <Dashboard />
   else if (p === '/gala') page = <GalaInfo />
   else if (p === '/levels') page = <Levels />
+  else if (p === '/reports') page = <Reports />
   else if (p.startsWith('/sponsors/')) page = <SponsorDetail key={p.split('/')[2]} id={p.split('/')[2]} />
   else if (p === '/sponsors') page = <Sponsors />
   else if (p === '/guests') page = <GuestList />
