@@ -4,6 +4,7 @@
 //   same order, so both modes download the same file. Each page then writes the CSV with downloadCsv (one writer, with the
 //   spreadsheet-formula guard). Columns stay provisional until AAFE sends its badge and check-in templates.
 import { GUEST_TYPE_LABEL, displayName } from '@shared/data'
+import { needStatus } from '@shared/guestNeeds'
 import type { DB, GuestType } from '@shared/types'
 
 export interface BadgeRow {
@@ -54,7 +55,7 @@ export function demoCheckinRows(db: DB): CheckinRow[] {
   const { orders, sponsor, table } = current(db)
   const named: CheckinRow[] = db.guests.filter((g) => orders.has(g.order_id)).map((g) => ({
     last_name: g.last_name, first_name: g.first_name, display_name: displayName(g), organization: g.organization, sponsor: sponsor(g.order_id)?.organization_name ?? '',
-    table_number: table(g.table_id), seat_number: g.seat_number, guest_type: g.guest_type, access_needs: !!g.accessibility_needs?.trim(),
+    table_number: table(g.table_id), seat_number: g.seat_number, guest_type: g.guest_type, access_needs: needStatus(g.accessibility_needs) === 'some',
     arrived: g.attendance_status === 'checked_in',
   }))
   const unnamed: CheckinRow[] = db.seats.filter((s) => !s.guest_id && s.status !== 'cancelled' && orders.has(s.order_id)).map((s) => ({
