@@ -66,6 +66,40 @@ describe('readExport', () => {
     ])
   })
 
+  it('stops on a quote that never closes, instead of losing every row after it (Oct 12 audit)', async () => {
+    const csv = 'Email,Amount Spent,Date/Time of Purchase,Tier Purchased,Last Name,First Name\n' +
+      'sam.lee@example.org,$500.00,2027-03-01 10:00:00 AM EST,Ticket,Lee,Sam\n' +
+      'ana.ruiz@example.org,$500.00,2027-03-02 10:00:00 AM EST,"Ticket,Ruiz,Ana\n' +
+      'bo.chen@example.org,$500.00,2027-03-03 10:00:00 AM EST,Ticket,Chen,Bo\n'
+    await expect(readExport(csv)).rejects.toThrow(ExportFormatError)
+    await expect(readExport(csv)).rejects.toThrow(/row 3 has a quote \(\"\) that never closes/)
+  })
+
+  it('rejects a row the CSV reader stumbled on (a stray quote), and keeps the rest (Oct 12 audit)', async () => {
+    const [head, a, b, c] = exportCsv({}, { Email: 'sam.lee@example.org' }, { Email: 'ana.ruiz@example.org' }).split('\n')
+    const { rows, rejected } = await readExport([head, a, b!.replace('Ticket', '"Ticket'), c].join('\n'))
+    expect(rows.map((r) => r.rowNumber)).toEqual([2, 4])
+    expect(rejected).toMatchObject([{ rowNumber: 3, reason: expect.stringMatching(/^couldn't read this row/) }])
+  })
+
+  it('rejects a row with more or fewer columns than the header, and keeps the rest (Oct 12 audit)', async () => {
+    const [head, a, b, c] = exportCsv({}, { Email: 'sam.lee@example.org' }, { Email: 'ana.ruiz@example.org' }).split('\n')
+    const shifted = b!.replace('Ticket', 'Ticket,Extra')          // a comma outside quotes: every value after it moves right
+    const short = c!.split(',').slice(0, 10).join(',')            // a row cut off by a line break
+    const { rows, rejected } = await readExport([head, a, shifted, short].join('\n'))
+    expect(rows.map((r) => r.rowNumber)).toEqual([2])
+    expect(rejected.map((r) => r.rowNumber)).toEqual([3, 4])
+    expect(rejected[0]!.reason).toMatch(new RegExp(`has ${HEADERS.length + 1} columns but the header has ${HEADERS.length}`))
+    expect(rejected[1]!.reason).toMatch(new RegExp(`has \\d+ columns but the header has ${HEADERS.length}`))
+  })
+
+  it('reads a file that mixes Windows and plain line breaks without running rows together', async () => {
+    const [head, a, b] = exportCsv({}, { Email: 'sam.lee@example.org' }).split(/\r?\n/)
+    const { rows, rejected } = await readExport(`${head}\r\n${a}\n${b}\r\n`)
+    expect(rejected).toEqual([])
+    expect(rows.map((r) => r.rowNumber)).toEqual([2, 3])
+  })
+
   it('case 25: never keeps the phone number', async () => {
     const { rows } = await readExport(exportCsv({}))
     expect(JSON.stringify(rows)).not.toContain('555-0101')
