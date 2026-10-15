@@ -102,8 +102,12 @@ export interface StaffApi {
   pullGiveLively(): Promise<PullCounts>
   /** This gala's Give Lively page name, chosen once from the pages in an upload. */
   setGalaPage(pageName: string): Promise<void>
-  /** Link a Give Lively tier name ("Ticket") to one of AAFE's packages for this gala. */
-  setTierMapping(givelivelyName: string, tierId: string): Promise<void>
+  /** Another Give Lively page for this gala, such as a private Community Tickets page; the sync looks back once. */
+  addGalaPage(pageName: string): Promise<void>
+  /** Take a page off this gala; purchases already imported from it stay. */
+  removeGalaPage(pageName: string): Promise<void>
+  /** Link a Give Lively tier name ("Ticket") to one of AAFE's packages for this gala, on its main page or (page) another of its pages. */
+  setTierMapping(givelivelyName: string, tierId: string, page?: string | null): Promise<void>
   /** Close an import review item with what staff decided. */
   resolveImportReview(id: string, resolution: string): Promise<void>
   /** The sponsor pipeline board (AAFE's prospect tracker). */
@@ -128,7 +132,7 @@ export const ROLES: Record<Exclude<keyof StaffApi, 'live'>, Role[]> = {
   updateGalaEvent: ADMIN, history: MANAGERS,
   exportBadges: MANAGERS, exportCheckin: ALL, exportSalesforce: ADMIN, syncSalesforce: ADMIN,
   emailQueue: MANAGERS, queueReminders: MANAGERS, setSponsorArrivals: ADMIN,
-  importGiveLively: ADMIN, pullGiveLively: ADMIN, setGalaPage: ADMIN, setTierMapping: ADMIN, resolveImportReview: MANAGERS,
+  importGiveLively: ADMIN, pullGiveLively: ADMIN, setGalaPage: ADMIN, addGalaPage: ADMIN, removeGalaPage: ADMIN, setTierMapping: ADMIN, resolveImportReview: MANAGERS,
   pipeline: MANAGERS, saveProspect: MANAGERS, setProspectStage: MANAGERS, setSponsorshipGoal: ADMIN,
   saveLevel: ADMIN, copyLevels: ADMIN, retireLevel: ADMIN, startGala: ADMIN,
   reportAttendance: ADMIN, reportSponsors: MANAGERS, reportNeeds: MANAGERS, reportPayments: MANAGERS, reportGuests: ADMIN,
@@ -178,6 +182,13 @@ function answerNow<R extends { db: DB }>(update: (fn: (d: DB) => DB) => void, fu
 export function demoApi(user: StaffUser, update: (fn: (d: DB) => DB) => void, full: () => DB): StaffApi {
   const may = (a: keyof typeof ROLES) => canDo(user.role, a)
   const run = (a: keyof typeof ROLES, fn: (d: DB) => DB) => { if (!may(a)) return forbidden(); update(fn); return Promise.resolve() }
+  // A change the store may refuse, as the database would: tried on the current data first, so the refusal reaches the
+  // caller instead of React's state update.
+  const checked = (a: keyof typeof ROLES, fn: (d: DB) => DB) => {
+    if (!may(a)) return forbidden()
+    try { fn(full()) } catch (e) { return Promise.reject(e) }
+    return run(a, fn)
+  }
   const api: StaffApi = {
     live: false,
     updateGuest: (id, patch) => run('updateGuest', (d) => store.updateGuest(d, user.name, id, patch)),
@@ -330,9 +341,11 @@ export function demoApi(user: StaffUser, update: (fn: (d: DB) => DB) => void, fu
       return { ...NO_PULL, seen: 1, created: r.created, skipped: r.skipped }
     },
     setGalaPage: (page) => (page.trim() ? run('setGalaPage', (d) => store.setGalaPage(d, user, page)) : Promise.reject(new Error('invalid_input: page name is required'))),
-    setTierMapping: (name, tierId) => (!name.trim() ? Promise.reject(new Error('invalid_input: tier name is required'))
+    addGalaPage: (page) => checked('addGalaPage', (d) => store.addGalaPage(d, user, page)),
+    removeGalaPage: (page) => checked('removeGalaPage', (d) => store.removeGalaPage(d, user, page)),
+    setTierMapping: (name, tierId, page = null) => (!name.trim() ? Promise.reject(new Error('invalid_input: tier name is required'))
       : !full().sponsorship_tiers.some((t) => t.id === tierId) ? Promise.reject(new Error('not_found: tier'))
-      : run('setTierMapping', (d) => store.setTierMapping(d, user, name, tierId))),
+      : checked('setTierMapping', (d) => store.setTierMapping(d, user, name, tierId, page))),
     resolveImportReview: (id, resolution) => {
       if (!may('resolveImportReview')) return forbidden()
       if (!(full().import_review ?? []).some((v) => v.id === id && v.status === 'open')) return Promise.reject(new Error('not_found'))
@@ -445,7 +458,9 @@ export function liveApi(client: SupabaseClient, reload: () => Promise<void>): St
       return { ...NO_PULL, ...data }
     },
     setGalaPage: (page) => write('staff_set_gala_page', { p_page_name: page }),
-    setTierMapping: (name, tierId) => write('staff_set_tier_mapping', { p_givelively_name: name, p_tier_id: tierId }),
+    addGalaPage: (page) => write('staff_add_gala_page', { p_page_name: page }),
+    removeGalaPage: (page) => write('staff_remove_gala_page', { p_page_name: page }),
+    setTierMapping: (name, tierId, page = null) => write('staff_set_tier_mapping', { p_givelively_name: name, p_tier_id: tierId, p_page: page }),
     resolveImportReview: (id, resolution) => write('staff_resolve_import_review', { p_id: id, p_resolution: resolution }),
     pipeline: () => call<PipelineBoard>('staff_pipeline', {}),
     saveProspect: async (p) => { const id = await call<string>('staff_save_prospect', { p }); await reload(); return id },

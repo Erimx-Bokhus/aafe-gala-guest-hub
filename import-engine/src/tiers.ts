@@ -10,10 +10,15 @@ export interface Tier {
   includedSeatCount: number
 }
 
-/** A row of `tier_mappings`: a Give Lively tier name staff linked to a tier for this gala. */
+/**
+ * A row of `tier_mappings`: a Give Lively tier name staff linked to a tier for this gala, on its main page or on one
+ * of its other pages, so "Ticket" on the Community Tickets page is its own mapping.
+ */
 export interface TierMapping {
   givelivelyName: string
   tierId: string
+  /** The gala's other page it's for (`tier_mappings.page_key`); missing, null or '': the main page. */
+  pageName?: string | null
 }
 
 export type TierResolution = { tier: Tier; via: 'mapping' | 'name' } | null
@@ -22,18 +27,24 @@ export type TierResolution = { tier: Tier; via: 'mapping' | 'name' } | null
 export const tierMappingKey = normText
 
 /**
- * The gala's tier mapping first, then Natalie's longest-name match: the tier whose short name (before
- * " — ") appears in the Give Lively tier name, longest first, ignoring complimentary tiers.
- * null means `unknown_tier`: nothing is created for the row until staff map it.
+ * The gala's tier mapping for the page first, then Natalie's longest-name match: the tier whose short name (before
+ * " — ") appears in the Give Lively tier name, longest first, ignoring complimentary tiers. null means `unknown_tier`:
+ * nothing is created for the row until staff map it.
+ *
+ * `otherPage`: the gala's other page the purchase was made on (null: its main page). There, only a mapping made for that
+ * page counts, on purpose: "Ticket" on the Community Tickets page must never land on the main page's $500 Ticket level
+ * by name or by the main page's mapping. gl_import() in backend.sql follows the same rule.
  */
-export function resolveTier(givelivelyName: string, mappings: TierMapping[], tiers: Tier[]): TierResolution {
+export function resolveTier(givelivelyName: string, mappings: TierMapping[], tiers: Tier[], otherPage: string | null = null): TierResolution {
   const key = tierMappingKey(givelivelyName)
   if (!key) return null
-  const mapping = mappings.find((m) => tierMappingKey(m.givelivelyName) === key)
+  const page = tierMappingKey(otherPage)
+  const mapping = mappings.find((m) => tierMappingKey(m.givelivelyName) === key && tierMappingKey(m.pageName) === page)
   if (mapping) {
     const tier = tiers.find((t) => t.id === mapping.tierId)
     if (tier) return { tier, via: 'mapping' }
   }
+  if (page) return null
   let best: { tier: Tier; length: number } | null = null
   for (const tier of tiers) {
     if (tier.tierCategory === 'complimentary') continue
@@ -53,21 +64,21 @@ export function seatCount(tier: Tier, seats: number | null, quantity: number | n
 }
 
 /**
- * Does a purchase belong to this gala? Matches the gala's Give Lively page name (normalized, exact)
- * against the row's Page Name or Internal Name.
+ * Does a purchase belong to this gala? Matches the gala's Give Lively pages (its main page and any others, such as
+ * a private Community Tickets page; normalized, exact) against the row's Page Name or Internal Name.
  *
  * - CSV upload (`allowBlank: true`): a row with no page name is imported.
  * - JSON sync (`allowBlank: false`): only a matching page name is imported.
- * With no page name configured for the gala, nothing matches; callers decide what that means
+ * With no page configured for the gala, nothing matches; callers decide what that means
  * (the sync does nothing and says so).
  */
 export function isGalaPage(
   names: { pageName: string | null; internalName: string | null },
-  galaPageName: string | null,
+  galaPages: string | null | readonly (string | null)[],
   { allowBlank }: { allowBlank: boolean },
 ): boolean {
   const candidates = [names.pageName, names.internalName].map(normText).filter(Boolean)
   if (candidates.length === 0) return allowBlank
-  const target = normText(galaPageName)
-  return target !== '' && candidates.includes(target)
+  const targets = (Array.isArray(galaPages) ? galaPages : [galaPages]).map(normText).filter(Boolean)
+  return candidates.some((c) => targets.includes(c))
 }

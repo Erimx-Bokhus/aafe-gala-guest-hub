@@ -40,6 +40,8 @@ const ACTIONS = [
   ['staff_import_givelively', ADMIN, `select staff_import_givelively('[]', '{"file_name":"empty.csv"}')`, 'import.csv'],
   ['staff_set_tier_mapping', ADMIN, `select staff_set_tier_mapping('Mystery', 'bronze')`, 'tier_mapping.set'],
   ['staff_set_gala_page', ADMIN, `select staff_set_gala_page('AAFE Gala 2027 (test)')`, 'gala.page_name_set'],
+  ['staff_add_gala_page', ADMIN, `select staff_add_gala_page('AAFE Gala 2027 (Community Tickets, test)')`, 'gala.page_added'],
+  ['staff_remove_gala_page', ADMIN, `select staff_remove_gala_page('AAFE Gala 2027 (Community Tickets, test)')`, 'gala.page_removed'],
   ['staff_check_in', VOL, `select staff_check_in('g-019')`, 'checkin.arrived'],
   ['staff_check_in_qr', VOL, `select staff_check_in_qr('aafe-00000000000000000000000000test')`, 'checkin.arrived'],
   ['staff_check_in_exception', VOL, `select staff_check_in_exception('Walk-in Guest', 'ord-acme', 'walk_in', 'Took an unnamed seat')`, 'checkin.exception'],
