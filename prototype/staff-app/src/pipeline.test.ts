@@ -15,7 +15,8 @@ const MEI = seedStaff('st-mei'), DANIEL = seedStaff('st-daniel'), KENJI = seedSt
 
 function demo(user: StaffUser, start: DB = loadDB()) {
   let data = start
-  return { api: demoApi(user, (fn) => { data = fn(data) }, () => data), db: () => data, as: (u: StaffUser) => demoApi(u, (fn) => { data = fn(data) }, () => data) }
+  return { api: demoApi(user, (fn) => { data = fn(data) }, () => data), db: () => data, set: (fn: (d: DB) => DB) => { data = fn(data) },
+    as: (u: StaffUser) => demoApi(u, (fn) => { data = fn(data) }, () => data) }
 }
 /** The board without ids and times (new records get random ones on each side), prospects in a fixed order. */
 const comparable = (b: PipelineBoard) => ({
@@ -31,9 +32,9 @@ const ticketBuyer = (db: DB) => {
 
 describe('the demo pipeline matches the database', () => {
   it('same board as staff_pipeline() from the seed, and after the same actions on both sides', async () => {
-    const { as, err } = await openTestDb()
+    const { as, err, db: sdb } = await openTestDb()
     const sql = async (q: string, params: unknown[] = []) => (await as('authenticated', MEI.email, q, params))[0]?.r
-    const { api, db } = demo(MEI)
+    const { api, db, set } = demo(MEI)
     const board = async () => [comparable(await sql('select staff_pipeline() r')), comparable(await api.pipeline())]
 
     // From the seed: every sponsorship order on this gala's list is a prospect, at the stage its order reached.
@@ -83,6 +84,17 @@ describe('the demo pipeline matches the database', () => {
       await expect(run()).rejects.toThrow(sqlErr)
       expect(sqlErr).toMatch(/^(invalid_input|invalid_transition)/)
     }
+
+    // Then Give Lively refunds it in full, the donor-covered fee too, and the order is cancelled, as gl_import does
+    // (Oct 12 audit): the prospect is lost and nothing counts as received, on both sides.
+    await sdb.query(`update payments set refunded_amount = original_amount + 11.30 where order_id = $1`, [sOrder])
+    await sdb.query(`update orders set status = 'cancelled', updated_at = now() where id = $1`, [sOrder])
+    set((d) => ({ ...d, payments: d.payments.map((x) => (x.order_id === dOrder ? { ...x, refunded_amount: x.original_amount + 11.3 } : x)),
+      orders: d.orders.map((o) => (o.id === dOrder ? { ...o, status: 'cancelled' as const, updated_at: new Date().toISOString() } : o)) }))
+    ;[server, mine] = await board()
+    expect(mine).toEqual(server)
+    expect(mine.prospects.find((p) => p.organization === 'Lotus Street Bakery')).toMatchObject({ stage: 'lost', received: 0, probability: 0 })
+    expect(mine.stages.find((x) => x.stage === 'payment_received')!.received).toBeGreaterThanOrEqual(0)
   }, 120_000)
 })
 
