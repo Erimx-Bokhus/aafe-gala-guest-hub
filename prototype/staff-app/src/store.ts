@@ -8,6 +8,7 @@ import type { DB, Guest, Order, PayMethod, PipelineStage, Prospect, ReviewReason
 import { tierMappingKey, type GlImportRow, type GlImportRun, type ImportResult } from './importer'
 import { CANCELLED_STATUS } from '../../../import-engine/src/index.ts'
 import type { StaffApi } from './api'
+import { money } from '@shared/ui'
 
 /**
  * What every page gets. `db` is what the signed-in role may read (a volunteer's has no emails, payments or notes).
@@ -229,13 +230,17 @@ export function demoImport(db: DB, user: StaffUser, rows: GlImportRow[], run: Gl
     }
     const cancel = !!r.cancelled || CANCELLED_STATUS.test(r.status ?? '') || (refunded > 0 && refunded >= gross)
     if (d.payments.some((p) => p.purchase_key === key)) { res.skipped++; continue }
-    const mapped = (d.tier_mappings ?? []).find((m) => m.event_id === ev.id && m.name_key === nameKey(r.ticket_level))
+    // As gl_import: a purchase on another of the gala's pages gets a level only from a mapping made for that page.
+    const page = (ev.givelively_other_pages ?? []).some((p) => nameKey(p) === nameKey(r.campaign)) ? nameKey(r.campaign) : ''
+    const mapped = (d.tier_mappings ?? []).find((m) => m.event_id === ev.id && (m.page_key ?? '') === page && m.name_key === nameKey(r.ticket_level))
     const tier = d.sponsorship_tiers.find((t) => t.id === r.tier_id) ?? d.sponsorship_tiers.find((t) => t.id === mapped?.tier_id)
-      ?? d.sponsorship_tiers.filter((t) => t.tier_category !== 'complimentary' && r.ticket_level && nameKey(r.ticket_level).includes(nameKey(t.name.split(' — ')[0])))
-        .sort((a, b) => b.name.split(' — ')[0].length - a.name.split(' — ')[0].length)[0]
-    if (!tier) { if (review(key, null, 'unknown_tier', { tier_purchased: r.ticket_level })) res.review_items++; res.unknown_tier++; continue }
+      ?? (page ? undefined : d.sponsorship_tiers.filter((t) => t.tier_category !== 'complimentary' && r.ticket_level && nameKey(r.ticket_level).includes(nameKey(t.name.split(' — ')[0])))
+        .sort((a, b) => b.name.split(' — ')[0].length - a.name.split(' — ')[0].length)[0])
+    if (!tier) { if (review(key, null, 'unknown_tier', { tier_purchased: r.ticket_level, ...(page ? { page: r.campaign } : {}) })) res.review_items++; res.unknown_tier++; continue }
     const qty = tier.tier_category === 'ticket' ? Math.max(1, r.quantity ?? (tier.contribution_amount ? Math.floor(original / tier.contribution_amount) : 1)) : 1
-    const commit = tier.contribution_amount > 0 ? tier.contribution_amount * qty : original
+    // Committed at what was paid, as gl_import: a discounted ticket is paid in full, not "partly paid".
+    const price = tier.contribution_amount * qty
+    const commit = tier.contribution_amount > 0 ? Math.min(price, original) : original
     const seats = tier.included_seat_count === 0 ? 0 : r.seats ?? tier.included_seat_count * qty
     const m = r.method ?? ''
     const method: PayMethod = /amex|american/i.test(m) ? 'amex' : /bank|ach/i.test(m) ? 'givelively_ach' : 'card'
@@ -256,7 +261,8 @@ export function demoImport(db: DB, user: StaffUser, rows: GlImportRow[], run: Gl
       logo_status: tier.required_materials.includes('logo') ? 'pending' as const : 'not_required' as const,
       program_ad_status: tier.required_materials.some((x) => x.endsWith('ad')) ? 'pending' as const : 'not_required' as const,
       givelively_order_ref: null, salesforce_opportunity_id: null,
-      internal_notes: `Imported from Give Lively (${r.campaign || 'no campaign'}).${flagged ? ` CHECK: payment method "${m}" not recognized.` : ''}`, created_at: nowIso(), updated_at: nowIso() }
+      internal_notes: `Imported from Give Lively (${r.campaign || 'no campaign'}).${commit < price ? ` Discounted: paid ${money(commit, true)}, ${money(price, true)} at the level's price.` : ''}${flagged ? ` CHECK: payment method "${m}" not recognized.` : ''}`,
+      givelively_page: r.campaign?.trim() || null, created_at: nowIso(), updated_at: nowIso() }
     const pay = { id: uid('pay'), order_id: o.id, method, processor: 'stripe' as const, givelively_transaction_id: null, check_number: null, original_amount: original,
       covered_fee_amount: r.covered ?? 0, gross_amount: gross, transaction_fee_amount: 0, refunded_amount: refunded, net_amount: gross - refunded,
       received_at: new Date(r.date).toISOString(), recorded_by: 'givelively_sync', reconciliation_status: flagged ? 'needs_review' as const : 'matched' as const,
@@ -305,15 +311,37 @@ export function setGalaPage(db: DB, user: StaffUser, page: string): DB {
     { actor_type: 'staff', actor: user.name, entity: 'gala_event', entity_id: ev.id, order_id: null, action: 'gala.page_name_set', from_state: ev.givelively_page_name ?? null, to_state: page.trim(), guest_visible: false, summary: `Give Lively page set to "${page.trim()}".` })
 }
 
-/** Like staff_set_tier_mapping: link a Give Lively tier name to a package for this gala; open unknown-tier items for it close. */
-export function setTierMapping(db: DB, user: StaffUser, givelivelyName: string, tierId: string): DB {
-  const ev = db.meta.current_event_id, key = nameKey(givelivelyName)
-  const old = (db.tier_mappings ?? []).find((m) => m.event_id === ev && m.name_key === key)
-  const row = { id: old?.id ?? uid('tm'), event_id: ev, givelively_name: givelivelyName.trim(), name_key: key, tier_id: tierId, created_by: user.name, created_at: nowIso() }
+/** Like staff_add_gala_page: another Give Lively page for this gala (a private Community Tickets page). */
+export function addGalaPage(db: DB, user: StaffUser, page: string): DB {
+  const ev = db.gala_events.find((e) => e.id === db.meta.current_event_id)!, v = page.trim()
+  if (!v) throw new Error('invalid_input: page name is required')
+  if ([ev.givelively_page_name, ...(ev.givelively_other_pages ?? [])].some((p) => nameKey(p) === nameKey(v))) throw new Error("invalid_input: already one of this gala's pages")
+  return addAudit({ ...db, gala_events: db.gala_events.map((e) => (e.id === ev.id ? { ...e, givelively_other_pages: [...(e.givelively_other_pages ?? []), v] } : e)) },
+    { actor_type: 'staff', actor: user.name, entity: 'gala_event', entity_id: ev.id, order_id: null, action: 'gala.page_added', from_state: null, to_state: v, guest_visible: false, summary: `Give Lively page "${v}" added; the next sync looks back over all purchases.` })
+}
+
+/** Like staff_remove_gala_page: purchases already imported from it stay. */
+export function removeGalaPage(db: DB, user: StaffUser, page: string): DB {
+  const ev = db.gala_events.find((e) => e.id === db.meta.current_event_id)!, all = ev.givelively_other_pages ?? []
+  const left = all.filter((p) => nameKey(p) !== nameKey(page))
+  if (left.length === all.length) throw new Error('not_found: page')
+  return addAudit({ ...db, gala_events: db.gala_events.map((e) => (e.id === ev.id ? { ...e, givelively_other_pages: left } : e)) },
+    { actor_type: 'staff', actor: user.name, entity: 'gala_event', entity_id: ev.id, order_id: null, action: 'gala.page_removed', from_state: page.trim(), to_state: null, guest_visible: false, summary: `Give Lively page "${page.trim()}" removed; purchases already imported from it stay.` })
+}
+
+/** Like staff_set_tier_mapping: link a Give Lively tier name to a package for this gala, on its main page or (page) another
+ * of its pages; open unknown-tier items for that name and page close. */
+export function setTierMapping(db: DB, user: StaffUser, givelivelyName: string, tierId: string, page: string | null = null): DB {
+  const ev = db.gala_events.find((e) => e.id === db.meta.current_event_id)!, key = nameKey(givelivelyName)
+  const pageKey = [nameKey(ev.givelively_page_name), ''].includes(nameKey(page)) ? '' : nameKey(page)
+  if (pageKey && !(ev.givelively_other_pages ?? []).some((p) => nameKey(p) === pageKey)) throw new Error('not_found: page')
+  const old = (db.tier_mappings ?? []).find((m) => m.event_id === ev.id && (m.page_key ?? '') === pageKey && m.name_key === key)
+  const row = { id: old?.id ?? uid('tm'), event_id: ev.id, givelively_name: givelivelyName.trim(), name_key: key, page_key: pageKey, tier_id: tierId, created_by: user.name, created_at: nowIso() }
   const d = { ...db, tier_mappings: [...(db.tier_mappings ?? []).filter((m) => m !== old), row],
     import_review: (db.import_review ?? []).map((v) => (v.status === 'open' && v.reason === 'unknown_tier' && nameKey(String(v.details.tier_purchased ?? '')) === key
-      ? { ...v, status: 'resolved' as const, resolution: `mapped to ${tierId}`, resolved_by: user.name, resolved_at: nowIso() } : v)) }
-  return addAudit(d, { actor_type: 'staff', actor: user.name, entity: 'tier_mapping', entity_id: key, order_id: null, action: 'tier_mapping.set', from_state: old?.tier_id ?? null, to_state: tierId, guest_visible: false, summary: `Give Lively tier "${givelivelyName.trim()}" mapped to ${tierId}.` })
+      && nameKey(String(v.details.page ?? '')) === pageKey ? { ...v, status: 'resolved' as const, resolution: `mapped to ${tierId}`, resolved_by: user.name, resolved_at: nowIso() } : v)) }
+  return addAudit(d, { actor_type: 'staff', actor: user.name, entity: 'tier_mapping', entity_id: key, order_id: null, action: 'tier_mapping.set', from_state: old?.tier_id ?? null, to_state: tierId, guest_visible: false,
+    summary: `Give Lively tier "${givelivelyName.trim()}"${pageKey ? ` on "${page!.trim()}"` : ''} mapped to ${tierId}.` })
 }
 
 /** Like staff_resolve_import_review: close a review item with what staff decided. */
