@@ -36,8 +36,8 @@ describe('prepareUpload', () => {
     const { rows, report } = await prepareUpload(csv, context({ tierMappings: [] }))
     expect(rows).toEqual([])
     expect(report.unknownTiers).toEqual([
-      { givelivelyName: 'Ticket', rowNumbers: [2, 3, 4] },
-      { givelivelyName: 'VIP Table 2027', rowNumbers: [5] },
+      { givelivelyName: 'Ticket', pageName: null, rowNumbers: [2, 3, 4] },
+      { givelivelyName: 'VIP Table 2027', pageName: null, rowNumbers: [5] },
     ])
     expect(report.reviewItems.map((i) => [i.reason, i.rowNumber])).toEqual([['unknown_tier', 2], ['unknown_tier', 3], ['unknown_tier', 4], ['unknown_tier', 5]])
 

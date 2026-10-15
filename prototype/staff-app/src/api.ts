@@ -102,8 +102,12 @@ export interface StaffApi {
   pullGiveLively(): Promise<PullCounts>
   /** This gala's Give Lively page name, chosen once from the pages in an upload. */
   setGalaPage(pageName: string): Promise<void>
-  /** Link a Give Lively tier name ("Ticket") to one of AAFE's packages for this gala. */
-  setTierMapping(givelivelyName: string, tierId: string): Promise<void>
+  /** Another Give Lively page for this gala, such as a private Community Tickets page; the sync looks back once. */
+  addGalaPage(pageName: string): Promise<void>
+  /** Take a page off this gala; purchases already imported from it stay. */
+  removeGalaPage(pageName: string): Promise<void>
+  /** Link a Give Lively tier name ("Ticket") to one of AAFE's packages for this gala, on its main page or (page) another of its pages. */
+  setTierMapping(givelivelyName: string, tierId: string, page?: string | null): Promise<void>
   /** Close an import review item with what staff decided. */
   resolveImportReview(id: string, resolution: string): Promise<void>
   /** The sponsor pipeline board (AAFE's prospect tracker). */
@@ -128,7 +132,7 @@ export const ROLES: Record<Exclude<keyof StaffApi, 'live'>, Role[]> = {
   updateGalaEvent: ADMIN, history: MANAGERS,
   exportBadges: MANAGERS, exportCheckin: ALL, exportSalesforce: ADMIN, syncSalesforce: ADMIN,
   emailQueue: MANAGERS, queueReminders: MANAGERS, setSponsorArrivals: ADMIN,
-  importGiveLively: ADMIN, pullGiveLively: ADMIN, setGalaPage: ADMIN, setTierMapping: ADMIN, resolveImportReview: MANAGERS,
+  importGiveLively: ADMIN, pullGiveLively: ADMIN, setGalaPage: ADMIN, addGalaPage: ADMIN, removeGalaPage: ADMIN, setTierMapping: ADMIN, resolveImportReview: MANAGERS,
   pipeline: MANAGERS, saveProspect: MANAGERS, setProspectStage: MANAGERS, setSponsorshipGoal: ADMIN,
   saveLevel: ADMIN, copyLevels: ADMIN, retireLevel: ADMIN, startGala: ADMIN,
   reportAttendance: ADMIN, reportSponsors: MANAGERS, reportNeeds: MANAGERS, reportPayments: MANAGERS, reportGuests: ADMIN,
@@ -159,12 +163,32 @@ export interface SalesforceSyncResult { sent: number; failed: number; by_object:
 export interface PullCounts { seen: number; created: number; updated: number; skipped: number; needs_review: number; not_gala: number; not_settled: number; unmapped: number; failed: number }
 const NO_PULL: PullCounts = { seen: 0, created: 0, updated: 0, skipped: 0, needs_review: 0, not_gala: 0, not_settled: 0, unmapped: 0, failed: 0 }
 
+/**
+ * A demo change that also answers something (purchases imported, emails queued). React runs a state updater at its next
+ * render, not when it's queued, so an answer read from inside one was still empty when the action returned (Oct 15: the
+ * "Imported: …" note never showed). The change is worked out on the current data, then saved.
+ * ponytail: a second change made before React renders would start from the same data; staff click one action at a time.
+ */
+function answerNow<R extends { db: DB }>(update: (fn: (d: DB) => DB) => void, full: () => DB, change: (d: DB) => R): R {
+  const r = change(full())
+  update(() => r.db)
+  return r
+}
+
 // ---- DEMO ------------------------------------------------------------------------------------------------
 
-/** The demo actions, on the full demo data held by the app. `update` applies a change; `full` reads the current data. */
+/** The demo actions, on the full demo data held by the app. `update` applies a change, perhaps later (React's state
+ * updates run at its next render); `full` reads the current data. */
 export function demoApi(user: StaffUser, update: (fn: (d: DB) => DB) => void, full: () => DB): StaffApi {
   const may = (a: keyof typeof ROLES) => canDo(user.role, a)
   const run = (a: keyof typeof ROLES, fn: (d: DB) => DB) => { if (!may(a)) return forbidden(); update(fn); return Promise.resolve() }
+  // A change the store may refuse, as the database would: tried on the current data first, so the refusal reaches the
+  // caller instead of React's state update.
+  const checked = (a: keyof typeof ROLES, fn: (d: DB) => DB) => {
+    if (!may(a)) return forbidden()
+    try { fn(full()) } catch (e) { return Promise.reject(e) }
+    return run(a, fn)
+  }
   const api: StaffApi = {
     live: false,
     updateGuest: (id, patch) => run('updateGuest', (d) => store.updateGuest(d, user.name, id, patch)),
@@ -287,16 +311,13 @@ export function demoApi(user: StaffUser, update: (fn: (d: DB) => DB) => void, fu
     reportGuests: () => exported('reportGuests', 'report_guests', demoGuests(full()), (n) => `Full guest list downloaded: ${n} guest(s).`),
     syncSalesforce: async () => {
       if (!may('syncSalesforce')) return forbidden()
-      let n = 0
-      update((d) => { const r = store.salesforceSyncNow(d); n = r.n; return r.db })
+      const { n } = answerNow(update, full, (d) => store.salesforceSyncNow(d))
       return { sent: n, failed: 0, by_object: {}, first_error: null }
     },
     emailQueue: async () => (may('emailQueue') ? demoEmailQueue(full()) : forbidden()),
     queueReminders: async (minDays = 7) => {
       if (!may('queueReminders')) return forbidden()
-      let n = 0
-      update((d) => { const r = store.queueGuestListReminders(d, user, minDays); n = r.n; return r.db })
-      return n
+      return answerNow(update, full, (d) => store.queueGuestListReminders(d, user, minDays)).n
     },
     // Like staff_set_sponsor_arrivals: on needs AAFE's approval noted; off needs nothing; both logged, a repeat does nothing.
     setSponsorArrivals: (on, note) => {
@@ -312,20 +333,19 @@ export function demoApi(user: StaffUser, update: (fn: (d: DB) => DB) => void, fu
     },
     importGiveLively: async (rows, run) => {
       if (!may('importGiveLively')) return forbidden()
-      let result: ImportResult | null = null
-      update((d) => { const r = store.demoImport(d, user, rows, run); result = r.result; return r.db })
-      return result!
+      return answerNow(update, full, (d) => store.demoImport(d, user, rows, run)).result
     },
     pullGiveLively: async () => {
       if (!may('pullGiveLively')) return forbidden()
-      let r = { created: 0, skipped: 0 }
-      update((d) => { const x = store.demoPull(d); r = x; return x.db })
+      const r = answerNow(update, full, (d) => store.demoPull(d))
       return { ...NO_PULL, seen: 1, created: r.created, skipped: r.skipped }
     },
     setGalaPage: (page) => (page.trim() ? run('setGalaPage', (d) => store.setGalaPage(d, user, page)) : Promise.reject(new Error('invalid_input: page name is required'))),
-    setTierMapping: (name, tierId) => (!name.trim() ? Promise.reject(new Error('invalid_input: tier name is required'))
+    addGalaPage: (page) => checked('addGalaPage', (d) => store.addGalaPage(d, user, page)),
+    removeGalaPage: (page) => checked('removeGalaPage', (d) => store.removeGalaPage(d, user, page)),
+    setTierMapping: (name, tierId, page = null) => (!name.trim() ? Promise.reject(new Error('invalid_input: tier name is required'))
       : !full().sponsorship_tiers.some((t) => t.id === tierId) ? Promise.reject(new Error('not_found: tier'))
-      : run('setTierMapping', (d) => store.setTierMapping(d, user, name, tierId))),
+      : checked('setTierMapping', (d) => store.setTierMapping(d, user, name, tierId, page))),
     resolveImportReview: (id, resolution) => {
       if (!may('resolveImportReview')) return forbidden()
       if (!(full().import_review ?? []).some((v) => v.id === id && v.status === 'open')) return Promise.reject(new Error('not_found'))
@@ -438,7 +458,9 @@ export function liveApi(client: SupabaseClient, reload: () => Promise<void>): St
       return { ...NO_PULL, ...data }
     },
     setGalaPage: (page) => write('staff_set_gala_page', { p_page_name: page }),
-    setTierMapping: (name, tierId) => write('staff_set_tier_mapping', { p_givelively_name: name, p_tier_id: tierId }),
+    addGalaPage: (page) => write('staff_add_gala_page', { p_page_name: page }),
+    removeGalaPage: (page) => write('staff_remove_gala_page', { p_page_name: page }),
+    setTierMapping: (name, tierId, page = null) => write('staff_set_tier_mapping', { p_givelively_name: name, p_tier_id: tierId, p_page: page }),
     resolveImportReview: (id, resolution) => write('staff_resolve_import_review', { p_id: id, p_resolution: resolution }),
     pipeline: () => call<PipelineBoard>('staff_pipeline', {}),
     saveProspect: async (p) => { const id = await call<string>('staff_save_prospect', { p }); await reload(); return id },
