@@ -118,7 +118,11 @@
    "required_materials": [
     "logo",
     "full_page_ad"
-   ]
+   ],
+   "event_id": "ev-2027",
+   "sort_order": 1,
+   "retired": false,
+   "guaranteed_seating": true
   },
   {
    "id": "gold",
@@ -129,7 +133,11 @@
    "required_materials": [
     "logo",
     "full_page_ad"
-   ]
+   ],
+   "event_id": "ev-2027",
+   "sort_order": 2,
+   "retired": false,
+   "guaranteed_seating": true
   },
   {
    "id": "silver",
@@ -140,7 +148,11 @@
    "required_materials": [
     "logo",
     "half_page_ad"
-   ]
+   ],
+   "event_id": "ev-2027",
+   "sort_order": 3,
+   "retired": false,
+   "guaranteed_seating": true
   },
   {
    "id": "bronze",
@@ -151,7 +163,11 @@
    "required_materials": [
     "logo",
     "half_page_ad"
-   ]
+   ],
+   "event_id": "ev-2027",
+   "sort_order": 4,
+   "retired": false,
+   "guaranteed_seating": true
   },
   {
    "id": "champion",
@@ -161,7 +177,11 @@
    "tier_category": "sponsorship",
    "required_materials": [
     "logo"
-   ]
+   ],
+   "event_id": "ev-2027",
+   "sort_order": 5,
+   "retired": false,
+   "guaranteed_seating": true
   },
   {
    "id": "friend",
@@ -171,7 +191,11 @@
    "tier_category": "sponsorship",
    "required_materials": [
     "logo"
-   ]
+   ],
+   "event_id": "ev-2027",
+   "sort_order": 6,
+   "retired": false,
+   "guaranteed_seating": false
   },
   {
    "id": "supporter",
@@ -181,7 +205,11 @@
    "tier_category": "sponsorship",
    "required_materials": [
     "logo"
-   ]
+   ],
+   "event_id": "ev-2027",
+   "sort_order": 7,
+   "retired": false,
+   "guaranteed_seating": false
   },
   {
    "id": "corporate_ticket",
@@ -189,7 +217,11 @@
    "contribution_amount": 500,
    "included_seat_count": 1,
    "tier_category": "ticket",
-   "required_materials": []
+   "required_materials": [],
+   "event_id": "ev-2027",
+   "sort_order": 8,
+   "retired": false,
+   "guaranteed_seating": false
   },
   {
    "id": "community_ticket",
@@ -197,7 +229,11 @@
    "contribution_amount": 250,
    "included_seat_count": 1,
    "tier_category": "ticket",
-   "required_materials": []
+   "required_materials": [],
+   "event_id": "ev-2027",
+   "sort_order": 9,
+   "retired": false,
+   "guaranteed_seating": false
   },
   {
    "id": "full_page_ad",
@@ -207,7 +243,11 @@
    "tier_category": "advertising_only",
    "required_materials": [
     "full_page_ad"
-   ]
+   ],
+   "event_id": "ev-2027",
+   "sort_order": 10,
+   "retired": false,
+   "guaranteed_seating": false
   },
   {
    "id": "half_page_ad",
@@ -217,7 +257,11 @@
    "tier_category": "advertising_only",
    "required_materials": [
     "half_page_ad"
-   ]
+   ],
+   "event_id": "ev-2027",
+   "sort_order": 11,
+   "retired": false,
+   "guaranteed_seating": false
   },
   {
    "id": "comp_relationship",
@@ -225,7 +269,171 @@
    "contribution_amount": 0,
    "included_seat_count": 0,
    "tier_category": "complimentary",
-   "required_materials": []
+   "required_materials": [],
+   "event_id": "ev-2027",
+   "sort_order": 12,
+   "retired": false,
+   "guaranteed_seating": false
+  },
+  {
+   "id": "gold-2024",
+   "name": "Gold — Documentary Screening Sponsor",
+   "contribution_amount": 25000,
+   "included_seat_count": 10,
+   "tier_category": "sponsorship",
+   "required_materials": [
+    "logo",
+    "full_page_ad"
+   ],
+   "event_id": "ev-2024",
+   "sort_order": 2,
+   "retired": false,
+   "guaranteed_seating": true
+  },
+  {
+   "id": "champion-2024",
+   "name": "Champion — Party Favor Sponsor",
+   "contribution_amount": 7000,
+   "included_seat_count": 2,
+   "tier_category": "sponsorship",
+   "required_materials": [
+    "logo"
+   ],
+   "event_id": "ev-2024",
+   "sort_order": 5,
+   "retired": false,
+   "guaranteed_seating": true
+  },
+  {
+   "id": "gold-2025",
+   "name": "Gold — Documentary Screening Sponsor",
+   "contribution_amount": 25000,
+   "included_seat_count": 10,
+   "tier_category": "sponsorship",
+   "required_materials": [
+    "logo",
+    "full_page_ad"
+   ],
+   "event_id": "ev-2025",
+   "sort_order": 2,
+   "retired": false,
+   "guaranteed_seating": true
+  },
+  {
+   "id": "bronze-2025",
+   "name": "Bronze — Performance Sponsor",
+   "contribution_amount": 10000,
+   "included_seat_count": 6,
+   "tier_category": "sponsorship",
+   "required_materials": [
+    "logo",
+    "half_page_ad"
+   ],
+   "event_id": "ev-2025",
+   "sort_order": 4,
+   "retired": false,
+   "guaranteed_seating": true
+  },
+  {
+   "id": "friend-2025",
+   "name": "Friend Sponsor",
+   "contribution_amount": 2500,
+   "included_seat_count": 1,
+   "tier_category": "sponsorship",
+   "required_materials": [
+    "logo"
+   ],
+   "event_id": "ev-2025",
+   "sort_order": 6,
+   "retired": false,
+   "guaranteed_seating": false
+  },
+  {
+   "id": "platinum-2026",
+   "name": "Platinum — Lead Sponsor",
+   "contribution_amount": 50000,
+   "included_seat_count": 20,
+   "tier_category": "sponsorship",
+   "required_materials": [
+    "logo",
+    "full_page_ad"
+   ],
+   "event_id": "ev-2026",
+   "sort_order": 1,
+   "retired": false,
+   "guaranteed_seating": true
+  },
+  {
+   "id": "gold-2026",
+   "name": "Gold — Documentary Screening Sponsor",
+   "contribution_amount": 25000,
+   "included_seat_count": 10,
+   "tier_category": "sponsorship",
+   "required_materials": [
+    "logo",
+    "full_page_ad"
+   ],
+   "event_id": "ev-2026",
+   "sort_order": 2,
+   "retired": false,
+   "guaranteed_seating": true
+  },
+  {
+   "id": "silver-2026",
+   "name": "Silver — Signature Cocktail Sponsor",
+   "contribution_amount": 15000,
+   "included_seat_count": 8,
+   "tier_category": "sponsorship",
+   "required_materials": [
+    "logo",
+    "half_page_ad"
+   ],
+   "event_id": "ev-2026",
+   "sort_order": 3,
+   "retired": false,
+   "guaranteed_seating": true
+  },
+  {
+   "id": "champion-2026",
+   "name": "Champion — Party Favor Sponsor",
+   "contribution_amount": 7000,
+   "included_seat_count": 2,
+   "tier_category": "sponsorship",
+   "required_materials": [
+    "logo"
+   ],
+   "event_id": "ev-2026",
+   "sort_order": 5,
+   "retired": false,
+   "guaranteed_seating": true
+  },
+  {
+   "id": "friend-2026",
+   "name": "Friend Sponsor",
+   "contribution_amount": 2500,
+   "included_seat_count": 1,
+   "tier_category": "sponsorship",
+   "required_materials": [
+    "logo"
+   ],
+   "event_id": "ev-2026",
+   "sort_order": 6,
+   "retired": false,
+   "guaranteed_seating": false
+  },
+  {
+   "id": "supporter-2026",
+   "name": "Supporter Sponsor",
+   "contribution_amount": 1000,
+   "included_seat_count": 1,
+   "tier_category": "sponsorship",
+   "required_materials": [
+    "logo"
+   ],
+   "event_id": "ev-2026",
+   "sort_order": 7,
+   "retired": false,
+   "guaranteed_seating": false
   }
  ],
  "sponsors": [
@@ -4795,7 +5003,7 @@
    "id": "ord-24-harb",
    "event_id": "ev-2024",
    "sponsor_id": "sp-harborline",
-   "tier_id": "gold",
+   "tier_id": "gold-2024",
    "source": "check",
    "commitment_amount": 25000,
    "status": "paid",
@@ -4815,7 +5023,7 @@
    "id": "ord-25-harb",
    "event_id": "ev-2025",
    "sponsor_id": "sp-harborline",
-   "tier_id": "gold",
+   "tier_id": "gold-2025",
    "source": "ach_direct",
    "commitment_amount": 25000,
    "status": "paid",
@@ -4835,7 +5043,7 @@
    "id": "ord-26-harb",
    "event_id": "ev-2026",
    "sponsor_id": "sp-harborline",
-   "tier_id": "platinum",
+   "tier_id": "platinum-2026",
    "source": "ach_direct",
    "commitment_amount": 50000,
    "status": "paid",
@@ -4855,7 +5063,7 @@
    "id": "ord-24-meri",
    "event_id": "ev-2024",
    "sponsor_id": "sp-meridian",
-   "tier_id": "gold",
+   "tier_id": "gold-2024",
    "source": "wire",
    "commitment_amount": 25000,
    "status": "paid",
@@ -4875,7 +5083,7 @@
    "id": "ord-26-meri",
    "event_id": "ev-2026",
    "sponsor_id": "sp-meridian",
-   "tier_id": "gold",
+   "tier_id": "gold-2026",
    "source": "wire",
    "commitment_amount": 25000,
    "status": "paid",
@@ -4895,7 +5103,7 @@
    "id": "ord-25-acme",
    "event_id": "ev-2025",
    "sponsor_id": "sp-acme",
-   "tier_id": "bronze",
+   "tier_id": "bronze-2025",
    "source": "check",
    "commitment_amount": 10000,
    "status": "paid",
@@ -4915,7 +5123,7 @@
    "id": "ord-26-acme",
    "event_id": "ev-2026",
    "sponsor_id": "sp-acme",
-   "tier_id": "silver",
+   "tier_id": "silver-2026",
    "source": "check",
    "commitment_amount": 15000,
    "status": "paid",
@@ -4935,7 +5143,7 @@
    "id": "ord-25-lotus",
    "event_id": "ev-2025",
    "sponsor_id": "sp-lotus",
-   "tier_id": "friend",
+   "tier_id": "friend-2025",
    "source": "givelively",
    "commitment_amount": 2500,
    "status": "paid",
@@ -4955,7 +5163,7 @@
    "id": "ord-26-lotus",
    "event_id": "ev-2026",
    "sponsor_id": "sp-lotus",
-   "tier_id": "champion",
+   "tier_id": "champion-2026",
    "source": "givelively",
    "commitment_amount": 7000,
    "status": "paid",
@@ -4975,7 +5183,7 @@
    "id": "ord-26-north",
    "event_id": "ev-2026",
    "sponsor_id": "sp-northgate",
-   "tier_id": "supporter",
+   "tier_id": "supporter-2026",
    "source": "givelively",
    "commitment_amount": 1000,
    "status": "paid",
@@ -4995,7 +5203,7 @@
    "id": "ord-24-kim",
    "event_id": "ev-2024",
    "sponsor_id": "sp-kimfam",
-   "tier_id": "champion",
+   "tier_id": "champion-2024",
    "source": "check",
    "commitment_amount": 7000,
    "status": "paid",
@@ -5015,7 +5223,7 @@
    "id": "ord-26-kim",
    "event_id": "ev-2026",
    "sponsor_id": "sp-kimfam",
-   "tier_id": "friend",
+   "tier_id": "friend-2026",
    "source": "check",
    "commitment_amount": 2500,
    "status": "paid",
