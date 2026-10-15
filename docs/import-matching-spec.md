@@ -94,10 +94,13 @@ Re-importing the same file changes nothing and reports every row as unchanged.
 ## 3. Rows to orders, seats, and guests (Natalie's schema)
 
 - **Order and payment.** One `orders` row per purchase key, `source = givelively`, plus one `payments`
-  row. Status `paid`, or `partially_paid` if refunds bring it below the commitment.
+  row. Status `paid`, or `partially_paid` if refunds bring it below the commitment. The commitment is what
+  was paid, up to the level's price (Oct 15): Give Lively takes the whole amount at checkout, so a
+  discounted ticket is paid in full, noted "Discounted" on the order, never "partly paid".
 - **Tier.** Resolved in this order (details below): the gala's tier mapping, then Natalie's longest-name
   match against `sponsorship_tiers`. No match → staff review `unknown_tier`; nothing is created for that
-  row until staff map the tier and re-run.
+  row until staff map the tier and re-run. A purchase on one of the gala's other pages (below) takes its
+  level only from a mapping made for that page: no name match, and never the main page's mapping.
 - **Seats.** `Total Seats` seats (fallback: tier seat count × tickets purchased). Advertising-only tiers
   get none.
 - **Seated or admitted.** Champion and above guarantee a table; Friend, Supporter, and single tickets are
@@ -109,8 +112,9 @@ Re-importing the same file changes nothing and reports every row as unchanged.
 AAFE's real export says only `Ticket` in both Tier Purchased and Tier Category, and no app tier is called
 that. Without a mapping, every ordinary ticket purchase would land in staff review.
 
-Proposed table `tier_mappings` (id, event, Give Lively tier name, tier, created by, created at), unique on
-event + normalized Give Lively name (NFKC, case-folded, trimmed, inner spaces collapsed):
+Table `tier_mappings` (id, event, page, Give Lively tier name, tier, created by, created at), unique on
+event + page + normalized Give Lively name (NFKC, case-folded, trimmed, inner spaces collapsed). The page
+is blank for the gala's main page, or one of its other pages:
 
 1. Staff fill it in **once per gala**, before the first upload, from a short list of the tier names seen in
    the file. The import report lists any tier name with no mapping.
@@ -119,8 +123,10 @@ event + normalized Give Lively name (NFKC, case-folded, trimmed, inner spaces co
    re-run and on later uploads; staff don't map the same name twice.
 4. Changing a mapping doesn't rewrite orders already imported; the change is logged and those orders keep
    their tier until staff change them (hard rule 7).
+5. Each of the gala's other pages has its own mappings, made on purpose: "Ticket" on the Community Tickets
+   page ($250) must never land on the main page's $500 Ticket level.
 
-One Give Lively name maps to one tier. If AAFE sells more than one ticket type under the same name (for
+On one page, one Give Lively name maps to one tier. If AAFE sells more than one ticket type under the same name (for
 example, Friend and Supporter both as "Ticket"), the mapping can't tell them apart; see section 10.
 
 ### Gala page
@@ -134,6 +140,14 @@ Each gala stores its Give Lively page name (proposed `gala_events.givelively_pag
   row numbers, so a mixed export never puts another event's purchases on the gala list. A blank Page Name
   is imported. If the gala has no page name yet, nothing is imported: the upload lists the page names
   found in the file (with row counts), staff pick this gala's page once, and it's saved for the year.
+- **Other pages** (Oct 15, `gala_events.givelively_other_pages`): AAFE also sells discounted tickets to
+  partners on a private page, "AAFE's 52nd Annual Gala (Community Tickets)", with its own export. The
+  upload lists the other pages it skipped with their purchase counts; a gala admin adds one with "Add as
+  one of this gala's pages" or removes it, both logged. Its purchases then import like the main page's,
+  once each of its ticket types is linked to a level. Adding a page clears the sync's cursor, so the next
+  sync looks back over every purchase once (re-imports are recognized by purchase key). The
+  missing-purchase check compares a file only with earlier purchases from the pages it holds, so the
+  Community Tickets export doesn't flag the main page's purchases.
 
 ### Sponsors confirm the imported names
 
@@ -368,4 +382,7 @@ data (`docs/seed-data-requirements.md`, `seed/natalie-prototype/`).
 | 40 | Slash between guests | 2-seat purchase | "Imani Carter imani@… / Dre Carter dre@…" | 2 guests; no "/" in a name |
 | 41 | Placeholders in a list | 3-seat purchase; 10-seat purchase | "Ellen Marsh ellen@…, Paul Marsh, TBD"; a line "Seats 4-10 to be named" | 2 guests, 1 seat open; the placeholder line is skipped, not unclear |
 | 42 | Ad with no seats | Full-page ad, 0 seats | "No ticket included" | No guests, nothing unclear |
+| 44 | Community Tickets page added | Main page "Ticket" → $500 level; Community Tickets page added | "Ticket" for $250 on the Community Tickets page | `unknown_tier` naming the page; once linked for that page (Community Ticket), the order is paid in full |
+| 45 | Discounted purchase | "Ticket" → $500 level | $250 paid on the main page | Order committed at $250, `paid`, noted "Discounted: paid $250.00, $500.00 at the level's price." |
+| 46 | Community export uploaded | Main and community purchases imported earlier | The Community Tickets export alone | Only community purchases can be `missing_from_source` |
 | 43 | Fee covered as TRUE/FALSE | — | Transaction Fee Covered "TRUE" | Row imports; covered amount unknown (Natalie's synthetic export, `import-engine/test/fixtures/messy-guest-lists/`) |
