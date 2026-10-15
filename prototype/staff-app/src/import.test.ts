@@ -6,7 +6,7 @@ import { loadDB } from '@shared/data'
 import type { DB, StaffUser } from '@shared/types'
 import { demoApi, liveApi } from './api'
 import { GalaPageNotSetError, prepareImport, sampleExport } from './importer'
-import { demoImport, setGalaPage, setTierMapping } from './store'
+import { addGalaPage, demoImport, setGalaPage, setTierMapping } from './store'
 import { GALA_PAGE, exportCsv } from '../../../import-engine/test/helpers.ts'
 // @ts-expect-error plain JavaScript helper shared with the backend tests
 import { openTestDb } from '../../scripts/test-db.mjs'
@@ -70,6 +70,51 @@ describe('the demo import matches the database', () => {
   }, 120_000)
 })
 
+describe("Community Tickets: another of the gala's pages (Gate 1b, #147)", () => {
+  it('the demo and the database agree: a review named with its page, its own link, paid at what was paid', async () => {
+    const COMMUNITY = `${GALA_PAGE} (Community Tickets)`
+    const { db: pg, as } = await openTestDb()
+    const admin = (sql: string, params?: unknown[]) => as('authenticated', ADMIN_EMAIL, sql, params)
+    await admin('select staff_set_gala_page($1)', [GALA_PAGE])
+    await admin(`select staff_set_tier_mapping('Ticket', 'corporate_ticket')`)
+    await admin('select staff_add_gala_page($1)', [COMMUNITY])
+    let demo = addGalaPage(setTierMapping(setGalaPage(loadDB(), ADMIN, GALA_PAGE), ADMIN, 'Ticket', 'corporate_ticket'), ADMIN, COMMUNITY)
+    // Two community tickets for $500, and a $250 main-page ticket on the $500 level (a discount code).
+    const csv = exportCsv(
+      { Email: 'ana.ruiz@example.org', 'Page Name': COMMUNITY, 'Tickets Purchased': '2', 'Total Seats': '2', 'Amount Spent': '$500.00' },
+      { Email: 'ben.ito@example.org', 'Amount Spent': '$250.00', 'Date/Time of Purchase': '2027-02-06 03:00:00 PM EST' },
+    )
+    const both = async () => {
+      const { rows, run } = await prepareImport(csv, 'community.csv', demo)
+      const server = (await admin('select staff_import_givelively($1, $2) r', [JSON.stringify(rows), JSON.stringify(run)]))[0].r
+      const local = demoImport(demo, ADMIN, rows, run)
+      demo = local.db
+      expect(summary(local.result)).toEqual(summary(server))
+    }
+    const openTiers = async () => ({
+      sql: (await pg.query(`select details from import_review where reason = 'unknown_tier' and status = 'open'`)).rows.map((r: { details: unknown }) => r.details),
+      demo: demo.import_review!.filter((v) => v.reason === 'unknown_tier' && v.status === 'open').map((v) => v.details),
+    })
+
+    await both()
+    expect(await openTiers()).toEqual({ sql: [{ tier_purchased: 'Ticket', page: COMMUNITY }], demo: [{ tier_purchased: 'Ticket', page: COMMUNITY }] })
+    await admin(`select staff_set_tier_mapping('Ticket', 'community_ticket', $1)`, [COMMUNITY])
+    demo = setTierMapping(demo, ADMIN, 'Ticket', 'community_ticket', COMMUNITY)
+    expect(await openTiers()).toEqual({ sql: [], demo: [] })
+    await both()
+
+    type Row = { tier_id: string; status: string; commitment_amount: number; givelively_page: string | null; internal_notes: string }
+    const sqlOrders: Row[] = (await pg.query(`select o.tier_id, o.status, o.commitment_amount::float commitment_amount, o.givelively_page, o.internal_notes
+      from orders o join payments p on p.order_id = o.id where p.purchase_key is not null order by p.purchase_key`)).rows
+    const demoOrders = demo.payments.filter((p) => p.purchase_key).sort((a, b) => a.purchase_key!.localeCompare(b.purchase_key!))
+      .map((p) => { const o = demo.orders.find((x) => x.id === p.order_id)!
+        return { tier_id: o.tier_id, status: o.status, commitment_amount: o.commitment_amount, givelively_page: o.givelively_page, internal_notes: o.internal_notes } })
+    expect(demoOrders).toEqual(sqlOrders)
+    expect(sqlOrders.map((o) => [o.tier_id, o.status, o.commitment_amount]).sort()).toEqual([['community_ticket', 'paid', 500], ['corporate_ticket', 'paid', 250]])
+    expect(sqlOrders.find((o) => o.tier_id === 'corporate_ticket')!.internal_notes).toContain("Discounted: paid $250.00, $500.00 at the level's price.")
+  }, 120_000)
+})
+
 describe('the upload screen, in demo mode', () => {
   function demo(user: StaffUser) {
     let data = loadDB()
@@ -82,7 +127,7 @@ describe('the upload screen, in demo mode', () => {
     await expect(prepareImport(sample.csv, sample.fileName, db())).rejects.toBeInstanceOf(GalaPageNotSetError)
     await api.setGalaPage("AAFE's 53rd Annual Gala")
     let prep = await prepareImport(sample.csv, sample.fileName, db())
-    expect(prep.prepared.report.skippedOtherPage).toHaveLength(1)
+    expect(prep.prepared.report.skippedOtherPage).toHaveLength(2)
     expect(prep.prepared.report.unknownTiers.map((t) => t.givelivelyName)).toEqual(['Ticket'])
     await api.setTierMapping('Ticket', 'community_ticket')
     prep = await prepareImport(sample.csv, sample.fileName, db())
@@ -92,6 +137,21 @@ describe('the upload screen, in demo mode', () => {
     expect(db().email_log.filter((m) => m.status === 'queued').length).toBe(drafts + 2)   // the refunded order gets no link
     expect(db().email_log.some((m) => m.trigger === 'givelively_sync' && m.status === 'sent' && m.approved_by == null)).toBe(false)
     expect(db().audit_log.at(-1)).toMatchObject({ action: 'import.csv', actor: ADMIN.name })
+
+    // The same file offers its Community Tickets page; once added, its "Ticket" waits for a link of its own (Gate 1b).
+    const community = "AAFE's 53rd Annual Gala (Community Tickets)"
+    await api.addGalaPage(community)
+    prep = await prepareImport(sample.csv, sample.fileName, db())
+    expect(prep.prepared.report.skippedOtherPage.map((s) => s.pageName)).toEqual(['AAFE Spring Benefit Raffle'])
+    expect(prep.prepared.report.unknownTiers).toEqual([{ givelivelyName: 'Ticket', pageName: community, rowNumbers: [5] }])
+    await expect(api.addGalaPage(community.toUpperCase())).rejects.toThrow('invalid_input')
+    await api.setTierMapping('Ticket', 'community_ticket', community)
+    prep = await prepareImport(sample.csv, sample.fileName, db())
+    expect((await api.importGiveLively(prep.rows, prep.run)).created).toBe(1)
+    expect(db().orders.at(-1)).toMatchObject({ tier_id: 'community_ticket', status: 'paid', commitment_amount: 500, givelively_page: community })
+    await api.removeGalaPage(community)
+    expect(db().gala_events.find((e) => e.id === db().meta.current_event_id)!.givelively_other_pages).toEqual([])
+    await expect(api.removeGalaPage(community)).rejects.toThrow('not_found')
   })
 
   it('a relationship manager decides close calls but cannot import, pick the page or link tiers', async () => {
@@ -104,6 +164,8 @@ describe('the upload screen, in demo mode', () => {
     await expect(rm.api.importGiveLively(prep.rows, prep.run)).rejects.toThrow('forbidden')
     await expect(rm.api.setGalaPage('x')).rejects.toThrow('forbidden')
     await expect(rm.api.setTierMapping('Ticket', 'community_ticket')).rejects.toThrow('forbidden')
+    await expect(rm.api.addGalaPage('x')).rejects.toThrow('forbidden')
+    await expect(rm.api.removeGalaPage('x')).rejects.toThrow('forbidden')
     await admin.api.importGiveLively(prep.rows, prep.run)
     const refund = admin.db().import_review!.find((v) => v.reason === 'refund' && v.status === 'open')!
     await admin.api.resolveImportReview(refund.id, 'Keep seats cancelled')
@@ -120,9 +182,12 @@ describe('live mode', () => {
     const run = { file_name: 'f.csv', file_hash: 'h', earliest: null, latest: null, missing: [], report: {} as never }
     expect(await api.importGiveLively([], run)).toEqual({ created: 1 })
     await api.setGalaPage('Page'); await api.setTierMapping('Ticket', 'community_ticket'); await api.resolveImportReview('rev-1', 'Same person')
+    await api.addGalaPage('Other'); await api.setTierMapping('Ticket', 'community_ticket', 'Other'); await api.removeGalaPage('Other')
     expect(rpc.mock.calls).toEqual([
       ['staff_import_givelively', { p_rows: [], p_run: run }], ['staff_set_gala_page', { p_page_name: 'Page' }],
-      ['staff_set_tier_mapping', { p_givelively_name: 'Ticket', p_tier_id: 'community_ticket' }], ['staff_resolve_import_review', { p_id: 'rev-1', p_resolution: 'Same person' }]])
-    expect(reload).toHaveBeenCalledTimes(4)
+      ['staff_set_tier_mapping', { p_givelively_name: 'Ticket', p_tier_id: 'community_ticket', p_page: null }], ['staff_resolve_import_review', { p_id: 'rev-1', p_resolution: 'Same person' }],
+      ['staff_add_gala_page', { p_page_name: 'Other' }], ['staff_set_tier_mapping', { p_givelively_name: 'Ticket', p_tier_id: 'community_ticket', p_page: 'Other' }],
+      ['staff_remove_gala_page', { p_page_name: 'Other' }]])
+    expect(reload).toHaveBeenCalledTimes(7)
   })
 })

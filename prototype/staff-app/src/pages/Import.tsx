@@ -60,6 +60,14 @@ export default function Import() {
             <section className="card p-5" data-testid="import-upload">
               <h2 className="font-semibold text-navy-900">Upload an export</h2>
               <p className="mt-1 text-sm text-navy-600">This gala's Give Lively page: {ev.givelively_page_name ? <b>{ev.givelively_page_name}</b> : <span>not chosen yet; you'll pick it from the first upload.</span>}</p>
+              {(ev.givelively_other_pages ?? []).length > 0 && (
+                <ul className="mt-1 space-y-1 text-sm text-navy-600" data-testid="import-other-gala-pages">
+                  {ev.givelively_other_pages!.map((p) => (
+                    <li key={p} className="flex flex-wrap items-center gap-2">Also this gala's: <b>{p}</b>
+                      <button className="btn-ghost btn-sm" onClick={() => void act(api.removeGalaPage(p), `"${p}" removed; purchases already imported from it stay`)}>Remove</button></li>
+                  ))}
+                </ul>
+              )}
               <p className="mt-1 text-sm text-navy-600">Upload the file exactly as Give Lively gives it: opening and saving it in Excel can damage non-English names, and the import stops if it finds that.</p>
               <div className="mt-4 flex flex-wrap gap-2">
                 <input ref={input} type="file" accept=".csv,text/csv" className="hidden" data-testid="import-file" onChange={(e) => { const f = e.target.files?.[0]; if (f) void choose(f); e.target.value = '' }} />
@@ -68,12 +76,13 @@ export default function Import() {
               </div>
               {error && <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-800" role="alert">This file can't be imported: {error}.</p>}
               {pages && <PagePicker pages={pages} onPick={(p) => void act(api.setGalaPage(p), `Give Lively page set to "${p}"`)} />}
-              {prep && <Preview prep={prep} db={db} onMap={(name, tierId) => void act(api.setTierMapping(name, tierId), `"${name}" linked`)} onImport={doImport} />}
+              {prep && <Preview prep={prep} db={db} onMap={(name, tierId, page) => void act(api.setTierMapping(name, tierId, page), `"${name}" linked`)}
+                onAddPage={(p) => void act(api.addGalaPage(p), `"${p}" added; link its ticket types below`)} onImport={doImport} />}
               {result && <ResultNote r={result} />}
             </section>
           )}
           <ReviewQueue open={open} db={db} admin={admin} onResolve={(v, choice) => void act(api.resolveImportReview(v.id, choice), 'Decision recorded')}
-            onMap={(name, tierId) => void act(api.setTierMapping(name, tierId), `"${name}" linked; upload the file again to import those purchases`)} />
+            onMap={(name, tierId, page) => void act(api.setTierMapping(name, tierId, page), `"${name}" linked; upload the file again to import those purchases`)} />
         </div>
         <section className="card p-5">
           <h2 className="font-semibold text-navy-900">Recent uploads</h2>
@@ -111,22 +120,47 @@ function PagePicker({ pages, onPick }: { pages: Pages; onPick: (p: string) => vo
   )
 }
 
-function TierLink({ name, db, onMap }: { name: string; db: DB; onMap: (name: string, tierId: string) => void }) {
+/** Link a Give Lively ticket type to a package, for the gala's main page or (page) another of its pages. */
+type OnMap = (name: string, tierId: string, page: string | null) => void
+
+function TierLink({ name, page, db, onMap }: { name: string; page: string | null; db: DB; onMap: OnMap }) {
   const [tier, setTier] = useState('')
   const tiers = levelsOf(db).filter((t) => t.tier_category !== 'complimentary')
+  const id = `tier-${page ?? ''}-${name}`
   return (
     <span className="flex flex-wrap items-center gap-2">
-      <label className="sr-only" htmlFor={`tier-${name}`}>Package for {name}</label>
-      <select id={`tier-${name}`} className="input w-auto py-1 text-sm" value={tier} onChange={(e) => setTier(e.target.value)}>
+      <label className="sr-only" htmlFor={id}>Package for {name}{page ? ` on ${page}` : ''}</label>
+      <select id={id} className="input w-auto py-1 text-sm" value={tier} onChange={(e) => setTier(e.target.value)}>
         <option value="">Choose a package…</option>
         {tiers.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
       </select>
-      <button className="btn-ghost btn-sm" disabled={!tier} onClick={() => onMap(name, tier)}>Link</button>
+      <button className="btn-ghost btn-sm" disabled={!tier} onClick={() => onMap(name, tier, page)}>Link</button>
     </span>
   )
 }
 
-function Preview({ prep, db, onMap, onImport }: { prep: Prepared; db: DB; onMap: (name: string, tierId: string) => void; onImport: () => void }) {
+/** The other Give Lively pages in the file, with how many purchases each: staff add the ones that sell this gala too. */
+function OtherPages({ skipped, onAddPage }: { skipped: { pageName: string | null }[]; onAddPage: (page: string) => void }) {
+  const counts = new Map<string, number>()
+  for (const s of skipped) if (s.pageName) counts.set(s.pageName, (counts.get(s.pageName) ?? 0) + 1)
+  if (!counts.size) return null
+  return (
+    <div className="rounded-lg border border-navy-100 p-4" data-testid="import-other-pages">
+      <h4 className="text-sm font-semibold text-navy-900">Purchases from other Give Lively pages, skipped</h4>
+      <p className="mt-1 text-sm text-navy-600">If a page also sells this gala, such as a private Community Tickets page, add it: its purchases are imported with the main page's once you link each of its ticket types to a package.</p>
+      <ul className="mt-2 space-y-2">
+        {[...counts].map(([page, n]) => (
+          <li key={page} className="flex flex-wrap items-center justify-between gap-2 text-sm">
+            <span><b>{page}</b> <span className="text-navy-500">{n} purchase{n === 1 ? '' : 's'}</span></span>
+            <button className="btn-ghost btn-sm" onClick={() => onAddPage(page)}>Add as one of this gala's pages</button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+function Preview({ prep, db, onMap, onAddPage, onImport }: { prep: Prepared; db: DB; onMap: OnMap; onAddPage: (page: string) => void; onImport: () => void }) {
   const r = prep.prepared.report
   const close = r.reviewItems.filter((i) => i.reason !== 'unknown_tier').length
   const stats: [string, number][] = [['Rows read', r.rowsRead], ['Ready to import', prep.prepared.rows.length], ['Names to pre-fill', r.namesPrefilled],
@@ -140,12 +174,18 @@ function Preview({ prep, db, onMap, onImport }: { prep: Prepared; db: DB; onMap:
       {r.unknownTiers.length > 0 && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-4" data-testid="import-tiers">
           <h4 className="text-sm font-semibold text-amber-900">Link these Give Lively ticket types to a package</h4>
-          <p className="mt-1 text-sm text-amber-900">Done once per gala. Purchases of an unlinked type wait for review and aren't imported until it's linked.</p>
+          <p className="mt-1 text-sm text-amber-900">Done once per gala, and once for each of its other pages: a Community Tickets "Ticket" is linked on purpose, never taken from the main page's. Purchases of an unlinked type wait for review and aren't imported until it's linked.</p>
           <ul className="mt-2 space-y-2">
-            {r.unknownTiers.map((t) => <li key={t.givelivelyName} className="flex flex-wrap items-center justify-between gap-2 text-sm"><span><b>"{t.givelivelyName}"</b> <span className="text-navy-500">rows {t.rowNumbers.join(', ')}</span></span><TierLink name={t.givelivelyName} db={db} onMap={onMap} /></li>)}
+            {r.unknownTiers.map((t) => (
+              <li key={`${t.pageName ?? ''}|${t.givelivelyName}`} className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                <span><b>"{t.givelivelyName}"</b>{t.pageName && <> on <b>{t.pageName}</b></>} <span className="text-navy-500">rows {t.rowNumbers.join(', ')}</span></span>
+                <TierLink name={t.givelivelyName} page={t.pageName} db={db} onMap={onMap} />
+              </li>
+            ))}
           </ul>
         </div>
       )}
+      <OtherPages skipped={r.skippedOtherPage} onAddPage={onAddPage} />
       {r.rejected.length > 0 && (
         <details className="text-sm"><summary className="cursor-pointer font-medium text-navy-800">{r.rejected.length} row{r.rejected.length === 1 ? '' : 's'} can't be read</summary>
           <ul className="mt-2 list-disc pl-5 text-navy-600">{r.rejected.map((x) => <li key={x.rowNumber}>Row {x.rowNumber}: {x.reason}</li>)}</ul></details>
@@ -171,7 +211,7 @@ function describe(v: ImportReview, db: DB): string {
   const sponsor = (() => { const o = db.orders.find((x) => x.id === v.order_id); return o ? db.sponsors.find((s) => s.id === o.sponsor_id)?.organization_name : null })()
   const guest = (id: unknown) => { const g = db.guests.find((x) => x.id === id); return g ? `${g.first_name} ${g.last_name}` : 'a guest already on the list' }
   switch (v.reason) {
-    case 'unknown_tier': return `Ticket type "${d.tier_purchased}" isn't linked to a package yet.`
+    case 'unknown_tier': return `Ticket type "${d.tier_purchased}"${d.page ? ` on "${d.page}"` : ''} isn't linked to a package yet.`
     case 'possible_duplicate': return `${d.guest} on ${sponsor ?? 'this purchase'} may be ${guest(d.existing_guest_id)}.`
     case 'double_booked': return `${d.guest} on ${sponsor ?? 'this purchase'} is also ${guest(d.existing_guest_id)} on another sponsor's list.`
     case 'email_name_conflict': return `${d.buyer} bought with ${d.email}, which another sponsor's contact also uses.`
@@ -182,7 +222,7 @@ function describe(v: ImportReview, db: DB): string {
   }
 }
 
-function ReviewQueue({ open, db, admin, onResolve, onMap }: { open: ImportReview[]; db: DB; admin: boolean; onResolve: (v: ImportReview, choice: string) => void; onMap: (name: string, tierId: string) => void }) {
+function ReviewQueue({ open, db, admin, onResolve, onMap }: { open: ImportReview[]; db: DB; admin: boolean; onResolve: (v: ImportReview, choice: string) => void; onMap: OnMap }) {
   return (
     <section className="card p-5" data-testid="import-review">
       <h2 className="font-semibold text-navy-900">Waiting for a person ({open.length})</h2>
@@ -194,7 +234,7 @@ function ReviewQueue({ open, db, admin, onResolve, onMap }: { open: ImportReview
               <span><Pill tone="gray">{REVIEW[v.reason].label}</Pill> <span className="text-navy-800">{describe(v, db)}</span></span>
               <span className="flex flex-wrap gap-2">
                 {REVIEW[v.reason].choices?.map((c) => <button key={c} className="btn-ghost btn-sm" onClick={() => onResolve(v, c)}>{c}</button>)}
-                {v.reason === 'unknown_tier' && (admin ? <TierLink name={String(v.details.tier_purchased ?? '')} db={db} onMap={onMap} /> : <span className="text-xs text-navy-500">A gala admin links it</span>)}
+                {v.reason === 'unknown_tier' && (admin ? <TierLink name={String(v.details.tier_purchased ?? '')} page={v.details.page ? String(v.details.page) : null} db={db} onMap={onMap} /> : <span className="text-xs text-navy-500">A gala admin links it</span>)}
               </span>
             </li>
           ))}
