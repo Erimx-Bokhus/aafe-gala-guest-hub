@@ -5,6 +5,7 @@
 //   demo behaves like the real app, including what a check-in volunteer can and can't see.
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { addAudit, displayName, loadDB, uid } from '@shared/data'
+import { needStatus } from '@shared/guestNeeds'
 import type { Snapshot } from '@shared/offlineCheckin'
 import type { AuditEntry, DB, EmailLog, GalaEvent, Guest, Material, PayMethod, PipelineStage, Role, Sector, StaffUser } from '@shared/types'
 import * as store from './store'
@@ -436,7 +437,7 @@ export function demoSnapshot(db: DB): CheckinSnapshot {
         id: g.id, order_id: g.order_id, first_name: g.first_name, last_name: g.last_name, display_name: displayName(g), title: g.title, organization: g.organization,
         sponsor: sponsorOf(g.order_id), package: db.sponsorship_tiers.find((t) => t.id === orders.get(g.order_id)!.tier_id)?.name ?? null,
         guest_type: g.guest_type, table_number: db.event_tables.find((t) => t.id === g.table_id)?.number ?? null, seat_number: g.seat_number,
-        has_access_needs: !!g.accessibility_needs?.trim(), qr_hash: null, qr_expires_at: null,
+        has_access_needs: needStatus(g.accessibility_needs) === 'some', qr_hash: null, qr_expires_at: null,
         arrived: g.attendance_status === 'checked_in' || !!ci, checkin_id: ci?.id ?? null, checkin_client_id: null,
         checked_in_at: ci?.checked_in_at ?? null, checked_in_by: ci?.checked_in_by ?? null, device: null,
       }

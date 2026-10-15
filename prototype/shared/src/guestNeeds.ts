@@ -65,11 +65,12 @@ export const serializeDietaryNeeds = (selected: readonly DietaryOption[], detail
   selected.includes(NONE) ? NONE : serializeNeeds(selected.filter((s) => s !== NONE) as (typeof DIETARY_OPTIONS[number] | 'Other')[], details, DIETARY_OPTIONS)
 export const serializeAccessibilityNeeds = (selected: readonly AccessibilityOption[], details: string) => serializeNeeds(selected, details, ACCESSIBILITY_OPTIONS)
 
-/** Has this guest answered? "none" (answered, no need), "some" (at least one need), or "unanswered". */
+/** Has this guest answered? "none" (answered, no need), "some" (at least one need), or "unanswered".
+ *  Same rule as has_need() in database/backend.sql, which sets the door list's access flag. */
 export function needStatus(value: string | null | undefined): 'none' | 'some' | 'unanswered' {
   const v = (value ?? '').trim()
   if (!v) return 'unanswered'
-  return v === NONE || v === 'No' ? 'none' : 'some'
+  return /^(none|no)$/i.test(v) ? 'none' : 'some'
 }
 
 export interface NeedCounts {
