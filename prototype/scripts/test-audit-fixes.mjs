@@ -91,5 +91,94 @@ ok(await retry(async () => { if (++tries < 3) throw new Error('db blip'); return
 tries = 0
 ok(await retry(async () => { tries++; throw new Error('db down') }, [1, 1]).then(() => false, (e) => e.message === 'db down') && tries === 3, 'and gives up with the last error')
 
+// ---- Saving a guest again in the portal (Oct 12 audit, Cornell): only a real change to the badge undoes staff's review
+// Its own link: an earlier check in this file replaces Acme's.
+const LINK = 'resave-test-link'
+await db.query(`update orders set portal_token = hash_token($1), portal_token_expires_at = now() + interval '30 days' where id = 'ord-acme'`, [LINK])
+const portalSave = async (slot, g) => (await as('anon', null, `select portal_save_guest($1, $2, $3) v`, [LINK, slot, g]))[0].v
+const freeSlot = (await as('anon', null, `select portal_get_view($1) v`, [LINK]))[0].v.seats.find((x) => x.status === 'unnamed').slot
+const guest = { first_name: 'Robin', last_name: 'Resave', title: 'Director', organization: 'Resave Partners', email: 'robin.resave@example.org', dietary_needs: '', accessibility_needs: '' }
+await portalSave(freeSlot, guest)
+const gid = (await one(`select g.id from guests g join seats s on s.guest_id = g.id join orders o on o.id = s.order_id where o.id = 'ord-acme' and s.slot_number = $1`, [freeSlot])).id
+await db.query(`update seats set status = 'reviewed' where guest_id = $1`, [gid]); await db.query(`update guests set badge_status = 'printed' where id = $1`, [gid])
+const stateOf = async () => one(`select g.badge_status b, s.status st, (select count(*)::int from audit_log a where a.entity_id = g.id) logs
+  from guests g join seats s on s.guest_id = g.id where g.id = $1`, [gid])
+const reviewed = await stateOf()
+await portalSave(freeSlot, guest)
+ok(JSON.stringify(await stateOf()) === JSON.stringify(reviewed), `saving the same guest again changes nothing: badge stays printed, seat stays reviewed, nothing logged (${JSON.stringify(await stateOf())})`)
+await portalSave(freeSlot, { ...guest, title: ' Director ', dietary_needs: null })
+ok(JSON.stringify(await stateOf()) === JSON.stringify(reviewed), 'blank and missing, or extra spaces, are not a change')
+await portalSave(freeSlot, { ...guest, dietary_needs: 'Vegetarian' })
+const afterFood = await stateOf()
+ok(afterFood.b === 'printed' && afterFood.st === 'reviewed' && afterFood.logs === reviewed.logs + 1, `a food answer is saved and logged without undoing the review (${JSON.stringify(afterFood)})`)
+ok((await one(`select dietary_needs d from guests where id = $1`, [gid])).d === 'Vegetarian', 'and the food answer is stored')
+await portalSave(freeSlot, { ...guest, dietary_needs: 'Vegetarian', title: 'Executive Director' })
+const afterTitle = await stateOf()
+ok(afterTitle.b === 'reprint_needed' && afterTitle.st === 'submitted', `a new title on a printed badge needs a reprint and a new review (${JSON.stringify(afterTitle)})`)
+await db.query(`update seats set status = 'reviewed' where guest_id = $1`, [gid]); await db.query(`update guests set badge_status = 'ready' where id = $1`, [gid])
+await portalSave(freeSlot, { ...guest, dietary_needs: 'Vegetarian', title: 'Executive Director', organization: 'Resave Group' })
+const afterOrg = await stateOf()
+ok(afterOrg.b === 'needs_review' && afterOrg.st === 'submitted', 'a new organization on an unprinted badge goes back to review')
+await as('anon', null, `select portal_release_seat($1, $2)`, [LINK, freeSlot])
+
+// ---- A repeat buyer with a two-word last name stays one sponsor (Oct 12 audit, Cornell)
+const ANA = 'ana.garcia.lopez@audit.example.org'
+const sponsorsOf = async (email) => (await one(`select count(*)::int n from sponsors where lower(primary_contact_email) = $1`, [email])).n
+const conflicts = async (email) => (await one(`select count(*)::int n from import_review where reason = 'email_name_conflict' and order_id in
+  (select o.id from orders o join sponsors s on s.id = o.sponsor_id where lower(s.primary_contact_email) = $1)`, [email])).n
+await imp(row('GL-AUDIT-ANA-1', { email: ANA, first: 'Ana', last: 'García López' }))
+await imp(row('GL-AUDIT-ANA-2', { email: ANA, first: 'Ana', last: 'García López', date: '2026-10-07T15:04:00Z' }))
+ok(await sponsorsOf(ANA) === 1 && await conflicts(ANA) === 0, `a second purchase by "Ana García López" joins her sponsor, with no shared-inbox review (${await sponsorsOf(ANA)} sponsors)`)
+await imp(row('GL-AUDIT-ANA-3', { email: ANA, first: 'Mark', last: 'Lee', date: '2026-10-08T15:04:00Z' }))
+ok(await sponsorsOf(ANA) === 2 && await conflicts(ANA) === 1, 'a different family on the same inbox is still a shared inbox: a new sponsor and a review')
+
+// ---- A $0 purchase goes to staff, not silently dropped (Oct 12 audit, Cornell)
+{
+  const ordersBefore = (await one(`select count(*)::int n from orders`)).n
+  const zero = row('GL-AUDIT-ZERO', { email: 'zero.ticket@audit.example.org', first: 'Zed', last: 'Zero', gross: 0, original: 0, fee: 0, net: 0,
+    ticket_level: 'Comp Ticket', quantity: 2, guest_text: 'Zed Zero; Zoe Zero' })
+  const r1 = await imp(zero)
+  ok(r1.zero_amount === 1 && r1.created === 0 && r1.skipped === 0 && r1.review_items === 1, `a $0 purchase is counted on its own, not as already imported (${JSON.stringify(r1)})`)
+  ok((await one(`select count(*)::int n from orders`)).n === ordersBefore, 'and nothing is created for it')
+  const item = await one(`select details from import_review where reason = 'zero_amount' and details ->> 'email' = 'zero.ticket@audit.example.org'`)
+  ok(item?.details.buyer === 'Zed Zero' && item.details.tier_purchased === 'Comp Ticket' && item.details.guest_text === 'Zed Zero; Zoe Zero',
+    'staff get a review item with the buyer, ticket type and guest list')
+  const r2 = await imp(zero)
+  ok(r2.zero_amount === 1 && r2.review_items === 0 && (await one(`select count(*)::int n from import_review where reason = 'zero_amount' and details ->> 'email' = 'zero.ticket@audit.example.org'`)).n === 1,
+    'uploading the same row again adds no second item')
+  ok((await err('authenticated', RM, `select staff_resolve_import_review((select id from import_review where reason = 'zero_amount' limit 1), 'Added as comps')`)) === null,
+    'a relationship manager can close it like any review item')
+}
+
+// ---- A new display name voids the guest's QR e-ticket, like a new first or last name (Oct 12 audit, Cornell)
+{
+  const seat = await one(`select s.id, s.guest_id from seats s where s.qr_token_hash is not null and s.guest_id is not null limit 1`)
+  const voids = async () => (await one(`select count(*)::int n from audit_log where action = 'qr.voided' and entity_id = $1`, [seat.id])).n
+  const hash = async () => (await one(`select qr_token_hash h from seats where id = $1`, [seat.id])).h
+  await db.query(`update guests set display_name = display_name where id = $1`, [seat.guest_id])
+  ok(await hash() !== null && await voids() === 0, 'saving the same display name leaves the QR code working')
+  await db.query(`update guests set display_name = null where id = $1`, [seat.guest_id])
+  await db.query(`update guests set display_name = btrim(concat_ws(' ', first_name, last_name)) where id = $1`, [seat.guest_id])
+  ok(await hash() !== null && await voids() === 0, 'clearing it, or filling a blank one in as "First Last", is not a new name')
+  await db.query(`update guests set display_name = 'Someone Else Entirely' where id = $1`, [seat.guest_id])
+  ok(await hash() === null && await voids() === 1, 'a new display name voids the QR code, and the change log says so')
+}
+
+// ---- Two comp guests added at once can't take the same slot (Oct 12 audit, Cornell). The test database runs one
+// connection, so it can't add two at the same instant: it checks the function waits its turn (a per-gala lock), and
+// that adds in a row get their own slots on one comp order.
+{
+  const src = (await one(`select string_agg(prosrc, ' ') src from pg_proc where proname = 'staff_add_comp_guest'`)).src   // the public wrapper and the private body
+  ok(/pg_advisory_xact_lock\(hashtext\('staff_add_comp_guest'\), hashtext\(current_event_id\(\)\)\)/.test(src), 'adding a comp guest waits for any other add on this gala to finish')
+  const compOrders = async () => (await one(`select count(*)::int n from orders o join sponsorship_tiers t on t.id = o.tier_id
+    where o.event_id = current_event_id() and o.status <> 'cancelled' and t.tier_category = 'complimentary'`)).n
+  const before = await compOrders()
+  const ids = []
+  for (const n of ['One', 'Two', 'Three']) ids.push((await as('authenticated', RM, `select staff_add_comp_guest($1) id`, [{ first_name: 'Comp', last_name: n }]))[0].id)
+  const slots = (await q(`select s.order_id, s.slot_number from seats s where s.guest_id = any($1) order by s.slot_number`, [ids]))
+  ok(new Set(slots.map((x) => x.order_id)).size === 1 && new Set(slots.map((x) => x.slot_number)).size === 3 && await compOrders() === Math.max(before, 1),
+    `three comp guests in a row: one comp order, three different slots (${JSON.stringify(slots.map((x) => x.slot_number))})`)
+}
+
 console.log(`audit fixes: ${count.pass} passed, ${count.fail} failed`)
 if (count.fail) process.exitCode = 1

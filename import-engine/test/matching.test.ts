@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { matchBuyer, matchGuest, nameWordSet, normName, normOrg, type ExistingGuest, type Sponsor } from '../src/index.ts'
+import { hasLastName, matchBuyer, matchGuest, nameWordSet, normName, normOrg, type ExistingGuest, type Sponsor } from '../src/index.ts'
 
 const sponsors: Sponsor[] = [
   { id: 'sp-ana', organizationName: 'Ruiz Family', primaryContactName: 'Ana Ruiz', primaryContactEmail: 'events@example.com' },
@@ -26,6 +26,23 @@ describe('matchBuyer', () => {
   it('case 14: a shared inbox with a different last name goes to review', () => {
     expect(matchBuyer({ first: 'Mark', last: 'Lee', email: 'events@example.com' }, null, sponsors))
       .toEqual({ kind: 'email_name_conflict', candidateSponsorIds: ['sp-ana'], organizationName: 'Mark Lee' })
+  })
+  it('a repeat buyer with a two-word last name is the same sponsor, not a shared inbox (Oct 12 audit)', () => {
+    const repeat: Sponsor[] = [
+      { id: 'sp-ana', organizationName: 'Ana García López', primaryContactName: 'Ana García López', primaryContactEmail: 'ana@example.org' },
+      { id: 'sp-maria', organizationName: 'Cruz Family', primaryContactName: 'Maria de la Cruz', primaryContactEmail: 'maria@example.org' },
+    ]
+    expect(matchBuyer({ first: 'Ana', last: 'García López', email: 'ana@example.org' }, null, repeat)).toEqual({ kind: 'existing', sponsorId: 'sp-ana' })
+    expect(matchBuyer({ first: 'Maria', last: 'de la Cruz', email: 'maria@example.org' }, null, repeat)).toEqual({ kind: 'existing', sponsorId: 'sp-maria' })
+    expect(matchBuyer({ first: 'Ana', last: 'López', email: 'ana@example.org' }, null, repeat)).toEqual({ kind: 'existing', sponsorId: 'sp-ana' })
+    // Whole words only: a last name that is part of a word, or a different family on the same inbox, is still a shared inbox.
+    expect(matchBuyer({ first: 'Ana', last: 'ópez', email: 'ana@example.org' }, null, repeat).kind).toBe('email_name_conflict')
+    expect(matchBuyer({ first: 'Mark', last: 'Lee', email: 'maria@example.org' }, null, repeat).kind).toBe('email_name_conflict')
+  })
+  it('hasLastName compares whole words, ignoring case, accents in place and titles', () => {
+    expect(hasLastName('Dr. Ana García López', 'GARCÍA LÓPEZ')).toBe(true)
+    expect(hasLastName('Ana García López', 'Garcia')).toBe(false)
+    expect(hasLastName('Ana García López', '')).toBe(false)
   })
   it("a new buyer's organization is the company, else their name", () => {
     expect(matchBuyer({ first: 'Sam', last: 'Lee', email: 'sam@example.org' }, 'Lotus Bank', sponsors)).toEqual({ kind: 'new', organizationName: 'Lotus Bank' })
