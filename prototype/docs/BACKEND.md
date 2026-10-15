@@ -64,6 +64,24 @@ The approval screen calls `staff_email_queue()`: every unsent email, drafts firs
 
 Until `RESEND_API_KEY` is set, approved emails wait in the queue and nothing is sent. A guest-list link or reminder for an order whose deadline has passed can't be approved (it would arrive expired): extend that order's deadline first (`staff_set_order_deadline`), and the sender refuses one whose deadline passed after approval. Once Resend accepts an email, saving that is retried and never counts as a failed send, so a database hiccup can't send a second email whose new link replaces the first. Each `send-emails` run claims its batch first (`email_claim()`), so the every-minute schedule and a manual "send now" never send the same email twice or replace a link a sponsor already received. A claim older than 10 minutes, from a run that stopped mid-send, is released for the next run. Until the Give Lively secrets are set, the poller returns `not_configured`.
 
+## Stable and nightly: two projects (Oct 15)
+
+From the stability run on, the build runs as two lines, each with its own Supabase project and its own web addresses, so work on new features can never break the version AAFE and Demo Day see. The release rules are on the hub's Releases page.
+
+| | Stable | Nightly |
+| --- | --- | --- |
+| Git branch | `main` (then `release/v1` from v1.0.0) | `nightly` |
+| Supabase project | `aafe-gala-guest-list` | `aafe-gala-nightly` |
+| Apps | `aafe-gala-staff`, `aafe-gala-checkin`, `aafe-gala-portal` `.pages.dev` | the same with `nightly.` in front |
+| Upload with | `--branch main` | `--branch nightly` |
+| Staff list | The team, AAFE's reviewers, Pursuit's advisors | The team |
+
+- **One working folder per project.** The Supabase CLI remembers its linked project per folder (`supabase/.temp/`), so keep a second clone or worktree on the `nightly` branch, linked to the nightly project, next to the stable one: `git worktree add ../aafe-gala-nightly nightly`, then in its `prototype/`: `npm ci`, `npx supabase link --project-ref <NIGHTLY-REF>`, and `npm ci` in its `import-engine/`. Every `db:backend`, `db:load` and `functions deploy` then reaches only that folder's project. Check with `cat supabase/.temp/project-ref` before running one.
+- **Each folder has its own `.env.admin.local` and app `.env.local` files** (gitignored), pointing at its own project. The nightly project has its own function secrets, never copies of stable's.
+- **Never upload from the nightly folder with `--branch main`**: that replaces the stable apps. Nightly uploads always use `--branch nightly`.
+- **Setting up a nightly project:** the steps in Setup above, in the nightly folder: `schema.sql`, `backend.sql`, `npm run db:load -- full-fixed`, `demo_givelively.sql`, `demo_salesforce.sql`, the team's rows in `staff_users` with a confirmed sign-in for each, the function secrets and deploys, and the Authentication settings in step 2 with the `nightly.` addresses.
+- **Fixes flow forward:** a fix merged into `main` is merged into `nightly` too, so nightly never brings a fixed bug back.
+
 ## Demo with a fake Give Lively (all synthetic)
 
 AAFE's real Give Lively account isn't used. `givelively-mock` is a pretend Give Lively account that answers exactly like the real Zapier JSON endpoint, so the real sync code runs unchanged.
