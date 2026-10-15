@@ -9,6 +9,18 @@ const ok = (c, m) => { if (c) pass++; else { fail++; console.log('FAIL:', m) } }
 const ADMIN = 'mei.ortiz@aafe-demo.example.org', RM = 'daniel.seo@aafe-demo.example.org'
 const vol = (await db.query(`select email from staff_users where role='check_in_volunteer'`)).rows[0].email
 
+// ---- Every foreign key has an index on its referencing columns (Oct 12 audit): without one, following it or
+// deleting the row it points at reads the whole table. A new foreign key needs an index in backend.sql.
+const unindexed = (await db.query(`
+  select c.conrelid::regclass::text || ' (' || c.conname || ')' fk from pg_constraint c
+  where c.contype = 'f' and c.connamespace = 'public'::regnamespace
+    and not exists (select 1 from pg_index i where i.indrelid = c.conrelid
+                    and (i.indkey::int2[])[0:cardinality(c.conkey) - 1] @> c.conkey
+                    and c.conkey @> (i.indkey::int2[])[0:cardinality(c.conkey) - 1])
+  order by 1`)).rows.map((r) => r.fk)
+ok(unindexed.length === 0, `every foreign key has an index${unindexed.length ? ': missing ' + unindexed.join(', ') : ''}`)
+ok((await db.query(`select 1 from pg_indexes where indexname = 'audit_log_order_id_idx'`)).rows.length === 1, "the portal's activity list has its index")
+
 // ---- Guest portal
 const v = (await as('anon', null, `select portal_get_view('ac-6w9k3p5d') v`))[0].v
 ok(v.organization && v.seats.length > 0, 'portal view loads with seed token')
