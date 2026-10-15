@@ -1,0 +1,14 @@
+{
+  "name": "aafe-gala-tooling",
+  "private": true,
+  "description": "Repo-wide checks only (the coding standard's lint). The apps and the import engine keep their own package.json.",
+  "scripts": {
+    "lint": "eslint --max-warnings 0 import-engine/src prototype/shared/src/offlineCheckin.ts prototype/shared/src/supabase.ts prototype/shared/src/guestNeeds.ts prototype/checkin-app/src/liveDoor.ts prototype/staff-app/src/importer.ts prototype/supabase/functions"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "eslint": "^9.39.5",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.71.2"
+  }
+}

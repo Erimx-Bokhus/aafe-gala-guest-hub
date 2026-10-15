@@ -29,56 +29,60 @@ const COMPOUND = new Set(['欧阳', '歐陽', '司马', '司馬', '诸葛', '諸
 const CJK = /^[\p{Script=Han}\p{Script=Hangul}]+$/u
 
 /** One full-name field (a portal, a guest list, staff typing a name) → the record. */
-export function fromFullName(input: string): Name {
+export function fromFullName(input: string | null | undefined): Name {
   const display = (input ?? '').normalize('NFC').replace(/\s+/g, ' ').trim()
   if (!display) return { display, first: '', last: '', sure: false }
-
   // Written in Chinese or Korean script without spaces: family name first, one character or a known two-character one.
   if (CJK.test(display)) {
     const n = COMPOUND.has(display.slice(0, 2)) && display.length > 2 ? 2 : 1
     return { display, first: display.slice(n), last: display.slice(0, n), sure: display.length <= 3 || n === 2 }
   }
+  const comma = lastNameFirst(display)
+  return 'name' in comma ? comma.name : fromWords(display, strip(comma.body.split(' ')))
+}
 
-  // "Doe, Jane" is last name first; "John Smith, Jr." is a suffix.
-  let body = display
+/** "Doe, Jane" is last name first; "John Smith, Jr." is a suffix, so the name before the comma is the whole name. */
+function lastNameFirst(display: string): { name: Name } | { body: string } {
   const parts = display.split(',').map((p) => p.trim()).filter(Boolean)
-  if (parts.length === 2) {
-    const after = parts[1]!.split(' ')
-    if (after.every((w) => SUFFIXES.has(fold(w)))) body = parts[0]!
-    else return { display, first: strip(after).join(' '), last: strip(parts[0]!.split(' ')).join(' '), sure: true }
-  }
+  const [before = '', after = ''] = parts
+  if (parts.length !== 2) return { body: display }
+  const afterWords = after.split(' ')
+  if (afterWords.every((w) => SUFFIXES.has(fold(w)))) return { body: before }
+  return { name: { display, first: strip(afterWords).join(' '), last: strip(before.split(' ')).join(' '), sure: true } }
+}
 
-  const words = strip(body.split(' '))
-  if (words.length === 1) return { display, first: words[0]!, last: '', sure: true }
+/** A name written in words, titles and suffixes already removed. */
+function fromWords(display: string, words: string[]): Name {
+  const [head = '', second = ''] = words
+  if (words.length === 1) return { display, first: head, last: '', sure: true }
   // Chinese or Korean script with spaces ("陳 美玲"): the family name is written first.
-  if (CJK.test(words[0]!)) return { display, first: words.slice(1).join(' '), last: words[0]!, sure: true }
-
+  if (CJK.test(head)) return { display, first: words.slice(1).join(' '), last: head, sure: true }
   // A romanized family name written first: "Kim Min-ji", "KIM Minji". "Grace Kim" stays given name first.
-  if (words.length === 2 && FAMILY_FIRST.has(fold(words[0]!))) {
-    const [a, b] = words as [string, string]
-    const familyFirst = b.includes('-') || (a.length > 1 && a === a.toUpperCase() && b !== b.toUpperCase())
-    if (familyFirst) return { display, first: b, last: a, sure: true }
-    return { display, first: a, last: b, sure: false }   // "Chen Wei": either order is possible; staff can check
-  }
-
+  if (words.length === 2 && FAMILY_FIRST.has(fold(head))) return romanizedTwoWords(display, head, second)
   // A surname prefix starts the last name: "Maria de la Cruz" → "de la Cruz".
   const p = words.findIndex((w, i) => i > 0 && i < words.length - 1 && PARTICLES.has(fold(w)))
   if (p > 0) return { display, first: words.slice(0, p).join(' '), last: words.slice(p).join(' '), sure: true }
-
   // Otherwise the last word. With three or more words it's a guess ("José García López" may be two surnames).
-  return { display, first: words.slice(0, -1).join(' '), last: words.at(-1)!, sure: words.length === 2 }
+  return { display, first: words.slice(0, -1).join(' '), last: words.at(-1) ?? '', sure: words.length === 2 }
+}
+
+/** Two words, the first a common family name: "Kim Min-ji" and "KIM Minji" are family name first. */
+function romanizedTwoWords(display: string, a: string, b: string): Name {
+  const familyFirst = b.includes('-') || (a.length > 1 && a === a.toUpperCase() && b !== b.toUpperCase())
+  if (familyFirst) return { display, first: b, last: a, sure: true }
+  return { display, first: a, last: b, sure: false }   // "Chen Wei": either order is possible; staff can check
 }
 
 /** Without titles in front or suffixes behind ("Dr. Lena Ortiz Jr." → Lena Ortiz); a lone word is kept. */
 function strip(words: string[]): string[] {
   const w = words.filter(Boolean)
-  while (w.length > 1 && TITLES.has(fold(w[0]!))) w.shift()
-  while (w.length > 1 && SUFFIXES.has(fold(w.at(-1)!))) w.pop()
+  while (w.length > 1 && TITLES.has(fold(w[0] ?? ''))) w.shift()
+  while (w.length > 1 && SUFFIXES.has(fold(w.at(-1) ?? ''))) w.pop()
   return w
 }
 
 /** First and last name fields (Give Lively's buyer columns, a two-field form) → the record. */
-export function fromParts(first: string, last: string): Name {
+export function fromParts(first: string | null | undefined, last: string | null | undefined): Name {
   const f = (first ?? '').normalize('NFC').replace(/\s+/g, ' ').trim()
   const l = (last ?? '').normalize('NFC').replace(/\s+/g, ' ').trim()
   return { display: [f, l].filter(Boolean).join(' '), first: f, last: l, sure: Boolean(f) }
