@@ -209,7 +209,7 @@ export function demoImport(db: DB, user: StaffUser, rows: GlImportRow[], run: Gl
   const ev = db.gala_events.find((e) => e.id === db.meta.current_event_id)!
   const runId = uid('run'), actor = `Give Lively CSV import (${user.name})`
   let d: DB = { ...db, import_review: [...(db.import_review ?? [])], import_runs: [...(db.import_runs ?? [])] }
-  const res: ImportResult = { created: 0, updated: 0, skipped: 0, needs_review: 0, unknown_tier: 0, names_prefilled: 0, review_items: 0, missing_from_source: 0, run_id: runId }
+  const res: ImportResult = { created: 0, updated: 0, skipped: 0, needs_review: 0, unknown_tier: 0, names_prefilled: 0, review_items: 0, missing_from_source: 0, zero_amount: 0, run_id: runId }
   const review = (key: string | null, orderId: string | null, reason: ReviewReason, details: Record<string, unknown>) => {
     if (d.import_review!.some((v) => v.purchase_key === key && v.reason === reason && JSON.stringify(v.details) === JSON.stringify(details))) return false
     d = { ...d, import_review: [...d.import_review!, { id: uid('rev'), run_id: runId, event_id: ev.id, purchase_key: key, order_id: orderId, reason, details, status: 'open', resolution: null, resolved_by: null, resolved_at: null, created_at: nowIso() }] }
@@ -217,8 +217,15 @@ export function demoImport(db: DB, user: StaffUser, rows: GlImportRow[], run: Gl
   }
   for (const r of rows) {
     const original = r.original ?? r.gross, gross = r.gross ?? original, refunded = r.refunded ?? 0
-    if (!r.email || !r.date || !(gross > 0)) { res.skipped++; continue }
+    if (!r.email || !r.date) { res.skipped++; continue }
     const key = r.purchase_key
+    // As gl_import: a $0 or blank amount is left for staff, never dropped with the already-imported rows.
+    if (!(gross > 0)) {
+      const buyer = `${r.first ?? ''} ${r.last ?? ''}`.trim() || null
+      if (review(key, null, 'zero_amount', { buyer, email: r.email.trim().toLowerCase(), tier_purchased: r.ticket_level, tickets: r.quantity ?? null, guest_text: r.guest_text?.trim() || null })) res.review_items++
+      res.zero_amount!++
+      continue
+    }
     const cancel = !!r.cancelled || CANCELLED_STATUS.test(r.status ?? '') || (refunded > 0 && refunded >= gross)
     if (d.payments.some((p) => p.purchase_key === key)) { res.skipped++; continue }
     const mapped = (d.tier_mappings ?? []).find((m) => m.event_id === ev.id && m.name_key === nameKey(r.ticket_level))
