@@ -290,7 +290,14 @@ create or replace function guests_void_qr() returns trigger
 language plpgsql security definer set search_path = public as $$
 declare s record;
 begin
-  if (new.first_name, new.last_name, new.email) is distinct from (old.first_name, old.last_name, old.email) then
+  -- The display name is the name printed on the badge and the door list, so a new one is a new person on the ticket
+  -- too (Oct 12 audit: changing only the display name kept the old QR code working). A blank display name stands for
+  -- "First Last", so filling it in with that (backend.sql does, for guests saved before Oct 10) is not a change.
+  if (new.first_name, new.last_name, new.email,
+      coalesce(nullif(btrim(new.display_name), ''), btrim(concat_ws(' ', nullif(btrim(new.first_name), ''), nullif(btrim(new.last_name), '')))))
+     is distinct from
+     (old.first_name, old.last_name, old.email,
+      coalesce(nullif(btrim(old.display_name), ''), btrim(concat_ws(' ', nullif(btrim(old.first_name), ''), nullif(btrim(old.last_name), ''))))) then
     for s in with v as (update seats set qr_token_hash = null, qr_token_expires_at = null
                          where guest_id = new.id and qr_token_hash is not null returning id, order_id, slot_number)
              select * from v loop
@@ -301,7 +308,7 @@ begin
   return new;
 end $$;
 drop trigger if exists guests_void_qr on guests;
-create trigger guests_void_qr after update of first_name, last_name, email on guests for each row execute function guests_void_qr();
+create trigger guests_void_qr after update of first_name, last_name, display_name, email on guests for each row execute function guests_void_qr();
 
 -- A project holds demo galas or AAFE's real ones, never both. The demo sets carry hundreds of working
 -- sponsor links and QR codes, so a real gala added beside them would share a database with links anyone
