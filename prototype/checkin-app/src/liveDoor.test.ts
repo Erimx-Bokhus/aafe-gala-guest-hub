@@ -28,6 +28,14 @@ const KENJI: StaffUser = { id: 'st-test-door', name: 'Door Tester', email: 'door
 beforeEach(() => localStorage.clear())
 
 describe('live door list', () => {
+  it('clears the list from the iPad once no gala is open (the server answers null)', async () => {
+    server.snapshot = list([guest('g-1', 'Ana', 'Diaz')], '2027-05-20T22:00:00Z')
+    expect(await loadDoor(KENJI)).not.toBeNull()
+    server.snapshot = null
+    expect(await loadDoor(KENJI)).toBeNull()
+    expect(JSON.stringify({ ...localStorage })).not.toContain('Diaz')
+  })
+
   it('shows a guest added after the door opened, on the next refresh', async () => {
     server.snapshot = list([guest('g-1', 'Ana', 'Diaz')], '2027-05-20T22:00:00Z')
     const door = (await loadDoor(KENJI))!
