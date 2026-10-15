@@ -14,6 +14,8 @@ export { GalaPageNotSetError, tierMappingKey, type GlImportRow, type GlImportRun
 export interface ImportResult {
   created: number; updated: number; skipped: number; needs_review: number; unknown_tier: number
   names_prefilled: number; review_items: number; missing_from_source: number; run_id: string
+  /** $0 or blank-amount purchases, each left for staff as a zero_amount review item (none created). */
+  zero_amount?: number
 }
 
 /** The engine's view of this gala: its page, packages, tier mappings, sponsors, guests, and purchases already imported. */
@@ -50,6 +52,7 @@ export const REVIEW: Record<ReviewReason, { label: string; choices: [string, str
   refund: { label: 'Refund', choices: ['Keep seats cancelled', 'Reinstate'] },
   missing_from_source: { label: 'Missing from the export', choices: ['Cancel the seats', 'Keep (partial export)'] },
   guest_text_changed: { label: 'Guest list changed in Give Lively', choices: ['Keep the current names', 'Use the new list'] },
+  zero_amount: { label: '$0 purchase', choices: ['Added as comps', 'Not a guest'] },
 }
 
 // ---- A small invented export for demo mode (hard rule 1: example.org emails, 555-01xx phones) ----

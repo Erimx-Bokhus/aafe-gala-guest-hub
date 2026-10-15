@@ -14,6 +14,9 @@ describe('parseAmount', () => {
     expect(parseAmount('  ')).toBeNull()
     expect(parseAmount(undefined)).toBeNull()
   })
+  it('reads a dash alone as $0, as a spreadsheet shows zero (Oct 12 audit)', () => {
+    for (const s of ['-', '$ -', ' $- ', '$0.00']) expect(parseAmount(s)).toBe(0)
+  })
   it('rejects what it cannot read', () => {
     for (const s of ['abc', '$1,00.00', '1.234', '($5.00', '$1 000']) expect(() => parseAmount(s)).toThrow(ValueError)
   })

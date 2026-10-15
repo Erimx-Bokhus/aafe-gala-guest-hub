@@ -91,5 +91,23 @@ ok(await retry(async () => { if (++tries < 3) throw new Error('db blip'); return
 tries = 0
 ok(await retry(async () => { tries++; throw new Error('db down') }, [1, 1]).then(() => false, (e) => e.message === 'db down') && tries === 3, 'and gives up with the last error')
 
+// ---- A $0 purchase goes to staff, not silently dropped (Oct 12 audit, Cornell)
+{
+  const ordersBefore = (await one(`select count(*)::int n from orders`)).n
+  const zero = row('GL-AUDIT-ZERO', { email: 'zero.ticket@audit.example.org', first: 'Zed', last: 'Zero', gross: 0, original: 0, fee: 0, net: 0,
+    ticket_level: 'Comp Ticket', quantity: 2, guest_text: 'Zed Zero; Zoe Zero' })
+  const r1 = await imp(zero)
+  ok(r1.zero_amount === 1 && r1.created === 0 && r1.skipped === 0 && r1.review_items === 1, `a $0 purchase is counted on its own, not as already imported (${JSON.stringify(r1)})`)
+  ok((await one(`select count(*)::int n from orders`)).n === ordersBefore, 'and nothing is created for it')
+  const item = await one(`select details from import_review where reason = 'zero_amount' and details ->> 'email' = 'zero.ticket@audit.example.org'`)
+  ok(item?.details.buyer === 'Zed Zero' && item.details.tier_purchased === 'Comp Ticket' && item.details.guest_text === 'Zed Zero; Zoe Zero',
+    'staff get a review item with the buyer, ticket type and guest list')
+  const r2 = await imp(zero)
+  ok(r2.zero_amount === 1 && r2.review_items === 0 && (await one(`select count(*)::int n from import_review where reason = 'zero_amount' and details ->> 'email' = 'zero.ticket@audit.example.org'`)).n === 1,
+    'uploading the same row again adds no second item')
+  ok((await err('authenticated', RM, `select staff_resolve_import_review((select id from import_review where reason = 'zero_amount' limit 1), 'Added as comps')`)) === null,
+    'a relationship manager can close it like any review item')
+}
+
 console.log(`audit fixes: ${count.pass} passed, ${count.fail} failed`)
 if (count.fail) process.exitCode = 1
