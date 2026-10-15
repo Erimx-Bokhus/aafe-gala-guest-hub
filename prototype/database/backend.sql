@@ -201,6 +201,10 @@ create table if not exists import_review (
   created_at    timestamptz not null default now()
 );
 create index if not exists import_review_open on import_review (event_id, status, reason);
+-- zero_amount (Oct 12 audit): a $0 or blank-amount purchase, left for staff instead of dropped (gl_import).
+alter table import_review drop constraint if exists import_review_reason_check;
+alter table import_review add constraint import_review_reason_check check (reason in ('unknown_tier','guest_text_changed',
+  'email_name_conflict','double_booked','possible_duplicate','refund','missing_from_source','zero_amount'));
 
 -- Give Lively tier name -> tier, once per gala ("Ticket" -> Supporter).
 create table if not exists tier_mappings (
@@ -1200,7 +1204,7 @@ declare
   v_at timestamptz; v_original numeric; v_gross numeric; v_fee numeric; v_refunded numeric; v_text text;
   v_cancel boolean; v_changed boolean; v_named int; v_conflict text[]; f jsonb;
   v_created int := 0; v_updated int := 0; v_skipped int := 0; v_flagged int := 0; v_unknown int := 0;
-  v_prefilled int := 0; v_reviews int := 0; v_applied numeric;
+  v_prefilled int := 0; v_reviews int := 0; v_zero int := 0; v_applied numeric;
 begin
   select * into e from gala_events where id = current_event_id();
   if e.id is null then raise exception 'not_found: no open gala event'; end if;
@@ -1213,10 +1217,21 @@ begin
     v_fee      := nullif(r ->> 'fee', '')::numeric;
     v_refunded := coalesce(nullif(r ->> 'refunded', '')::numeric, 0);
     v_at       := nullif(r ->> 'date', '')::timestamptz;
-    if coalesce(r ->> 'email', '') = '' or v_at is null or coalesce(v_gross, 0) <= 0 then
+    if coalesce(r ->> 'email', '') = '' or v_at is null then
       v_skipped := v_skipped + 1; continue;
     end if;
     v_key := coalesce(nullif(r ->> 'purchase_key', ''), purchase_key(r ->> 'email', v_at));
+    -- A $0 or blank amount (Oct 12 audit: these were dropped with the already-imported rows). Give Lively has no comp
+    -- tickets, so a $0 row may be a comp on a hidden page, a free RSVP, or a mistake: staff decide, with the buyer and
+    -- guest list in front of them. Nothing is created; the same row uploaded again adds no second item.
+    if coalesce(v_gross, 0) <= 0 then
+      if add_import_review(p_run_id, v_key, null, 'zero_amount', jsonb_build_object(
+           'buyer', nullif(trim(coalesce(r ->> 'first', '') || ' ' || coalesce(r ->> 'last', '')), ''), 'email', lower(btrim(r ->> 'email')),
+           'tier_purchased', r ->> 'ticket_level', 'tickets', nullif(r ->> 'quantity', ''), 'guest_text', nullif(btrim(r ->> 'guest_text'), ''))) then
+        v_reviews := v_reviews + 1;
+      end if;
+      v_zero := v_zero + 1; continue;
+    end if;
     v_text := nullif(btrim(r ->> 'guest_text'), '');
     v_cancel := coalesce((r ->> 'cancelled')::boolean, false) or coalesce((r ->> 'cancel_only')::boolean, false)
              -- The failure words match the sync's classify() and the import engine's CANCELLED_STATUS (test-audit-fixes checks all three).
@@ -1399,7 +1414,7 @@ begin
   end loop;
 
   return jsonb_build_object('created', v_created, 'updated', v_updated, 'skipped', v_skipped, 'needs_review', v_flagged,
-                            'unknown_tier', v_unknown, 'names_prefilled', v_prefilled, 'review_items', v_reviews);
+                            'unknown_tier', v_unknown, 'names_prefilled', v_prefilled, 'review_items', v_reviews, 'zero_amount', v_zero);
 end $$;
 
 -- CSV upload from the staff app (Integrations page). Admin only. One call is one transaction: if
