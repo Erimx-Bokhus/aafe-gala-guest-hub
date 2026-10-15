@@ -91,5 +91,35 @@ ok(await retry(async () => { if (++tries < 3) throw new Error('db blip'); return
 tries = 0
 ok(await retry(async () => { tries++; throw new Error('db down') }, [1, 1]).then(() => false, (e) => e.message === 'db down') && tries === 3, 'and gives up with the last error')
 
+// ---- Saving a guest again in the portal (Oct 12 audit, Cornell): only a real change to the badge undoes staff's review
+// Its own link: an earlier check in this file replaces Acme's.
+const LINK = 'resave-test-link'
+await db.query(`update orders set portal_token = hash_token($1), portal_token_expires_at = now() + interval '30 days' where id = 'ord-acme'`, [LINK])
+const portalSave = async (slot, g) => (await as('anon', null, `select portal_save_guest($1, $2, $3) v`, [LINK, slot, g]))[0].v
+const freeSlot = (await as('anon', null, `select portal_get_view($1) v`, [LINK]))[0].v.seats.find((x) => x.status === 'unnamed').slot
+const guest = { first_name: 'Robin', last_name: 'Resave', title: 'Director', organization: 'Resave Partners', email: 'robin.resave@example.org', dietary_needs: '', accessibility_needs: '' }
+await portalSave(freeSlot, guest)
+const gid = (await one(`select g.id from guests g join seats s on s.guest_id = g.id join orders o on o.id = s.order_id where o.id = 'ord-acme' and s.slot_number = $1`, [freeSlot])).id
+await db.query(`update seats set status = 'reviewed' where guest_id = $1`, [gid]); await db.query(`update guests set badge_status = 'printed' where id = $1`, [gid])
+const stateOf = async () => one(`select g.badge_status b, s.status st, (select count(*)::int from audit_log a where a.entity_id = g.id) logs
+  from guests g join seats s on s.guest_id = g.id where g.id = $1`, [gid])
+const reviewed = await stateOf()
+await portalSave(freeSlot, guest)
+ok(JSON.stringify(await stateOf()) === JSON.stringify(reviewed), `saving the same guest again changes nothing: badge stays printed, seat stays reviewed, nothing logged (${JSON.stringify(await stateOf())})`)
+await portalSave(freeSlot, { ...guest, title: ' Director ', dietary_needs: null })
+ok(JSON.stringify(await stateOf()) === JSON.stringify(reviewed), 'blank and missing, or extra spaces, are not a change')
+await portalSave(freeSlot, { ...guest, dietary_needs: 'Vegetarian' })
+const afterFood = await stateOf()
+ok(afterFood.b === 'printed' && afterFood.st === 'reviewed' && afterFood.logs === reviewed.logs + 1, `a food answer is saved and logged without undoing the review (${JSON.stringify(afterFood)})`)
+ok((await one(`select dietary_needs d from guests where id = $1`, [gid])).d === 'Vegetarian', 'and the food answer is stored')
+await portalSave(freeSlot, { ...guest, dietary_needs: 'Vegetarian', title: 'Executive Director' })
+const afterTitle = await stateOf()
+ok(afterTitle.b === 'reprint_needed' && afterTitle.st === 'submitted', `a new title on a printed badge needs a reprint and a new review (${JSON.stringify(afterTitle)})`)
+await db.query(`update seats set status = 'reviewed' where guest_id = $1`, [gid]); await db.query(`update guests set badge_status = 'ready' where id = $1`, [gid])
+await portalSave(freeSlot, { ...guest, dietary_needs: 'Vegetarian', title: 'Executive Director', organization: 'Resave Group' })
+const afterOrg = await stateOf()
+ok(afterOrg.b === 'needs_review' && afterOrg.st === 'submitted', 'a new organization on an unprinted badge goes back to review')
+await as('anon', null, `select portal_release_seat($1, $2)`, [LINK, freeSlot])
+
 console.log(`audit fixes: ${count.pass} passed, ${count.fail} failed`)
 if (count.fail) process.exitCode = 1
