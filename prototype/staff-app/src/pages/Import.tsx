@@ -160,7 +160,7 @@ function Preview({ prep, db, onMap, onImport }: { prep: Prepared; db: DB; onMap:
 function ResultNote({ r }: { r: ImportResult }) {
   return (
     <p className="mt-4 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-900" role="status" data-testid="import-result">
-      Imported: <b>{r.created}</b> new, {r.skipped} already imported, {r.names_prefilled} guest names pre-filled, {r.review_items} for review{r.unknown_tier ? ` (${r.unknown_tier} waiting on a ticket type)` : ''}.
+      Imported: <b>{r.created}</b> new, {r.skipped} already imported, {r.names_prefilled} guest names pre-filled, {r.review_items} for review{r.unknown_tier ? ` (${r.unknown_tier} waiting on a ticket type)` : ''}{r.zero_amount ? `, ${r.zero_amount} at $0 for staff to check` : ''}.
     </p>
   )
 }
@@ -177,6 +177,7 @@ function describe(v: ImportReview, db: DB): string {
     case 'refund': return `${sponsor ?? 'This purchase'} was refunded in Give Lively (${d.status ?? 'refunded'}); its seats are cancelled.`
     case 'missing_from_source': return `${sponsor ?? 'A purchase'} from ${d.purchased_at ? fmtDate(String(d.purchased_at)) : 'earlier'} isn't in this export.`
     case 'guest_text_changed': return `${sponsor ?? 'A sponsor'}'s guest list changed in Give Lively after names were entered.`
+    case 'zero_amount': return `${d.buyer ?? d.email} got ${d.tickets ?? 'a'} "${d.tier_purchased}" ticket${Number(d.tickets) > 1 ? 's' : ''} for $0 in Give Lively${d.guest_text ? ` (guests: ${d.guest_text})` : ''}. Nothing was imported: if it's a comp, add the guests on Relationship guests.`
   }
 }
 
