@@ -125,7 +125,7 @@ export default function App() {
   if (!viewDb || !api) return <><PrototypeBanner dataSwitch /><p className="p-8 text-sm text-navy-600" role={loadError ? 'alert' : 'status'}>{loadError || 'Loading the gala…'}</p></>
 
   const nav = NAV.filter((n) => n.roles.includes(user.role))
-  const allowed = (p: string) => nav.some((n) => (n.to === '/' ? p === '/' : p.startsWith(n.to)))
+  const allowed = (p: string) => nav.some((n) => p === n.to || (n.to !== '/' && p.startsWith(n.to + '/')))
   const p = allowed(path) ? path : nav[0].to
   let page: ReactNode
   if (p === '/') page = <Dashboard />
