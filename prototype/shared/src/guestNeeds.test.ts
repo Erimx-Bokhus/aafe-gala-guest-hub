@@ -49,6 +49,7 @@ describe('answered "none" vs not answered', () => {
   it('tells an answer of none from no answer', () => {
     expect(needStatus('None')).toBe('none')
     expect(needStatus('No')).toBe('none')
+    expect(needStatus(' none ')).toBe('none') // staff may type it; the door flag (has_need in backend.sql) agrees
     expect(needStatus('')).toBe('unanswered')
     expect(needStatus(null)).toBe('unanswered')
     expect(needStatus('Vegan, Nut allergy')).toBe('some')
