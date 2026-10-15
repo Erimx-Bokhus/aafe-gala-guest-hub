@@ -3,6 +3,7 @@
 // The server records who checked a guest in from the sign-in, never from the iPad. QR codes are matched on their
 // hash (hard rule 6). Undo: a check-in still on the iPad is taken off the queue; a synced one goes through
 // staff_undo_check_in(), which allows only the person who made it or a gala admin.
+import type { PostgrestError } from '@supabase/supabase-js'
 import { CheckInDesk, type KeyValueStore, type QueuedCheckIn, type Snapshot, type SyncResult } from '@shared/offlineCheckin'
 import { needStatus } from '@shared/guestNeeds'
 import { supabase } from '@shared/supabase'
@@ -28,14 +29,20 @@ function deviceName() {
   store.setItem(k, d)
   return d
 }
+/** Calls a server function. Its reply is typed by that function's contract, which the backend tests check (test-offline-checkin.mjs). */
 async function rpc<T>(fn: string, args?: Record<string, unknown>): Promise<T> {
   if (!supabase) throw new Error('not_configured')
-  const { data, error } = await supabase.rpc(fn, args)
-  if (error) throw error
-  return data as T
+  const res: { data: unknown; error: PostgrestError | null } = await supabase.rpc(fn, args)
+  if (res.error) throw res.error
+  return res.data as T
+}
+/** An error's message, whatever was thrown (a Supabase error is an object with a message, not always an Error). */
+function messageOf(e: unknown): string {
+  if (typeof e === 'object' && e !== null && 'message' in e && typeof e.message === 'string') return e.message
+  return String(e)
 }
 /** The server's reason, without its code ("forbidden: only Kenji Abe or a gala admin…" → "Only Kenji Abe or a gala admin…"). */
-const reason = (e: unknown) => { const m = String((e as { message?: string })?.message ?? e).replace(/^\w+:\s*/, ''); return m.charAt(0).toUpperCase() + m.slice(1) }
+const reason = (e: unknown) => { const m = messageOf(e).replace(/^\w+:\s*/, ''); return m.charAt(0).toUpperCase() + m.slice(1) }
 
 export const deskFor = (staff: StaffUser) =>
   new CheckInDesk({ store, device: deviceName(), staffName: staff.name, prefix: `aafe-checkin:${staff.id}:` })
@@ -55,33 +62,103 @@ export async function loadDoor(staff: StaffUser): Promise<Door | null> {
   } catch (e) {
     if (!desk.snapshot) throw e   // no connection and nothing saved: nothing to show
   }
-  return liveDoor(desk)
+  const saved = desk.snapshot
+  if (!saved) throw new Error('internal error: the door opens only with a saved list')
+  return liveDoor(desk, saved)
 }
 
-function liveDoor(desk: CheckInDesk): Door {
+/** The list on screen, from a saved list, with a key that changes only when a guest or sponsor does. */
+function buildView(s: Snapshot) {
+  const guests: DoorGuest[] = s.guests.map((g) => ({
+    id: g.id, order_id: g.order_id, first_name: g.first_name, last_name: g.last_name, title: g.title, organization: g.organization,
+    sponsor: g.sponsor, category: CATEGORY[g.guest_type] ?? g.guest_type, seat_label: seatLabel(g.guest_type, g.sponsor, g.package),
+    table: g.table_number, // A list saved before Oct 13 has the details instead of the flag; it is replaced on the next refresh.
+    access: g.has_access_needs ?? needStatus(g.accessibility_needs) === 'some',
+  }))
+  const sponsors = [...new Map([...s.guests.filter((g) => g.guest_type === 'sponsor_guest').map((g) => [g.order_id, g.sponsor] as const),
+    ...s.unnamed_seats.map((u) => [u.order_id, u.sponsor] as const)]).entries()].map(([order_id, name]) => ({ order_id, name }))
+  return { guests, sponsors, key: JSON.stringify([guests, sponsors]) }
+}
+
+const queuedFor = (desk: CheckInDesk, guestId: string) =>
+  desk.pending().find((q): q is Extract<QueuedCheckIn, { kind: 'guest' }> => q.kind === 'guest' && q.guest_id === guestId)
+
+/** Who has arrived, each with the handle Undo needs: the iPad's own check-in if it's still waiting, else the server's. */
+function arrivalsOf(desk: CheckInDesk): Map<string, Arrival> {
+  const m = new Map<string, Arrival>()
+  for (const g of desk.guests()) {
+    if (!g.arrived || !g.checked_in_at) continue
+    const q = queuedFor(desk, g.id)
+    const handle = q?.client_id ?? g.checkin_client_id ?? g.checkin_id
+    if (handle) m.set(g.id, { handle, at: g.checked_in_at, by: g.checked_in_by ?? '', queued: !!q })
+  }
+  return m
+}
+
+/** Walk-ins and other exceptions, the ones still on this iPad first, newest first. */
+function exceptionsOf(desk: CheckInDesk): ExceptionRow[] {
+  const waiting: ExceptionRow[] = desk.pending().flatMap((q) => q.kind === 'exception'
+    ? [{ handle: q.client_id, name: q.name, type: q.type, at: q.at, by: 'this iPad', queued: true }] : [])
+  const synced: ExceptionRow[] = (desk.snapshot?.exceptions ?? []).map((e) => ({ handle: e.client_id ?? e.id, name: e.name, type: e.type, at: e.checked_in_at, by: e.checked_in_by, queued: false }))
+  return [...waiting, ...synced].sort((a, b) => b.at.localeCompare(a.at))
+}
+
+/** What the door says after a QR scan; null when the guest is checked in. Every outcome is named (R7). */
+function scanMessage(out: Awaited<ReturnType<CheckInDesk['scan']>>, code: string): string | null {
+  switch (out.kind) {
+    case 'checked_in': return null
+    case 'already': return `${out.guest.first_name} ${out.guest.last_name}: ${out.message}. Don't admit this ticket twice.`
+    case 'expired_code': return `This ticket's code for ${out.guest.first_name} ${out.guest.last_name} has expired. Check the guest in by name.`
+    case 'unknown_code':
+    case 'not_found': return `No guest found for code “${code.trim()}”.`
+  }
+}
+
+/** Undo the iPad couldn't do on its own: still sending, needs a connection, or the server's own reason. */
+function undoProblem(m: string): string {
+  if (/no check-in to undo/i.test(m)) return 'That check-in is still sending. Try Undo again in a moment.'
+  if (/fetch|network|failed/i.test(m)) return 'Undo needs a connection for a check-in that has already synced.'
+  return m
+}
+
+/** What staff do at the door: check in, scan a ticket, add a walk-in, undo. `kick` sends it and refreshes the screen. */
+function doorActions(desk: CheckInDesk, kick: () => void): Pick<Door, 'checkIn' | 'scan' | 'addException' | 'undo'> {
+  return {
+    checkIn(ids, method) {
+      const made = ids.flatMap((id) => desk.checkIn(id, method).kind === 'checked_in' ? [queuedFor(desk, id)?.client_id ?? ''] : []).filter(Boolean)
+      if (made.length) kick()
+      return made
+    },
+    async scan(code) {
+      const out = await desk.scan(code)
+      if (out.kind === 'checked_in') kick()
+      return scanMessage(out, code)
+    },
+    addException(p) {
+      const item = desk.checkInException({ name: p.name, order_id: p.orderId || null, type: p.type, note: p.note })
+      kick()
+      return item.client_id
+    },
+    async undo(handles) {
+      const problems: string[] = []
+      for (const h of handles) {
+        if (desk.cancel(h)) continue
+        try { await rpc('staff_undo_check_in', { p_id: h }) } catch (e) { problems.push(undoProblem(reason(e))) }
+      }
+      kick()
+      return problems[0] ?? null
+    },
+  }
+}
+
+function liveDoor(desk: CheckInDesk, s0: Snapshot): Door {
   const listeners = new Set<() => void>()
   let online: boolean | null = null, timer: ReturnType<typeof setInterval> | null = null, busy = false
-  const emit = () => listeners.forEach((f) => f())
-  const snap = () => desk.snapshot as Snapshot
-  const queuedFor = (guestId: string) => desk.pending().find((q): q is Extract<QueuedCheckIn, { kind: 'guest' }> => q.kind === 'guest' && q.guest_id === guestId)
-  const s0 = snap()
+  const emit = () => { listeners.forEach((f) => { f() }) }
   const gala: Gala = { id: s0.event_id, name: s0.event_name, event_date: s0.event_date ?? '', doors_time: s0.doors_time ?? null, venue_name: s0.venue_name ?? null }
-  /** The list on screen, from a saved list. Rebuilt when a refresh brings guests added or changed since the door opened
-   *  (a sponsor naming a guest, a comp added in the staff app), not only when the app loads. */
-  const build = (s: Snapshot) => {
-    const guests: DoorGuest[] = s.guests.map((g) => ({
-      id: g.id, order_id: g.order_id, first_name: g.first_name, last_name: g.last_name, title: g.title, organization: g.organization,
-      sponsor: g.sponsor, category: CATEGORY[g.guest_type] ?? g.guest_type, seat_label: seatLabel(g.guest_type, g.sponsor, g.package),
-      table: g.table_number, // A list saved before Oct 13 has the details instead of the flag; it is replaced on the next refresh.
-      access: g.has_access_needs ?? needStatus((g as { accessibility_needs?: string | null }).accessibility_needs) === 'some',
-    }))
-    const sponsors = [...new Map([...s.guests.filter((g) => g.guest_type === 'sponsor_guest').map((g) => [g.order_id, g.sponsor] as const),
-      ...s.unnamed_seats.map((u) => [u.order_id, u.sponsor] as const)]).entries()].map(([order_id, name]) => ({ order_id, name }))
-    return { guests, sponsors, key: JSON.stringify([guests, sponsors]) }
-  }
   // Arrivals already come from the latest list (desk.guests()); a list that only changed who arrived keeps the same
   // arrays, so the screen doesn't re-sort every few seconds.
-  let view = build(s0)
+  let view = buildView(s0)
 
   /** Send what's waiting, then fetch the latest list (other doors' check-ins). */
   async function tick() {
@@ -93,7 +170,7 @@ function liveDoor(desk: CheckInDesk): Door {
       const s = await rpc<Snapshot>('staff_checkin_snapshot')
       if (s.event_id === gala.id) {
         desk.saveSnapshot(s)
-        const next = build(s)
+        const next = buildView(s)
         if (next.key !== view.key) view = next
       }
       online = true
@@ -105,62 +182,16 @@ function liveDoor(desk: CheckInDesk): Door {
     }
   }
   const kick = () => { emit(); void tick() }
-
-  const api: Door = {
+  return {
     gala,
     get guests() { return view.guests },
     get sponsors() { return view.sponsors },
     get status() { return { online, pending: desk.pending().length } },
-    arrivals() {
-      const m = new Map<string, Arrival>()
-      for (const g of desk.guests()) {
-        if (!g.arrived || !g.checked_in_at) continue
-        const q = queuedFor(g.id)
-        const handle = q?.client_id ?? g.checkin_client_id ?? g.checkin_id
-        if (handle) m.set(g.id, { handle, at: g.checked_in_at, by: g.checked_in_by ?? '', queued: !!q })
-      }
-      return m
-    },
-    exceptions() {
-      const waiting: ExceptionRow[] = desk.pending().flatMap((q) => q.kind === 'exception'
-        ? [{ handle: q.client_id, name: q.name, type: q.type, at: q.at, by: 'this iPad', queued: true }] : [])
-      const synced: ExceptionRow[] = (snap().exceptions ?? []).map((e) => ({ handle: e.client_id ?? e.id, name: e.name, type: e.type, at: e.checked_in_at, by: e.checked_in_by, queued: false }))
-      return [...waiting, ...synced].sort((a, b) => b.at.localeCompare(a.at))
-    },
+    arrivals: () => arrivalsOf(desk),
+    exceptions: () => exceptionsOf(desk),
     notices: () => desk.notices(),
     dismiss: (id) => { desk.dismissNotice(id); emit() },
-    checkIn(ids, method) {
-      const made = ids.flatMap((id) => desk.checkIn(id, method).kind === 'checked_in' ? [queuedFor(id)?.client_id ?? ''] : []).filter(Boolean)
-      if (made.length) kick()
-      return made
-    },
-    async scan(code) {
-      const out = await desk.scan(code)
-      switch (out.kind) {
-        case 'checked_in': kick(); return null
-        case 'already': return `${out.guest.first_name} ${out.guest.last_name}: ${out.message}. Don't admit this ticket twice.`
-        case 'expired_code': return `This ticket's code for ${out.guest.first_name} ${out.guest.last_name} has expired. Check the guest in by name.`
-        default: return `No guest found for code “${code.trim()}”.`
-      }
-    },
-    addException(p) {
-      const item = desk.checkInException({ name: p.name, order_id: p.orderId || null, type: p.type, note: p.note })
-      kick()
-      return item.client_id
-    },
-    async undo(handles) {
-      const problems: string[] = []
-      for (const h of handles) {
-        if (desk.cancel(h)) continue
-        try { await rpc('staff_undo_check_in', { p_id: h }) } catch (e) {
-          const m = reason(e)
-          problems.push(/no check-in to undo/i.test(m) ? 'That check-in is still sending. Try Undo again in a moment.'
-            : /fetch|network|failed/i.test(m) ? 'Undo needs a connection for a check-in that has already synced.' : m)
-        }
-      }
-      kick()
-      return problems[0] ?? null
-    },
+    ...doorActions(desk, kick),
     subscribe(fn) { listeners.add(fn); return () => { listeners.delete(fn) } },
     start() {
       if (timer) return
@@ -174,5 +205,4 @@ function liveDoor(desk: CheckInDesk): Door {
       window.removeEventListener('online', kick)
     },
   }
-  return api
 }

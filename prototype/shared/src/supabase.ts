@@ -4,7 +4,7 @@
 //   (database/backend.sql).
 // DEMO (no env, e.g. OPEN-Staff-App.html): `supabase` is null and the login page offers the synthetic demo accounts.
 import { createClient, type EmailOtpType } from '@supabase/supabase-js'
-import type { StaffUser } from '@shared/types'
+import type { Role, StaffUser } from '@shared/types'
 
 const url = import.meta.env.VITE_SUPABASE_URL
 const key = import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -41,7 +41,7 @@ export async function signInFromLink(): Promise<boolean> {
   const q = new URLSearchParams(window.location.search)
   const tokenHash = q.get('token_hash')
   if (!tokenHash) return false
-  const type = (q.get('type') ?? 'magiclink') as EmailOtpType
+  const type = OTP_TYPES.find((t) => t === q.get('type')) ?? 'magiclink'   // only a type Supabase knows; it came in the address
   q.delete('token_hash'); q.delete('type')
   window.history.replaceState(null, '', window.location.pathname + (q.size ? `?${q}` : '') + window.location.hash)
   const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type })
@@ -54,9 +54,27 @@ export async function currentStaff(): Promise<StaffUser | null> {
   if (!supabase) return null
   const { data: { session } } = await supabase.auth.getSession()
   if (!session) return null
-  const { data, error } = await supabase.rpc('staff_me')
-  if (error) throw error
-  return (data as StaffUser | null) ?? null
+  const res: { data: unknown; error: Error | null } = await supabase.rpc('staff_me')
+  if (res.error) throw res.error
+  return asStaffUser(res.data)
+}
+
+const OTP_TYPES: readonly EmailOtpType[] = ['magiclink', 'signup', 'invite', 'recovery', 'email_change', 'email']
+const ROLES: readonly Role[] = ['gala_admin', 'relationship_manager', 'check_in_volunteer']
+const isRole = (r: unknown): r is Role => ROLES.some((x) => x === r)
+
+/**
+ * The staff record staff_me() returned, checked before the app trusts it: the role decides what a person can do, so
+ * anything that isn't a known role with text fields stops the sign-in instead of being guessed at (R9).
+ */
+export function asStaffUser(data: unknown): StaffUser | null {
+  if (data == null) return null
+  if (typeof data !== 'object') throw new Error('staff_me returned an unexpected answer')
+  const r: Record<string, unknown> = { ...data }
+  if (typeof r.id !== 'string' || typeof r.name !== 'string' || typeof r.email !== 'string' || !isRole(r.role)) {
+    throw new Error('staff_me returned an unexpected staff record')
+  }
+  return { id: r.id, name: r.name, email: r.email, role: r.role }
 }
 
 export async function signOut(): Promise<void> {

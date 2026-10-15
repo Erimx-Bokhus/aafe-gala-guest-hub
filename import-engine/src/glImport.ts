@@ -4,6 +4,7 @@
 import { fromFullName, fromParts } from './names.ts'
 import type { PreparedRow, PreparedUpload } from './prepareUpload.ts'
 import type { PurchaseRow } from './readExport.ts'
+import { must } from './must.ts'
 
 /** One row in the shape `gl_import()` reads. */
 export interface GlImportRow {
@@ -73,7 +74,7 @@ function preparedRow(r: PreparedRow): GlImportRow {
   }
   const findings = r.guestFindings.flatMap((f, i) => {
     if (!f || r.guestList.kind !== 'names') return []
-    const guest = r.guestList.guests[i]!.displayName
+    const guest = must(r.guestList.guests[i], 'each guest finding lines up with a parsed guest').displayName
     return [{ reason: f.reason, details: { guest, existing_guest_id: f.existingGuestId, existing_order_id: f.existingOrderId } }]
   })
   if (findings.length) row.findings = findings

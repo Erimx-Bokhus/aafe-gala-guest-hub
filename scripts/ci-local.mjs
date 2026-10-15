@@ -5,7 +5,7 @@
 //   node scripts/ci-local.mjs                  all six checks (about 5 minutes)
 //   node scripts/ci-local.mjs --quick          skip the backend tests and the demo-file rebuild (about 1 minute)
 //   node scripts/ci-local.mjs frontend backend only the checks named (real-data, secrets, import-engine,
-//                                              frontend, backend, edge-functions)
+//                                              lint, frontend, backend, edge-functions)
 //   node scripts/ci-local.mjs --full-scan      scan the whole git history for secrets, not just your new commits
 //   node scripts/ci-local.mjs --install-hook   run --quick before every git push (skip once with git push --no-verify)
 //
@@ -62,6 +62,10 @@ const checks = {
     const dir = join(root, 'import-engine')
     return deps(dir) && sh('npm run typecheck', dir) && sh('npm test', dir)
   },
+
+  // The coding standard (docs/CODING-STANDARD.md): ESLint from the repo root, zero warnings. Type information comes
+  // from each package, so their modules are installed too. Also in frontend.yml.
+  lint: () => deps(root) && deps(proto) && deps(join(root, 'import-engine')) && sh('npm run lint', root),
 
   // .github/workflows/frontend.yml: tests, then rebuild the seeds and double-click files and check nothing changed.
   frontend: () => {

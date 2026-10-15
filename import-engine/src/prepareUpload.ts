@@ -5,7 +5,7 @@
 // Left to `gl_import()` because they need the stored rows: skipping unchanged rows, `guest_text_changed`,
 // never filling seats a sponsor or staff already named, and the all-or-nothing transaction.
 
-import { parseGuestList, type GuestList } from './guestList.ts'
+import { parseGuestList, type GuestList, type ParsedGuest } from './guestList.ts'
 import { matchBuyer, matchGuest, type BuyerMatch, type ExistingGuest, type GuestFinding, type Sponsor } from './matching.ts'
 import { findMissing, type ImportedPurchase } from './missing.ts'
 import { readExport, type PurchaseRow, type RejectedRow } from './readExport.ts'
@@ -95,103 +95,120 @@ const isCancelled = (r: PurchaseRow) =>
 export async function prepareUpload(csv: string, ctx: UploadContext): Promise<PreparedUpload> {
   const read = await readExport(csv)
   const galaPageName = ctx.galaPageName?.trim()
-  if (!galaPageName) {
-    const pages = new Map<string | null, number>()
-    for (const r of read.rows) {
-      const name = r.pageName ?? r.internalName
-      pages.set(name, (pages.get(name) ?? 0) + 1)
-    }
-    throw new GalaPageNotSetError([...pages].map(([pageName, rows]) => ({ pageName, rows })))
+  if (!galaPageName) throw new GalaPageNotSetError(pagesIn(read.rows))
+
+  const t: Tally = {
+    rows: [], pendingTier: [], skippedOtherPage: [], unknownTiers: new Map(), reviewItems: [],
+    // ponytail: each guest is compared with every guest before it (quadratic): about 1 s for 1,000 purchases, 3 minutes
+    // for 10,000 (benchmarked Oct 12). AAFE has a few hundred; past that, index the pool by email and name words.
+    guestPool: [...ctx.existingGuests], namesPrefilled: 0, listsForSponsor: 0,
   }
-
-  const rows: PreparedRow[] = []
-  const pendingTier: PurchaseRow[] = []
-  const skippedOtherPage: UploadReport['skippedOtherPage'] = []
-  const unknownTiers = new Map<string, { givelivelyName: string; rowNumbers: number[] }>()
-  const reviewItems: ReviewItem[] = []
-  // ponytail: each guest is compared with every guest before it (quadratic): about 1 s for 1,000 purchases, 3 minutes
-  // for 10,000 (benchmarked Oct 12). AAFE has a few hundred; past that, index the pool by email and name words.
-  const guestPool: ExistingGuest[] = [...ctx.existingGuests]
-  let namesPrefilled = 0
-  let listsForSponsor = 0
-
-  for (const row of read.rows) {
-    if (!isGalaPage(row, galaPageName, { allowBlank: true })) {
-      skippedOtherPage.push({ rowNumber: row.rowNumber, pageName: row.pageName ?? row.internalName })
-      continue
-    }
-
-    const resolved = resolveTier(row.tierName, ctx.tierMappings, ctx.tiers)
-    if (!resolved) {
-      const key = tierMappingKey(row.tierName)
-      const entry = unknownTiers.get(key) ?? { givelivelyName: row.tierName, rowNumbers: [] }
-      entry.rowNumbers.push(row.rowNumber)
-      unknownTiers.set(key, entry)
-      reviewItems.push({ reason: 'unknown_tier', purchaseKey: row.purchaseKey, rowNumber: row.rowNumber, details: { tierPurchased: row.tierName } })
-      pendingTier.push(row)
-      continue
-    }
-
-    const seats = seatCount(resolved.tier, row.seats, row.quantity)
-    const guestList = parseGuestList(row.guestText, seats, row.buyer)
-    const buyerMatch = matchBuyer(row.buyer, row.company, ctx.sponsors)
-    const cancelled = isCancelled(row)
-    const orderId = ctx.orderIdByPurchaseKey?.[row.purchaseKey] ?? row.purchaseKey
-
-    const guestFindings: (GuestFinding | null)[] = []
-    if (guestList.kind === 'names') {
-      namesPrefilled += guestList.guests.length
-      guestList.guests.forEach((g, i) => {
-        const found = matchGuest({ ...g, organization: null }, orderId, guestPool)
-        guestFindings.push(found)
-        if (found) {
-          reviewItems.push({
-            reason: found.reason, purchaseKey: row.purchaseKey, rowNumber: row.rowNumber,
-            details: { guest: g.displayName, existingGuestId: found.existingGuestId, existingOrderId: found.existingOrderId },
-          })
-        }
-        guestPool.push({ id: `${row.purchaseKey}#${i}`, orderId, displayName: g.displayName, email: g.email, organization: null })
-      })
-      if (guestList.unread.length) listsForSponsor += 1
-    } else if (guestList.kind === 'unclear') {
-      listsForSponsor += 1
-    }
-
-    if (buyerMatch.kind === 'email_name_conflict') {
-      reviewItems.push({
-        reason: 'email_name_conflict', purchaseKey: row.purchaseKey, rowNumber: row.rowNumber,
-        details: { buyer: `${row.buyer.first} ${row.buyer.last}`, email: row.buyer.email, candidateSponsorIds: buyerMatch.candidateSponsorIds },
-      })
-    }
-    if (cancelled) {
-      reviewItems.push({
-        reason: 'refund', purchaseKey: row.purchaseKey, rowNumber: row.rowNumber,
-        details: { status: row.status, gross: row.gross, refunded: row.refunded },
-      })
-    }
-
-    rows.push({ ...row, tierId: resolved.tier.id, tierVia: resolved.via, seatCount: seats, guestList, buyerMatch, guestFindings, cancelled })
-  }
+  for (const row of read.rows) prepareRow(row, galaPageName, ctx, t)
 
   // Every accepted row in the file counts as present, even one skipped for its tier, so a purchase
   // waiting on a tier mapping isn't also reported missing.
   const presentKeys = read.rows.map((r) => r.purchaseKey)
   for (const p of findMissing(ctx.previousPurchases, presentKeys, read.dateRange)) {
-    reviewItems.push({ reason: 'missing_from_source', purchaseKey: p.purchaseKey, rowNumber: null, details: { purchasedAt: p.purchasedAt } })
+    t.reviewItems.push({ reason: 'missing_from_source', purchaseKey: p.purchaseKey, rowNumber: null, details: { purchasedAt: p.purchasedAt } })
   }
 
   return {
-    rows,
-    pendingTier,
+    rows: t.rows,
+    pendingTier: t.pendingTier,
     report: {
       rowsRead: read.rows.length + read.rejected.length,
       rejected: read.rejected,
-      skippedOtherPage,
-      unknownTiers: [...unknownTiers.values()],
-      namesPrefilled,
-      listsForSponsor,
-      reviewItems,
+      skippedOtherPage: t.skippedOtherPage,
+      unknownTiers: [...t.unknownTiers.values()],
+      namesPrefilled: t.namesPrefilled,
+      listsForSponsor: t.listsForSponsor,
+      reviewItems: t.reviewItems,
       dateRange: read.dateRange,
     },
   }
+}
+
+/** What one upload has prepared so far. */
+interface Tally {
+  rows: PreparedRow[]
+  pendingTier: PurchaseRow[]
+  skippedOtherPage: UploadReport['skippedOtherPage']
+  unknownTiers: Map<string, { givelivelyName: string; rowNumbers: number[] }>
+  reviewItems: ReviewItem[]
+  guestPool: ExistingGuest[]
+  namesPrefilled: number
+  listsForSponsor: number
+}
+
+/** The Give Lively pages in the file, with their row counts, for staff to pick this gala's page from. */
+function pagesIn(rows: PurchaseRow[]): { pageName: string | null; rows: number }[] {
+  const pages = new Map<string | null, number>()
+  for (const r of rows) {
+    const name = r.pageName ?? r.internalName
+    pages.set(name, (pages.get(name) ?? 0) + 1)
+  }
+  return [...pages].map(([pageName, n]) => ({ pageName, rows: n }))
+}
+
+/** One purchase: skipped for its page, waiting on a tier mapping, or prepared with its guests and review items. */
+function prepareRow(row: PurchaseRow, galaPageName: string, ctx: UploadContext, t: Tally): void {
+  if (!isGalaPage(row, galaPageName, { allowBlank: true })) {
+    t.skippedOtherPage.push({ rowNumber: row.rowNumber, pageName: row.pageName ?? row.internalName })
+    return
+  }
+  const resolved = resolveTier(row.tierName, ctx.tierMappings, ctx.tiers)
+  if (!resolved) {
+    waitForTier(row, t)
+    return
+  }
+  const seats = seatCount(resolved.tier, row.seats, row.quantity)
+  const guestList = parseGuestList(row.guestText, seats, row.buyer)
+  const buyerMatch = matchBuyer(row.buyer, row.company, ctx.sponsors)
+  const cancelled = isCancelled(row)
+  const orderId = ctx.orderIdByPurchaseKey?.[row.purchaseKey] ?? row.purchaseKey
+  const guestFindings = guestList.kind === 'names' ? matchListedGuests(row, guestList.guests, orderId, t) : []
+  if (guestList.kind === 'unclear' || (guestList.kind === 'names' && guestList.unread.length)) t.listsForSponsor += 1
+  t.reviewItems.push(...buyerAndRefundReviews(row, buyerMatch, cancelled))
+  t.rows.push({ ...row, tierId: resolved.tier.id, tierVia: resolved.via, seatCount: seats, guestList, buyerMatch, guestFindings, cancelled })
+}
+
+/** A tier name with no level or mapping: one staff review per row, grouped by name for the report. */
+function waitForTier(row: PurchaseRow, t: Tally): void {
+  const key = tierMappingKey(row.tierName)
+  const entry = t.unknownTiers.get(key) ?? { givelivelyName: row.tierName, rowNumbers: [] }
+  entry.rowNumbers.push(row.rowNumber)
+  t.unknownTiers.set(key, entry)
+  t.reviewItems.push({ reason: 'unknown_tier', purchaseKey: row.purchaseKey, rowNumber: row.rowNumber, details: { tierPurchased: row.tierName } })
+  t.pendingTier.push(row)
+}
+
+/** Each named guest against every guest already known (and those earlier in this file): possible duplicates for review. */
+function matchListedGuests(row: PurchaseRow, guests: ParsedGuest[], orderId: string, t: Tally): (GuestFinding | null)[] {
+  t.namesPrefilled += guests.length
+  return guests.map((g, i) => {
+    const found = matchGuest({ ...g, organization: null }, orderId, t.guestPool)
+    if (found) {
+      t.reviewItems.push({
+        reason: found.reason, purchaseKey: row.purchaseKey, rowNumber: row.rowNumber,
+        details: { guest: g.displayName, existingGuestId: found.existingGuestId, existingOrderId: found.existingOrderId },
+      })
+    }
+    t.guestPool.push({ id: `${row.purchaseKey}#${i}`, orderId, displayName: g.displayName, email: g.email, organization: null })
+    return found
+  })
+}
+
+/** A shared inbox (same email, another family) and a refund each need staff to look. */
+function buyerAndRefundReviews(row: PurchaseRow, buyerMatch: BuyerMatch, cancelled: boolean): ReviewItem[] {
+  const items: ReviewItem[] = []
+  if (buyerMatch.kind === 'email_name_conflict') {
+    items.push({
+      reason: 'email_name_conflict', purchaseKey: row.purchaseKey, rowNumber: row.rowNumber,
+      details: { buyer: `${row.buyer.first} ${row.buyer.last}`, email: row.buyer.email, candidateSponsorIds: buyerMatch.candidateSponsorIds },
+    })
+  }
+  if (cancelled) {
+    items.push({ reason: 'refund', purchaseKey: row.purchaseKey, rowNumber: row.rowNumber, details: { status: row.status, gross: row.gross, refunded: row.refunded } })
+  }
+  return items
 }

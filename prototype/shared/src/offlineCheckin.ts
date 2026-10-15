@@ -25,8 +25,11 @@ export interface SnapshotGuest {
   guest_type: string
   table_number: number | null
   seat_number: number | null
-  /** The guest has accessibility needs: the door says "ask a staff lead". The details stay in the staff app. */
-  has_access_needs: boolean
+  /** The guest has accessibility needs: the door says "ask a staff lead". The details stay in the staff app.
+   *  Missing from a list saved on an iPad before Oct 13, which had `accessibility_needs` instead; the next refresh replaces it. */
+  has_access_needs?: boolean
+  /** Only in a list saved before Oct 13 (see has_access_needs). */
+  accessibility_needs?: string | null
   /** SHA-256 of the guest's QR code (upper-cased), or null when there is none or it expired. */
   qr_hash: string | null
   qr_expires_at: string | null
@@ -123,6 +126,9 @@ export const alreadyMessage = (at: string | null | undefined, by: string | null 
   `Already checked in${at ? ` at ${clock(at)}` : ''}${device || by ? ` by ${device || by}` : ''}`
 
 const fold = (s: string | null | undefined) => (s ?? '').normalize('NFKD').replace(/\p{M}/gu, '').toLowerCase().trim()
+
+/** What one sync did: sent, refused because another door was first, refused for another reason, or still offline. */
+export interface SyncTotals { synced: number; conflicts: number; errors: number; offline: boolean }
 
 export class CheckInDesk {
   private readonly store: KeyValueStore
@@ -243,49 +249,58 @@ export class CheckInDesk {
    * Sends waiting check-ins, oldest first. Answered items leave the queue; conflicts and refusals become
    * notices for staff. If `send` throws (still offline), everything stays queued. Never runs twice at once.
    */
-  async sync(send: (items: QueuedCheckIn[]) => Promise<SyncResult[]>): Promise<{ synced: number; conflicts: number; errors: number; offline: boolean }> {
-    const totals = { synced: 0, conflicts: 0, errors: 0, offline: false }
+  async sync(send: (items: QueuedCheckIn[]) => Promise<SyncResult[]>): Promise<SyncTotals> {
+    const totals: SyncTotals = { synced: 0, conflicts: 0, errors: 0, offline: false }
     if (this.syncing) return totals
     this.syncing = true
     try {
-      for (;;) {
+      // Every round that goes on answers at least one check-in, so the queue as it is now bounds the rounds (R2).
+      // Check-ins made during the sync wait for the next one.
+      const rounds = this.pending().length
+      for (let round = 0; round < rounds; round++) {
         const batch = this.pending().slice(0, BATCH)
         if (!batch.length) break
-        let results: SyncResult[]
-        try {
-          results = await send(batch)
-        } catch {
-          totals.offline = true
-          break
-        }
-        const byId = new Map(results.map((r) => [r.client_id, r]))
-        const answered = new Set<string>()
-        const notices: Notice[] = []
-        for (const item of batch) {
-          const r = byId.get(item.client_id)
-          if (!r) continue
-          answered.add(item.client_id)
-          const guest = item.kind === 'guest' ? this.snapshot?.guests.find((g) => g.id === item.guest_id) : undefined
-          const name = item.kind === 'guest' ? (guest ? `${guest.first_name} ${guest.last_name}` : item.guest_id) : item.name
-          if (r.status === 'conflict') {
-            totals.conflicts++
-            notices.push({ client_id: item.client_id, guest_id: item.kind === 'guest' ? item.guest_id : null, name, kind: 'conflict',
-              message: `${name}: ${alreadyMessage(r.first_at, r.first_by, r.first_device)}. This iPad's check-in at ${clock(item.at)} was not counted.` })
-            if (item.kind === 'guest') this.markFirst(item.guest_id, r)
-          } else if (r.status === 'error') {
-            totals.errors++
-            notices.push({ client_id: item.client_id, guest_id: item.kind === 'guest' ? item.guest_id : null, name, kind: 'error',
-              message: `${name}: not synced (${r.error ?? 'refused'}). Check this guest in again or tell a gala admin.` })
-          } else totals.synced++
-        }
-        this.write(KEYS.queue, this.pending().filter((q) => !answered.has(q.client_id)))
-        if (notices.length) this.write(KEYS.notices, [...this.notices(), ...notices])
-        if (!answered.size) break   // the server answered none of them; try again later
+        const results = await send(batch).catch(() => null)
+        if (!results) { totals.offline = true; break }
+        if (!this.record(batch, results, totals)) break   // the server answered none of them; try again later
       }
     } finally {
       this.syncing = false
     }
     return totals
+  }
+
+  /** Takes the server's answers off the queue; a conflict or a refusal becomes a notice for staff. Returns how many it answered. */
+  private record(batch: QueuedCheckIn[], results: SyncResult[], totals: SyncTotals): number {
+    const byId = new Map(results.map((r) => [r.client_id, r]))
+    const answered = new Set<string>()
+    const notices: Notice[] = []
+    for (const item of batch) {
+      const r = byId.get(item.client_id)
+      if (!r) continue
+      answered.add(item.client_id)
+      const notice = this.noticeFor(item, r)
+      if (notice) notices.push(notice)
+      totals[r.status === 'conflict' ? 'conflicts' : r.status === 'error' ? 'errors' : 'synced']++
+    }
+    this.write(KEYS.queue, this.pending().filter((q) => !answered.has(q.client_id)))
+    if (notices.length) this.write(KEYS.notices, [...this.notices(), ...notices])
+    return answered.size
+  }
+
+  /** A conflict (another door was first) or a refusal, as a notice; null for a check-in the server took. */
+  private noticeFor(item: QueuedCheckIn, r: SyncResult): Notice | null {
+    if (r.status !== 'conflict' && r.status !== 'error') return null
+    const guest = item.kind === 'guest' ? this.snapshot?.guests.find((g) => g.id === item.guest_id) : undefined
+    const name = item.kind === 'guest' ? (guest ? `${guest.first_name} ${guest.last_name}` : item.guest_id) : item.name
+    const guest_id = item.kind === 'guest' ? item.guest_id : null
+    if (r.status === 'error') {
+      return { client_id: item.client_id, guest_id, name, kind: 'error',
+        message: `${name}: not synced (${r.error ?? 'refused'}). Check this guest in again or tell a gala admin.` }
+    }
+    if (item.kind === 'guest') this.markFirst(item.guest_id, r)
+    return { client_id: item.client_id, guest_id, name, kind: 'conflict',
+      message: `${name}: ${alreadyMessage(r.first_at, r.first_by, r.first_device)}. This iPad's check-in at ${clock(item.at)} was not counted.` }
   }
 
   /** After gala night: remove the saved list, the queue and notices from the iPad. */
