@@ -151,6 +151,10 @@ update guests set display_name = btrim(concat_ws(' ', nullif(btrim(first_name), 
  where coalesce(btrim(display_name), '') = '';
 alter table orders      add column if not exists imported_guest_text text;  -- the export's free-text guest list, as written
 alter table gala_events add column if not exists givelively_page_name text; -- e.g. "AAFE's 52nd Annual Gala"; set once per year
+-- The gala's other Give Lively pages (Oct 15, Community Tickets): e.g. "AAFE's 52nd Annual Gala (Community Tickets)", a private
+-- page selling discounted tickets to partners. Their purchases import like the main page's.
+alter table gala_events add column if not exists givelively_other_pages text[] not null default '{}';
+alter table orders      add column if not exists givelively_page text;  -- the Give Lively page it was bought on (null: imported before Oct 15)
 do $$ begin
   if not exists (select 1 from information_schema.columns where table_name = 'sponsorship_tiers' and column_name = 'guaranteed_seating') then
     alter table sponsorship_tiers add column guaranteed_seating boolean not null default false;
@@ -212,11 +216,20 @@ create table if not exists tier_mappings (
   event_id        text not null references gala_events(id),
   givelively_name text not null,
   name_key        text not null,   -- name_key(givelively_name)
+  page_key        text not null default '',  -- name_key of one of the gala's other pages; '' for its main page
   tier_id         text not null references sponsorship_tiers(id),
   created_by      text not null,
   created_at      timestamptz not null default now(),
-  unique (event_id, name_key)
+  unique (event_id, page_key, name_key)
 );
+-- Upgrade (Oct 15): a mapping belongs to one page, so "Ticket" on Community Tickets is its own mapping.
+alter table tier_mappings add column if not exists page_key text not null default '';
+alter table tier_mappings drop constraint if exists tier_mappings_event_id_name_key_key;
+do $$ begin
+  if not exists (select 1 from pg_constraint where conname = 'tier_mappings_event_id_page_key_name_key_key') then
+    alter table tier_mappings add constraint tier_mappings_event_id_page_key_name_key_key unique (event_id, page_key, name_key);
+  end if;
+end $$;
 
 -- Indexes (Oct 12 audit). Postgres doesn't index the referencing side of a foreign key by itself, so following one
 -- (an order's guests, a gala's orders) or deleting the row it points at reads the whole table. Every foreign key
@@ -1251,7 +1264,7 @@ declare
   r jsonb; p payments; o orders; t sponsorship_tiers; e gala_events; v_sp text; v_order text; v_pay text;
   v_method text; v_qty int; v_seats int; v_commit numeric; v_review text[]; v_name text; v_org text; v_key text;
   v_at timestamptz; v_original numeric; v_gross numeric; v_fee numeric; v_refunded numeric; v_text text;
-  v_cancel boolean; v_changed boolean; v_named int; v_conflict text[]; f jsonb;
+  v_cancel boolean; v_changed boolean; v_named int; v_conflict text[]; f jsonb; v_page text;
   v_created int := 0; v_updated int := 0; v_skipped int := 0; v_flagged int := 0; v_unknown int := 0;
   v_prefilled int := 0; v_reviews int := 0; v_zero int := 0; v_applied numeric;
 begin
@@ -1345,25 +1358,30 @@ begin
     -- A failed donation from the sync (cancel_only) only undoes a purchase imported earlier; it never creates one.
     if coalesce((r ->> 'cancel_only')::boolean, false) then v_skipped := v_skipped + 1; continue; end if;
 
-    -- Package: the prepared tier, else this gala's tier mapping, else the longest tier name (before
-    -- " — ") found in the Give Lively name. No match: staff review, nothing created until mapped.
+    -- Package: the prepared tier, else this gala's tier mapping for the page it was bought on, else the longest tier
+    -- name (before " — ") found in the Give Lively name. No match: staff review, nothing created until mapped.
+    -- A purchase on one of the gala's other pages (Community Tickets) gets a level only from a mapping made for that
+    -- page, on purpose: its "Ticket" must never land on the main page's $500 Ticket level by name.
     -- A retired level takes no new orders, whichever way the purchase arrives (CSV, sync or mapping).
+    v_page := case when name_key(r ->> 'campaign') = any (select name_key(x) from unnest(e.givelively_other_pages) x)
+                   then name_key(r ->> 'campaign') else '' end;
     t := null;
     if coalesce(r ->> 'tier_id', '') <> '' then
       select * into t from sponsorship_tiers where id = r ->> 'tier_id' and event_id = e.id and not retired;
     end if;
     if t.id is null then
       select st.* into t from tier_mappings m join sponsorship_tiers st on st.id = m.tier_id
-       where m.event_id = e.id and m.name_key = name_key(r ->> 'ticket_level') and not st.retired;
+       where m.event_id = e.id and m.page_key = v_page and m.name_key = name_key(r ->> 'ticket_level') and not st.retired;
     end if;
-    if t.id is null then
+    if t.id is null and v_page = '' then
       select * into t from sponsorship_tiers
        where event_id = e.id and not retired and tier_category <> 'complimentary' and coalesce(r ->> 'ticket_level', '') <> ''
          and position(name_key(split_part(name, ' — ', 1)) in name_key(r ->> 'ticket_level')) > 0
        order by length(split_part(name, ' — ', 1)) desc limit 1;
     end if;
     if t.id is null then
-      if add_import_review(p_run_id, v_key, null, 'unknown_tier', jsonb_build_object('tier_purchased', r ->> 'ticket_level')) then
+      if add_import_review(p_run_id, v_key, null, 'unknown_tier', jsonb_build_object('tier_purchased', r ->> 'ticket_level')
+           || case when v_page <> '' then jsonb_build_object('page', r ->> 'campaign') else '{}' end) then
         v_reviews := v_reviews + 1;
       end if;
       v_unknown := v_unknown + 1;
@@ -1375,7 +1393,9 @@ begin
     if t.tier_category = 'ticket' then
       v_qty := greatest(1, coalesce(nullif(r ->> 'quantity', '')::int, floor(v_original / nullif(t.contribution_amount, 0))::int, 1));
     end if;
-    v_commit := case when t.contribution_amount > 0 then t.contribution_amount * v_qty else v_original end;
+    -- Committed at what was paid (Oct 15): Give Lively takes the whole amount at checkout, so a discounted ticket (a $250
+    -- Community Ticket on a $500 level) is paid in full, not "partly paid" with a balance nobody owes.
+    v_commit := case when t.contribution_amount > 0 then least(t.contribution_amount * v_qty, v_original) else v_original end;
     -- Seats: the export's Total Seats, else seats per tier × tickets. Advertising-only tiers get none.
     v_seats := case when t.included_seat_count = 0 then 0
                     else coalesce(nullif(r ->> 'seats', '')::int, t.included_seat_count * v_qty) end;
@@ -1417,14 +1437,17 @@ begin
 
     v_order := new_id('ord'); v_pay := new_id('pay');
     insert into orders (id, event_id, sponsor_id, tier_id, source, commitment_amount, status, guest_list_deadline,
-                        logo_status, program_ad_status, givelively_order_ref, imported_guest_text, internal_notes)
+                        logo_status, program_ad_status, givelively_order_ref, imported_guest_text, internal_notes, givelively_page)
     values (v_order, e.id, v_sp, t.id, 'givelively', v_commit,
             case when v_original - v_refunded + 0.005 >= v_commit then 'paid' else 'partially_paid' end, e.guest_list_deadline,
             case when 'logo' = any (t.required_materials) then 'pending' else 'not_required' end,
             case when exists (select 1 from unnest(t.required_materials) m where m like '%ad') then 'pending' else 'not_required' end,
             nullif(r ->> 'txn', ''), v_text,
             format('Imported from Give Lively (%s).', coalesce(nullif(r ->> 'campaign', ''), 'no campaign'))
-              || case when cardinality(v_review) > 0 then ' CHECK: ' || array_to_string(v_review, '; ') || '.' else '' end);
+              || case when v_commit < t.contribution_amount * v_qty
+                      then format(' Discounted: paid %s, %s at the level''s price.', money_fmt(v_commit), money_fmt(t.contribution_amount * v_qty)) else '' end
+              || case when cardinality(v_review) > 0 then ' CHECK: ' || array_to_string(v_review, '; ') || '.' else '' end,
+            nullif(btrim(r ->> 'campaign'), ''));
     insert into payments (id, order_id, method, processor, givelively_transaction_id, purchase_key, original_amount, covered_fee_amount,
                           gross_amount, transaction_fee_amount, refunded_amount, net_amount, received_at, recorded_by, reconciliation_status)
     values (v_pay, v_order, v_method, 'stripe', nullif(r ->> 'txn', ''), v_key, v_original, coalesce(nullif(r ->> 'covered', '')::numeric, 0), v_gross,
@@ -1499,34 +1522,45 @@ begin
   return v_res;
 end $$;
 
--- Tier mapping (spec section 3): staff link a Give Lively tier name to a tier, once per gala. Open
--- unknown_tier items for that name are resolved; staff re-run the upload. Changing a mapping doesn't
--- rewrite orders already imported (they keep their tier until staff change them).
-create or replace function staff_set_tier_mapping(p_givelively_name text, p_tier_id text) returns void
+-- Tier mapping (spec section 3): staff link a Give Lively tier name to a tier, once per gala, for its main page or
+-- (p_page) one of its other pages: "Ticket" on Community Tickets is its own mapping. Open unknown_tier items for
+-- that name and page are resolved; staff re-run the upload. Changing a mapping doesn't rewrite orders already
+-- imported (they keep their tier until staff change them).
+drop function if exists public.staff_set_tier_mapping(text, text);
+drop function if exists private.staff_set_tier_mapping(text, text);
+create or replace function staff_set_tier_mapping(p_givelively_name text, p_tier_id text, p_page text default null) returns void
 language plpgsql security definer set search_path = public as $$
-declare me staff_users := require_staff(array['gala_admin']); v_old text;
+declare me staff_users := require_staff(array['gala_admin']); e gala_events; v_old text; v_page text := '';
 begin
   if name_key(p_givelively_name) = '' then raise exception 'invalid_input: tier name is required'; end if;
   if not exists (select 1 from sponsorship_tiers where id = p_tier_id and event_id = current_event_id()) then raise exception 'not_found: tier'; end if;
-  select tier_id into v_old from tier_mappings where event_id = current_event_id() and name_key = name_key(p_givelively_name);
-  insert into tier_mappings (id, event_id, givelively_name, name_key, tier_id, created_by)
-  values (new_id('tm'), current_event_id(), btrim(p_givelively_name), name_key(p_givelively_name), p_tier_id, me.name)
-  on conflict (event_id, name_key) do update set tier_id = excluded.tier_id, created_by = excluded.created_by, created_at = now();
+  select * into e from gala_events where id = current_event_id();
+  if name_key(p_page) not in ('', name_key(e.givelively_page_name)) then
+    v_page := name_key(p_page);
+    if not v_page = any (select name_key(x) from unnest(e.givelively_other_pages) x) then raise exception 'not_found: page'; end if;
+  end if;
+  select tier_id into v_old from tier_mappings where event_id = e.id and page_key = v_page and name_key = name_key(p_givelively_name);
+  insert into tier_mappings (id, event_id, givelively_name, name_key, page_key, tier_id, created_by)
+  values (new_id('tm'), e.id, btrim(p_givelively_name), name_key(p_givelively_name), v_page, p_tier_id, me.name)
+  on conflict (event_id, page_key, name_key) do update set tier_id = excluded.tier_id, created_by = excluded.created_by, created_at = now();
   update import_review set status = 'resolved', resolution = 'mapped to ' || p_tier_id, resolved_by = me.name, resolved_at = now()
-   where status = 'open' and reason = 'unknown_tier' and name_key(details ->> 'tier_purchased') = name_key(p_givelively_name);
+   where status = 'open' and reason = 'unknown_tier' and name_key(details ->> 'tier_purchased') = name_key(p_givelively_name)
+     and name_key(details ->> 'page') = v_page;
   perform write_audit('staff', me.name, 'tier_mapping', name_key(p_givelively_name), null, 'tier_mapping.set', v_old, p_tier_id, false,
-    format('Give Lively tier "%s" mapped to %s.', btrim(p_givelively_name), p_tier_id));
+    format('Give Lively tier "%s"%s mapped to %s.', btrim(p_givelively_name),
+           case when v_page <> '' then format(' on "%s"', btrim(p_page)) else '' end, p_tier_id));
 end $$;
 
--- This gala's Give Lively page name (spec section 3): set once per year, from the upload screen.
--- The Give Lively page of the gala being run now, for the sync (service role only). The same rule as every other
--- function, current_event_id(): next year's gala in planning doesn't take the sync over (it read "the newest open
--- year" until Oct 15, the rule #137 removed from the staff app).
-create or replace function sync_gala_page() returns text
+-- The Give Lively pages of the gala being run now, for the sync (service role only): its main page and any others.
+-- The same rule as every other function, current_event_id(): next year's gala in planning doesn't take the sync over
+-- (it read "the newest open year" until Oct 15, the rule #137 removed from the staff app).
+drop function if exists sync_gala_page();
+create or replace function sync_gala_pages() returns text[]
 language sql stable security definer set search_path = public as $$
-  select givelively_page_name from gala_events where id = current_event_id()
+  select array_remove(array[givelively_page_name], null) || givelively_other_pages from gala_events where id = current_event_id()
 $$;
 
+-- This gala's Give Lively page name (spec section 3): set once per year, from the upload screen.
 create or replace function staff_set_gala_page(p_page_name text) returns void
 language plpgsql security definer set search_path = public as $$
 declare me staff_users := require_staff(array['gala_admin']); v_old text;
@@ -1536,6 +1570,39 @@ begin
   update gala_events set givelively_page_name = btrim(p_page_name) where id = current_event_id();
   perform write_audit('staff', me.name, 'gala_event', current_event_id(), null, 'gala.page_name_set', v_old, btrim(p_page_name), false,
     format('Give Lively page set to "%s".', btrim(p_page_name)));
+end $$;
+
+-- Another Give Lively page for this gala (Oct 15, Gate 1b): AAFE sells discounted tickets to partners on a private
+-- "Community Tickets" page. Its purchases import once staff link each of its ticket types to a level for that page.
+-- Adding a page makes the sync look back once: it asks Give Lively only for what changed since its last run, so
+-- purchases made before the page was added would never arrive. Re-importing them is safe: each purchase is matched
+-- by its purchase key or Give Lively transaction ID.
+create or replace function staff_add_gala_page(p_page_name text) returns void
+language plpgsql security definer set search_path = public as $$
+declare me staff_users := require_staff(array['gala_admin']); e gala_events; v text := btrim(coalesce(p_page_name, ''));
+begin
+  if v = '' then raise exception 'invalid_input: page name is required'; end if;
+  select * into e from gala_events where id = current_event_id();
+  if name_key(v) = name_key(e.givelively_page_name) or name_key(v) = any (select name_key(x) from unnest(e.givelively_other_pages) x) then
+    raise exception 'invalid_input: already one of this gala''s pages';
+  end if;
+  update gala_events set givelively_other_pages = givelively_other_pages || v where id = e.id;
+  update givelively_sync_state set cursor_ms = null where id = 1;
+  perform write_audit('staff', me.name, 'gala_event', e.id, null, 'gala.page_added', null, v, false,
+    format('Give Lively page "%s" added; the next sync looks back over all purchases.', v));
+end $$;
+
+-- Take a page off the gala. Purchases already imported from it stay; uploads and the sync skip it from now on.
+create or replace function staff_remove_gala_page(p_page_name text) returns void
+language plpgsql security definer set search_path = public as $$
+declare me staff_users := require_staff(array['gala_admin']); e gala_events; v_left text[];
+begin
+  select * into e from gala_events where id = current_event_id();
+  v_left := array(select p from unnest(e.givelively_other_pages) with ordinality u(p, n) where name_key(p) <> name_key(p_page_name) order by n);
+  if cardinality(v_left) = cardinality(e.givelively_other_pages) then raise exception 'not_found: page'; end if;
+  update gala_events set givelively_other_pages = v_left where id = e.id;
+  perform write_audit('staff', me.name, 'gala_event', e.id, null, 'gala.page_removed', btrim(p_page_name), null, false,
+    format('Give Lively page "%s" removed; purchases already imported from it stay.', btrim(p_page_name)));
 end $$;
 
 -- Close a review item with what staff decided.
@@ -2530,7 +2597,7 @@ begin
               'staff_assign_seat','staff_seat_order_at_table','staff_record_payment','staff_add_pledge','staff_add_comp_guest',
               'staff_send_qr_invite','staff_resend_portal_link','staff_approve_email','staff_cancel_email','checkin_list','staff_check_in','staff_check_in_qr',
               'staff_check_in_exception','gl_import','staff_import_givelively','email_mark_sent','email_mark_failed','email_claim',
-              'purchase_key','name_key','has_need','add_import_review','import_fill_guests','staff_set_tier_mapping','staff_set_gala_page','sync_gala_page',
+              'purchase_key','name_key','has_need','add_import_review','import_fill_guests','staff_set_tier_mapping','staff_set_gala_page','sync_gala_pages','staff_add_gala_page','staff_remove_gala_page',
               'staff_resolve_import_review','seats_void_qr','guests_void_qr','gala_events_no_mixing','require_gala_order',
               'staff_export_badges','staff_export_checkin','staff_export_salesforce',
               'staff_queue_guest_list_reminders','staff_email_queue','staff_checkin_snapshot','staff_sync_check_ins','staff_undo_check_in',
@@ -2563,7 +2630,8 @@ grant execute on function
   staff_set_sponsor_arrivals(boolean, text), staff_update_gala_event(jsonb), staff_set_material_status(text, text, text), staff_set_order_deadline(text, date),
   staff_save_level(jsonb), staff_copy_levels(text, text), staff_retire_level(text, boolean), staff_start_gala(jsonb),
   staff_report_attendance(), staff_report_sponsors(), staff_report_needs(), staff_report_payments(), staff_report_guests(),
-  staff_import_givelively(jsonb, jsonb), staff_set_tier_mapping(text, text), staff_set_gala_page(text),
+  staff_import_givelively(jsonb, jsonb), staff_set_tier_mapping(text, text, text), staff_set_gala_page(text),
+  staff_add_gala_page(text), staff_remove_gala_page(text),
   staff_resolve_import_review(text, text),
   staff_export_badges(boolean), staff_export_checkin(), staff_export_salesforce(),
   staff_queue_guest_list_reminders(int), staff_email_queue()
@@ -2571,7 +2639,7 @@ grant execute on function
 
 -- Edge functions (service role)
 grant execute on function gl_import(jsonb, text, text), email_mark_sent(text, text), email_mark_failed(text, text), email_claim(int), hash_token(text),
-  salesforce_outbox(), salesforce_mark_synced(jsonb, text), sync_gala_page()
+  salesforce_outbox(), salesforce_mark_synced(jsonb, text), sync_gala_pages()
   to service_role;
 
 -- ---------------------------------------------------------------------
