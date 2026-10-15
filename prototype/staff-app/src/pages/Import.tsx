@@ -60,6 +60,7 @@ export default function Import() {
             <section className="card p-5" data-testid="import-upload">
               <h2 className="font-semibold text-navy-900">Upload an export</h2>
               <p className="mt-1 text-sm text-navy-600">This gala's Give Lively page: {ev.givelively_page_name ? <b>{ev.givelively_page_name}</b> : <span>not chosen yet; you'll pick it from the first upload.</span>}</p>
+              <p className="mt-1 text-sm text-navy-600">Upload the file exactly as Give Lively gives it: opening and saving it in Excel can damage non-English names, and the import stops if it finds that.</p>
               <div className="mt-4 flex flex-wrap gap-2">
                 <input ref={input} type="file" accept=".csv,text/csv" className="hidden" data-testid="import-file" onChange={(e) => { const f = e.target.files?.[0]; if (f) void choose(f); e.target.value = '' }} />
                 <button className="btn-primary" onClick={() => input.current?.click()}><FileUp size={15} /> Choose the CSV file</button>
@@ -160,7 +161,7 @@ function Preview({ prep, db, onMap, onImport }: { prep: Prepared; db: DB; onMap:
 function ResultNote({ r }: { r: ImportResult }) {
   return (
     <p className="mt-4 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-900" role="status" data-testid="import-result">
-      Imported: <b>{r.created}</b> new, {r.skipped} already imported, {r.names_prefilled} guest names pre-filled, {r.review_items} for review{r.unknown_tier ? ` (${r.unknown_tier} waiting on a ticket type)` : ''}.
+      Imported: <b>{r.created}</b> new, {r.skipped} already imported, {r.names_prefilled} guest names pre-filled, {r.review_items} for review{r.unknown_tier ? ` (${r.unknown_tier} waiting on a ticket type)` : ''}{r.zero_amount ? `, ${r.zero_amount} at $0 for staff to check` : ''}.
     </p>
   )
 }
@@ -177,6 +178,7 @@ function describe(v: ImportReview, db: DB): string {
     case 'refund': return `${sponsor ?? 'This purchase'} was refunded in Give Lively (${d.status ?? 'refunded'}); its seats are cancelled.`
     case 'missing_from_source': return `${sponsor ?? 'A purchase'} from ${d.purchased_at ? fmtDate(String(d.purchased_at)) : 'earlier'} isn't in this export.`
     case 'guest_text_changed': return `${sponsor ?? 'A sponsor'}'s guest list changed in Give Lively after names were entered.`
+    case 'zero_amount': return `${d.buyer ?? d.email} got ${d.tickets ?? 'a'} "${d.tier_purchased}" ticket${Number(d.tickets) > 1 ? 's' : ''} for $0 in Give Lively${d.guest_text ? ` (guests: ${d.guest_text})` : ''}. Nothing was imported: if it's a comp, add the guests on Relationship guests.`
   }
 }
 

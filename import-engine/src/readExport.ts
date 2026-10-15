@@ -107,14 +107,55 @@ const RowSchema = z.object({
 })
 
 /**
- * Parse the export. Throws ExportFormatError when a required column is missing (the whole file is
- * wrong). Otherwise every row is either accepted or rejected with its row number and reason; fully
- * blank rows are skipped silently.
+ * Text that a spreadsheet program damaged, found by an Excel round-trip test (Oct 15): Excel opens a UTF-8 export
+ * that has no byte-order mark in the wrong character set, so on saving, "Renée" comes back as "Ren��e" (or as "RenÃ©"
+ * on a US-English Windows), "Đặng" as "�����ng", and Chinese names as "�" or stray control characters, in both of
+ * Excel's CSV formats. Those names would go onto badges and into Salesforce as they are, and "�" can't be turned back.
+ * Signs: the replacement character, control characters (other than tab and line breaks), and UTF-8 read as
+ * Windows-1252 ("Ã©", "Ã±", "â€™"). None of them occur in a real name.
+ */
+const DAMAGED_TEXT = /�|[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]|[Â-Å][\u0080-¿]|â€/
+const CHECKED_FIELDS: readonly Field[] = ['first', 'last', 'company', 'guestText', 'tierName']
+const EXAMPLES = 3
+
+/** Stops the upload when names in the file are damaged: the whole file went through the same save, so none of it can be trusted. */
+function checkNotDamaged(records: string[][], columns: Map<Field, number>): void {
+  const examples: string[] = []
+  let count = 0
+  for (const [i, cells] of records.entries()) {
+    const bad = CHECKED_FIELDS.map((f) => cells[columns.get(f) ?? -1] ?? '').find((v) => DAMAGED_TEXT.test(v))
+    if (bad === undefined) continue
+    count++
+    if (examples.length < EXAMPLES) examples.push(`row ${i + 2}: "${bad.split('\n')[0]!.trim().slice(0, 40)}"`)
+  }
+  if (count === 0) return
+  throw new ExportFormatError(`names in this file are damaged (${examples.join(', ')}${count > EXAMPLES ? `, and ${count - EXAMPLES} more rows` : ''}). ` +
+    'That happens when the export is opened and saved in Excel. Download the export from Give Lively again and upload it ' +
+    'without opening it; to correct a name, correct it in the staff app after the import')
+}
+
+/**
+ * Parse the export. Throws ExportFormatError when a required column is missing, when names in the file are damaged
+ * (checkNotDamaged), or when a quote never closes
+ * (everything after it would be read as one cell, so the rest of the file would vanish). Otherwise every row is
+ * either accepted or rejected with its row number and reason, including a row whose column count doesn't match
+ * the header and any row the CSV reader couldn't read cleanly; fully blank rows are skipped silently.
  */
 export async function readExport(csv: string): Promise<ReadResult> {
-  const parsed = Papa.parse<string[]>(csv.replace(/^﻿/, ''), { header: false, skipEmptyLines: false })
+  // One kind of line break: the CSV reader guesses it from the first line, so a file mixing Windows (\r\n) and plain
+  // (\n) line breaks, e.g. after an edit in a text editor, would otherwise run two rows together.
+  const parsed = Papa.parse<string[]>(csv.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n'), { header: false, skipEmptyLines: false, newline: '\n' })
   const [header, ...records] = parsed.data
   if (!header) throw new ExportFormatError('the file is empty')
+  // The CSV reader's own complaints (Oct 12 audit: they were ignored, so rows could vanish). Its `row` counts
+  // from 0 at the header, so spreadsheet row = row + 1.
+  const unclosed = parsed.errors.find((e) => e.code === 'MissingQuotes')
+  if (unclosed) {
+    throw new ExportFormatError(`row ${(unclosed.row ?? 0) + 1} has a quote (") that never closes, so the rows after it can't be read. ` +
+      'Fix that cell in a spreadsheet, or export the file from Give Lively again.')
+  }
+  const readErrors = new Map<number, string>()
+  for (const e of parsed.errors) if (e.row != null && e.row > 0) readErrors.set(e.row + 1, `couldn't read this row (${e.message})`)
 
   const columns = new Map<Field, number>()
   const phoneColumns = new Set<number>()
@@ -126,6 +167,7 @@ export async function readExport(csv: string): Promise<ReadResult> {
   })
   const missing = Object.entries(REQUIRED_COLUMNS).filter(([, f]) => !columns.has(f)).map(([label]) => label)
   if (missing.length) throw new ExportFormatError(`missing column${missing.length > 1 ? 's' : ''}: ${missing.join(', ')}`)
+  checkNotDamaged(records, columns)
 
   const rows: PurchaseRow[] = []
   const rejected: RejectedRow[] = []
@@ -134,6 +176,15 @@ export async function readExport(csv: string): Promise<ReadResult> {
   for (const [i, cells] of records.entries()) {
     const rowNumber = i + 2
     if (cells.every((c) => c.trim() === '')) continue
+    const readError = readErrors.get(rowNumber)
+    if (readError) { rejected.push({ rowNumber, reason: readError }); continue }
+    // A comma outside quotes, or a line break that split a row, shifts every value after it into the wrong column.
+    // Give Lively writes every column on every row, so a different count means the row can't be trusted. (Trailing
+    // empty columns can't be let through: a shifted row ends in them too, because the export's last columns are blank.)
+    if (cells.length !== header.length) {
+      rejected.push({ rowNumber, reason: `has ${cells.length} columns but the header has ${header.length}, so its values may be in the wrong columns (a comma outside quotes, or a line break that split the row?)` })
+      continue
+    }
     const cell = (f: Field) => {
       const idx = columns.get(f)
       return idx === undefined ? '' : (cells[idx] ?? '')
