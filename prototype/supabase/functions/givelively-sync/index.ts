@@ -3,8 +3,8 @@
 // trigger it from the staff app ("Pull now").
 //
 // Secrets: GIVELIVELY_ORG_ID, GIVELIVELY_API_KEY (Nonprofit Admin Portal -> Zapier API key), CRON_SECRET.
-// Which donations are gala sales: the current gala's Give Lively page name (gala_events.givelively_page_name,
-// e.g. "AAFE's 52nd Annual Gala"), set by staff in the staff app. Not set -> the sync does nothing and says so. Demo: GIVELIVELY_BASE_URL points at the givelively-mock function instead of Give Lively.
+// Which donations are gala sales: the current gala's Give Lively pages (gala_events.givelively_page_name, e.g.
+// "AAFE's 52nd Annual Gala", and givelively_other_pages, e.g. its Community Tickets page), set by staff in the staff app. Not set -> the sync does nothing and says so. Demo: GIVELIVELY_BASE_URL points at the givelively-mock function instead of Give Lively.
 import { pollStart, syncDonations, withoutKey } from '../_shared/givelively-sync.ts'
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2'
 import { admin, caller, cors, env, json } from '../_shared/supabase.ts'
@@ -20,11 +20,11 @@ Deno.serve(async (req) => {
   const db = admin()
   // The gala being run now (current_event_id, in the database), never the newest open year: next year's gala in
   // planning must not take the sync over.
-  const { data: page, error: pageError } = await db.rpc('sync_gala_page')
+  const { data: pages, error: pageError } = await db.rpc('sync_gala_pages')
   if (pageError) return json({ error: 'db_error', message: pageError.message }, 500)
-  const pageName = typeof page === 'string' ? page.trim() : ''
-  if (!pageName) return json({ error: 'not_configured', message: "Set this gala's Give Lively page name in the staff app first." }, 500)
-  return await runSync(db, { org, key, campaigns: [pageName], actor: who === 'schedule' ? 'Give Lively sync' : `Give Lively sync (${who})` })
+  const campaigns = (Array.isArray(pages) ? pages : []).filter((p): p is string => typeof p === 'string' && p.trim() !== '').map((p) => p.trim())
+  if (!campaigns.length) return json({ error: 'not_configured', message: "Set this gala's Give Lively page name in the staff app first." }, 500)
+  return await runSync(db, { org, key, campaigns, actor: who === 'schedule' ? 'Give Lively sync' : `Give Lively sync (${who})` })
 })
 
 /** One poll: the donations Give Lively changed since the last one, imported one by one, and the cursor moved on. */
