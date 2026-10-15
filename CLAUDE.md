@@ -40,6 +40,7 @@ Natalie built clickable concepts of the sponsor portal and staff app (shared in 
 - Branches: each person works on their own branch (`aisling`, `natalie`, `cornell`, `antonin`) or a short feature branch off it (`aisling-import-engine`; a `name/...` prefix is impossible while a branch called `name` exists).
 - Aisling is the repo admin: every pull request is reviewed and merged by Aisling (`nessaisling-lab` or `aislingld-pursuit`).
 - Merge `main` into your branch often; send work back as small pull requests.
+- Follow `docs/CODING-STANDARD.md` (Oct 15, Gate 4): `npm run lint` at the repo root passes with zero warnings, and an impossible state fails with its reason (`must()` in the import engine, an explicit check elsewhere), never a silent `!`.
 - Commit messages say what changed and why. Credit co-authors with `Co-authored-by:` trailers.
 
 ## Team

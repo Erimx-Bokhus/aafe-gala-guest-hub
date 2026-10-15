@@ -40,20 +40,8 @@ export async function syncDonations(donations: unknown[], campaigns: string[], p
     const row = normalize(raw)
     const verdict = classify(row, campaigns)
     let status: string = verdict, note: string | null = null
-    if (verdict === 'import' || verdict === 'failed') {
-      const { data, error } = await ports.importRow(verdict === 'failed' ? { ...row, cancel_only: true } : row)
-      if (error || !data) { status = 'unmapped'; note = error ?? 'No result from gl_import'; counts.unmapped++ }
-      else {
-        for (const k of ['created', 'updated', 'skipped', 'needs_review'] as const) counts[k] += data[k]
-        status = data.created ? 'imported' : data.updated ? 'updated' : 'skipped'
-        if (data.needs_review) note = 'Imported; flagged for review in Payments.'
-        if (verdict === 'failed') {
-          counts.failed++
-          note = data.updated ? `Status "${row.status}" in Give Lively: the purchase imported earlier is cancelled, with its seats.`
-            : `Status "${row.status}"; nothing to undo (never imported, or already cancelled).`
-        }
-      }
-    } else counts[verdict]++
+    if (verdict === 'import' || verdict === 'failed') ({ status, note } = await importOne(row, verdict, ports, counts))
+    else counts[verdict]++
     if (status === 'not_gala') continue
     // Unmapped rows have no reliable ID; key them by content so they are still recorded once.
     await ports.saveRaw({
@@ -64,6 +52,18 @@ export async function syncDonations(donations: unknown[], campaigns: string[], p
     })
   }
   return counts
+}
+
+/** One gala purchase sent to gl_import: imported, updated, skipped, or stored as unmapped with the database's reason. */
+async function importOne(row: GLRow, verdict: 'import' | 'failed', ports: SyncPorts, counts: SyncCounts): Promise<{ status: string; note: string | null }> {
+  const { data, error } = await ports.importRow(verdict === 'failed' ? { ...row, cancel_only: true } : row)
+  if (error || !data) { counts.unmapped++; return { status: 'unmapped', note: error ?? 'No result from gl_import' } }
+  for (const k of ['created', 'updated', 'skipped', 'needs_review'] as const) counts[k] += data[k]
+  const status = data.created ? 'imported' : data.updated ? 'updated' : 'skipped'
+  if (verdict !== 'failed') return { status, note: data.needs_review ? 'Imported; flagged for review in Payments.' : null }
+  counts.failed++
+  return { status, note: data.updated ? `Status "${row.status}" in Give Lively: the purchase imported earlier is cancelled, with its seats.`
+    : `Status "${row.status}"; nothing to undo (never imported, or already cancelled).` }
 }
 
 async function sha256(s: string) {
