@@ -159,9 +159,22 @@ export interface SalesforceSyncResult { sent: number; failed: number; by_object:
 export interface PullCounts { seen: number; created: number; updated: number; skipped: number; needs_review: number; not_gala: number; not_settled: number; unmapped: number; failed: number }
 const NO_PULL: PullCounts = { seen: 0, created: 0, updated: 0, skipped: 0, needs_review: 0, not_gala: 0, not_settled: 0, unmapped: 0, failed: 0 }
 
+/**
+ * A demo change that also answers something (purchases imported, emails queued). React runs a state updater at its next
+ * render, not when it's queued, so an answer read from inside one was still empty when the action returned (Oct 15: the
+ * "Imported: …" note never showed). The change is worked out on the current data, then saved.
+ * ponytail: a second change made before React renders would start from the same data; staff click one action at a time.
+ */
+function answerNow<R extends { db: DB }>(update: (fn: (d: DB) => DB) => void, full: () => DB, change: (d: DB) => R): R {
+  const r = change(full())
+  update(() => r.db)
+  return r
+}
+
 // ---- DEMO ------------------------------------------------------------------------------------------------
 
-/** The demo actions, on the full demo data held by the app. `update` applies a change; `full` reads the current data. */
+/** The demo actions, on the full demo data held by the app. `update` applies a change, perhaps later (React's state
+ * updates run at its next render); `full` reads the current data. */
 export function demoApi(user: StaffUser, update: (fn: (d: DB) => DB) => void, full: () => DB): StaffApi {
   const may = (a: keyof typeof ROLES) => canDo(user.role, a)
   const run = (a: keyof typeof ROLES, fn: (d: DB) => DB) => { if (!may(a)) return forbidden(); update(fn); return Promise.resolve() }
@@ -287,16 +300,13 @@ export function demoApi(user: StaffUser, update: (fn: (d: DB) => DB) => void, fu
     reportGuests: () => exported('reportGuests', 'report_guests', demoGuests(full()), (n) => `Full guest list downloaded: ${n} guest(s).`),
     syncSalesforce: async () => {
       if (!may('syncSalesforce')) return forbidden()
-      let n = 0
-      update((d) => { const r = store.salesforceSyncNow(d); n = r.n; return r.db })
+      const { n } = answerNow(update, full, (d) => store.salesforceSyncNow(d))
       return { sent: n, failed: 0, by_object: {}, first_error: null }
     },
     emailQueue: async () => (may('emailQueue') ? demoEmailQueue(full()) : forbidden()),
     queueReminders: async (minDays = 7) => {
       if (!may('queueReminders')) return forbidden()
-      let n = 0
-      update((d) => { const r = store.queueGuestListReminders(d, user, minDays); n = r.n; return r.db })
-      return n
+      return answerNow(update, full, (d) => store.queueGuestListReminders(d, user, minDays)).n
     },
     // Like staff_set_sponsor_arrivals: on needs AAFE's approval noted; off needs nothing; both logged, a repeat does nothing.
     setSponsorArrivals: (on, note) => {
@@ -312,14 +322,11 @@ export function demoApi(user: StaffUser, update: (fn: (d: DB) => DB) => void, fu
     },
     importGiveLively: async (rows, run) => {
       if (!may('importGiveLively')) return forbidden()
-      let result: ImportResult | null = null
-      update((d) => { const r = store.demoImport(d, user, rows, run); result = r.result; return r.db })
-      return result!
+      return answerNow(update, full, (d) => store.demoImport(d, user, rows, run)).result
     },
     pullGiveLively: async () => {
       if (!may('pullGiveLively')) return forbidden()
-      let r = { created: 0, skipped: 0 }
-      update((d) => { const x = store.demoPull(d); r = x; return x.db })
+      const r = answerNow(update, full, (d) => store.demoPull(d))
       return { ...NO_PULL, seen: 1, created: r.created, skipped: r.skipped }
     },
     setGalaPage: (page) => (page.trim() ? run('setGalaPage', (d) => store.setGalaPage(d, user, page)) : Promise.reject(new Error('invalid_input: page name is required'))),
