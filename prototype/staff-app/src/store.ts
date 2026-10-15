@@ -398,13 +398,15 @@ export interface ProspectInput {
 /** pipeline_apply_order(): link the order and move the stage on (money → payment received; a pledge → closed won). */
 function applyOrder(db: DB, p: Prospect, o: Order, actorType: 'staff' | 'system', actor: string, at: string): DB {
   if (p.order_id && p.order_id !== o.id) return db
-  const to: PipelineStage = o.status === 'paid' || o.status === 'partially_paid' ? 'payment_received'
+  // As pipeline_apply_order: a refunded, failed or cancelled order loses the prospect (Oct 12 audit).
+  const to: PipelineStage = o.status === 'cancelled' ? (['closed_won', 'payment_received'].includes(p.stage) ? 'lost' : p.stage)
+    : o.status === 'paid' || o.status === 'partially_paid' ? 'payment_received'
     : (o.status === 'pledged' || o.status === 'invoice_sent') && ['not_started', 'reached_out', 'in_conversation', 'lost'].includes(p.stage) ? 'closed_won' : p.stage
   const next: Prospect = { ...p, order_id: o.id, stage: to, seen_status: o.status, updated_at: at, stage_changed_at: to !== p.stage ? at : p.stage_changed_at }
   const d = { ...db, sponsor_prospects: (db.sponsor_prospects ?? []).map((x) => (x.id === p.id ? next : x)) }
   if (to === p.stage) return d
   return addAudit(d, { actor_type: actorType, actor, entity: 'prospect', entity_id: p.id, order_id: o.id, action: 'prospect.stage', from_state: p.stage, to_state: to, guest_visible: false,
-    summary: `${sponsorOf(db, p.sponsor_id)?.organization_name}: ${stageLabel(p.stage)} → ${stageLabel(to)} (${to === 'payment_received' ? 'payment recorded' : 'pledge or purchase recorded'}).` })
+    summary: `${sponsorOf(db, p.sponsor_id)?.organization_name}: ${stageLabel(p.stage)} → ${stageLabel(to)} (${to === 'payment_received' ? 'payment recorded' : to === 'lost' ? 'refunded or cancelled' : 'pledge or purchase recorded'}).` })
 }
 
 /**
@@ -419,10 +421,22 @@ export function syncPipeline(db: DB): DB {
   let d: DB = { ...db, sponsor_prospects: db.sponsor_prospects ?? [] }
   for (const o of db.orders) {
     const cat = tierOf(db, o.tier_id)?.tier_category
-    if (o.event_id !== ev || o.status === 'cancelled' || o.status === 'comp' || (cat !== 'sponsorship' && cat !== 'ticket')) continue
+    if (o.event_id !== ev || o.status === 'comp' || (cat !== 'sponsorship' && cat !== 'ticket')) continue
     const list = d.sponsor_prospects!
     let p = list.find((x) => x.order_id === o.id) ?? list.find((x) => x.event_id === ev && x.sponsor_id === o.sponsor_id)
       ?? list.filter((x) => x.event_id === ev && !x.order_id && orgKey(d, x.sponsor_id) === orgKey(d, o.sponsor_id)).sort((a, b) => a.created_at.localeCompare(b.created_at))[0]
+    // A cancelled order (refunded, failed, or cancelled by staff) moves its prospect to lost; it never creates one. The
+    // demo works the pipeline out again on each read, so first replay the order as it stood before it was cancelled
+    // (paid if it has payments, else pledged), as the database saw it then.
+    if (o.status === 'cancelled') {
+      if (!p || o.updated_at < p.created_at || (p.order_id === o.id && p.seen_status === o.status)) continue
+      if (p.order_id !== o.id) {
+        d = applyOrder(d, p, { ...o, status: d.payments.some((x) => x.order_id === o.id) ? 'paid' : 'pledged' }, 'system', 'Pipeline', o.updated_at)
+        p = d.sponsor_prospects!.find((x) => x.id === p!.id)!
+      }
+      d = applyOrder(d, p, o, 'system', 'Pipeline', o.updated_at)
+      continue
+    }
     if (p && (o.updated_at < p.created_at || (p.order_id === o.id && p.seen_status === o.status))) continue
     if (!p) {
       if (cat !== 'sponsorship') continue
