@@ -201,6 +201,10 @@ create table if not exists import_review (
   created_at    timestamptz not null default now()
 );
 create index if not exists import_review_open on import_review (event_id, status, reason);
+-- zero_amount (Oct 12 audit): a $0 or blank-amount purchase, left for staff instead of dropped (gl_import).
+alter table import_review drop constraint if exists import_review_reason_check;
+alter table import_review add constraint import_review_reason_check check (reason in ('unknown_tier','guest_text_changed',
+  'email_name_conflict','double_booked','possible_duplicate','refund','missing_from_source','zero_amount'));
 
 -- Give Lively tier name -> tier, once per gala ("Ticket" -> Supporter).
 create table if not exists tier_mappings (
@@ -213,6 +217,32 @@ create table if not exists tier_mappings (
   created_at      timestamptz not null default now(),
   unique (event_id, name_key)
 );
+
+-- Indexes (Oct 12 audit). Postgres doesn't index the referencing side of a foreign key by itself, so following one
+-- (an order's guests, a gala's orders) or deleting the row it points at reads the whole table. Every foreign key
+-- gets one; scripts/test-backend.mjs fails if a new one is added without it. Safe to re-run.
+create index if not exists check_ins_guest_id_idx               on check_ins (guest_id);
+create index if not exists check_ins_order_id_idx               on check_ins (order_id);
+create index if not exists email_log_guest_id_idx               on email_log (guest_id);
+create index if not exists email_log_order_id_idx               on email_log (order_id);
+create index if not exists email_log_payment_id_idx             on email_log (payment_id);
+create index if not exists guests_order_id_idx                  on guests (order_id);
+create index if not exists import_review_order_id_idx           on import_review (order_id);
+create index if not exists import_review_run_id_idx             on import_review (run_id);
+create index if not exists import_runs_event_id_idx             on import_runs (event_id);
+create index if not exists orders_event_id_idx                  on orders (event_id);
+create index if not exists orders_sponsor_id_idx                on orders (sponsor_id);
+create index if not exists orders_tier_id_idx                   on orders (tier_id);
+create index if not exists payments_order_id_idx                on payments (order_id);
+create index if not exists seats_guest_id_idx                   on seats (guest_id);
+create index if not exists sponsor_prospects_ask_tier_id_idx    on sponsor_prospects (ask_tier_id);
+create index if not exists sponsor_prospects_follow_up_idx      on sponsor_prospects (follow_up_owner_id);
+create index if not exists sponsor_prospects_sponsor_id_idx     on sponsor_prospects (sponsor_id);
+create index if not exists sponsors_relationship_owner_id_idx   on sponsors (relationship_owner_id);
+create index if not exists sponsorship_tiers_event_id_idx       on sponsorship_tiers (event_id);
+create index if not exists tier_mappings_tier_id_idx            on tier_mappings (tier_id);
+-- The sponsor portal reads its order's activity list every time a sponsor opens their link (portal_get_view).
+create index if not exists audit_log_order_id_idx               on audit_log (order_id, id) where order_id is not null;
 
 -- ---------------------------------------------------------------------
 -- 2. Helpers
@@ -260,7 +290,14 @@ create or replace function guests_void_qr() returns trigger
 language plpgsql security definer set search_path = public as $$
 declare s record;
 begin
-  if (new.first_name, new.last_name, new.email) is distinct from (old.first_name, old.last_name, old.email) then
+  -- The display name is the name printed on the badge and the door list, so a new one is a new person on the ticket
+  -- too (Oct 12 audit: changing only the display name kept the old QR code working). A blank display name stands for
+  -- "First Last", so filling it in with that (backend.sql does, for guests saved before Oct 10) is not a change.
+  if (new.first_name, new.last_name, new.email,
+      coalesce(nullif(btrim(new.display_name), ''), btrim(concat_ws(' ', nullif(btrim(new.first_name), ''), nullif(btrim(new.last_name), '')))))
+     is distinct from
+     (old.first_name, old.last_name, old.email,
+      coalesce(nullif(btrim(old.display_name), ''), btrim(concat_ws(' ', nullif(btrim(old.first_name), ''), nullif(btrim(old.last_name), ''))))) then
     for s in with v as (update seats set qr_token_hash = null, qr_token_expires_at = null
                          where guest_id = new.id and qr_token_hash is not null returning id, order_id, slot_number)
              select * from v loop
@@ -271,7 +308,7 @@ begin
   return new;
 end $$;
 drop trigger if exists guests_void_qr on guests;
-create trigger guests_void_qr after update of first_name, last_name, email on guests for each row execute function guests_void_qr();
+create trigger guests_void_qr after update of first_name, last_name, display_name, email on guests for each row execute function guests_void_qr();
 
 -- A project holds demo galas or AAFE's real ones, never both. The demo sets carry hundreds of working
 -- sponsor links and QR codes, so a real gala added beside them would share a database with links anyone
@@ -542,7 +579,8 @@ create or replace function portal_save_guest(p_token text, p_slot int, p_guest j
 language plpgsql security definer set search_path = public as $$
 declare
   o orders := portal_order(p_token);
-  st seats; g guests; g_old guests; v_contact text; v_action text; v_from text;
+  st seats; g guests; g_old guests; v_contact text; v_action text; v_from text; v_to text;
+  v_badge boolean := true;   -- what prints on the badge changed (name, title, organization)
   v_first text := left(trim(coalesce(p_guest ->> 'first_name', '')), 100);
   v_last  text := left(trim(coalesce(p_guest ->> 'last_name', '')), 100);
   v_display text := left(trim(coalesce(p_guest ->> 'display_name', '')), 200);
@@ -566,11 +604,21 @@ begin
   v_from := st.status;
 
   if st.guest_id is not null then
+    -- Only a real change counts (Oct 12 audit): pressing Save again changes nothing, and only a change to what prints
+    -- on the badge sends it back for staff review (or reprint, once printed). A food, access or email answer is saved
+    -- without undoing staff's review. Blank and missing count as the same.
+    v_badge := coalesce(g_old.first_name, '') <> v_first or coalesce(g_old.last_name, '') <> v_last
+            or coalesce(g_old.display_name, '') <> v_display or coalesce(g_old.title, '') <> coalesce(f_title, '')
+            or coalesce(g_old.organization, '') <> coalesce(f_org, '');
+    if not v_badge and coalesce(g_old.email, '') = coalesce(f_email, '') and coalesce(g_old.dietary_needs, '') = coalesce(f_diet, '')
+       and coalesce(g_old.accessibility_needs, '') = coalesce(f_acc, '') then
+      return portal_get_view(p_token);
+    end if;
     v_action := 'guest.updated';
     update guests set first_name = v_first, last_name = v_last, display_name = v_display, title = f_title, organization = f_org, email = f_email,
            dietary_needs = f_diet, accessibility_needs = f_acc, last_updated_by = 'guest_portal', updated_at = now(),
-           -- editing a printed badge means it must be reprinted
-           badge_status = case when badge_status = 'printed' then 'reprint_needed' else 'needs_review' end
+           -- a new name, title or organization must be reviewed again, and a printed badge reprinted
+           badge_status = case when not v_badge then badge_status when badge_status = 'printed' then 'reprint_needed' else 'needs_review' end
      where id = st.guest_id returning * into g;
   else
     v_action := 'guest.submitted';
@@ -582,8 +630,9 @@ begin
     returning * into g;
   end if;
 
-  update seats set guest_id = g.id, status = 'submitted', updated_at = now() where id = st.id;
-  perform write_audit('guest_portal', 'Guest portal (' || v_contact || ')', 'guest', g.id, o.id, v_action, v_from, 'submitted', true,
+  v_to := case when v_badge then 'submitted' else st.status end;
+  update seats set guest_id = g.id, status = v_to, updated_at = now() where id = st.id;
+  perform write_audit('guest_portal', 'Guest portal (' || v_contact || ')', 'guest', g.id, o.id, v_action, v_from, v_to, true,
     case when v_action = 'guest.submitted' then format('%s added to seat %s.', v_display, p_slot)
          else format('%s updated (seat %s).', v_display, p_slot) end,
     case when v_action = 'guest.updated' then audit_changes(to_jsonb(g_old), to_jsonb(g),
@@ -822,6 +871,10 @@ begin
   select n.display, n.first, n.last into v_display, v_first, v_last
     from name_parts(p_guest ->> 'display_name', p_guest ->> 'first_name', p_guest ->> 'last_name') n;
   if v_display = '' then raise exception 'invalid_input: a name is required'; end if;
+  -- One comp guest at a time per gala (Oct 12 audit): two staff adding at once both read the same last slot (one got a
+  -- "duplicate key" error and lost the guest), and on a gala with no comp order yet both created one. The lock waits
+  -- for the other add to finish and is released when this one commits.
+  perform pg_advisory_xact_lock(hashtext('staff_add_comp_guest'), hashtext(current_event_id()));
   select id into v_order from orders
    where event_id = current_event_id() and status <> 'cancelled'
      and tier_id in (select id from sponsorship_tiers where event_id = current_event_id() and tier_category = 'complimentary')
@@ -1200,7 +1253,7 @@ declare
   v_at timestamptz; v_original numeric; v_gross numeric; v_fee numeric; v_refunded numeric; v_text text;
   v_cancel boolean; v_changed boolean; v_named int; v_conflict text[]; f jsonb;
   v_created int := 0; v_updated int := 0; v_skipped int := 0; v_flagged int := 0; v_unknown int := 0;
-  v_prefilled int := 0; v_reviews int := 0; v_applied numeric;
+  v_prefilled int := 0; v_reviews int := 0; v_zero int := 0; v_applied numeric;
 begin
   select * into e from gala_events where id = current_event_id();
   if e.id is null then raise exception 'not_found: no open gala event'; end if;
@@ -1213,10 +1266,21 @@ begin
     v_fee      := nullif(r ->> 'fee', '')::numeric;
     v_refunded := coalesce(nullif(r ->> 'refunded', '')::numeric, 0);
     v_at       := nullif(r ->> 'date', '')::timestamptz;
-    if coalesce(r ->> 'email', '') = '' or v_at is null or coalesce(v_gross, 0) <= 0 then
+    if coalesce(r ->> 'email', '') = '' or v_at is null then
       v_skipped := v_skipped + 1; continue;
     end if;
     v_key := coalesce(nullif(r ->> 'purchase_key', ''), purchase_key(r ->> 'email', v_at));
+    -- A $0 or blank amount (Oct 12 audit: these were dropped with the already-imported rows). Give Lively has no comp
+    -- tickets, so a $0 row may be a comp on a hidden page, a free RSVP, or a mistake: staff decide, with the buyer and
+    -- guest list in front of them. Nothing is created; the same row uploaded again adds no second item.
+    if coalesce(v_gross, 0) <= 0 then
+      if add_import_review(p_run_id, v_key, null, 'zero_amount', jsonb_build_object(
+           'buyer', nullif(trim(coalesce(r ->> 'first', '') || ' ' || coalesce(r ->> 'last', '')), ''), 'email', lower(btrim(r ->> 'email')),
+           'tier_purchased', r ->> 'ticket_level', 'tickets', nullif(r ->> 'quantity', ''), 'guest_text', nullif(btrim(r ->> 'guest_text'), ''))) then
+        v_reviews := v_reviews + 1;
+      end if;
+      v_zero := v_zero + 1; continue;
+    end if;
     v_text := nullif(btrim(r ->> 'guest_text'), '');
     v_cancel := coalesce((r ->> 'cancelled')::boolean, false) or coalesce((r ->> 'cancel_only')::boolean, false)
              -- The failure words match the sync's classify() and the import engine's CANCELLED_STATUS (test-audit-fixes checks all three).
@@ -1330,14 +1394,17 @@ begin
     end if;
 
     -- Buyer -> sponsor: same email AND same last name. Same email, different last name is a shared
-    -- inbox: a new sponsor so the order isn't lost, and a staff review.
+    -- inbox: a new sponsor so the order isn't lost, and a staff review. The contact's name must be the last
+    -- name or end with it word for word, so "Ana García López" matches "García López" (Oct 12 audit: comparing
+    -- only the last word made every repeat buyer with a two-word surname a new sponsor).
     v_name := trim(coalesce(r ->> 'first', '') || ' ' || coalesce(r ->> 'last', ''));
     v_org  := coalesce(nullif(trim(r ->> 'company'), ''), nullif(v_name, ''), r ->> 'email');
     select array_agg(id order by created_at) into v_conflict from sponsors
      where lower(btrim(primary_contact_email)) = lower(btrim(r ->> 'email'));
     select id into v_sp from sponsors
      where id = any (coalesce(v_conflict, '{}'))
-       and (coalesce(r ->> 'last', '') = '' or name_key(regexp_replace(primary_contact_name, '^.*\s', '')) = name_key(r ->> 'last'))
+       and (name_key(r ->> 'last') = '' or name_key(primary_contact_name) = name_key(r ->> 'last')
+            or right(name_key(primary_contact_name), length(name_key(r ->> 'last')) + 1) = ' ' || name_key(r ->> 'last'))
      order by created_at limit 1;
     if v_sp is null then
       v_sp := new_id('sp');
@@ -1399,7 +1466,7 @@ begin
   end loop;
 
   return jsonb_build_object('created', v_created, 'updated', v_updated, 'skipped', v_skipped, 'needs_review', v_flagged,
-                            'unknown_tier', v_unknown, 'names_prefilled', v_prefilled, 'review_items', v_reviews);
+                            'unknown_tier', v_unknown, 'names_prefilled', v_prefilled, 'review_items', v_reviews, 'zero_amount', v_zero);
 end $$;
 
 -- CSV upload from the staff app (Integrations page). Admin only. One call is one transaction: if

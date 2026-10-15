@@ -44,7 +44,12 @@ ok(sp.every((r) => Number(r.balance) === (['cancelled', 'comp'].includes(r.statu
   await db.exec('rollback')
   ok(row && Number(row.paid) === 0 && Number(row.balance) === 0, `a refunded, cancelled purchase: paid 0, balance 0 (${row?.paid}, ${row?.balance})`)
 }
-ok(sp.find((r) => r.sponsor === att.find((a) => a.came && a.category !== 'walk_in').sponsor)?.guests_came >= 1, "the guest who came counts for their sponsor")
+// An arrival from a sponsorship or ticket purchase (comps and walk-ins aren't rows of this report). A sponsor can have
+// more than one order, one row each, in no set order when the amounts tie: sum their rows.
+{
+  const name = att.find((a) => a.came && ['sponsor_guest', 'ticket_holder'].includes(a.category)).sponsor
+  ok(sp.filter((r) => r.sponsor === name).reduce((t, r) => t + Number(r.guests_came), 0) >= 1, "the guest who came counts for their sponsor")
+}
 
 // Food and access, payments, full guest list
 const needs = await report('staff_report_needs', RM)

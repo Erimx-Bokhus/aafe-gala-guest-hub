@@ -19,6 +19,17 @@ export type BuyerMatch =
 
 const lastNameOf = (fullName: string) => normName(splitName(fullName).last || fullName)
 
+/**
+ * The contact's name is the buyer's last name, or ends with it word for word: "Ana García López" has the last name
+ * "García López" (and "López"). Comparing only the last word made a repeat buyer with a two-word surname look like a
+ * shared inbox, so each purchase made a new sponsor (Oct 12 audit). gl_import (backend.sql) and the staff app's demo
+ * import use the same rule.
+ */
+export function hasLastName(fullName: string, last: string): boolean {
+  const n = normName(fullName), l = normName(last)
+  return l !== '' && (n === l || n.endsWith(' ' + l))
+}
+
 export function matchBuyer(
   buyer: { first: string; last: string; email: string },
   company: string | null,
@@ -27,7 +38,7 @@ export function matchBuyer(
   const email = normEmail(buyer.email)
   const last = normName(buyer.last)
   const sameEmail = sponsors.filter((s) => normEmail(s.primaryContactEmail) === email)
-  const same = sameEmail.find((s) => lastNameOf(s.primaryContactName) === last)
+  const same = sameEmail.find((s) => (last ? hasLastName(s.primaryContactName, last) : lastNameOf(s.primaryContactName) === ''))
   if (same) return { kind: 'existing', sponsorId: same.id }
   const organizationName = company?.trim() || `${buyer.first} ${buyer.last}`.trim()
   if (sameEmail.length) return { kind: 'email_name_conflict', candidateSponsorIds: sameEmail.map((s) => s.id), organizationName }
