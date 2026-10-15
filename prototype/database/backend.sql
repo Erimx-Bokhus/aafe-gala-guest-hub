@@ -214,6 +214,32 @@ create table if not exists tier_mappings (
   unique (event_id, name_key)
 );
 
+-- Indexes (Oct 12 audit). Postgres doesn't index the referencing side of a foreign key by itself, so following one
+-- (an order's guests, a gala's orders) or deleting the row it points at reads the whole table. Every foreign key
+-- gets one; scripts/test-backend.mjs fails if a new one is added without it. Safe to re-run.
+create index if not exists check_ins_guest_id_idx               on check_ins (guest_id);
+create index if not exists check_ins_order_id_idx               on check_ins (order_id);
+create index if not exists email_log_guest_id_idx               on email_log (guest_id);
+create index if not exists email_log_order_id_idx               on email_log (order_id);
+create index if not exists email_log_payment_id_idx             on email_log (payment_id);
+create index if not exists guests_order_id_idx                  on guests (order_id);
+create index if not exists import_review_order_id_idx           on import_review (order_id);
+create index if not exists import_review_run_id_idx             on import_review (run_id);
+create index if not exists import_runs_event_id_idx             on import_runs (event_id);
+create index if not exists orders_event_id_idx                  on orders (event_id);
+create index if not exists orders_sponsor_id_idx                on orders (sponsor_id);
+create index if not exists orders_tier_id_idx                   on orders (tier_id);
+create index if not exists payments_order_id_idx                on payments (order_id);
+create index if not exists seats_guest_id_idx                   on seats (guest_id);
+create index if not exists sponsor_prospects_ask_tier_id_idx    on sponsor_prospects (ask_tier_id);
+create index if not exists sponsor_prospects_follow_up_idx      on sponsor_prospects (follow_up_owner_id);
+create index if not exists sponsor_prospects_sponsor_id_idx     on sponsor_prospects (sponsor_id);
+create index if not exists sponsors_relationship_owner_id_idx   on sponsors (relationship_owner_id);
+create index if not exists sponsorship_tiers_event_id_idx       on sponsorship_tiers (event_id);
+create index if not exists tier_mappings_tier_id_idx            on tier_mappings (tier_id);
+-- The sponsor portal reads its order's activity list every time a sponsor opens their link (portal_get_view).
+create index if not exists audit_log_order_id_idx               on audit_log (order_id, id) where order_id is not null;
+
 -- ---------------------------------------------------------------------
 -- 2. Helpers
 -- ---------------------------------------------------------------------
