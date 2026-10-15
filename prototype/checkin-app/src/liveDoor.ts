@@ -4,6 +4,7 @@
 // hash (hard rule 6). Undo: a check-in still on the iPad is taken off the queue; a synced one goes through
 // staff_undo_check_in(), which allows only the person who made it or a gala admin.
 import { CheckInDesk, type KeyValueStore, type QueuedCheckIn, type Snapshot, type SyncResult } from '@shared/offlineCheckin'
+import { needStatus } from '@shared/guestNeeds'
 import { supabase } from '@shared/supabase'
 import type { StaffUser } from '@shared/types'
 import { CATEGORY, seatLabel, type Arrival, type Door, type DoorGuest, type ExceptionRow, type Gala } from './door'
@@ -72,7 +73,7 @@ function liveDoor(desk: CheckInDesk): Door {
       id: g.id, order_id: g.order_id, first_name: g.first_name, last_name: g.last_name, title: g.title, organization: g.organization,
       sponsor: g.sponsor, category: CATEGORY[g.guest_type] ?? g.guest_type, seat_label: seatLabel(g.guest_type, g.sponsor, g.package),
       table: g.table_number, // A list saved before Oct 13 has the details instead of the flag; it is replaced on the next refresh.
-      access: g.has_access_needs ?? !!(g as { accessibility_needs?: string | null }).accessibility_needs?.trim(),
+      access: g.has_access_needs ?? needStatus((g as { accessibility_needs?: string | null }).accessibility_needs) === 'some',
     }))
     const sponsors = [...new Map([...s.guests.filter((g) => g.guest_type === 'sponsor_guest').map((g) => [g.order_id, g.sponsor] as const),
       ...s.unnamed_seats.map((u) => [u.order_id, u.sponsor] as const)]).entries()].map(([order_id, name]) => ({ order_id, name }))
