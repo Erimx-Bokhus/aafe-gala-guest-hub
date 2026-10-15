@@ -47,9 +47,12 @@ ok((await q(`select count(*)::int n from audit_log where action = 'email.reminde
 
 // Sending a reminder replaces the sponsor's link: the new one works, the old one stops.
 const brooks = (await q(`select id from email_log where template = 'guest_list_reminder' and order_id = 'ord-brooks' and status = 'queued'`))[0].id
+await db.query(`update orders set portal_token = hash_token('brooks-old-link') where id = 'ord-brooks'`)
+ok((await err('anon', null, `select portal_get_view('brooks-old-link')`)) === null, 'the link before the reminder works')
 await as('authenticated', ADMIN, `select staff_approve_email($1)`, [brooks])
 await as('service_role', null, `select email_mark_sent($1, hash_token('brooks-reminder-link'))`, [brooks])
 ok((await err('anon', null, `select portal_get_view('brooks-reminder-link')`)) === null, "the reminder's new link works")
+ok((await err('anon', null, `select portal_get_view('brooks-old-link')`))?.includes('invalid_link'), 'and the old link stops working (Gate 2)')
 ok((await q(`select count(*)::int n from orders where id = 'ord-brooks' and portal_token = hash_token('brooks-reminder-link')
   and portal_token_expires_at > now()`))[0].n === 1, 'the new link expires at the deadline like any link')
 ok((await as('authenticated', RM, `select staff_queue_guest_list_reminders() n`))[0].n === 0, 'no new reminder within a week of the last one')
@@ -121,6 +124,22 @@ ok(r4.subject === 'Add your guests for AAFE Gala 2027' && r4.html.includes('by <
 const r5 = qrInvitationEmail({ firstName: 'Rep', event, code: 'AAFE-0123456789ABCDEF0123456789ABCDEF' })
 ok(r5.html.includes('AAFE-0123456789ABCDEF0123456789ABCDEF') && r5.html.includes('Thursday, May 13, 2027, doors 6:00 PM'), 'QR invitation shows the code and the date')
 ok(money(1234.5) === '$1,234.50' && longDay('2027-04-23') === 'April 23', 'money and date formats')
+
+// ---- Gate 2 review (Oct 15)
+// A QR invitation not sent yet is discarded when the guest's name or email changes: sending it would issue a working
+// code to the old address, admitting whoever now holds the seat.
+const invite = (await as('authenticated', RM, `select staff_send_qr_invite('g-019') id`))[0].id
+await as('authenticated', RM, `select staff_update_guest('g-019', '{"email": "new.guest@example.org"}')`)
+ok((await q(`select status from email_log where id = $1`, [invite]))[0].status === 'cancelled', "the queued invitation is discarded when the guest's email changes")
+await as('service_role', null, `select email_mark_sent($1, hash_token('OLDINVITE01'))`, [invite])
+ok((await err('authenticated', VOL, `select staff_check_in_qr('OLDINVITE01')`))?.startsWith('not_found'), "and its code, if it went out anyway, admits nobody")
+ok((await q(`select count(*)::int n from audit_log where entity_id = 'g-019' and action = 'email.cancelled'`))[0].n === 1, 'the discarded invitation is logged')
+
+// A missing expiry date never means "forever".
+await db.query(`update orders set portal_token = hash_token('no-expiry-link'), portal_token_expires_at = null where id = 'ord-acme'`)
+ok((await err('anon', null, `select portal_get_view('no-expiry-link')`))?.includes('invalid_link'), 'a sponsor link with no expiry date does not work')
+await db.query(`update seats set qr_token_hash = hash_token('NOEXPIRY01'), qr_token_expires_at = null where id = 'seat-ord-acme-1'`)
+ok((await err('authenticated', VOL, `select staff_check_in_qr('NOEXPIRY01')`))?.startsWith('expired'), 'a QR code with no expiry date checks nobody in')
 
 console.log(`emails: ${count.pass} passed, ${count.fail} failed`)
 if (count.fail) process.exitCode = 1
