@@ -29,6 +29,7 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: |
+            package-lock.json
             prototype/package-lock.json
             import-engine/package-lock.json
       - uses: actions/setup-python@v5
@@ -38,6 +39,11 @@ jobs:
       # The staff app's Give Lively import screen runs the import engine in the browser.
       - run: npm ci
         working-directory: import-engine
+      # The coding standard (docs/CODING-STANDARD.md): ESLint from the repo root, zero warnings allowed.
+      - run: npm ci
+        working-directory: .
+      - run: npm run lint
+        working-directory: .
       # Unit tests: the build guard that keeps secret keys out of the browser, and app tests.
       - run: npm test
       # Demo data comes from generate_seed.py. Regenerate it first: the apps bundle seed.json.
