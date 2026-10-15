@@ -5,6 +5,8 @@ export interface ImportedPurchase {
   /** UTC ISO time, as stored by the import. */
   purchasedAt: string
   cancelled?: boolean
+  /** The Give Lively page it was bought on; missing or null: the gala's main page (purchases imported before Oct 15). */
+  pageName?: string | null
 }
 
 /**
