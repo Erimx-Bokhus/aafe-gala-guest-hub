@@ -161,6 +161,21 @@ ok(await sponsorsOf(ANA) === 2 && await conflicts(ANA) === 1, 'a different famil
   ok(await hash() !== null && await voids() === 0, 'clearing it, or filling a blank one in as "First Last", is not a new name')
   await db.query(`update guests set display_name = 'Someone Else Entirely' where id = $1`, [seat.guest_id])
   ok(await hash() === null && await voids() === 1, 'a new display name voids the QR code, and the change log says so')
+
+// ---- Two comp guests added at once can't take the same slot (Oct 12 audit, Cornell). The test database runs one
+// connection, so it can't add two at the same instant: it checks the function waits its turn (a per-gala lock), and
+// that adds in a row get their own slots on one comp order.
+{
+  const src = (await one(`select string_agg(prosrc, ' ') src from pg_proc where proname = 'staff_add_comp_guest'`)).src   // the public wrapper and the private body
+  ok(/pg_advisory_xact_lock\(hashtext\('staff_add_comp_guest'\), hashtext\(current_event_id\(\)\)\)/.test(src), 'adding a comp guest waits for any other add on this gala to finish')
+  const compOrders = async () => (await one(`select count(*)::int n from orders o join sponsorship_tiers t on t.id = o.tier_id
+    where o.event_id = current_event_id() and o.status <> 'cancelled' and t.tier_category = 'complimentary'`)).n
+  const before = await compOrders()
+  const ids = []
+  for (const n of ['One', 'Two', 'Three']) ids.push((await as('authenticated', RM, `select staff_add_comp_guest($1) id`, [{ first_name: 'Comp', last_name: n }]))[0].id)
+  const slots = (await q(`select s.order_id, s.slot_number from seats s where s.guest_id = any($1) order by s.slot_number`, [ids]))
+  ok(new Set(slots.map((x) => x.order_id)).size === 1 && new Set(slots.map((x) => x.slot_number)).size === 3 && await compOrders() === Math.max(before, 1),
+    `three comp guests in a row: one comp order, three different slots (${JSON.stringify(slots.map((x) => x.slot_number))})`)
 }
 
 console.log(`audit fixes: ${count.pass} passed, ${count.fail} failed`)
