@@ -1,7 +1,7 @@
 // Reads AAFE's Give Lively ticket export (spec section 1) into validated purchase rows.
 // One row per purchase. Columns are found by header name, ignoring case, spacing, and punctuation.
 
-import Papa from 'papaparse'
+import Papa, { type ParseError } from 'papaparse'
 import { z } from 'zod'
 import { purchaseKey } from './purchaseKey.ts'
 import { parseAmount, parseCount, parseCoveredFee, parsePurchaseTime, ValueError } from './values.ts'
@@ -114,6 +114,7 @@ const RowSchema = z.object({
  * Signs: the replacement character, control characters (other than tab and line breaks), and UTF-8 read as
  * Windows-1252 ("Ã©", "Ã±", "â€™"). None of them occur in a real name.
  */
+// eslint-disable-next-line no-control-regex -- it looks for control characters on purpose: they only appear in damaged text
 const DAMAGED_TEXT = /�|[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]|[Â-Å][\u0080-¿]|â€/
 const CHECKED_FIELDS: readonly Field[] = ['first', 'last', 'company', 'guestText', 'tierName']
 const EXAMPLES = 3
@@ -126,7 +127,7 @@ function checkNotDamaged(records: string[][], columns: Map<Field, number>): void
     const bad = CHECKED_FIELDS.map((f) => cells[columns.get(f) ?? -1] ?? '').find((v) => DAMAGED_TEXT.test(v))
     if (bad === undefined) continue
     count++
-    if (examples.length < EXAMPLES) examples.push(`row ${i + 2}: "${bad.split('\n')[0]!.trim().slice(0, 40)}"`)
+    if (examples.length < EXAMPLES) examples.push(`row ${i + 2}: "${(bad.split('\n')[0] ?? '').trim().slice(0, 40)}"`)
   }
   if (count === 0) return
   throw new ExportFormatError(`names in this file are damaged (${examples.join(', ')}${count > EXAMPLES ? `, and ${count - EXAMPLES} more rows` : ''}). ` +
@@ -147,16 +148,48 @@ export async function readExport(csv: string): Promise<ReadResult> {
   const parsed = Papa.parse<string[]>(csv.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n'), { header: false, skipEmptyLines: false, newline: '\n' })
   const [header, ...records] = parsed.data
   if (!header) throw new ExportFormatError('the file is empty')
-  // The CSV reader's own complaints (Oct 12 audit: they were ignored, so rows could vanish). Its `row` counts
-  // from 0 at the header, so spreadsheet row = row + 1.
-  const unclosed = parsed.errors.find((e) => e.code === 'MissingQuotes')
+  const readErrors = readerErrors(parsed.errors)
+  const sheet = mapColumns(header)
+  checkNotDamaged(records, sheet.columns)
+
+  const rows: PurchaseRow[] = []
+  const rejected: RejectedRow[] = []
+  const seenKeys = new Map<string, number>()
+  for (const [i, cells] of records.entries()) {
+    const rowNumber = i + 2
+    if (cells.every((c) => c.trim() === '')) continue
+    const row = await readRow(cells, rowNumber, sheet, readErrors.get(rowNumber))
+    if ('reason' in row) { rejected.push(row); continue }
+    const firstRow = seenKeys.get(row.purchaseKey)
+    if (firstRow !== undefined) {
+      rejected.push({ rowNumber, reason: `duplicate of row ${firstRow} (same buyer email and purchase time)` })
+      continue
+    }
+    seenKeys.set(row.purchaseKey, rowNumber)
+    rows.push(row)
+  }
+  return { rows, rejected, dateRange: rangeOf(rows) }
+}
+
+/**
+ * The CSV reader's own complaints (Oct 12 audit: they were ignored, so rows could vanish), by spreadsheet row. Its
+ * `row` counts from 0 at the header, so spreadsheet row = row + 1. A quote that never closes stops the upload.
+ */
+function readerErrors(errors: ParseError[]): Map<number, string> {
+  const unclosed = errors.find((e) => e.code === 'MissingQuotes')
   if (unclosed) {
     throw new ExportFormatError(`row ${(unclosed.row ?? 0) + 1} has a quote (") that never closes, so the rows after it can't be read. ` +
       'Fix that cell in a spreadsheet, or export the file from Give Lively again.')
   }
-  const readErrors = new Map<number, string>()
-  for (const e of parsed.errors) if (e.row != null && e.row > 0) readErrors.set(e.row + 1, `couldn't read this row (${e.message})`)
+  const byRow = new Map<number, string>()
+  for (const e of errors) if (e.row != null && e.row > 0) byRow.set(e.row + 1, `couldn't read this row (${e.message})`)
+  return byRow
+}
 
+interface Sheet { header: string[]; columns: Map<Field, number>; phoneColumns: Set<number> }
+
+/** Each field's column, found by header name; stops the upload if a required column is missing. */
+function mapColumns(header: string[]): Sheet {
   const columns = new Map<Field, number>()
   const phoneColumns = new Set<number>()
   header.forEach((h, i) => {
@@ -167,93 +200,70 @@ export async function readExport(csv: string): Promise<ReadResult> {
   })
   const missing = Object.entries(REQUIRED_COLUMNS).filter(([, f]) => !columns.has(f)).map(([label]) => label)
   if (missing.length) throw new ExportFormatError(`missing column${missing.length > 1 ? 's' : ''}: ${missing.join(', ')}`)
-  checkNotDamaged(records, columns)
+  return { header, columns, phoneColumns }
+}
 
-  const rows: PurchaseRow[] = []
-  const rejected: RejectedRow[] = []
-  const seenKeys = new Map<string, number>()
-
-  for (const [i, cells] of records.entries()) {
-    const rowNumber = i + 2
-    if (cells.every((c) => c.trim() === '')) continue
-    const readError = readErrors.get(rowNumber)
-    if (readError) { rejected.push({ rowNumber, reason: readError }); continue }
-    // A comma outside quotes, or a line break that split a row, shifts every value after it into the wrong column.
-    // Give Lively writes every column on every row, so a different count means the row can't be trusted. (Trailing
-    // empty columns can't be let through: a shifted row ends in them too, because the export's last columns are blank.)
-    if (cells.length !== header.length) {
-      rejected.push({ rowNumber, reason: `has ${cells.length} columns but the header has ${header.length}, so its values may be in the wrong columns (a comma outside quotes, or a line break that split the row?)` })
-      continue
-    }
-    const cell = (f: Field) => {
-      const idx = columns.get(f)
-      return idx === undefined ? '' : (cells[idx] ?? '')
-    }
-
-    const checked = RowSchema.safeParse({
-      first: cell('first'), last: cell('last'), email: cell('email'), tierName: cell('tierName'),
-      tierCategory: cell('tierCategory'), company: cell('company'), method: cell('method'), status: cell('status'),
-      pageName: cell('pageName'), internalName: cell('internalName'), guestText: cell('guestText'),
-    })
-    if (!checked.success) {
-      rejected.push({ rowNumber, reason: checked.error.issues.map((e) => e.message).join('; ') })
-      continue
-    }
-    const r = checked.data
-
-    let purchasedAt: string | null, gross: number | null, refunded: number | null, covered: number | null
-    let quantity: number | null, seats: number | null
-    try {
-      purchasedAt = parsePurchaseTime(cell('purchasedAt'))
-      gross = parseAmount(cell('gross'))
-      refunded = parseAmount(cell('refunded'))
-      covered = parseCoveredFee(cell('covered'))
-      quantity = parseCount(cell('quantity'))
-      seats = parseCount(cell('seats'))
-    } catch (e) {
-      if (!(e instanceof ValueError)) throw e
-      rejected.push({ rowNumber, reason: e.message })
-      continue
-    }
-    if (purchasedAt === null) { rejected.push({ rowNumber, reason: 'missing Date/Time of Purchase' }); continue }
-    if (gross === null) { rejected.push({ rowNumber, reason: 'missing Amount Spent' }); continue }
-
-    const key = await purchaseKey(r.email, purchasedAt)
-    const firstRow = seenKeys.get(key)
-    if (firstRow !== undefined) {
-      rejected.push({ rowNumber, reason: `duplicate of row ${firstRow} (same buyer email and purchase time)` })
-      continue
-    }
-    seenKeys.set(key, rowNumber)
-
-    const raw: Record<string, string> = {}
-    header.forEach((h, idx) => {
-      if (!phoneColumns.has(idx)) raw[h] = cells[idx] ?? ''
-    })
-
-    rows.push({
-      rowNumber,
-      purchaseKey: key,
-      purchasedAt,
-      buyer: { first: r.first, last: r.last, email: r.email.toLowerCase() },
-      company: r.company,
-      tierName: r.tierName,
-      tierCategory: r.tierCategory,
-      quantity,
-      seats,
-      gross,
-      refunded,
-      covered,
-      method: r.method,
-      status: r.status,
-      pageName: r.pageName,
-      internalName: r.internalName,
-      guestText: r.guestText,
-      raw,
-    })
+/** One row, as a purchase or as the reason it's rejected. */
+async function readRow(cells: string[], rowNumber: number, sheet: Sheet, readError: string | undefined): Promise<PurchaseRow | RejectedRow> {
+  if (readError) return { rowNumber, reason: readError }
+  // A comma outside quotes, or a line break that split a row, shifts every value after it into the wrong column.
+  // Give Lively writes every column on every row, so a different count means the row can't be trusted. (Trailing
+  // empty columns can't be let through: a shifted row ends in them too, because the export's last columns are blank.)
+  if (cells.length !== sheet.header.length) {
+    return { rowNumber, reason: `has ${cells.length} columns but the header has ${sheet.header.length}, so its values may be in the wrong columns (a comma outside quotes, or a line break that split the row?)` }
   }
+  const cell = (f: Field) => cells[sheet.columns.get(f) ?? -1] ?? ''
+  const checked = RowSchema.safeParse({
+    first: cell('first'), last: cell('last'), email: cell('email'), tierName: cell('tierName'),
+    tierCategory: cell('tierCategory'), company: cell('company'), method: cell('method'), status: cell('status'),
+    pageName: cell('pageName'), internalName: cell('internalName'), guestText: cell('guestText'),
+  })
+  if (!checked.success) return { rowNumber, reason: checked.error.issues.map((e) => e.message).join('; ') }
+  const v = readValues(cell)
+  if ('reason' in v) return { rowNumber, reason: v.reason }
+  const r = checked.data
+  return {
+    rowNumber, purchaseKey: await purchaseKey(r.email, v.purchasedAt), purchasedAt: v.purchasedAt,
+    buyer: { first: r.first, last: r.last, email: r.email.toLowerCase() }, company: r.company,
+    tierName: r.tierName, tierCategory: r.tierCategory, quantity: v.quantity, seats: v.seats,
+    gross: v.gross, refunded: v.refunded, covered: v.covered, method: r.method, status: r.status,
+    pageName: r.pageName, internalName: r.internalName, guestText: r.guestText, raw: rawCells(sheet, cells),
+  }
+}
 
+type Values = Pick<PurchaseRow, 'purchasedAt' | 'gross' | 'refunded' | 'covered' | 'quantity' | 'seats'>
+
+/** The row's date, amounts and counts, or the reason one can't be read. */
+function readValues(cell: (f: Field) => string): Values | { reason: string } {
+  try {
+    const purchasedAt = parsePurchaseTime(cell('purchasedAt'))
+    const gross = parseAmount(cell('gross'))
+    const refunded = parseAmount(cell('refunded'))
+    const covered = parseCoveredFee(cell('covered'))
+    const quantity = parseCount(cell('quantity'))
+    const seats = parseCount(cell('seats'))
+    if (purchasedAt === null) return { reason: 'missing Date/Time of Purchase' }
+    if (gross === null) return { reason: 'missing Amount Spent' }
+    return { purchasedAt, gross, refunded, covered, quantity, seats }
+  } catch (e) {
+    if (!(e instanceof ValueError)) throw e
+    return { reason: e.message }
+  }
+}
+
+/** Every column as exported, by header, except the phone number (never imported). */
+function rawCells(sheet: Sheet, cells: string[]): Record<string, string> {
+  const raw: Record<string, string> = {}
+  sheet.header.forEach((h, idx) => {
+    if (!sheet.phoneColumns.has(idx)) raw[h] = cells[idx] ?? ''
+  })
+  return raw
+}
+
+/** Earliest and latest purchase time among accepted rows, for the missing-purchase check. */
+function rangeOf(rows: PurchaseRow[]): ReadResult['dateRange'] {
   const times = rows.map((r) => r.purchasedAt).sort()
-  const dateRange = times.length ? { earliest: times[0]!, latest: times[times.length - 1]! } : null
-  return { rows, rejected, dateRange }
+  const [earliest] = times
+  const latest = times.at(-1)
+  return earliest !== undefined && latest !== undefined ? { earliest, latest } : null
 }
