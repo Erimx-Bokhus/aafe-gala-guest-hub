@@ -1519,6 +1519,14 @@ begin
 end $$;
 
 -- This gala's Give Lively page name (spec section 3): set once per year, from the upload screen.
+-- The Give Lively page of the gala being run now, for the sync (service role only). The same rule as every other
+-- function, current_event_id(): next year's gala in planning doesn't take the sync over (it read "the newest open
+-- year" until Oct 15, the rule #137 removed from the staff app).
+create or replace function sync_gala_page() returns text
+language sql stable security definer set search_path = public as $$
+  select givelively_page_name from gala_events where id = current_event_id()
+$$;
+
 create or replace function staff_set_gala_page(p_page_name text) returns void
 language plpgsql security definer set search_path = public as $$
 declare me staff_users := require_staff(array['gala_admin']); v_old text;
@@ -2522,7 +2530,7 @@ begin
               'staff_assign_seat','staff_seat_order_at_table','staff_record_payment','staff_add_pledge','staff_add_comp_guest',
               'staff_send_qr_invite','staff_resend_portal_link','staff_approve_email','staff_cancel_email','checkin_list','staff_check_in','staff_check_in_qr',
               'staff_check_in_exception','gl_import','staff_import_givelively','email_mark_sent','email_mark_failed','email_claim',
-              'purchase_key','name_key','has_need','add_import_review','import_fill_guests','staff_set_tier_mapping','staff_set_gala_page',
+              'purchase_key','name_key','has_need','add_import_review','import_fill_guests','staff_set_tier_mapping','staff_set_gala_page','sync_gala_page',
               'staff_resolve_import_review','seats_void_qr','guests_void_qr','gala_events_no_mixing','require_gala_order',
               'staff_export_badges','staff_export_checkin','staff_export_salesforce',
               'staff_queue_guest_list_reminders','staff_email_queue','staff_checkin_snapshot','staff_sync_check_ins','staff_undo_check_in',
@@ -2563,7 +2571,7 @@ grant execute on function
 
 -- Edge functions (service role)
 grant execute on function gl_import(jsonb, text, text), email_mark_sent(text, text), email_mark_failed(text, text), email_claim(int), hash_token(text),
-  salesforce_outbox(), salesforce_mark_synced(jsonb, text)
+  salesforce_outbox(), salesforce_mark_synced(jsonb, text), sync_gala_page()
   to service_role;
 
 -- ---------------------------------------------------------------------
