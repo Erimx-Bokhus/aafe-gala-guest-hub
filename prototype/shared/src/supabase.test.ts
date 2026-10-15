@@ -115,6 +115,25 @@ describe('live mode', () => {
     await expect(s.currentStaff()).rejects.toThrow('network')
   })
 
+  it('stops the sign-in on a staff record it cannot trust: an unknown role or a field that is not text (coding standard R9)', async () => {
+    const s = await load(true)
+    m.auth.getSession.mockResolvedValue({ data: { session: { access_token: 't' } } })
+    const me = { id: 'st-1', name: 'Mei Lin Ortiz', email: 'mei.ortiz@aafe-demo.example.org', role: 'gala_admin' }
+    for (const bad of [{ ...me, role: 'superuser' }, { ...me, role: undefined }, { ...me, email: 42 }, 'gala_admin']) {
+      m.rpc.mockResolvedValue({ data: bad, error: null })
+      await expect(s.currentStaff()).rejects.toThrow(/staff_me returned an unexpected/)
+    }
+    expect(s.asStaffUser({ ...me, extra: 'ignored' })).toEqual(me)
+  })
+
+  it('signs in from a link only with a type Supabase knows; anything else is treated as a magic link', async () => {
+    const s = await load(true)
+    m.auth.verifyOtp.mockResolvedValue({ error: null })
+    window.history.replaceState(null, '', '/?token_hash=abc123&type=not-a-real-type#/')
+    await expect(s.signInFromLink()).resolves.toBe(true)
+    expect(m.auth.verifyOtp).toHaveBeenCalledWith({ token_hash: 'abc123', type: 'magiclink' })
+  })
+
   it('signs out of Supabase', async () => {
     const s = await load(true)
     await s.signOut()

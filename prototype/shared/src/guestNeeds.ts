@@ -31,8 +31,8 @@ function parseNeeds<T extends string>(raw: string, known: readonly T[]): ParsedN
   const selected = new Set<T | 'Other'>()
   const details: string[] = []
   const parts = value.split(/\s*[;,]\s*/).filter(Boolean)
-  for (const raw of parts) {
-    const part = ALIASES[raw] ?? raw
+  for (const written of parts) {
+    const part = ALIASES[written] ?? written
     if (known.includes(part as T)) {
       selected.add(part as T)
     } else if (/^Other(?::|$)/.test(part)) {
@@ -62,7 +62,7 @@ export const parseDietaryNeeds = (value: string): ParsedNeeds<DietaryOption> =>
   value.trim() === NONE ? { selected: [NONE], otherDetails: '' } : parseNeeds(value, DIETARY_OPTIONS)
 export const parseAccessibilityNeeds = (value: string) => parseNeeds(value, ACCESSIBILITY_OPTIONS)
 export const serializeDietaryNeeds = (selected: readonly DietaryOption[], details: string) =>
-  selected.includes(NONE) ? NONE : serializeNeeds(selected.filter((s) => s !== NONE) as (typeof DIETARY_OPTIONS[number] | 'Other')[], details, DIETARY_OPTIONS)
+  selected.includes(NONE) ? NONE : serializeNeeds(selected.filter((s): s is typeof DIETARY_OPTIONS[number] | 'Other' => s !== NONE), details, DIETARY_OPTIONS)
 export const serializeAccessibilityNeeds = (selected: readonly AccessibilityOption[], details: string) => serializeNeeds(selected, details, ACCESSIBILITY_OPTIONS)
 
 /** Has this guest answered? "none" (answered, no need), "some" (at least one need), or "unanswered".
@@ -94,7 +94,7 @@ export function countNeeds(values: (string | null | undefined)[], kind: 'dietary
     if (status === 'unanswered') { unanswered++; continue }
     if (status === 'none') { none++; continue }
     some++
-    const parsed = kind === 'dietary' ? parseDietaryNeeds(v!) : parseAccessibilityNeeds(v!)
+    const parsed = kind === 'dietary' ? parseDietaryNeeds(v ?? '') : parseAccessibilityNeeds(v ?? '')   // needStatus said it has an answer
     for (const s of parsed.selected) if (s !== NONE) counts.set(s, (counts.get(s) ?? 0) + 1)
     if (parsed.otherDetails) otherDetails.push(parsed.otherDetails)
   }

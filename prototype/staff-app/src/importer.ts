@@ -23,7 +23,7 @@ export function importContext(db: DB): UploadContext {
   const ev = db.gala_events.find((e) => e.id === db.meta.current_event_id)
   const orders = db.orders.filter((o) => o.event_id === db.meta.current_event_id)
   const orderIds = new Set(orders.map((o) => o.id))
-  const bought = db.payments.filter((p) => p.purchase_key && orderIds.has(p.order_id))
+  const bought = db.payments.flatMap((p) => (p.purchase_key && orderIds.has(p.order_id) ? [{ ...p, key: p.purchase_key }] : []))
   return {
     galaPageName: ev?.givelively_page_name ?? null,
     tiers: levelsOf(db).map((t) => ({ id: t.id, name: t.name, tierCategory: t.tier_category, includedSeatCount: t.included_seat_count })),
@@ -31,8 +31,8 @@ export function importContext(db: DB): UploadContext {
     sponsors: db.sponsors.map((s) => ({ id: s.id, organizationName: s.organization_name, primaryContactName: s.primary_contact_name, primaryContactEmail: s.primary_contact_email })),
     existingGuests: db.guests.filter((g) => orderIds.has(g.order_id))
       .map((g) => ({ id: g.id, orderId: g.order_id, displayName: `${g.first_name} ${g.last_name}`.trim(), email: g.email || null, organization: g.organization || null })),
-    previousPurchases: bought.map((p) => ({ purchaseKey: p.purchase_key!, purchasedAt: p.received_at, cancelled: orders.find((o) => o.id === p.order_id)?.status === 'cancelled' })),
-    orderIdByPurchaseKey: Object.fromEntries(bought.map((p) => [p.purchase_key!, p.order_id])),
+    previousPurchases: bought.map((p) => ({ purchaseKey: p.key, purchasedAt: p.received_at, cancelled: orders.find((o) => o.id === p.order_id)?.status === 'cancelled' })),
+    orderIdByPurchaseKey: Object.fromEntries(bought.map((p) => [p.key, p.order_id])),
   }
 }
 
