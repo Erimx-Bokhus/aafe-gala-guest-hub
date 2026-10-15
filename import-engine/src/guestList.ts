@@ -65,11 +65,12 @@ function splitEntries(text: string): string[] {
 function splitAroundEmails(line: string): string[] {
   const matches = [...line.matchAll(EMAIL)]
   if (matches.length === 0) return [line]
-  if (matches.length === 1 && !/^[)>\]]?\s*,/.test(line.slice(matches[0]!.index! + matches[0]![0].length))) return [line]
+  const [only] = matches
+  if (matches.length === 1 && only && !/^[)>\]]?\s*,/.test(line.slice(only.index + only[0].length))) return [line]
   const entries: string[] = []
   let start = 0
   for (const m of matches) {
-    const end = m.index! + m[0].length
+    const end = m.index + m[0].length
     entries.push(line.slice(start, end))
     start = end
   }
@@ -107,16 +108,9 @@ function splitCommas(entry: string, seatCount: number): string[] | null {
   return null
 }
 
-export function parseGuestList(text: string | null, seatCount: number, buyer: Buyer): GuestList {
-  const trimmed = (text ?? '').trim()
-  // No seats to fill (an ad, say): whatever the buyer wrote ("No ticket included") names nobody.
-  if (trimmed === '' || NOTHING.test(trimmed) || seatCount === 0) return { kind: 'none' }
-
-  let entries = splitEntries(trimmed).filter((e) => e.includes(',') || !PLACEHOLDER.test(e))   // with commas: splitCommas drops them
-
-  // Commas between names. An entry with an address that won't split stays whole, as before ("Doe, Jane jane@…").
-  const reasons: string[] = []
-  entries = entries.flatMap((entry) => {
+/** Commas between names. An entry with an address that won't split stays whole, as before ("Doe, Jane jane@…"). */
+function splitOnCommas(entries: string[], seatCount: number, reasons: string[]): string[] {
+  return entries.flatMap((entry) => {
     if (!entry.includes(',')) return [entry]
     const split = splitCommas(entry, seatCount)
     if (split) return split
@@ -124,23 +118,38 @@ export function parseGuestList(text: string | null, seatCount: number, buyer: Bu
     reasons.push(`commas that don't separate full names: "${entry}"`)
     return []
   })
+}
 
-  const buyerEmail = normEmail(buyer.email)
-  const buyerName = `${buyer.first} ${buyer.last}`.trim()
+/** One entry: the buyer themselves, a guest, or the reason it can't be read as one person. */
+function readGuest(entry: string, me: { email: string; name: string }): { guest: ParsedGuest } | { reason: string } {
+  const { name, email } = readEntry(entry)
+  if (isBuyer(name, email, me)) return { guest: { displayName: name && !SELF.test(name) ? name : me.name, email: me.email, isBuyer: true } }
+  if (name === '') return { reason: `an email address with no name: "${entry}"` }
+  if (!/\p{L}/u.test(name) || /\d|@/.test(name)) return { reason: `can't be read: "${entry}"` }
+  if (COUPLE.test(name)) return { reason: `a couple or pair on one line: "${entry}"` }
+  if (normName(name).split(' ').filter(Boolean).length < 2) return { reason: `a one-word name: "${entry}"` }
+  if (countNameWords(name) >= RUN_ON) return { reason: `may be more than one person: "${entry}"` }
+  return { guest: { displayName: name, email: email === me.email ? null : email, isBuyer: false } }
+}
+
+/** "me", the buyer's own address with no name, or the buyer's own name in any order. */
+function isBuyer(name: string, email: string | null, me: { email: string; name: string }): boolean {
+  return SELF.test(name) || (name === '' && email === me.email) || (name !== '' && nameWordSet(name) === nameWordSet(me.name))
+}
+
+export function parseGuestList(text: string | null, seatCount: number, buyer: Buyer): GuestList {
+  const trimmed = (text ?? '').trim()
+  // No seats to fill (an ad, say): whatever the buyer wrote ("No ticket included") names nobody.
+  if (trimmed === '' || NOTHING.test(trimmed) || seatCount === 0) return { kind: 'none' }
+
+  const reasons: string[] = []
+  const entries = splitOnCommas(splitEntries(trimmed).filter((e) => e.includes(',') || !PLACEHOLDER.test(e)), seatCount, reasons)   // with commas: splitCommas drops them
+  const me = { email: normEmail(buyer.email), name: `${buyer.first} ${buyer.last}`.trim() }
   const guests: ParsedGuest[] = []
-
   for (const entry of entries) {
-    const { name, email } = readEntry(entry)
-    if (SELF.test(name) || (name === '' && email === buyerEmail) || (name && nameWordSet(name) === nameWordSet(buyerName))) {
-      guests.push({ displayName: name && !SELF.test(name) ? name : buyerName, email: buyerEmail, isBuyer: true })
-      continue
-    }
-    if (name === '') { reasons.push(`an email address with no name: "${entry}"`); continue }
-    if (!/\p{L}/u.test(name) || /\d|@/.test(name)) { reasons.push(`can't be read: "${entry}"`); continue }
-    if (COUPLE.test(name)) { reasons.push(`a couple or pair on one line: "${entry}"`); continue }
-    if (normName(name).split(' ').filter(Boolean).length < 2) { reasons.push(`a one-word name: "${entry}"`); continue }
-    if (countNameWords(name) >= RUN_ON) { reasons.push(`may be more than one person: "${entry}"`); continue }
-    guests.push({ displayName: name, email: email === buyerEmail ? null : email, isBuyer: false })
+    const read = readGuest(entry, me)
+    if ('guest' in read) guests.push(read.guest)
+    else reasons.push(read.reason)
   }
 
   if (guests.length > seatCount) {

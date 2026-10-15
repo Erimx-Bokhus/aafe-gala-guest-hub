@@ -86,6 +86,10 @@ ok((await tierOf('GL-LV-RETIRED-ID')) === null && (await tierOf('GL-LV-RETIRED-N
 // Next year's levels are set up while this year's gala is still the current one.
 await db.exec(`insert into gala_events (id, year, name, event_date, status, is_synthetic) values ('ev-2028', 2028, 'AAFE 54th Annual Gala (demo)', '2028-05-18', 'planning', true)`)
 ok((await one(`select current_event_id() id`)).id === cur, "a 2028 gala in planning doesn't take over from this year's")
+// The Give Lively sync reads this year's page too, not the planning gala's (it read the newest open year until Oct 15).
+await db.exec(`update gala_events set givelively_page_name = 'Page for 2028' where id = 'ev-2028'; update gala_events set givelively_page_name = 'Page for this year' where id = '${cur}'`)
+ok((await as('service_role', null, `select sync_gala_page() p`))[0].p === 'Page for this year', "the sync reads this year's Give Lively page, not next year's")
+ok((await err('authenticated', ADMIN.email, `select sync_gala_page()`))?.includes('permission denied'), 'only the sync (service role) can call it')
 const offered = (await one(`select count(*)::int n from sponsorship_tiers where event_id = $1 and not retired and tier_category <> 'complimentary'`, [cur])).n
 const copied = (await asAdmin(`select staff_copy_levels($1, 'ev-2028') n`, [cur]))[0].n
 ok(copied === offered && copied > 0, `"start from last year's levels" copies every level still offered (${copied})`)

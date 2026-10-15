@@ -6,6 +6,7 @@
 // Which donations are gala sales: the current gala's Give Lively page name (gala_events.givelively_page_name,
 // e.g. "AAFE's 52nd Annual Gala"), set by staff in the staff app. Not set -> the sync does nothing and says so. Demo: GIVELIVELY_BASE_URL points at the givelively-mock function instead of Give Lively.
 import { pollStart, syncDonations, withoutKey } from '../_shared/givelively-sync.ts'
+import type { SupabaseClient } from 'npm:@supabase/supabase-js@2'
 import { admin, caller, cors, env, json } from '../_shared/supabase.ts'
 
 Deno.serve(async (req) => {
@@ -17,10 +18,18 @@ Deno.serve(async (req) => {
   if (!org || !key) return json({ error: 'not_configured', message: 'Set GIVELIVELY_ORG_ID and GIVELIVELY_API_KEY.' }, 500)
 
   const db = admin()
-  const { data: gala } = await db.from('gala_events').select('givelively_page_name').neq('status', 'closed').order('year', { ascending: false }).limit(1).maybeSingle()
-  const pageName = gala?.givelively_page_name?.trim()
+  // The gala being run now (current_event_id, in the database), never the newest open year: next year's gala in
+  // planning must not take the sync over.
+  const { data: page, error: pageError } = await db.rpc('sync_gala_page')
+  if (pageError) return json({ error: 'db_error', message: pageError.message }, 500)
+  const pageName = typeof page === 'string' ? page.trim() : ''
   if (!pageName) return json({ error: 'not_configured', message: "Set this gala's Give Lively page name in the staff app first." }, 500)
-  const campaigns = [pageName]
+  return await runSync(db, { org, key, campaigns: [pageName], actor: who === 'schedule' ? 'Give Lively sync' : `Give Lively sync (${who})` })
+})
+
+/** One poll: the donations Give Lively changed since the last one, imported one by one, and the cursor moved on. */
+async function runSync(db: SupabaseClient, o: { org: string; key: string; campaigns: string[]; actor: string }): Promise<Response> {
+  const { org, key, campaigns, actor } = o
   const startedAt = Date.now()
   const { data: state } = await db.from('givelively_sync_state').select('cursor_ms').eq('id', 1).single()
   const base = (env('GIVELIVELY_BASE_URL') || 'https://secure.givelively.org').replace(/\/$/, '')
@@ -42,10 +51,9 @@ Deno.serve(async (req) => {
     const body = await res.json()
     donations = Array.isArray(body) ? body : Array.isArray(body?.data) ? body.data : []
   } catch (e) {
-    return await fail(`Could not reach Give Lively: ${withoutKey((e as Error).message, key)}`)
+    return await fail(`Could not reach Give Lively: ${withoutKey(e instanceof Error ? e.message : String(e), key)}`)
   }
 
-  const actor = who === 'schedule' ? 'Give Lively sync' : `Give Lively sync (${who})`
   // Per-donation rules: _shared/givelively-sync.ts (tested in scripts/test-givelively-sync.mts).
   const counts = await syncDonations(donations, campaigns, {
     importRow: async (row) => {
@@ -57,4 +65,4 @@ Deno.serve(async (req) => {
 
   await db.from('givelively_sync_state').update({ cursor_ms: startedAt, last_run_at: new Date().toISOString(), last_status: 'ok', last_error: null, last_counts: counts }).eq('id', 1)
   return json(counts)
-})
+}
