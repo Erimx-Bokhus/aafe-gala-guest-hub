@@ -822,6 +822,10 @@ begin
   select n.display, n.first, n.last into v_display, v_first, v_last
     from name_parts(p_guest ->> 'display_name', p_guest ->> 'first_name', p_guest ->> 'last_name') n;
   if v_display = '' then raise exception 'invalid_input: a name is required'; end if;
+  -- One comp guest at a time per gala (Oct 12 audit): two staff adding at once both read the same last slot (one got a
+  -- "duplicate key" error and lost the guest), and on a gala with no comp order yet both created one. The lock waits
+  -- for the other add to finish and is released when this one commits.
+  perform pg_advisory_xact_lock(hashtext('staff_add_comp_guest'), hashtext(current_event_id()));
   select id into v_order from orders
    where event_id = current_event_id() and status <> 'cancelled'
      and tier_id in (select id from sponsorship_tiers where event_id = current_event_id() and tier_category = 'complimentary')
