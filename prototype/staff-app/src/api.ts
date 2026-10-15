@@ -462,7 +462,8 @@ export function demoPipeline(db: DB): PipelineBoard {
   const sum = (xs: (number | null)[]) => cents(xs.reduce<number>((a, x) => a + (x ?? 0), 0))
   const staffName = (id: string | null) => (id && db.staff_users.find((u) => u.id === id)?.name) || null
   const tierName = (id: string | null) => (id && db.sponsorship_tiers.find((t) => t.id === id)?.name) || null
-  const paidIn = (orderIds: string[]) => sum(db.payments.filter((x) => orderIds.includes(x.order_id)).map((x) => x.original_amount - x.refunded_amount))
+  // Per payment, never below 0, as staff_pipeline(): a full Give Lively refund returns the donor-covered fee too.
+  const paidIn = (orderIds: string[]) => sum(db.payments.filter((x) => orderIds.includes(x.order_id)).map((x) => Math.max(x.original_amount - x.refunded_amount, 0)))
   const prior = db.gala_events.filter((e) => e.year === ev.year - 1 || e.year === ev.year - 2).sort((a, b) => b.year - a.year)
   const ord = (s: PipelineStage) => STAGES.findIndex((x) => x.stage === s)
   const prospects: PipelineProspect[] = (db.sponsor_prospects ?? []).filter((p) => p.event_id === ev.id).map((p) => {
