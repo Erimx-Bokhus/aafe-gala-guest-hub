@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { levelsOf } from '@shared/data'
 import { Plus } from 'lucide-react'
 import { Field, Modal, Pill, fmtDate, money } from '@shared/ui'
 import type { PipelineStage, Sector } from '@shared/types'
@@ -149,7 +150,7 @@ function ProspectForm({ editing, board, onClose }: { editing: PipelineProspect |
   const [f, setF] = useState({
     sponsor_id: '', organization: '', contact_name: '', contact_email: '',
     sector: (old?.sector ?? '') as Sector | '', ask: old?.ask != null ? String(old.ask) : '',
-    ask_tier_id: db.sponsorship_tiers.find((x) => x.name === old?.ask_tier)?.id ?? '',
+    ask_tier_id: levelsOf(db, db.meta.current_event_id, true).find((x) => x.name === old?.ask_tier)?.id ?? '',
     follow_up_owner_id: db.staff_users.find((u) => u.name === old?.follow_up)?.id ?? '', notes: old?.notes ?? '',
   })
   const inPipeline = new Set(board.prospects.map((p) => p.sponsor_id))
@@ -185,7 +186,7 @@ function ProspectForm({ editing, board, onClose }: { editing: PipelineProspect |
         <div className="grid gap-3 sm:grid-cols-2">
           <Field id="pf-sector" label="Sector"><select id="pf-sector" className="input" value={f.sector} onChange={set('sector')}><option value="">—</option>{SECTORS.map((s) => <option key={s} value={s}>{sectorLabel(s)}</option>)}</select></Field>
           <Field id="pf-ask" label="Ask ($)"><input id="pf-ask" className="input" inputMode="numeric" value={f.ask} onChange={(e) => setF({ ...f, ask: e.target.value.replace(/[^0-9.]/g, '') })} /></Field>
-          <Field id="pf-tier" label="Package asked for"><select id="pf-tier" className="input" value={f.ask_tier_id} onChange={set('ask_tier_id')}><option value="">—</option>{db.sponsorship_tiers.filter((x) => x.tier_category === 'sponsorship').map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</select></Field>
+          <Field id="pf-tier" label="Package asked for"><select id="pf-tier" className="input" value={f.ask_tier_id} onChange={set('ask_tier_id')}><option value="">—</option>{levelsOf(db).filter((x) => x.tier_category === 'sponsorship').map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</select></Field>
           <Field id="pf-fu" label="Follow-up (AAFE)"><select id="pf-fu" className="input" value={f.follow_up_owner_id} onChange={set('follow_up_owner_id')}><option value="">—</option>{db.staff_users.filter((u) => u.role !== 'check_in_volunteer').map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</select></Field>
         </div>
         <Field id="pf-notes" label="Notes (staff only)"><textarea id="pf-notes" className="input" rows={2} value={f.notes} onChange={set('notes')} /></Field>

@@ -150,6 +150,18 @@ describe('live mode: one staff_* function per action', () => {
     expect(rpc).toHaveBeenCalledWith('staff_check_in_qr', { p_code: 'ABC' })
   })
 
+  it("loads this year's gala as the server says, even with next year's in planning", async () => {
+    const d = loadDB(), now = d.meta.current_event_id
+    const tables = { ...d, gala_events: [...d.gala_events, { ...d.gala_events.find((e) => e.id === now)!, id: 'ev-2099', year: 2099, status: 'planning' }] } as unknown as Record<string, unknown[]>
+    const rows = (t: string) => ({ select: () => ({ order: () => ({
+      range: async (a: number, b: number) => ({ data: (tables[t] ?? []).slice(a, b + 1), error: null }),
+      limit: async () => ({ data: [], error: null }) }) }) })
+    const rpc = vi.fn().mockResolvedValue({ data: now, error: null })
+    const ldb = await loadLiveDb({ rpc, from: rows } as unknown as SupabaseClient, ADMIN)
+    expect(rpc).toHaveBeenCalledWith('staff_current_event')
+    expect(ldb.meta.current_event_id).toBe(now)
+  })
+
   it('loads a volunteer from the door list only, never the tables', async () => {
     const snap: CheckinSnapshot = demoSnapshot(loadDB())
     const { c, rpc, from } = client({ data: snap })
