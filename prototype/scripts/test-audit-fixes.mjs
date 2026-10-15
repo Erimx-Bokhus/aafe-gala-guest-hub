@@ -148,6 +148,19 @@ ok(await sponsorsOf(ANA) === 2 && await conflicts(ANA) === 1, 'a different famil
     'uploading the same row again adds no second item')
   ok((await err('authenticated', RM, `select staff_resolve_import_review((select id from import_review where reason = 'zero_amount' limit 1), 'Added as comps')`)) === null,
     'a relationship manager can close it like any review item')
+
+// ---- A new display name voids the guest's QR e-ticket, like a new first or last name (Oct 12 audit, Cornell)
+{
+  const seat = await one(`select s.id, s.guest_id from seats s where s.qr_token_hash is not null and s.guest_id is not null limit 1`)
+  const voids = async () => (await one(`select count(*)::int n from audit_log where action = 'qr.voided' and entity_id = $1`, [seat.id])).n
+  const hash = async () => (await one(`select qr_token_hash h from seats where id = $1`, [seat.id])).h
+  await db.query(`update guests set display_name = display_name where id = $1`, [seat.guest_id])
+  ok(await hash() !== null && await voids() === 0, 'saving the same display name leaves the QR code working')
+  await db.query(`update guests set display_name = null where id = $1`, [seat.guest_id])
+  await db.query(`update guests set display_name = btrim(concat_ws(' ', first_name, last_name)) where id = $1`, [seat.guest_id])
+  ok(await hash() !== null && await voids() === 0, 'clearing it, or filling a blank one in as "First Last", is not a new name')
+  await db.query(`update guests set display_name = 'Someone Else Entirely' where id = $1`, [seat.guest_id])
+  ok(await hash() === null && await voids() === 1, 'a new display name voids the QR code, and the change log says so')
 }
 
 console.log(`audit fixes: ${count.pass} passed, ${count.fail} failed`)
