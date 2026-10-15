@@ -1720,6 +1720,9 @@ begin
   select * into p from sponsor_prospects where id = p_prospect_id for update;
   if p.id is null or (p.order_id is not null and p.order_id <> o.id) then return; end if;
   v_to := case
+    -- Refunded or failed in Give Lively, or cancelled by staff (Oct 12 audit: it stayed at payment received and
+    -- counted its ask in the forecast at 100%).
+    when o.status = 'cancelled' and p.stage in ('closed_won', 'payment_received') then 'lost'
     when o.status in ('paid', 'partially_paid') then 'payment_received'
     when o.status in ('pledged', 'invoice_sent') and p.stage in ('not_started', 'reached_out', 'in_conversation', 'lost') then 'closed_won'
     else p.stage end;
@@ -1730,7 +1733,8 @@ begin
     select organization_name into v_org from sponsors where id = p.sponsor_id;
     perform write_audit(p_actor_type, p_actor, 'prospect', p.id, o.id, 'prospect.stage', p.stage, v_to, false,
       format('%s: %s → %s (%s).', v_org, pipeline_stage_label(p.stage), pipeline_stage_label(v_to),
-             case when v_to = 'payment_received' then 'payment recorded' else 'pledge or purchase recorded' end));
+             case when v_to = 'payment_received' then 'payment recorded' when v_to = 'lost' then 'refunded or cancelled'
+                  else 'pledge or purchase recorded' end));
   end if;
 end $$;
 
@@ -1743,7 +1747,13 @@ declare v_id text; v_cat text;
 begin
   -- Sponsorships and tickets count toward a prospect; ads (an add-on) and comps don't.
   select tier_category into v_cat from sponsorship_tiers where id = new.tier_id;
-  if new.status in ('cancelled', 'comp') or v_cat not in ('sponsorship', 'ticket') then return new; end if;
+  if new.status = 'comp' or v_cat not in ('sponsorship', 'ticket') then return new; end if;
+  -- A cancelled order only moves the prospect it's linked to (to lost); it never creates or claims one.
+  if new.status = 'cancelled' then
+    select id into v_id from sponsor_prospects where order_id = new.id;
+    if v_id is not null then perform pipeline_apply_order(v_id, new, 'system', 'Pipeline'); end if;
+    return new;
+  end if;
   -- The prospect this order is already linked to, else this sponsor's prospect.
   select id into v_id from sponsor_prospects where order_id = new.id;
   if v_id is null then
@@ -1794,9 +1804,10 @@ begin
   p as (
     select sp.*, s.organization_name, s.primary_contact_name, rm.name rm_name, fu.name fu_name, st.probability, st.ord,
            o.commitment_amount commitment, t.name tier_name, ta.name ask_tier_name,
-           coalesce((select sum(pay.original_amount - pay.refunded_amount) from payments pay where pay.order_id = o.id), 0) received,
+           -- Per payment, never below 0: a full Give Lively refund returns the donor-covered fee too.
+           coalesce((select sum(greatest(pay.original_amount - pay.refunded_amount, 0)) from payments pay where pay.order_id = o.id), 0) received,
            (select coalesce(jsonb_agg(jsonb_build_object('year', ge.year, 'given',
-                     coalesce((select sum(pay.original_amount - pay.refunded_amount) from orders oo join payments pay on pay.order_id = oo.id
+                     coalesce((select sum(greatest(pay.original_amount - pay.refunded_amount, 0)) from orders oo join payments pay on pay.order_id = oo.id
                                 where oo.sponsor_id = sp.sponsor_id and oo.event_id = ge.id and oo.status <> 'cancelled'), 0))
                      order by ge.year desc), '[]')
               from gala_events ge where ge.year in (e.year - 1, e.year - 2)) prior_years
