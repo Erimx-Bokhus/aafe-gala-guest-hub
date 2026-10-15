@@ -1330,14 +1330,17 @@ begin
     end if;
 
     -- Buyer -> sponsor: same email AND same last name. Same email, different last name is a shared
-    -- inbox: a new sponsor so the order isn't lost, and a staff review.
+    -- inbox: a new sponsor so the order isn't lost, and a staff review. The contact's name must be the last
+    -- name or end with it word for word, so "Ana García López" matches "García López" (Oct 12 audit: comparing
+    -- only the last word made every repeat buyer with a two-word surname a new sponsor).
     v_name := trim(coalesce(r ->> 'first', '') || ' ' || coalesce(r ->> 'last', ''));
     v_org  := coalesce(nullif(trim(r ->> 'company'), ''), nullif(v_name, ''), r ->> 'email');
     select array_agg(id order by created_at) into v_conflict from sponsors
      where lower(btrim(primary_contact_email)) = lower(btrim(r ->> 'email'));
     select id into v_sp from sponsors
      where id = any (coalesce(v_conflict, '{}'))
-       and (coalesce(r ->> 'last', '') = '' or name_key(regexp_replace(primary_contact_name, '^.*\s', '')) = name_key(r ->> 'last'))
+       and (name_key(r ->> 'last') = '' or name_key(primary_contact_name) = name_key(r ->> 'last')
+            or right(name_key(primary_contact_name), length(name_key(r ->> 'last')) + 1) = ' ' || name_key(r ->> 'last'))
      order by created_at limit 1;
     if v_sp is null then
       v_sp := new_id('sp');

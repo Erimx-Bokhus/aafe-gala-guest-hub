@@ -91,5 +91,16 @@ ok(await retry(async () => { if (++tries < 3) throw new Error('db blip'); return
 tries = 0
 ok(await retry(async () => { tries++; throw new Error('db down') }, [1, 1]).then(() => false, (e) => e.message === 'db down') && tries === 3, 'and gives up with the last error')
 
+// ---- A repeat buyer with a two-word last name stays one sponsor (Oct 12 audit, Cornell)
+const ANA = 'ana.garcia.lopez@audit.example.org'
+const sponsorsOf = async (email) => (await one(`select count(*)::int n from sponsors where lower(primary_contact_email) = $1`, [email])).n
+const conflicts = async (email) => (await one(`select count(*)::int n from import_review where reason = 'email_name_conflict' and order_id in
+  (select o.id from orders o join sponsors s on s.id = o.sponsor_id where lower(s.primary_contact_email) = $1)`, [email])).n
+await imp(row('GL-AUDIT-ANA-1', { email: ANA, first: 'Ana', last: 'García López' }))
+await imp(row('GL-AUDIT-ANA-2', { email: ANA, first: 'Ana', last: 'García López', date: '2026-10-07T15:04:00Z' }))
+ok(await sponsorsOf(ANA) === 1 && await conflicts(ANA) === 0, `a second purchase by "Ana García López" joins her sponsor, with no shared-inbox review (${await sponsorsOf(ANA)} sponsors)`)
+await imp(row('GL-AUDIT-ANA-3', { email: ANA, first: 'Mark', last: 'Lee', date: '2026-10-08T15:04:00Z' }))
+ok(await sponsorsOf(ANA) === 2 && await conflicts(ANA) === 1, 'a different family on the same inbox is still a shared inbox: a new sponsor and a review')
+
 console.log(`audit fixes: ${count.pass} passed, ${count.fail} failed`)
 if (count.fail) process.exitCode = 1

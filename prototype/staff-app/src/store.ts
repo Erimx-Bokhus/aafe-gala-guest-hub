@@ -197,7 +197,8 @@ export function demoPull(db: DB): { db: DB; created: number; skipped: number } {
 // ---- Give Lively CSV import (slice C): the demo's stand-in for staff_import_givelively() / gl_import() ----
 
 const nameKey = (s: string | null | undefined) => tierMappingKey(s ?? '')
-const lastWord = (s: string) => s.trim().split(/\s+/).pop() ?? ''
+/** As gl_import: the contact's name is the buyer's last name or ends with it, word for word ("Ana García López", "García López"). */
+const endsWithName = (full: string, last: string) => { const n = nameKey(full), l = nameKey(last); return n === l || n.endsWith(' ' + l) }
 
 /**
  * Like gl_import() for new purchases: package from the prepared tier, this gala's tier mapping, or the tier name; sponsor by email
@@ -235,7 +236,7 @@ export function demoImport(db: DB, user: StaffUser, rows: GlImportRow[], run: Gl
     const name = `${r.first} ${r.last}`.trim(), org = r.company?.trim() || name || r.email
     // Buyer -> sponsor: same email and same last name; same email, different last name is a shared inbox.
     const sameEmail = d.sponsors.filter((s) => s.primary_contact_email.trim().toLowerCase() === r.email.trim().toLowerCase())
-    let sp = sameEmail.find((s) => !r.last || nameKey(lastWord(s.primary_contact_name)) === nameKey(r.last))
+    let sp = sameEmail.find((s) => !r.last || endsWithName(s.primary_contact_name, r.last))
     const conflict = !sp && sameEmail.length ? sameEmail.map((s) => s.id) : null
     if (!sp) {
       sp = { id: uid('sp'), organization_name: org, primary_contact_name: name || org, primary_contact_email: r.email.trim().toLowerCase(), phone: '',
