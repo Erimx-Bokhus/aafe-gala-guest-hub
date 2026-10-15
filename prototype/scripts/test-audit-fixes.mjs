@@ -91,5 +91,19 @@ ok(await retry(async () => { if (++tries < 3) throw new Error('db blip'); return
 tries = 0
 ok(await retry(async () => { tries++; throw new Error('db down') }, [1, 1]).then(() => false, (e) => e.message === 'db down') && tries === 3, 'and gives up with the last error')
 
+// ---- A new display name voids the guest's QR e-ticket, like a new first or last name (Oct 12 audit, Cornell)
+{
+  const seat = await one(`select s.id, s.guest_id from seats s where s.qr_token_hash is not null and s.guest_id is not null limit 1`)
+  const voids = async () => (await one(`select count(*)::int n from audit_log where action = 'qr.voided' and entity_id = $1`, [seat.id])).n
+  const hash = async () => (await one(`select qr_token_hash h from seats where id = $1`, [seat.id])).h
+  await db.query(`update guests set display_name = display_name where id = $1`, [seat.guest_id])
+  ok(await hash() !== null && await voids() === 0, 'saving the same display name leaves the QR code working')
+  await db.query(`update guests set display_name = null where id = $1`, [seat.guest_id])
+  await db.query(`update guests set display_name = btrim(concat_ws(' ', first_name, last_name)) where id = $1`, [seat.guest_id])
+  ok(await hash() !== null && await voids() === 0, 'clearing it, or filling a blank one in as "First Last", is not a new name')
+  await db.query(`update guests set display_name = 'Someone Else Entirely' where id = $1`, [seat.guest_id])
+  ok(await hash() === null && await voids() === 1, 'a new display name voids the QR code, and the change log says so')
+}
+
 console.log(`audit fixes: ${count.pass} passed, ${count.fail} failed`)
 if (count.fail) process.exitCode = 1
