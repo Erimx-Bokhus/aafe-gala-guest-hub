@@ -568,7 +568,8 @@ create or replace function portal_save_guest(p_token text, p_slot int, p_guest j
 language plpgsql security definer set search_path = public as $$
 declare
   o orders := portal_order(p_token);
-  st seats; g guests; g_old guests; v_contact text; v_action text; v_from text;
+  st seats; g guests; g_old guests; v_contact text; v_action text; v_from text; v_to text;
+  v_badge boolean := true;   -- what prints on the badge changed (name, title, organization)
   v_first text := left(trim(coalesce(p_guest ->> 'first_name', '')), 100);
   v_last  text := left(trim(coalesce(p_guest ->> 'last_name', '')), 100);
   v_display text := left(trim(coalesce(p_guest ->> 'display_name', '')), 200);
@@ -592,11 +593,21 @@ begin
   v_from := st.status;
 
   if st.guest_id is not null then
+    -- Only a real change counts (Oct 12 audit): pressing Save again changes nothing, and only a change to what prints
+    -- on the badge sends it back for staff review (or reprint, once printed). A food, access or email answer is saved
+    -- without undoing staff's review. Blank and missing count as the same.
+    v_badge := coalesce(g_old.first_name, '') <> v_first or coalesce(g_old.last_name, '') <> v_last
+            or coalesce(g_old.display_name, '') <> v_display or coalesce(g_old.title, '') <> coalesce(f_title, '')
+            or coalesce(g_old.organization, '') <> coalesce(f_org, '');
+    if not v_badge and coalesce(g_old.email, '') = coalesce(f_email, '') and coalesce(g_old.dietary_needs, '') = coalesce(f_diet, '')
+       and coalesce(g_old.accessibility_needs, '') = coalesce(f_acc, '') then
+      return portal_get_view(p_token);
+    end if;
     v_action := 'guest.updated';
     update guests set first_name = v_first, last_name = v_last, display_name = v_display, title = f_title, organization = f_org, email = f_email,
            dietary_needs = f_diet, accessibility_needs = f_acc, last_updated_by = 'guest_portal', updated_at = now(),
-           -- editing a printed badge means it must be reprinted
-           badge_status = case when badge_status = 'printed' then 'reprint_needed' else 'needs_review' end
+           -- a new name, title or organization must be reviewed again, and a printed badge reprinted
+           badge_status = case when not v_badge then badge_status when badge_status = 'printed' then 'reprint_needed' else 'needs_review' end
      where id = st.guest_id returning * into g;
   else
     v_action := 'guest.submitted';
@@ -608,8 +619,9 @@ begin
     returning * into g;
   end if;
 
-  update seats set guest_id = g.id, status = 'submitted', updated_at = now() where id = st.id;
-  perform write_audit('guest_portal', 'Guest portal (' || v_contact || ')', 'guest', g.id, o.id, v_action, v_from, 'submitted', true,
+  v_to := case when v_badge then 'submitted' else st.status end;
+  update seats set guest_id = g.id, status = v_to, updated_at = now() where id = st.id;
+  perform write_audit('guest_portal', 'Guest portal (' || v_contact || ')', 'guest', g.id, o.id, v_action, v_from, v_to, true,
     case when v_action = 'guest.submitted' then format('%s added to seat %s.', v_display, p_slot)
          else format('%s updated (seat %s).', v_display, p_slot) end,
     case when v_action = 'guest.updated' then audit_changes(to_jsonb(g_old), to_jsonb(g),
