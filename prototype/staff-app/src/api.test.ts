@@ -5,6 +5,8 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { loadDB } from '@shared/data'
 import type { DB, StaffUser } from '@shared/types'
 import { ROLES, demoApi, demoSnapshot, errorText, liveApi, loadLiveDb, selectAll, volunteerDb, type CheckinSnapshot } from './api'
+import { prepareImport, sampleExport } from './importer'
+import { queueGuestListReminders, salesforceSyncNow } from './store'
 
 const staff = (role: StaffUser['role']): StaffUser => ({ id: `st-${role}`, name: `Test ${role}`, email: `${role}@aafe-demo.example.org`, role })
 const VOL = staff('check_in_volunteer'), RM = staff('relationship_manager'), ADMIN = staff('gala_admin')
@@ -253,5 +255,41 @@ describe('moving the gala deadline (demo, like staff_update_gala_event)', () => 
     for (const id of on) expect(db().orders.find((o) => o.id === id)!.guest_list_deadline).toBe('2027-05-01')
     if (own) expect(db().orders.find((o) => o.id === own.id)!.guest_list_deadline).toBe(own.guest_list_deadline)
     expect(on.length).toBeGreaterThan(0)
+  })
+})
+
+describe('demo actions that answer with counts answer at once (Oct 15)', () => {
+  /** Like the app: React applies each change at its next render, not when it's queued. */
+  function deferred(user: StaffUser) {
+    let data = loadDB()
+    const queue: ((d: DB) => DB)[] = []
+    const api = demoApi(user, (fn) => { queue.push(fn) }, () => data)
+    return { api, db: () => data, render: () => { for (const fn of queue.splice(0)) data = fn(data) } }
+  }
+
+  it('the import, Pull now, reminders and Salesforce sync say what they did, and it is saved', async () => {
+    const { api, db, render } = deferred(ADMIN)
+    await api.setGalaPage("AAFE's 53rd Annual Gala"); render()
+    await api.setTierMapping('Ticket', 'community_ticket'); render()
+    const sample = sampleExport(db())
+    const prep = await prepareImport(sample.csv, sample.fileName, db())
+    const orders = db().orders.length
+    expect(await api.importGiveLively(prep.rows, prep.run)).toMatchObject({ created: 3 })
+    render()
+    expect(db().orders.length).toBe(orders + 3)
+
+    expect(await api.pullGiveLively()).toMatchObject({ created: 1 })
+    render()
+    expect(db().orders.length).toBe(orders + 4)
+
+    const reminders = queueGuestListReminders(db(), ADMIN, 0).n
+    expect(reminders).toBeGreaterThan(0)
+    expect(await api.queueReminders(0)).toBe(reminders)
+    render()
+    expect(queueGuestListReminders(db(), ADMIN, 0).n).toBe(0)
+
+    const synced = salesforceSyncNow(db()).n
+    expect(synced).toBeGreaterThan(0)
+    expect((await api.syncSalesforce()).sent).toBe(synced)
   })
 })
