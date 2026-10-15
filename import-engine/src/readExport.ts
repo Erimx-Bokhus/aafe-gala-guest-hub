@@ -107,7 +107,36 @@ const RowSchema = z.object({
 })
 
 /**
- * Parse the export. Throws ExportFormatError when a required column is missing, or when a quote never closes
+ * Text that a spreadsheet program damaged, found by an Excel round-trip test (Oct 15): Excel opens a UTF-8 export
+ * that has no byte-order mark in the wrong character set, so on saving, "Renée" comes back as "Ren��e" (or as "RenÃ©"
+ * on a US-English Windows), "Đặng" as "�����ng", and Chinese names as "�" or stray control characters, in both of
+ * Excel's CSV formats. Those names would go onto badges and into Salesforce as they are, and "�" can't be turned back.
+ * Signs: the replacement character, control characters (other than tab and line breaks), and UTF-8 read as
+ * Windows-1252 ("Ã©", "Ã±", "â€™"). None of them occur in a real name.
+ */
+const DAMAGED_TEXT = /�|[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]|[Â-Å][\u0080-¿]|â€/
+const CHECKED_FIELDS: readonly Field[] = ['first', 'last', 'company', 'guestText', 'tierName']
+const EXAMPLES = 3
+
+/** Stops the upload when names in the file are damaged: the whole file went through the same save, so none of it can be trusted. */
+function checkNotDamaged(records: string[][], columns: Map<Field, number>): void {
+  const examples: string[] = []
+  let count = 0
+  for (const [i, cells] of records.entries()) {
+    const bad = CHECKED_FIELDS.map((f) => cells[columns.get(f) ?? -1] ?? '').find((v) => DAMAGED_TEXT.test(v))
+    if (bad === undefined) continue
+    count++
+    if (examples.length < EXAMPLES) examples.push(`row ${i + 2}: "${bad.split('\n')[0]!.trim().slice(0, 40)}"`)
+  }
+  if (count === 0) return
+  throw new ExportFormatError(`names in this file are damaged (${examples.join(', ')}${count > EXAMPLES ? `, and ${count - EXAMPLES} more rows` : ''}). ` +
+    'That happens when the export is opened and saved in Excel. Download the export from Give Lively again and upload it ' +
+    'without opening it; to correct a name, correct it in the staff app after the import')
+}
+
+/**
+ * Parse the export. Throws ExportFormatError when a required column is missing, when names in the file are damaged
+ * (checkNotDamaged), or when a quote never closes
  * (everything after it would be read as one cell, so the rest of the file would vanish). Otherwise every row is
  * either accepted or rejected with its row number and reason, including a row whose column count doesn't match
  * the header and any row the CSV reader couldn't read cleanly; fully blank rows are skipped silently.
@@ -138,6 +167,7 @@ export async function readExport(csv: string): Promise<ReadResult> {
   })
   const missing = Object.entries(REQUIRED_COLUMNS).filter(([, f]) => !columns.has(f)).map(([label]) => label)
   if (missing.length) throw new ExportFormatError(`missing column${missing.length > 1 ? 's' : ''}: ${missing.join(', ')}`)
+  checkNotDamaged(records, columns)
 
   const rows: PurchaseRow[] = []
   const rejected: RejectedRow[] = []

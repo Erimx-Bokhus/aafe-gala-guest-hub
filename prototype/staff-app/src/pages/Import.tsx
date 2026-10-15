@@ -60,6 +60,7 @@ export default function Import() {
             <section className="card p-5" data-testid="import-upload">
               <h2 className="font-semibold text-navy-900">Upload an export</h2>
               <p className="mt-1 text-sm text-navy-600">This gala's Give Lively page: {ev.givelively_page_name ? <b>{ev.givelively_page_name}</b> : <span>not chosen yet; you'll pick it from the first upload.</span>}</p>
+              <p className="mt-1 text-sm text-navy-600">Upload the file exactly as Give Lively gives it: opening and saving it in Excel can damage non-English names, and the import stops if it finds that.</p>
               <div className="mt-4 flex flex-wrap gap-2">
                 <input ref={input} type="file" accept=".csv,text/csv" className="hidden" data-testid="import-file" onChange={(e) => { const f = e.target.files?.[0]; if (f) void choose(f); e.target.value = '' }} />
                 <button className="btn-primary" onClick={() => input.current?.click()}><FileUp size={15} /> Choose the CSV file</button>
