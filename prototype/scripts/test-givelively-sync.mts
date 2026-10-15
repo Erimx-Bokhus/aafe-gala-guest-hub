@@ -16,6 +16,22 @@ const donation = (txn: string, over: Record<string, unknown> = {}) => ({
   donation_status: 'succeeded', quantity: 1, original_amount: 25000, covered_transaction_fee_amount: 0, gross_amount: 25000,
   transaction_fee_amount: 550, net_amount: 24450, total_refunded_amount: 0, ...over,
 })
+// Gate 2 review (Oct 15): another campaign's donation is never kept, even one the sync can't read; and what is kept has
+// no phone number or postal address (the feed's other fields stay, so staff can see what Give Lively sends).
+{
+  const kept = new Map<string, any>()
+  const keep: SyncPorts = { importRow: async () => ({ data: null, error: null }), saveRaw: async (r) => { kept.set(r.transaction_id, r) } }
+  await syncDonations([
+    { campaign_name: 'Year-End Appeal', email: 'appeal@example.org', phone: '(212) 555-0199', street_address: '1 Example St' },
+    { campaign_name: '', first_name: 'Unreadable', donor_email_address: 'unreadable@example.org', phone_number: '(212) 555-0198',
+      billing: { address_1: '2 Example St', city: 'New York', zip: '10002' } },
+  ], [PAGE], keep)
+  const rows = [...kept.values()]
+  ok(rows.length === 1 && JSON.stringify(rows[0].payload).includes('Unreadable'), `only the unreadable row is kept, not the other campaign's (${rows.length})`)
+  const kept1 = JSON.stringify(rows[0]?.payload ?? {})
+  ok(!/555-|Example St|10002|New York/.test(kept1) && kept1.includes('unreadable@example.org'), `kept without phone or address, email kept: ${kept1}`)
+}
+
 const DONATIONS = [
   donation('GL-S1'),
   donation('GL-S2', { campaign_name: 'Spring Appeal' }),            // another campaign

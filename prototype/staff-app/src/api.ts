@@ -416,7 +416,7 @@ export function liveApi(client: SupabaseClient, reload: () => Promise<void>): St
     updateGalaEvent: (patch) => write('staff_update_gala_event', { p_patch: patch }),
     setMaterialStatus: (o, material, status) => write('staff_set_material_status', { p_order_id: o, p_material: material, p_status: status }),
     history: async (o) => {
-      const { data, error } = await client.from('audit_log').select('*').eq('order_id', o).order('id')
+      const { data, error } = await client.from('audit_log').select(AUDIT_COLUMNS).eq('order_id', o).order('id')
       if (error) throw new Error(error.message)
       return data as AuditEntry[]
     },
@@ -601,6 +601,8 @@ export function volunteerDb(snap: CheckinSnapshot, user: StaffUser): DB {
   }
 }
 
+// The change log's readable columns (backend.sql grants these, not its change details): AuditEntry's fields.
+const AUDIT_COLUMNS = 'id,at,actor_type,actor,entity,entity_id,order_id,action,from_state,to_state,guest_visible,summary'
 const TABLES = ['gala_events', 'staff_users', 'sponsorship_tiers', 'sponsors', 'orders', 'payments', 'event_tables', 'guests', 'seats', 'check_ins', 'email_log', 'salesforce_sync', 'import_runs', 'import_review', 'tier_mappings'] as const
 const PAGE = 1000 // Supabase returns at most 1,000 rows per request
 
@@ -626,7 +628,7 @@ export async function loadLiveDb(client: SupabaseClient, user: StaffUser): Promi
   const [lists, audit, cur] = await Promise.all([
     Promise.all(TABLES.map((t) => selectAll(client, t))),
     // The change log only grows; the Activity page shows the latest, so load the newest 1,000.
-    client.from('audit_log').select('*').order('id', { ascending: false }).limit(PAGE),
+    client.from('audit_log').select(AUDIT_COLUMNS).order('id', { ascending: false }).limit(PAGE),
     // This year's gala is the server's answer (current_event_id), never worked out here: with next year's gala in
     // planning, the newest open year would show 2028 while every save still goes to 2027.
     client.rpc('staff_current_event'),
