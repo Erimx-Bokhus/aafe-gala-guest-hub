@@ -9,11 +9,14 @@ import { parseGuestList, type GuestList, type ParsedGuest } from './guestList.ts
 import { matchBuyer, matchGuest, type BuyerMatch, type ExistingGuest, type GuestFinding, type Sponsor } from './matching.ts'
 import { findMissing, type ImportedPurchase } from './missing.ts'
 import { readExport, type PurchaseRow, type RejectedRow } from './readExport.ts'
+import { normText } from './normalize.ts'
 import { isGalaPage, resolveTier, seatCount, tierMappingKey, type Tier, type TierMapping } from './tiers.ts'
 
 export interface UploadContext {
   /** `gala_events.givelively_page_name`. Not set → GalaPageNotSetError, listing the pages in the file. */
   galaPageName: string | null
+  /** The gala's other Give Lively pages (`gala_events.givelively_other_pages`), such as a private Community Tickets page. */
+  otherPages?: string[]
   tiers: Tier[]
   tierMappings: TierMapping[]
   sponsors: Sponsor[]
@@ -52,8 +55,8 @@ export interface UploadReport {
   rowsRead: number
   rejected: RejectedRow[]
   skippedOtherPage: { rowNumber: number; pageName: string | null }[]
-  /** Give Lively tier names with no mapping and no matching tier, with the rows that used them. */
-  unknownTiers: { givelivelyName: string; rowNumbers: number[] }[]
+  /** Give Lively tier names with no mapping and no matching tier, by page (null: the main page), with the rows that used them. */
+  unknownTiers: { givelivelyName: string; pageName: string | null; rowNumbers: number[] }[]
   namesPrefilled: number
   /** Guest lists with entries left for the sponsor (all of the list, or only the entries that couldn't be read). */
   listsForSponsor: number
@@ -98,7 +101,7 @@ export async function prepareUpload(csv: string, ctx: UploadContext): Promise<Pr
   if (!galaPageName) throw new GalaPageNotSetError(pagesIn(read.rows))
 
   const t: Tally = {
-    rows: [], pendingTier: [], skippedOtherPage: [], unknownTiers: new Map(), reviewItems: [],
+    rows: [], pendingTier: [], skippedOtherPage: [], unknownTiers: new Map(), reviewItems: [], pagesSeen: new Set(),
     // ponytail: each guest is compared with every guest before it (quadratic): about 1 s for 1,000 purchases, 3 minutes
     // for 10,000 (benchmarked Oct 12). AAFE has a few hundred; past that, index the pool by email and name words.
     guestPool: [...ctx.existingGuests], namesPrefilled: 0, listsForSponsor: 0,
@@ -107,8 +110,11 @@ export async function prepareUpload(csv: string, ctx: UploadContext): Promise<Pr
 
   // Every accepted row in the file counts as present, even one skipped for its tier, so a purchase
   // waiting on a tier mapping isn't also reported missing.
+  // Only purchases from the pages in this file can be missing from it: the Community Tickets export doesn't hold the
+  // main page's purchases. A purchase with no page (imported before Oct 15) is the main page's.
   const presentKeys = read.rows.map((r) => r.purchaseKey)
-  for (const p of findMissing(ctx.previousPurchases, presentKeys, read.dateRange)) {
+  const comparable = ctx.previousPurchases.filter((p) => t.pagesSeen.has(normText(p.pageName ?? galaPageName)))
+  for (const p of findMissing(comparable, presentKeys, read.dateRange)) {
     t.reviewItems.push({ reason: 'missing_from_source', purchaseKey: p.purchaseKey, rowNumber: null, details: { purchasedAt: p.purchasedAt } })
   }
 
@@ -133,8 +139,10 @@ interface Tally {
   rows: PreparedRow[]
   pendingTier: PurchaseRow[]
   skippedOtherPage: UploadReport['skippedOtherPage']
-  unknownTiers: Map<string, { givelivelyName: string; rowNumbers: number[] }>
+  unknownTiers: Map<string, UploadReport['unknownTiers'][number]>
   reviewItems: ReviewItem[]
+  /** The gala's pages this file holds purchases from (normalized), for the missing-purchase check. */
+  pagesSeen: Set<string>
   guestPool: ExistingGuest[]
   namesPrefilled: number
   listsForSponsor: number
@@ -151,14 +159,17 @@ function pagesIn(rows: PurchaseRow[]): { pageName: string | null; rows: number }
 }
 
 /** One purchase: skipped for its page, waiting on a tier mapping, or prepared with its guests and review items. */
-function prepareRow(row: PurchaseRow, galaPageName: string, ctx: UploadContext, t: Tally): void {
-  if (!isGalaPage(row, galaPageName, { allowBlank: true })) {
+function prepareRow(row: PurchaseRow, main: string, ctx: UploadContext, t: Tally): void {
+  const others = ctx.otherPages ?? []
+  if (!isGalaPage(row, [main, ...others], { allowBlank: true })) {
     t.skippedOtherPage.push({ rowNumber: row.rowNumber, pageName: row.pageName ?? row.internalName })
     return
   }
-  const resolved = resolveTier(row.tierName, ctx.tierMappings, ctx.tiers)
+  const otherPage = isGalaPage(row, main, { allowBlank: true }) ? null : others.find((p) => isGalaPage(row, p, { allowBlank: false })) ?? null
+  t.pagesSeen.add(normText(otherPage ?? main))
+  const resolved = resolveTier(row.tierName, ctx.tierMappings, ctx.tiers, otherPage)
   if (!resolved) {
-    waitForTier(row, t)
+    waitForTier(row, otherPage, t)
     return
   }
   const seats = seatCount(resolved.tier, row.seats, row.quantity)
@@ -172,13 +183,13 @@ function prepareRow(row: PurchaseRow, galaPageName: string, ctx: UploadContext, 
   t.rows.push({ ...row, tierId: resolved.tier.id, tierVia: resolved.via, seatCount: seats, guestList, buyerMatch, guestFindings, cancelled })
 }
 
-/** A tier name with no level or mapping: one staff review per row, grouped by name for the report. */
-function waitForTier(row: PurchaseRow, t: Tally): void {
-  const key = tierMappingKey(row.tierName)
-  const entry = t.unknownTiers.get(key) ?? { givelivelyName: row.tierName, rowNumbers: [] }
+/** A tier name with no level or mapping: one staff review per row, grouped by page and name for the report. */
+function waitForTier(row: PurchaseRow, otherPage: string | null, t: Tally): void {
+  const key = `${tierMappingKey(otherPage)}\n${tierMappingKey(row.tierName)}`
+  const entry = t.unknownTiers.get(key) ?? { givelivelyName: row.tierName, pageName: otherPage, rowNumbers: [] }
   entry.rowNumbers.push(row.rowNumber)
   t.unknownTiers.set(key, entry)
-  t.reviewItems.push({ reason: 'unknown_tier', purchaseKey: row.purchaseKey, rowNumber: row.rowNumber, details: { tierPurchased: row.tierName } })
+  t.reviewItems.push({ reason: 'unknown_tier', purchaseKey: row.purchaseKey, rowNumber: row.rowNumber, details: { tierPurchased: row.tierName, page: otherPage } })
   t.pendingTier.push(row)
 }
 

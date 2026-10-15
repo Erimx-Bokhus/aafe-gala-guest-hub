@@ -18,7 +18,7 @@ export interface ImportResult {
   zero_amount?: number
 }
 
-/** The engine's view of this gala: its page, packages, tier mappings, sponsors, guests, and purchases already imported. */
+/** The engine's view of this gala: its pages, packages, tier mappings, sponsors, guests, and purchases already imported. */
 export function importContext(db: DB): UploadContext {
   const ev = db.gala_events.find((e) => e.id === db.meta.current_event_id)
   const orders = db.orders.filter((o) => o.event_id === db.meta.current_event_id)
@@ -26,12 +26,16 @@ export function importContext(db: DB): UploadContext {
   const bought = db.payments.flatMap((p) => (p.purchase_key && orderIds.has(p.order_id) ? [{ ...p, key: p.purchase_key }] : []))
   return {
     galaPageName: ev?.givelively_page_name ?? null,
+    otherPages: ev?.givelively_other_pages ?? [],
     tiers: levelsOf(db).map((t) => ({ id: t.id, name: t.name, tierCategory: t.tier_category, includedSeatCount: t.included_seat_count })),
-    tierMappings: (db.tier_mappings ?? []).filter((m) => m.event_id === db.meta.current_event_id).map((m) => ({ givelivelyName: m.givelively_name, tierId: m.tier_id })),
+    tierMappings: (db.tier_mappings ?? []).filter((m) => m.event_id === db.meta.current_event_id).map((m) => ({ givelivelyName: m.givelively_name, tierId: m.tier_id, pageName: m.page_key || null })),
     sponsors: db.sponsors.map((s) => ({ id: s.id, organizationName: s.organization_name, primaryContactName: s.primary_contact_name, primaryContactEmail: s.primary_contact_email })),
     existingGuests: db.guests.filter((g) => orderIds.has(g.order_id))
       .map((g) => ({ id: g.id, orderId: g.order_id, displayName: `${g.first_name} ${g.last_name}`.trim(), email: g.email || null, organization: g.organization || null })),
-    previousPurchases: bought.map((p) => ({ purchaseKey: p.key, purchasedAt: p.received_at, cancelled: orders.find((o) => o.id === p.order_id)?.status === 'cancelled' })),
+    previousPurchases: bought.map((p) => {
+      const o = orders.find((x) => x.id === p.order_id)
+      return { purchaseKey: p.key, purchasedAt: p.received_at, cancelled: o?.status === 'cancelled', pageName: o?.givelively_page ?? null }
+    }),
     orderIdByPurchaseKey: Object.fromEntries(bought.map((p) => [p.key, p.order_id])),
   }
 }
@@ -63,7 +67,8 @@ const HEADERS = ['First Name', 'Last Name', 'Email', 'Tier Purchased', 'Tier Cat
   'Please list the name(s) and email address(es) of all guests. To revise, email gala@aafe.org.', 'Address 1', 'City', 'State', 'Zip']
 const cell = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v)
 
-/** Four purchases in Give Lively's export format: two tickets with guest names, a refund, and one from another page. */
+/** Five purchases in Give Lively's export format: two tickets with guest names, a refund, two tickets from the gala's private
+ * Community Tickets page, and one from another campaign. */
 export function sampleExport(db: DB): { csv: string; fileName: string } {
   const sponsorTier = levelsOf(db).find((t) => t.tier_category === 'sponsorship' && t.included_seat_count >= 4)
   const page = "AAFE's 53rd Annual Gala"
@@ -81,6 +86,9 @@ export function sampleExport(db: DB): { csv: string; fileName: string } {
     { ...base, 'First Name': 'Owen', 'Last Name': 'Reyes', Email: 'owen.reyes@sample.example.org', 'Tier Purchased': 'Ticket', 'Tier Category': 'Ticket',
       'Tickets Purchased': '1', 'Total Seats': '1', 'Amount Spent': '$250.00', 'Amount Refunded': '$250.00', Status: 'refunded',
       'Date/Time of Purchase': '2027-02-06 03:30:00 PM EST', 'Phone Number': '(212) 555-0133' },
+    { ...base, 'First Name': 'Rosa', 'Last Name': 'Lim', Email: 'rosa.lim@sample.example.org', 'Tier Purchased': 'Ticket', 'Tier Category': 'Ticket',
+      'Tickets Purchased': '2', 'Total Seats': '2', 'Amount Spent': '$500.00', 'Date/Time of Purchase': '2027-02-06 06:20:00 PM EST',
+      'Page Name': `${page} (Community Tickets)`, 'Company/Organization Name': 'Chinatown Sample Partners', 'Phone Number': '(212) 555-0135' },
     { ...base, 'First Name': 'Ivy', 'Last Name': 'Chen', Email: 'ivy.chen@sample.example.org', 'Tier Purchased': 'Ticket', 'Tier Category': 'Ticket',
       'Tickets Purchased': '1', 'Total Seats': '1', 'Amount Spent': '$40.00', 'Date/Time of Purchase': '2027-02-07 11:05:00 AM EST',
       'Page Name': 'AAFE Spring Benefit Raffle', 'Phone Number': '(212) 555-0134' },
