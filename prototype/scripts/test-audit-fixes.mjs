@@ -148,6 +148,7 @@ ok(await sponsorsOf(ANA) === 2 && await conflicts(ANA) === 1, 'a different famil
     'uploading the same row again adds no second item')
   ok((await err('authenticated', RM, `select staff_resolve_import_review((select id from import_review where reason = 'zero_amount' limit 1), 'Added as comps')`)) === null,
     'a relationship manager can close it like any review item')
+}
 
 // ---- A new display name voids the guest's QR e-ticket, like a new first or last name (Oct 12 audit, Cornell)
 {
@@ -161,6 +162,7 @@ ok(await sponsorsOf(ANA) === 2 && await conflicts(ANA) === 1, 'a different famil
   ok(await hash() !== null && await voids() === 0, 'clearing it, or filling a blank one in as "First Last", is not a new name')
   await db.query(`update guests set display_name = 'Someone Else Entirely' where id = $1`, [seat.guest_id])
   ok(await hash() === null && await voids() === 1, 'a new display name voids the QR code, and the change log says so')
+}
 
 // ---- Two comp guests added at once can't take the same slot (Oct 12 audit, Cornell). The test database runs one
 // connection, so it can't add two at the same instant: it checks the function waits its turn (a per-gala lock), and
