@@ -33,19 +33,21 @@ const METHOD: Record<string, string> = { check: 'Check', ach_direct: 'ACH', wire
 export function toBatches(o: Outbox): { sobject: string; entity: string; ids: string[]; records: SfRecord[] }[] {
   const rec = (type: string, id: string, fields: Record<string, unknown>): SfRecord => ({ attributes: { type }, [EXTERNAL_ID]: id, ...fields })
   const gala = o.campaign
-  const out = [
-    { sobject: 'Campaign', entity: 'gala', rows: gala ? [gala] : [], make: (c: NonNullable<Outbox['campaign']>) => rec('Campaign', c.id, { Name: c.name, StartDate: c.date, Type: 'Event', IsActive: true }) },
-    { sobject: 'Account', entity: 'sponsor', rows: o.accounts, make: (a: Outbox['accounts'][0]) => rec('Account', a.id, { Name: a.name }) },
-    { sobject: 'Opportunity', entity: 'order', rows: o.opportunities, make: (p: Outbox['opportunities'][0]) => rec('Opportunity', p.id, {
-      Name: p.name, Amount: p.amount, CloseDate: p.close_date, StageName: STAGE[p.status] ?? 'Pledged', Account: ref(p.account_id), ...(gala ? { Campaign: ref(gala.id) } : {}) }) },
-    { sobject: 'npe01__OppPayment__c', entity: 'payment', rows: o.payments, make: (p: Outbox['payments'][0]) => rec('npe01__OppPayment__c', p.id, {
-      npe01__Opportunity__r: ref(p.order_id), npe01__Payment_Amount__c: p.amount, npe01__Payment_Date__c: p.date, npe01__Payment_Method__c: METHOD[p.method] ?? p.method, npe01__Paid__c: true }) },
+  const batch = <T extends { id: string }>(sobject: string, entity: string, rows: T[], make: (r: T) => SfRecord) =>
+    ({ sobject, entity, ids: rows.map((r) => r.id), records: rows.map(make) })
+  // Campaign members carry their campaign's id, so there are none without a gala.
+  const members = gala ? o.contacts.map((c) => ({ ...c, campaignId: gala.id })) : []
+  return [
+    batch('Campaign', 'gala', gala ? [gala] : [], (c) => rec('Campaign', c.id, { Name: c.name, StartDate: c.date, Type: 'Event', IsActive: true })),
+    batch('Account', 'sponsor', o.accounts, (a) => rec('Account', a.id, { Name: a.name })),
+    batch('Opportunity', 'order', o.opportunities, (p) => rec('Opportunity', p.id, {
+      Name: p.name, Amount: p.amount, CloseDate: p.close_date, StageName: STAGE[p.status] ?? 'Pledged', Account: ref(p.account_id), ...(gala ? { Campaign: ref(gala.id) } : {}) })),
+    batch('npe01__OppPayment__c', 'payment', o.payments, (p) => rec('npe01__OppPayment__c', p.id, {
+      npe01__Opportunity__r: ref(p.order_id), npe01__Payment_Amount__c: p.amount, npe01__Payment_Date__c: p.date, npe01__Payment_Method__c: METHOD[p.method] ?? p.method, npe01__Paid__c: true })),
     // Contacts carry a name and, when there is one, an email: no phones, dietary or accessibility details.
-    { sobject: 'Contact', entity: 'guest', rows: o.contacts, make: (c: Outbox['contacts'][0]) => rec('Contact', c.id, { FirstName: c.first, LastName: c.last, Email: c.email }) },
-    { sobject: 'CampaignMember', entity: 'guest', rows: gala ? o.contacts : [], make: (c: Outbox['contacts'][0]) => rec('CampaignMember', c.id, { Campaign: ref(gala!.id), Contact: ref(c.id), Status: c.status }) },
-  ] as const
-  // deno-lint-ignore no-explicit-any
-  return out.map((b) => ({ sobject: b.sobject, entity: b.entity, ids: b.rows.map((r: any) => r.id), records: b.rows.map((r: any) => (b.make as any)(r)) }))
+    batch('Contact', 'guest', o.contacts, (c) => rec('Contact', c.id, { FirstName: c.first, LastName: c.last, Email: c.email })),
+    batch('CampaignMember', 'guest', members, (c) => rec('CampaignMember', c.id, { Campaign: ref(c.campaignId), Contact: ref(c.id), Status: c.status })),
+  ]
 }
 
 /** Sends every batch in order, 200 records a call, and returns each record's outcome (a failed call fails its records, not the run). */

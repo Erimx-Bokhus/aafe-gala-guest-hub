@@ -11,8 +11,9 @@
 //          GUEST_PORTAL_URL (e.g. https://gala.aafe.org/), CRON_SECRET.
 // Demo: EMAIL_REDIRECT_TO=<team inbox> sends every email there instead of the (fake) recipient.
 import QRCode from 'npm:qrcode@1.5.4'
-import { deadlinePassed, guestListReminderEmail, paymentReceiptEmail, portalLinkEmail, qrInvitationEmail } from '../_shared/emails.ts'
+import { deadlinePassed, guestListReminderEmail, paymentReceiptEmail, portalLinkEmail, qrInvitationEmail, type EventInfo } from '../_shared/emails.ts'
 import { retry } from '../_shared/retry.ts'
+import type { SupabaseClient } from 'npm:@supabase/supabase-js@2'
 import { admin, caller, cors, env, json } from '../_shared/supabase.ts'
 
 Deno.serve(async (req) => {
@@ -27,11 +28,10 @@ Deno.serve(async (req) => {
   // so a scheduled run and a manual "send now" never send the same email or overwrite each other's link.
   const { data: claimed, error } = await db.rpc('email_claim', { p_limit: 25 })
   if (error) return json({ error: 'db_error', message: error.message }, 500)
-  // deno-lint-ignore no-explicit-any
-  const queue = ((claimed ?? []) as any[]).sort((a, b) => String(a.id).localeCompare(String(b.id)))
+  const queue = ((claimed ?? []) as EmailRow[]).sort((a, b) => a.id.localeCompare(b.id))   // email_claim's rows
 
   let sent = 0, failed = 0, unsaved = 0
-  for (const m of queue ?? []) {
+  for (const m of queue) {
     let delivered = false
     try {
       const { subject, html, attachments, tokenHash } = await build(db, m, portalUrl)
@@ -54,69 +54,100 @@ Deno.serve(async (req) => {
       // may send it once more. Store the link's hash before sending if a database outage mid-run ever matters.
       if (delivered) { unsaved++; continue }
       failed++
-      await db.rpc('email_mark_failed', { p_email_id: m.id, p_error: (e as Error).message })
+      await db.rpc('email_mark_failed', { p_email_id: m.id, p_error: e instanceof Error ? e.message : String(e) })
     }
   }
   return json({ sent, failed, unsaved })
 })
 
+/** A claimed email (email_claim in backend.sql). */
+interface EmailRow {
+  id: string; template: string; to_email: string; to_name: string | null
+  order_id: string | null; payment_id: string | null; guest_id: string | null; attempts: number
+}
+interface Built { subject: string; html: string; attachments: { filename: string; content: string }[] | undefined; tokenHash: string | null }
+type OrderContext = Awaited<ReturnType<typeof orderContext>>
+/** The order row orderContext reads: an order has one level and one gala, so both come back as objects. */
+interface OrderForEmail {
+  commitment_amount: number | null; guest_list_deadline: string | null
+  sponsorship_tiers: { name: string } | null
+  gala_events: (EventInfo & { guest_list_deadline: string | null }) | null
+}
+
 // Gathers what each template needs; the wording lives in _shared/emails.ts.
-// deno-lint-ignore no-explicit-any
-async function build(db: any, m: any, portalUrl: string) {
+async function build(db: SupabaseClient, m: EmailRow, portalUrl: string): Promise<Built> {
+  const ctx = await orderContext(db, m)
+  // staff_approve_email refuses these too; this catches a deadline that passed after the draft was approved.
+  if ((m.template === 'portal_link' || m.template === 'guest_list_reminder') && deadlinePassed(ctx.deadline)) {
+    throw new Error(`The guest-list deadline (${ctx.deadline}) has passed, so the link would arrive expired. Extend this order's deadline, then send the link again.`)
+  }
+  switch (m.template) {
+    case 'portal_link': return await portalLink(ctx, portalUrl)
+    case 'guest_list_reminder': return await reminder(db, m, ctx, portalUrl)
+    case 'payment_receipt': return await receipt(db, m, ctx)
+    case 'qr_invitation': return await qrInvitation(db, m, ctx)
+    default: throw new Error(`No template for "${m.template}" yet`)
+  }
+}
+
+/** The email's order, its gala, and the guest-list deadline (the order's own, else the gala's). */
+async function orderContext(db: SupabaseClient, m: EmailRow) {
   const { data: o } = m.order_id
-    ? await db.from('orders').select('commitment_amount, guest_list_deadline, sponsorship_tiers(name), gala_events(name, event_date, doors_time, venue_name, venue_address, guest_list_deadline)').eq('id', m.order_id).single()
+    ? await db.from('orders').select('commitment_amount, guest_list_deadline, sponsorship_tiers(name), gala_events(name, event_date, doors_time, venue_name, venue_address, guest_list_deadline)').eq('id', m.order_id).single<OrderForEmail>()
     : { data: null }
   const event = o?.gala_events ?? null
-  const deadline = o?.guest_list_deadline ?? event?.guest_list_deadline ?? null
-  const toName = m.to_name ?? ''
-  const newLink = () => { const token = randomToken(); return { token, link: `${portalUrl.replace(/#.*$/, '')}#/s/${token}` } }
-  // staff_approve_email refuses these too; this catches a deadline that passed after the draft was approved.
-  if ((m.template === 'portal_link' || m.template === 'guest_list_reminder') && deadlinePassed(deadline)) {
-    throw new Error(`The guest-list deadline (${deadline}) has passed, so the link would arrive expired. Extend this order's deadline, then send the link again.`)
-  }
+  return { o, event, deadline: o?.guest_list_deadline ?? event?.guest_list_deadline ?? null, toName: m.to_name ?? '' }
+}
 
-  if (m.template === 'portal_link') {
-    const { token, link } = newLink()
-    return { ...portalLinkEmail({ toName, tierName: o?.sponsorship_tiers?.name ?? null, event, deadline, link }), tokenHash: await sha256(token), attachments: undefined }
-  }
+/** A fresh private link: the token goes in the email, only its hash is stored. */
+function newLink(portalUrl: string) {
+  const token = randomToken()
+  return { token, link: `${portalUrl.replace(/#.*$/, '')}#/s/${token}` }
+}
 
-  if (m.template === 'guest_list_reminder') {
-    const { data: seats } = await db.from('seats').select('status').eq('order_id', m.order_id).neq('status', 'cancelled')
-    const unnamed = (seats ?? []).filter((x: { status: string }) => x.status === 'unnamed').length
-    // Everyone named since the draft was approved: nothing to remind about, so don't send it.
-    if (unnamed === 0) throw new Error('No unnamed seats left; discard this reminder')
-    const { token, link } = newLink()
-    return {
-      ...guestListReminderEmail({ toName, tierName: o?.sponsorship_tiers?.name ?? null, event, deadline, link, unnamed, total: seats.length }),
-      tokenHash: await sha256(token), attachments: undefined,
-    }
-  }
+async function portalLink(ctx: OrderContext, portalUrl: string): Promise<Built> {
+  const { token, link } = newLink(portalUrl)
+  return { ...portalLinkEmail({ toName: ctx.toName, tierName: ctx.o?.sponsorship_tiers?.name ?? null, event: ctx.event, deadline: ctx.deadline, link }), tokenHash: await sha256(token), attachments: undefined }
+}
 
-  if (m.template === 'payment_receipt') {
-    const { data: p } = await db.from('payments').select('gross_amount, method, received_at, check_number').eq('id', m.payment_id).single()
-    if (!p) throw new Error('Payment not found')
-    const { data: all } = await db.from('payments').select('original_amount, refunded_amount').eq('order_id', m.order_id)
-    const paidToDate = (all ?? []).reduce((t: number, x: { original_amount: number; refunded_amount: number }) => t + Number(x.original_amount) - Number(x.refunded_amount), 0)
-    return {
-      ...paymentReceiptEmail({ toName, event, amount: Number(p.gross_amount), method: p.method, receivedAt: p.received_at, checkNumber: p.check_number,
-        commitment: Number(o?.commitment_amount ?? 0), paidToDate }),
-      tokenHash: null, attachments: undefined,
-    }
+async function reminder(db: SupabaseClient, m: EmailRow, ctx: OrderContext, portalUrl: string): Promise<Built> {
+  const { data: seats } = await db.from('seats').select('status').eq('order_id', m.order_id).neq('status', 'cancelled')
+  const all: { status: string }[] = seats ?? []
+  const unnamed = all.filter((x) => x.status === 'unnamed').length
+  // Everyone named since the draft was approved: nothing to remind about, so don't send it.
+  if (unnamed === 0) throw new Error('No unnamed seats left; discard this reminder')
+  const { token, link } = newLink(portalUrl)
+  return {
+    ...guestListReminderEmail({ toName: ctx.toName, tierName: ctx.o?.sponsorship_tiers?.name ?? null, event: ctx.event, deadline: ctx.deadline, link, unnamed, total: all.length }),
+    tokenHash: await sha256(token), attachments: undefined,
   }
+}
 
-  if (m.template === 'qr_invitation') {
-    // A fresh code for the guest's seat, minted here and never stored: only its hash is saved
-    // (email_mark_sent), so earlier codes for that seat stop working.
-    const { data: g } = await db.from('guests').select('first_name').eq('id', m.guest_id).single()
-    if (!g) throw new Error('Guest not found')
-    const code = qrToken()
-    const png: Uint8Array = await QRCode.toBuffer(code, { width: 360, margin: 2 })
-    return {
-      ...qrInvitationEmail({ firstName: g.first_name, event, code }),
-      tokenHash: await sha256(code), attachments: [{ filename: 'aafe-gala-entry-qr.png', content: b64(png) }],
-    }
+async function receipt(db: SupabaseClient, m: EmailRow, ctx: OrderContext): Promise<Built> {
+  const { data: p } = await db.from('payments').select('gross_amount, method, received_at, check_number').eq('id', m.payment_id).single()
+  if (!p) throw new Error('Payment not found')
+  const { data: all } = await db.from('payments').select('original_amount, refunded_amount').eq('order_id', m.order_id)
+  // Per payment, never below 0 (coding standard S5): a full Give Lively refund returns the donor-covered fee too.
+  const paidToDate = ((all ?? []) as { original_amount: number; refunded_amount: number }[])
+    .reduce((t, x) => t + Math.max(Number(x.original_amount) - Number(x.refunded_amount), 0), 0)
+  return {
+    ...paymentReceiptEmail({ toName: ctx.toName, event: ctx.event, amount: Number(p.gross_amount), method: p.method, receivedAt: p.received_at, checkNumber: p.check_number,
+      commitment: Number(ctx.o?.commitment_amount ?? 0), paidToDate }),
+    tokenHash: null, attachments: undefined,
   }
-  throw new Error(`No template for "${m.template}" yet`)
+}
+
+async function qrInvitation(db: SupabaseClient, m: EmailRow, ctx: OrderContext): Promise<Built> {
+  // A fresh code for the guest's seat, minted here and never stored: only its hash is saved
+  // (email_mark_sent), so earlier codes for that seat stop working.
+  const { data: g } = await db.from('guests').select('first_name').eq('id', m.guest_id).single()
+  if (!g) throw new Error('Guest not found')
+  const code = qrToken()
+  const png: Uint8Array = await QRCode.toBuffer(code, { width: 360, margin: 2 })
+  return {
+    ...qrInvitationEmail({ firstName: g.first_name, event: ctx.event, code }),
+    tokenHash: await sha256(code), attachments: [{ filename: 'aafe-gala-entry-qr.png', content: b64(png) }],
+  }
 }
 
 const b64 = (u: Uint8Array) => btoa(String.fromCharCode(...u))

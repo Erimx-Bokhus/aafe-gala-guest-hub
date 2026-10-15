@@ -89,7 +89,8 @@ const button = (href: string, label: string) =>
 const row = (label: string, value: string) =>
   `<tr><td style="padding:4px 16px 4px 0;color:#555">${esc(label)}</td><td style="padding:4px 0;font-weight:600">${esc(value)}</td></tr>`
 
-export const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!)
+const ENTITIES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }
+export const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ENTITIES[c] ?? c)
 /** "$1,250.00" */
 export const money = (n: number) => '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 /** True once a guest-list deadline day (YYYY-MM-DD) is over in New York: a link minted now would arrive expired. */
