@@ -3,10 +3,15 @@
 
 export class ValueError extends Error {}
 
-/** "$1,000.00 " → 1000. Blank → null. Parentheses or a leading minus mean negative. */
+/**
+ * "$1,000.00 " → 1000. Blank → null. Parentheses or a leading minus mean negative. A dash alone ("-", "$ -") is
+ * zero: that's how a spreadsheet's accounting format shows $0, e.g. after the export is opened and saved in Excel
+ * (Oct 12 audit: it was read as blank, so a $0 row was rejected as "missing Amount Spent").
+ */
 export function parseAmount(raw: string | null | undefined): number | null {
   const s = (raw ?? '').trim()
-  if (s === '' || s === '-') return null
+  if (s === '') return null
+  if (/^\$?\s*-\s*$/.test(s)) return 0
   const m = /^(\()?\s*(-)?\s*\$?\s*(\d{1,3}(?:,\d{3})+|\d+)(\.\d{1,2})?\s*(\))?$/.exec(s)
   if (!m || Boolean(m[1]) !== Boolean(m[5])) throw new ValueError(`unreadable amount "${s}"`)
   const value = Number(m[3]!.replace(/,/g, '') + (m[4] ?? ''))
