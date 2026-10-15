@@ -107,14 +107,26 @@ const RowSchema = z.object({
 })
 
 /**
- * Parse the export. Throws ExportFormatError when a required column is missing (the whole file is
- * wrong). Otherwise every row is either accepted or rejected with its row number and reason; fully
- * blank rows are skipped silently.
+ * Parse the export. Throws ExportFormatError when a required column is missing, or when a quote never closes
+ * (everything after it would be read as one cell, so the rest of the file would vanish). Otherwise every row is
+ * either accepted or rejected with its row number and reason, including a row whose column count doesn't match
+ * the header and any row the CSV reader couldn't read cleanly; fully blank rows are skipped silently.
  */
 export async function readExport(csv: string): Promise<ReadResult> {
-  const parsed = Papa.parse<string[]>(csv.replace(/^﻿/, ''), { header: false, skipEmptyLines: false })
+  // One kind of line break: the CSV reader guesses it from the first line, so a file mixing Windows (\r\n) and plain
+  // (\n) line breaks, e.g. after an edit in a text editor, would otherwise run two rows together.
+  const parsed = Papa.parse<string[]>(csv.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n'), { header: false, skipEmptyLines: false, newline: '\n' })
   const [header, ...records] = parsed.data
   if (!header) throw new ExportFormatError('the file is empty')
+  // The CSV reader's own complaints (Oct 12 audit: they were ignored, so rows could vanish). Its `row` counts
+  // from 0 at the header, so spreadsheet row = row + 1.
+  const unclosed = parsed.errors.find((e) => e.code === 'MissingQuotes')
+  if (unclosed) {
+    throw new ExportFormatError(`row ${(unclosed.row ?? 0) + 1} has a quote (") that never closes, so the rows after it can't be read. ` +
+      'Fix that cell in a spreadsheet, or export the file from Give Lively again.')
+  }
+  const readErrors = new Map<number, string>()
+  for (const e of parsed.errors) if (e.row != null && e.row > 0) readErrors.set(e.row + 1, `couldn't read this row (${e.message})`)
 
   const columns = new Map<Field, number>()
   const phoneColumns = new Set<number>()
@@ -134,6 +146,15 @@ export async function readExport(csv: string): Promise<ReadResult> {
   for (const [i, cells] of records.entries()) {
     const rowNumber = i + 2
     if (cells.every((c) => c.trim() === '')) continue
+    const readError = readErrors.get(rowNumber)
+    if (readError) { rejected.push({ rowNumber, reason: readError }); continue }
+    // A comma outside quotes, or a line break that split a row, shifts every value after it into the wrong column.
+    // Give Lively writes every column on every row, so a different count means the row can't be trusted. (Trailing
+    // empty columns can't be let through: a shifted row ends in them too, because the export's last columns are blank.)
+    if (cells.length !== header.length) {
+      rejected.push({ rowNumber, reason: `has ${cells.length} columns but the header has ${header.length}, so its values may be in the wrong columns (a comma outside quotes, or a line break that split the row?)` })
+      continue
+    }
     const cell = (f: Field) => {
       const idx = columns.get(f)
       return idx === undefined ? '' : (cells[idx] ?? '')
