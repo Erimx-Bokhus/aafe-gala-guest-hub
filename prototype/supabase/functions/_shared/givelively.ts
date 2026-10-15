@@ -91,9 +91,13 @@ const pageKey = (s: string) => s.normalize('NFKC').toLowerCase().replace(/\s+/g,
  * not as a substring, so "AAFE's 52nd Annual Gala Auction" or another year's page isn't imported.
  */
 export function classify(row: GLRow, pageNames: string[]): Verdict {
-  if (!row.txn || !row.email || !(row.gross ?? row.original)) return 'unmapped'
   const keys = pageNames.map(pageKey).filter(Boolean)
-  if (!keys.includes(pageKey(row.campaign))) return 'not_gala'
+  const page = pageKey(row.campaign)
+  // Another campaign's donation is never kept, whatever it holds (Gate 2 review). A row whose page can't be read is still
+  // stored as unmapped: it's how staff notice that Give Lively renamed its fields.
+  if (page && !keys.includes(page)) return 'not_gala'
+  if (!row.txn || !row.email || !(row.gross ?? row.original)) return 'unmapped'
+  if (!page) return 'not_gala'
   // Failed, declined, cancelled or a returned bank payment: it may undo a purchase imported earlier (a bounced ACH).
   // The same words as the CSV upload (import engine CANCELLED_STATUS, gl_import); test-audit-fixes checks they agree.
   if (/fail|declin|cancel|void|revers|return/i.test(row.status)) return 'failed'

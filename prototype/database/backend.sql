@@ -301,7 +301,7 @@ create trigger seats_void_qr before update of guest_id, status on seats for each
 
 create or replace function guests_void_qr() returns trigger
 language plpgsql security definer set search_path = public as $$
-declare s record;
+declare s record; n int;
 begin
   -- The display name is the name printed on the badge and the door list, so a new one is a new person on the ticket
   -- too (Oct 12 audit: changing only the display name kept the old QR code working). A blank display name stands for
@@ -317,6 +317,15 @@ begin
       perform write_audit('system', 'QR e-ticket', 'seat', s.id, s.order_id, 'qr.voided', 'valid', 'void', false,
         format('QR e-ticket for seat %s stopped working: the guest''s name or email changed.', s.slot_number));
     end loop;
+    -- An invitation not sent yet would issue a working code to the old name and email when it goes out (Gate 2 review,
+    -- Oct 15): it's discarded, as when a seat is released. email_mark_sent issues codes only for queued emails.
+    with c as (update email_log set status = 'cancelled'
+                where guest_id = new.id and template = 'qr_invitation' and status = 'queued' returning 1)
+    select count(*) into n from c;
+    if n > 0 then
+      perform write_audit('system', 'QR e-ticket', 'guest', new.id, null, 'email.cancelled', 'queued', 'cancelled', false,
+        'QR invitation not sent: the guest''s name or email changed. Send a new one.');
+    end if;
   end if;
   return new;
 end $$;
@@ -345,8 +354,10 @@ create trigger gala_events_no_mixing before insert or update of is_synthetic on 
 -- gala stays current for a month after its date for results, the Salesforce export and late check-in fixes; else
 -- the newest one not closed. Creating next year's gala in planning must not take check-in, imports and exports away
 -- from this year's before it is closed (Oct 12 audit; the 30 days from Cornell's #112 review).
+-- SECURITY INVOKER (Gate 2, Oct 15): the access rules call it as the signed-in person, who reads gala_events anyway;
+-- inside the staff_* functions it runs with their rights, as before.
 create or replace function current_event_id() returns text
-language sql stable security definer set search_path = public as $$
+language sql stable security invoker set search_path = public as $$
   select id from gala_events where status <> 'closed'
    order by (status = 'live') desc,
             (event_date >= (now() at time zone 'America/New_York')::date - 30) desc,
@@ -455,7 +466,7 @@ language sql immutable set search_path = public as $$ select '$' || to_char(n, '
 -- ---------------------------------------------------------------------
 
 do $$
-declare t text;
+declare t text; p text;
 begin
   foreach t in array array['gala_events','staff_users','sponsorship_tiers','sponsors','orders','payments',
     'event_tables','guests','seats','check_ins','email_log','audit_log','salesforce_sync',
@@ -463,34 +474,43 @@ begin
   loop
     execute format('alter table %I enable row level security', t);
     execute format('drop policy if exists staff_read on %I', t);
+    -- No direct writes, even for gala admins (Gate 2, Oct 15): a direct edit to staff_users (someone's role) or
+    -- gala_events (a date that link and QR expiries follow) left no line in the change log. Every change goes through a
+    -- staff_* function, which checks the role and logs it; new staff are added in Supabase's SQL editor (BACKEND.md).
+    foreach p in array array['admin_write','admin_insert','admin_update','admin_delete'] loop
+      execute format('drop policy if exists %I on %I', p, t);
+    end loop;
+  end loop;
+
+  -- Staff read the gala's records directly: the staff app loads them.
+  foreach t in array array['gala_events','staff_users','sponsorship_tiers','sponsors','orders','payments','event_tables','seats',
+    'check_ins','audit_log','salesforce_sync','givelively_sync_state','import_runs','tier_mappings','sponsor_prospects']
+  loop
     execute format($p$create policy staff_read on %I for select to authenticated
                      using (staff_role() in ('gala_admin','relationship_manager'))$p$, t);
   end loop;
-
-  foreach t in array array['gala_events','event_tables','staff_users']
-  loop
-    -- Separate insert/update/delete policies: a FOR ALL policy would also cover SELECT and
-    -- overlap staff_read (Supabase advisor: multiple permissive policies).
-    execute format('drop policy if exists admin_write on %I', t);
-    execute format('drop policy if exists admin_insert on %I', t);
-    execute format('drop policy if exists admin_update on %I', t);
-    execute format('drop policy if exists admin_delete on %I', t);
-    execute format($p$create policy admin_insert on %I for insert to authenticated
-                     with check (staff_role() = 'gala_admin')$p$, t);
-    execute format($p$create policy admin_update on %I for update to authenticated
-                     using (staff_role() = 'gala_admin') with check (staff_role() = 'gala_admin')$p$, t);
-    execute format($p$create policy admin_delete on %I for delete to authenticated
-                     using (staff_role() = 'gala_admin')$p$, t);
-  end loop;
-  -- Sponsorship levels change only through staff_save_level / staff_copy_levels / staff_retire_level, which log every
-  -- change and lock a closed gala's levels (Oct 14). Projects set up earlier lose the old direct-write rules.
-  foreach t in array array['admin_write','admin_insert','admin_update','admin_delete'] loop
-    execute format('drop policy if exists %I on sponsorship_tiers', t);
-  end loop;
+  -- Guests' emails and food and access answers, the emails sent about them and the import's review items (decided
+  -- Oct 15): gala admins read every year; relationship managers only the gala being run, which their sponsor and comp
+  -- work needs. Give Lively's raw records are gala admins' only.
+  create policy staff_read on guests for select to authenticated
+    using (staff_role() = 'gala_admin' or (staff_role() = 'relationship_manager'
+           and order_id in (select id from orders where event_id = current_event_id())));
+  create policy staff_read on email_log for select to authenticated
+    using (staff_role() = 'gala_admin' or (staff_role() = 'relationship_manager'
+           and order_id in (select id from orders where event_id = current_event_id())));
+  create policy staff_read on import_review for select to authenticated
+    using (staff_role() = 'gala_admin' or (staff_role() = 'relationship_manager' and event_id = current_event_id()));
+  create policy staff_read on givelively_raw for select to authenticated using (staff_role() = 'gala_admin');
 end $$;
 
 -- audit_log is append-only, even for the table owner's API roles.
 revoke update, delete, truncate on audit_log from anon, authenticated;
+-- Its change details (old and new values: emails, food and access answers) stay in the database for the record, but no
+-- API role reads them (Gate 2, Oct 15); the app shows the summary. Only the listed columns can be read, so a new column
+-- stays hidden until it's added here.
+revoke select on audit_log from anon, authenticated;
+grant select (id, at, actor_type, actor, entity, entity_id, order_id, action, from_state, to_state, guest_visible, summary)
+  on audit_log to authenticated;
 
 -- Views must respect the caller's RLS, not the view owner's.
 alter view v_payment_ledger set (security_invoker = true);
@@ -512,7 +532,7 @@ begin
   select * into o from orders
    where portal_token = hash_token(coalesce(p_token, ''))
      and status <> 'cancelled'
-     and (portal_token_expires_at is null or portal_token_expires_at > now());
+     and portal_token_expires_at > now();   -- a link with no expiry doesn't work (Gate 2): never "forever"
   if o.id is null then raise exception 'invalid_link' using errcode = 'P0002'; end if;
   return o;
 end $$;
@@ -586,7 +606,7 @@ language sql immutable set search_path = public as $$
          lateral (select coalesce(nullif(btrim(regexp_replace(coalesce(p_display, ''), '\s+', ' ', 'g')), ''),
                                   btrim(concat_ws(' ', nullif(x.f, ''), nullif(x.l, ''))), '') d) y
 $$;
-revoke all on function name_parts(text, text, text) from public;
+revoke all on function name_parts(text, text, text) from public, anon, authenticated;
 
 create or replace function portal_save_guest(p_token text, p_slot int, p_guest jsonb) returns jsonb
 language plpgsql security definer set search_path = public as $$
@@ -991,7 +1011,7 @@ begin
    where s.qr_token_hash = hash_token(upper(trim(coalesce(p_code, '')))) and s.status <> 'cancelled' and s.guest_id is not null;
   select * into g from guests where id = v_guest_id;
   if g.id is null then raise exception 'not_found: unknown QR code'; end if;
-  if v_expires <= now() then raise exception 'expired: QR code has expired'; end if;
+  if v_expires is null or v_expires <= now() then raise exception 'expired: QR code has expired'; end if;
   v_new := staff_check_in(g.id, 'qr');
   return jsonb_build_object('guest_id', g.id, 'first_name', g.first_name, 'last_name', g.last_name, 'already_checked_in', not v_new);
 end $$;
@@ -2611,8 +2631,8 @@ begin
   end loop;
 end $$;
 
--- staff_role() is used inside RLS policies, so logged-in users need it.
-grant execute on function staff_role() to authenticated;
+-- staff_role() and current_event_id() are used inside RLS policies, so logged-in users need them.
+grant execute on function staff_role(), current_event_id() to authenticated;
 
 -- Guest Portal
 grant execute on function portal_get_view(text), portal_save_guest(text, int, jsonb), portal_release_seat(text, int)
@@ -2673,7 +2693,9 @@ begin
     execute format('create function public.%I(%s) returns %s language sql security invoker set search_path = '''' as $w$ select %s private.%I(%s) $w$',
                    f.proname, f.args, f.result, case when f.proretset then '* from' else '' end, f.proname,
                    coalesce((select string_agg('$' || i, ', ') from generate_series(1, f.pronargs) i), ''));
-    execute format('revoke all on function public.%I(%s) from public', f.proname, f.ident);
+    -- Supabase grants every new function to anon and authenticated by default, so revoking from public alone left the
+    -- wrappers callable by anyone (Gate 2; the call still failed at the private function).
+    execute format('revoke all on function public.%I(%s) from public, anon, authenticated', f.proname, f.ident);
     foreach r in array f.roles loop
       execute format('grant execute on function public.%I(%s) to %I', f.proname, f.ident, r);
     end loop;

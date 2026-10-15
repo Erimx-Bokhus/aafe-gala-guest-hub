@@ -29,10 +29,11 @@ async function attempt(c, sql, params = []) {
 const blocked = (e) => /row-level security|permission denied/.test(e ?? '')
 
 // ---- Tables: who reads, who writes directly
-// Policy: admins and relationship managers read every table; nobody else reads any. Only admins write
-// directly, and only to the three setup tables; every other change, sponsorship levels included, goes through an audited function.
-const SETUP_TABLES = ['gala_events', 'event_tables', 'staff_users']
+// Policy (Gate 2, decided Oct 15): admins and relationship managers read the tables, managers without Give Lively's raw
+// records (and, tested below, only this gala's guests, emails and review items); nobody else reads any. Nobody writes
+// directly, gala admins included: every change goes through an audited function.
 const READERS = ['relationship_manager', 'gala_admin']
+const ADMIN_ONLY = ['givelively_raw']
 
 // One invented row in each table that starts empty, so every table is really probed.
 await db.exec(`
@@ -56,22 +57,36 @@ for (const t of tables) {
 
   for (const c of callers) {
     const read = await attempt(c, `select count(*)::int n from ${t}`)
-    if (READERS.includes(c.kind)) ok(read === total, `${c.name} reads all of ${t} (${read}/${total})`)
+    if (READERS.includes(c.kind) && !(c.kind === 'relationship_manager' && ADMIN_ONLY.includes(t))) ok(read === total, `${c.name} reads all of ${t} (${read}/${total})`)
     else ok(read === 0 || blocked(read), `${c.name} reads nothing in ${t} (${read})`)
 
     const ins = await attempt(c, `with x as (insert into ${t} select * from jsonb_populate_record(null::${t}, $1) returning 1) select count(*)::int n from x`, [sample])
     const upd = await attempt(c, `with x as (update ${t} set ${col} = ${col} returning 1) select count(*)::int n from x`)
     const del = await attempt(c, `with x as (delete from ${t} returning 1) select count(*)::int n from x`)
-    if (c.kind === 'gala_admin' && SETUP_TABLES.includes(t)) {
-      // Allowed by the rules: the insert gets past them to the table's own constraints (the copy is a duplicate).
-      ok(typeof ins === 'string' && !blocked(ins), `gala admin may insert into ${t} (${ins})`)
-      ok(upd === total, `gala admin may update ${t} (${upd}/${total})`)
-    } else {
-      ok(blocked(ins), `${c.name} cannot insert into ${t} (${ins})`)
-      ok(upd === 0 || blocked(upd), `${c.name} cannot update ${t} (${upd})`)
-      ok(del === 0 || blocked(del), `${c.name} cannot delete from ${t} (${del})`)
-    }
+    ok(blocked(ins), `${c.name} cannot insert into ${t} (${ins})`)
+    ok(upd === 0 || blocked(upd), `${c.name} cannot update ${t} (${upd})`)
+    ok(del === 0 || blocked(del), `${c.name} cannot delete from ${t} (${del})`)
   }
+}
+
+// Relationship managers read the gala being run only: a guest, an email and a review item from a past gala stay hidden
+// from them; gala admins still read them (Gate 2, decided Oct 15).
+await db.exec(`
+insert into orders (id, event_id, sponsor_id, tier_id, source, commitment_amount, status)
+  select 'ord-past-test', e.id, (select id from sponsors limit 1), (select id from sponsorship_tiers where event_id = e.id limit 1), 'check', 1, 'pledged'
+    from gala_events e where e.id <> current_event_id() order by e.event_date limit 1;
+insert into guests select (jsonb_populate_record(null::guests, to_jsonb(g) || '{"id": "g-past-test", "order_id": "ord-past-test", "table_id": null, "seat_number": null, "qr_token": null}')).* from guests g limit 1;
+insert into email_log select (jsonb_populate_record(null::email_log, to_jsonb(m) || '{"id": "em-past-test", "order_id": "ord-past-test", "guest_id": null}')).* from email_log m limit 1;
+insert into import_review (id, run_id, event_id, reason) select 'rev-past-test', 'run-test-1', event_id, 'refund' from orders where id = 'ord-past-test';
+`)
+for (const [t, id] of [['guests', 'g-past-test'], ['email_log', 'em-past-test'], ['import_review', 'rev-past-test']]) {
+  ok(await attempt(byKind('relationship_manager'), `select count(*)::int n from ${t} where id = $1`, [id]) === 0, `a relationship manager doesn't read a past gala's ${t}`)
+  ok(await attempt(byKind('gala_admin'), `select count(*)::int n from ${t} where id = $1`, [id]) === 1, `a gala admin reads a past gala's ${t}`)
+}
+// The change log's details (old and new values: emails, food and access answers) are read by no API role; its summaries are.
+for (const k of READERS) {
+  ok(blocked(await attempt(byKind(k), `select count(changes)::int n from audit_log`)), `${k} cannot read the change log's details`)
+  ok(typeof (await attempt(byKind(k), `select count(summary)::int n from audit_log`)) === 'number', `${k} reads the change log's summaries`)
 }
 // The change log is append-only even for admins.
 for (const sql of [`update audit_log set summary = 'x'`, `delete from audit_log`, `truncate audit_log`])
@@ -110,11 +125,13 @@ const STAFF_FUNCTIONS = {
 }
 // Return who you are (or nothing), so they need no role check.
 const SELF = ['staff_me', 'staff_role']
+// The access rules call it as the signed-in person (it returns this gala's id, nothing else).
+const RULE_HELPERS = ['current_event_id']
 
 const callable = async (role) => (await db.query(`select proname f from pg_proc where pronamespace = 'public'::regnamespace
   and has_function_privilege($1, oid, 'execute') order by 1`, [role])).rows.map((r) => r.f)
 ok(JSON.stringify(await callable('anon')) === JSON.stringify(PORTAL), `anon can call only the portal functions: ${await callable('anon')}`)
-const expectAuth = [...PORTAL, ...SELF, ...Object.keys(STAFF_FUNCTIONS)].sort()
+const expectAuth = [...PORTAL, ...SELF, ...RULE_HELPERS, ...Object.keys(STAFF_FUNCTIONS)].sort()
 ok(JSON.stringify(await callable('authenticated')) === JSON.stringify(expectAuth),
   `signed-in users can call exactly the portal and staff functions: ${(await callable('authenticated')).filter((f) => !expectAuth.includes(f))}`)
 

@@ -34,6 +34,21 @@ export type SyncCounts = Record<'seen' | 'created' | 'updated' | 'skipped' | 'ne
  * - unmapped (no transaction ID or date): stored, keyed by its content, so staff can see it once.
  * - A row the database refuses is stored as unmapped with the error, and the rest carry on.
  */
+// Field names that hold a phone number or a postal address (never an email field such as "email_address").
+const CONTACT_FIELD = /phone|mobile|street|city|zip|postal|country|address/i
+
+/**
+ * The raw donation without phone numbers or postal addresses, which the tool never uses (docs/data-handling.md). The
+ * other fields stay, so staff can see what Give Lively actually sends: its feed's field names aren't documented.
+ */
+export function withoutContactDetails(raw: unknown): unknown {
+  if (Array.isArray(raw)) return raw.map(withoutContactDetails)
+  if (!raw || typeof raw !== 'object') return raw
+  return Object.fromEntries(Object.entries(raw)
+    .filter(([k]) => /email/i.test(k) || !CONTACT_FIELD.test(k))
+    .map(([k, v]) => [k, withoutContactDetails(v)]))
+}
+
 export async function syncDonations(donations: unknown[], campaigns: string[], ports: SyncPorts, now = () => new Date()): Promise<SyncCounts> {
   const counts: SyncCounts = { seen: donations.length, created: 0, updated: 0, skipped: 0, needs_review: 0, failed: 0, not_gala: 0, not_settled: 0, unmapped: 0 }
   for (const raw of donations) {
@@ -46,7 +61,7 @@ export async function syncDonations(donations: unknown[], campaigns: string[], p
     // Unmapped rows have no reliable ID; key them by content so they are still recorded once.
     await ports.saveRaw({
       transaction_id: row.txn || `unmapped-${await sha256(JSON.stringify(raw))}`,
-      payload: raw, last_seen_at: now().toISOString(),
+      payload: withoutContactDetails(raw), last_seen_at: now().toISOString(),
       import_status: status === 'not_settled' ? 'skipped' : status,
       import_note: note ?? (status === 'not_settled' ? `Status "${row.status}"; will import once settled.` : null),
     })
