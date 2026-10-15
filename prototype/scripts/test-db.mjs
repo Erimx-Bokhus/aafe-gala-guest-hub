@@ -17,6 +17,7 @@ create function auth.jwt() returns jsonb language sql stable as $$ select coales
 grant usage on schema public to anon, authenticated, service_role;
 alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
 alter default privileges in schema public grant all on sequences to anon, authenticated, service_role;
+alter default privileges in schema public grant all on functions to anon, authenticated, service_role;
 `)
   await db.exec(readFileSync(D + 'schema.sql', 'utf8'))
   await db.exec(readFileSync(D + 'seed.sql', 'utf8'))

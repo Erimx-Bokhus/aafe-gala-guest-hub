@@ -27,6 +27,15 @@ describe('staff app (demo mode)', () => {
     expect(container.innerHTML).not.toContain(g.email)
   })
 
+  it("a volunteer's page is matched by its own address, not a prefix (Gate 2)", async () => {
+    await renderDemo()
+    fireEvent.click(await screen.findByTestId('login-check_in_volunteer'))
+    await waitFor(() => expect(window.location.hash).toBe('#/checkin'))
+    window.location.hash = '#/checkinx'
+    expect(await screen.findByTestId('export-checkin')).toBeTruthy()
+    expect(screen.queryByText('Gala dashboard')).toBeNull()
+  })
+
   it('a gala admin saves the gala information', async () => {
     await renderDemo()
     fireEvent.click(await screen.findByTestId('login-gala_admin'))
