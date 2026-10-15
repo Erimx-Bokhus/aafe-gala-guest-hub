@@ -35,7 +35,7 @@ export function nameWordSet(s: string | null | undefined): string {
 export function normOrg(s: string | null | undefined): string {
   const words = normWords(normText(s).replace(/&/g, ' and ')).split(' ').filter(Boolean)
   if (words[0] === 'the') words.shift()
-  while (words.length > 1 && ORG_SUFFIXES.has(words[words.length - 1]!)) words.pop()
+  while (words.length > 1 && ORG_SUFFIXES.has(words.at(-1) ?? '')) words.pop()
   return words.join(' ')
 }
 
@@ -48,5 +48,5 @@ export function normEmail(s: string | null | undefined): string {
 export function splitName(displayName: string): { first: string; last: string } {
   const words = displayName.trim().split(/\s+/).filter(Boolean)
   if (words.length <= 1) return { first: words[0] ?? '', last: '' }
-  return { first: words.slice(0, -1).join(' '), last: words[words.length - 1]! }
+  return { first: words.slice(0, -1).join(' '), last: words.at(-1) ?? '' }
 }

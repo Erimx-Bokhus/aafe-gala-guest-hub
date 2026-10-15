@@ -1,6 +1,8 @@
 // Reading amounts, counts, and purchase times from the Give Lively export (spec section 1).
 // Each parser returns null for a blank cell and throws ValueError for one it can't read.
 
+import { must } from './must.ts'
+
 export class ValueError extends Error {}
 
 /**
@@ -14,7 +16,7 @@ export function parseAmount(raw: string | null | undefined): number | null {
   if (/^\$?\s*-\s*$/.test(s)) return 0
   const m = /^(\()?\s*(-)?\s*\$?\s*(\d{1,3}(?:,\d{3})+|\d+)(\.\d{1,2})?\s*(\))?$/.exec(s)
   if (!m || Boolean(m[1]) !== Boolean(m[5])) throw new ValueError(`unreadable amount "${s}"`)
-  const value = Number(m[3]!.replace(/,/g, '') + (m[4] ?? ''))
+  const value = Number(must(m[3], 'the amount pattern always captures its digits').replace(/,/g, '') + (m[4] ?? ''))
   return m[1] || m[2] ? -value : value
 }
 
@@ -54,37 +56,37 @@ export function parsePurchaseTime(raw: string | null | undefined): string | null
   if (s === '') return null
   const m = DATE_TIME.exec(s)
   if (!m) throw new ValueError(`unreadable date "${s}"`)
-  if (!m[11]) throw new ValueError(`date has no time zone "${s}"`)
-  const year = Number(m[1] ?? m[6])
-  const month = Number(m[2] ?? m[4])
-  const day = Number(m[3] ?? m[5])
-  let hour = Number(m[7])
-  const minute = Number(m[8])
-  const second = Number(m[9] ?? 0)
-  const ampm = m[10]?.toUpperCase()
-  const zone = m[11]!.toUpperCase()
-
-  if (ampm) {
-    if (hour < 1 || hour > 12) throw new ValueError(`unreadable date "${s}"`)
-    hour = (hour % 12) + (ampm === 'PM' ? 12 : 0)
+  const zone = m[11]?.toUpperCase()
+  if (!zone) throw new ValueError(`date has no time zone "${s}"`)
+  const t = {
+    year: Number(m[1] ?? m[6]), month: Number(m[2] ?? m[4]), day: Number(m[3] ?? m[5]),
+    hour: to24Hour(Number(m[7]), m[10], s), minute: Number(m[8]), second: Number(m[9] ?? 0),
   }
-  let offsetMinutes: number
-  if (/^[+-]/.test(zone)) {
-    const z = /^([+-])(\d{2}):?(\d{2})$/.exec(zone)!
-    offsetMinutes = (z[1] === '-' ? -1 : 1) * (Number(z[2]) * 60 + Number(z[3]))
-  } else if (zone in ZONES) {
-    offsetMinutes = ZONES[zone]! * 60
-  } else {
-    throw new ValueError(`unknown time zone "${zone}" in "${s}"`)
-  }
-
-  const local = Date.UTC(year, month - 1, day, hour, minute, second)
-  const check = new Date(local)
-  if (
-    check.getUTCFullYear() !== year || check.getUTCMonth() !== month - 1 || check.getUTCDate() !== day ||
-    hour > 23 || minute > 59 || second > 59
-  ) {
-    throw new ValueError(`unreadable date "${s}"`)
-  }
+  const offsetMinutes = zoneOffsetMinutes(zone, s)
+  const local = Date.UTC(t.year, t.month - 1, t.day, t.hour, t.minute, t.second)
+  if (!isRealTime(local, t)) throw new ValueError(`unreadable date "${s}"`)
   return new Date(local - offsetMinutes * 60_000).toISOString().replace(/\.\d{3}Z$/, 'Z')
+}
+
+/** An hour with AM or PM (1–12) as 0–23; without either, the hour as written. */
+function to24Hour(hour: number, ampm: string | undefined, s: string): number {
+  if (!ampm) return hour
+  if (hour < 1 || hour > 12) throw new ValueError(`unreadable date "${s}"`)
+  return (hour % 12) + (ampm.toUpperCase() === 'PM' ? 12 : 0)
+}
+
+/** "+05:30", "-0400", or a zone name in ZONES, as minutes east of UTC. */
+function zoneOffsetMinutes(zone: string, s: string): number {
+  const z = /^([+-])(\d{2}):?(\d{2})$/.exec(zone)
+  if (z) return (z[1] === '-' ? -1 : 1) * (Number(z[2]) * 60 + Number(z[3]))
+  const hours = ZONES[zone]
+  if (hours === undefined) throw new ValueError(`unknown time zone "${zone}" in "${s}"`)
+  return hours * 60
+}
+
+/** The date exists (no February 30) and the time is within the day. */
+function isRealTime(local: number, t: { year: number; month: number; day: number; hour: number; minute: number; second: number }): boolean {
+  const d = new Date(local)
+  return d.getUTCFullYear() === t.year && d.getUTCMonth() === t.month - 1 && d.getUTCDate() === t.day &&
+    t.hour <= 23 && t.minute <= 59 && t.second <= 59
 }
