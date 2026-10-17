@@ -69,7 +69,7 @@ const ACTIONS = [
   ['staff_report_guests', ADMIN, `select staff_report_guests()`, 'report.guests'],
 ]
 // Only read, so nothing to log.
-const READS = ['staff_me', 'staff_current_event', 'staff_role', 'staff_email_queue', 'checkin_list', 'staff_checkin_snapshot', 'staff_pipeline']
+const READS = ['staff_me', 'staff_current_event', 'staff_role', 'staff_email_queue', 'checkin_list', 'staff_checkin_snapshot', 'staff_pipeline', 'staff_sync']
 
 // Some staff reminders only draft when a sponsor's deadline is ahead; keep them ahead of today.
 await db.exec(`update orders set guest_list_deadline = (now() + interval '30 days')::date where event_id = current_event_id()`)
