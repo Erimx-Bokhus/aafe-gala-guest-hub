@@ -1125,6 +1125,11 @@ declare
 begin
   if jsonb_typeof(p_items) is distinct from 'array' then raise exception 'invalid_input: items must be a list'; end if;
   if jsonb_array_length(p_items) > 1000 then raise exception 'invalid_input: at most 1000 check-ins per sync'; end if;
+  -- The batch's guests are locked first, in one order (Gate 3 load test, Oct 17). Locked item by item, two iPads syncing
+  -- the same guests in a different order could deadlock, and the iPad drops a refused check-in from its queue. Holding
+  -- the locks first also makes a batch sent again while the first send is still running wait for it, then answer
+  -- "already synced" rather than "conflict".
+  perform 1 from guests where id in (select value ->> 'guest_id' from jsonb_array_elements(p_items)) order by id for update;
   for it in select value from jsonb_array_elements(p_items) loop
     v_cid := nullif(btrim(coalesce(it ->> 'client_id', '')), '');
     begin
@@ -1200,8 +1205,10 @@ begin
           v_res := jsonb_build_object('client_id', v_cid, 'status', 'checked_in');
         end if;
       end if;
-    exception when others then
-      v_res := jsonb_build_object('client_id', v_cid, 'status', 'error', 'error', sqlerrm);
+    exception
+      -- The same check-in sent twice at once (a walk-in has no guest to lock): the first one counted.
+      when unique_violation then v_res := jsonb_build_object('client_id', v_cid, 'status', 'already_synced');
+      when others then v_res := jsonb_build_object('client_id', v_cid, 'status', 'error', 'error', sqlerrm);
     end;
     v_out := v_out || jsonb_build_array(v_res);
   end loop;
