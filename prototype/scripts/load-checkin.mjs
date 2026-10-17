@@ -91,7 +91,56 @@ files.staffapp = [`select set_config('request.jwt.claims', '${JSON.stringify({ e
   'set role authenticated;', '\\timing on',
   ...Array.from({ length: 40 }, () => 'select jsonb_array_length(staff_checkin_snapshot() -> \'guests\'); select count(*) from checkin_list();')].join('\n')
 
-// ---- Every iPad and the staff app at once, each on its own connection
+// ---- Staff app tabs keeping their copy with staff_sync(cursor) while the doors run (Gate 3, data use): one everything,
+// then only changes, merged by id. Each must end with exactly what a fresh load would give, through its own access rules.
+// They're open before the doors, as on the night, and sync without pause while the doors run (the app waits 10 s), so
+// nearly every sync answers while check-ins are still being saved: the race the cursor is built for.
+const EVENT = rows(`select current_event_id()`)[0]
+let doorsDone = false
+const openTab = async (role) => {
+  const p = spawn('docker', ['exec', '-i', NAME, 'psql', '-U', 'postgres', '-At', '-q'])
+  let buf = '', err = '', waiting = null
+  p.stdout.on('data', (d) => {
+    buf += d
+    const i = buf.indexOf('__END__\n')
+    if (i >= 0 && waiting) { const out = buf.slice(0, i); buf = buf.slice(i + 8); waiting(out) }
+  })
+  p.stderr.on('data', (d) => { err += d })
+  p.stdin.write(`select set_config('request.jwt.claims', '${JSON.stringify({ email: staff[role] })}', false) \\g /dev/null\nset role authenticated;\n`)
+  const sync = (cursor) => new Promise((resolve) => {
+    waiting = (out) => resolve(out.trim())
+    p.stdin.write(`select staff_sync(${cursor ? `'${cursor}'` : 'null'}, '${EVENT}');\n\\echo __END__\n`)
+  })
+  const copy = {}, bytes = []
+  let cursor = null
+  const poll = async () => {
+    const out = await sync(cursor)
+    if (!out) throw new Error(`${role} tab: ${err.trim() || 'no answer'}`)
+    const s = JSON.parse(out)
+    bytes.push(out.length)
+    if (s.full) for (const t of Object.keys(s.rows)) copy[t] = new Map()
+    for (const d of s.deleted) copy[d.table].delete(d.id)
+    for (const [t, list] of Object.entries(s.rows)) for (const r of list) copy[t].set(String(r.id), r)
+    cursor = s.cursor
+  }
+  await poll()
+  return { follow: async () => {
+  while (!doorsDone) await poll()
+  await poll()
+  const truth = JSON.parse(await sync(null))
+  p.stdin.end()
+  const off = []
+  for (const [t, list] of Object.entries(truth.rows)) {
+    const mine = [...copy[t].values()].sort((a, b) => (a.id < b.id ? 1 : -1))
+    const want = [...list].sort((a, b) => (a.id < b.id ? 1 : -1))
+    const kept = t === 'audit_log' ? mine.slice(0, want.length) : mine   // a full load sends the newest 1,000 entries
+    if (JSON.stringify(kept) !== JSON.stringify(want)) off.push(`${t} (${mine.length} kept, ${list.length} in the database)`)
+  }
+  return { role, polls: bytes.length, first: bytes[0], later: bytes.slice(1).sort((a, b) => a - b), off }
+  } }
+}
+
+// ---- Every iPad, the door list readers and two staff tabs at once, each on its own connection
 const dir = mkdtempSync(join(tmpdir(), 'aafe-load-'))
 for (const [f, text] of Object.entries(files)) writeFileSync(join(dir, `${f}.sql`), text)
 docker('exec', NAME, 'mkdir', '-p', '/load')
@@ -102,9 +151,13 @@ const run = (f) => new Promise((resolve) => {
   p.stdout.on('data', (d) => { out += d }); p.stderr.on('data', (d) => { err += d })
   p.on('close', () => resolve({ f, out, err }))
 })
+const tabs = await Promise.all(['gala_admin', 'relationship_manager'].map(openTab))
 const t0 = Date.now()
+const following = tabs.map((t) => t.follow())
 const results = await Promise.all(Object.keys(files).map(run))
 const wall = Date.now() - t0
+doorsDone = true
+const tabResults = await Promise.all(following)
 
 // ---- What each iPad was told, and how long the syncs took
 const status = { checked_in: 0, conflict: 0, already_synced: 0, error: 0 }, errors = [], times = []
@@ -139,10 +192,16 @@ const checks = [
   [notFirst.length === 0, `the first arrival stands for every guest (${notFirst.length} wrong)`],
   [seatsOff.length === 0, `every checked-in guest's seat says checked in (${seatsOff.length} off)`],
   [conflicts === twoDoors, `one conflict recorded per second arrival (${conflicts} recorded, ${twoDoors} planned)`],
+  ...tabResults.map((t) => [t.off.length === 0, `the ${t.role.replace(/_/g, ' ')} tab's copy equals the database after ${t.polls} syncs` +
+    (t.off.length ? `: off in ${t.off.join(', ')}` : '')]),
 ]
-console.log(`Load test, seed ${SEED}: ${IPADS} iPads + the staff app, ${guests.length} guests, ${twoDoors} scanned at two doors, ` +
+console.log(`Load test, seed ${SEED}: ${IPADS} iPads + the door list + 2 staff tabs, ${guests.length} guests, ${twoDoors} scanned at two doors, ` +
   `${Object.values(sent).reduce((a, b) => a + b, 0) + 1} syncs (two after an offline stretch, one resent twice)`)
 console.log(`Answers: ${JSON.stringify(status)} · wall ${(wall / 1000).toFixed(1)} s · sync time median ${pct(0.5)} ms, 95th ${pct(0.95)} ms, max ${times.at(-1)} ms`)
+const kb = (n) => `${(n / 1024).toFixed(1)} KB`
+for (const t of tabResults) console.log(`Staff tab (${t.role}): first load ${kb(t.first)}, then ${t.later.length} syncs: ` +
+  `median ${kb(t.later[t.later.length >> 1] ?? 0)}, largest ${kb(t.later.at(-1) ?? 0)}, ` +
+  `${kb(t.later.reduce((a, b) => a + b, 0))} in all (a full reload each time: ${kb(t.first * t.later.length)})`)
 for (const [ok, msg] of checks) console.log(`${ok ? 'PASS' : 'FAIL'}: ${msg}`)
 for (const e of [...new Set(errors)].slice(0, 10)) console.log(`  ${e}`)
 if (!KEEP) docker('rm', '-f', NAME)

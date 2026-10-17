@@ -231,6 +231,60 @@ do $$ begin
   end if;
 end $$;
 
+-- ---------------------------------------------------------------------
+-- Sync: the staff app fetches only what changed (Gate 3, data use, Oct 17)
+--   Every row the staff app reads carries the id of the transaction that last wrote it (sync_txid). staff_sync(cursor)
+--   returns the rows written by transactions at or after the cursor, and a new cursor: the oldest transaction still
+--   running when it answered (pg_snapshot_xmin). A change still being saved then is at or after that cursor, so it comes
+--   next time: nothing is missed, at worst a row is sent twice. Timestamps can't do this: a save that started earlier
+--   but finished later carries an earlier time than the cursor and would be skipped. Deleted rows leave a tombstone.
+-- ---------------------------------------------------------------------
+create table if not exists sync_deleted (
+  id          bigserial primary key,
+  table_name  text not null,
+  row_id      text not null,
+  sync_txid   xid8 not null default pg_current_xact_id(),
+  deleted_at  timestamptz not null default now()
+);
+-- One row. Tombstones up to `floor` were pruned, so a cursor at or below it gets everything again.
+create table if not exists sync_state (
+  id     int primary key default 1 check (id = 1),
+  floor  xid8 not null default '0'
+);
+insert into sync_state (id) values (1) on conflict do nothing;
+
+create or replace function sync_touch() returns trigger
+language plpgsql set search_path = public as $$
+begin
+  new.sync_txid := pg_current_xact_id();   -- the top-level transaction, also inside a subtransaction
+  return new;
+end $$;
+
+create or replace function sync_tombstone() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  insert into sync_deleted (table_name, row_id) values (tg_table_name, old.id::text);
+  return old;
+end $$;
+
+do $$
+declare t text;
+begin
+  foreach t in array array['gala_events','staff_users','sponsorship_tiers','sponsors','orders','payments','event_tables','guests','seats','check_ins','email_log','salesforce_sync','import_runs','import_review','tier_mappings','audit_log']
+  loop
+    execute format('alter table %I add column if not exists sync_txid xid8 not null default pg_current_xact_id()', t);
+    -- A restored backup carries another database's transaction ids; one ahead of this database's counter would be sent
+    -- on every sync until the counter caught up.
+    execute format('update %I set sync_txid = pg_current_xact_id() where sync_txid > pg_current_xact_id()', t);
+    execute format('drop trigger if exists sync_touch on %I', t);
+    execute format('create trigger sync_touch before insert or update on %I for each row execute function sync_touch()', t);
+    if t <> 'audit_log' then   -- append-only: nothing to tombstone
+      execute format('drop trigger if exists sync_tombstone on %I', t);
+      execute format('create trigger sync_tombstone after delete on %I for each row execute function sync_tombstone()', t);
+    end if;
+  end loop;
+end $$;
+
 -- Indexes (Oct 12 audit). Postgres doesn't index the referencing side of a foreign key by itself, so following one
 -- (an order's guests, a gala's orders) or deleting the row it points at reads the whole table. Every foreign key
 -- gets one; scripts/test-backend.mjs fails if a new one is added without it. Safe to re-run.
@@ -470,7 +524,8 @@ declare t text; p text;
 begin
   foreach t in array array['gala_events','staff_users','sponsorship_tiers','sponsors','orders','payments',
     'event_tables','guests','seats','check_ins','email_log','audit_log','salesforce_sync',
-    'givelively_sync_state','givelively_raw','import_runs','import_review','tier_mappings','sponsor_prospects']
+    'givelively_sync_state','givelively_raw','import_runs','import_review','tier_mappings','sponsor_prospects',
+    'sync_deleted','sync_state']
   loop
     execute format('alter table %I enable row level security', t);
     execute format('drop policy if exists staff_read on %I', t);
@@ -484,7 +539,8 @@ begin
 
   -- Staff read the gala's records directly: the staff app loads them.
   foreach t in array array['gala_events','staff_users','sponsorship_tiers','sponsors','orders','payments','event_tables','seats',
-    'check_ins','audit_log','salesforce_sync','givelively_sync_state','import_runs','tier_mappings','sponsor_prospects']
+    'check_ins','audit_log','salesforce_sync','givelively_sync_state','import_runs','tier_mappings','sponsor_prospects',
+    'sync_deleted','sync_state']
   loop
     execute format($p$create policy staff_read on %I for select to authenticated
                      using (staff_role() in ('gala_admin','relationship_manager'))$p$, t);
@@ -509,7 +565,7 @@ revoke update, delete, truncate on audit_log from anon, authenticated;
 -- API role reads them (Gate 2, Oct 15); the app shows the summary. Only the listed columns can be read, so a new column
 -- stays hidden until it's added here.
 revoke select on audit_log from anon, authenticated;
-grant select (id, at, actor_type, actor, entity, entity_id, order_id, action, from_state, to_state, guest_visible, summary)
+grant select (id, at, actor_type, actor, entity, entity_id, order_id, action, from_state, to_state, guest_visible, summary, sync_txid)
   on audit_log to authenticated;
 
 -- Views must respect the caller's RLS, not the view owner's.
@@ -2612,6 +2668,74 @@ begin
   return v;
 end $$;
 
+-- What changed since the staff app last looked (Gate 3, data use; "Sync" near the top explains the cursor). It runs with
+-- the caller's rights, so each role gets exactly the rows its access rules allow, and in one statement, so one
+-- snapshot: every table in the answer agrees with the others. Everything comes when there's no cursor yet, when the
+-- tombstones it needs were pruned, or when the gala being run changed. `counts` lets the app check its copy and reload
+-- everything if it drifted (the change log is left out: the app keeps only its newest 1,000 entries).
+create or replace function staff_sync(p_cursor xid8 default null, p_event text default null) returns jsonb
+language plpgsql stable security invoker set search_path = public as $$
+declare v_full boolean; v_out jsonb;
+begin
+  if coalesce(staff_role(), '') not in ('gala_admin', 'relationship_manager') then raise exception 'forbidden'; end if;
+  v_full := p_cursor is null or p_cursor <= (select floor from sync_state where id = 1) or p_event is distinct from current_event_id();
+  select jsonb_build_object(
+    'cursor', pg_snapshot_xmin(pg_current_snapshot())::text,
+    'full', v_full,
+    'event', current_event_id(),
+    'rows', jsonb_build_object(
+      'gala_events', (select coalesce(jsonb_agg(to_jsonb(r) - 'sync_txid'), '[]') from gala_events r where v_full or r.sync_txid >= p_cursor),
+      'staff_users', (select coalesce(jsonb_agg(to_jsonb(r) - 'sync_txid'), '[]') from staff_users r where v_full or r.sync_txid >= p_cursor),
+      'sponsorship_tiers', (select coalesce(jsonb_agg(to_jsonb(r) - 'sync_txid'), '[]') from sponsorship_tiers r where v_full or r.sync_txid >= p_cursor),
+      'sponsors', (select coalesce(jsonb_agg(to_jsonb(r) - 'sync_txid'), '[]') from sponsors r where v_full or r.sync_txid >= p_cursor),
+      'orders', (select coalesce(jsonb_agg(to_jsonb(r) - 'sync_txid'), '[]') from orders r where v_full or r.sync_txid >= p_cursor),
+      'payments', (select coalesce(jsonb_agg(to_jsonb(r) - 'sync_txid'), '[]') from payments r where v_full or r.sync_txid >= p_cursor),
+      'event_tables', (select coalesce(jsonb_agg(to_jsonb(r) - 'sync_txid'), '[]') from event_tables r where v_full or r.sync_txid >= p_cursor),
+      'guests', (select coalesce(jsonb_agg(to_jsonb(r) - 'sync_txid'), '[]') from guests r where v_full or r.sync_txid >= p_cursor),
+      'seats', (select coalesce(jsonb_agg(to_jsonb(r) - 'sync_txid'), '[]') from seats r where v_full or r.sync_txid >= p_cursor),
+      'check_ins', (select coalesce(jsonb_agg(to_jsonb(r) - 'sync_txid'), '[]') from check_ins r where v_full or r.sync_txid >= p_cursor),
+      'email_log', (select coalesce(jsonb_agg(to_jsonb(r) - 'sync_txid'), '[]') from email_log r where v_full or r.sync_txid >= p_cursor),
+      'salesforce_sync', (select coalesce(jsonb_agg(to_jsonb(r) - 'sync_txid'), '[]') from salesforce_sync r where v_full or r.sync_txid >= p_cursor),
+      'import_runs', (select coalesce(jsonb_agg(to_jsonb(r) - 'sync_txid'), '[]') from import_runs r where v_full or r.sync_txid >= p_cursor),
+      'import_review', (select coalesce(jsonb_agg(to_jsonb(r) - 'sync_txid'), '[]') from import_review r where v_full or r.sync_txid >= p_cursor),
+      'tier_mappings', (select coalesce(jsonb_agg(to_jsonb(r) - 'sync_txid'), '[]') from tier_mappings r where v_full or r.sync_txid >= p_cursor),
+      'audit_log', (select coalesce(jsonb_agg(to_jsonb(a) order by a.id), '[]') from (
+        select id, at, actor_type, actor, entity, entity_id, order_id, action, from_state, to_state, guest_visible, summary
+          from audit_log where v_full or sync_txid >= p_cursor order by id desc limit case when v_full then 1000 end) a)),
+    -- Only rows that are gone in this same snapshot. Transaction ids don't follow commit order, so a tombstone can come
+    -- again after its row was created anew under the same id (a seat, a re-imported order); the app would delete it.
+    'deleted', case when v_full then '[]'::jsonb else (select coalesce(jsonb_agg(jsonb_build_object('table', table_name, 'id', row_id)), '[]') from (
+          select d.table_name, d.row_id from sync_deleted d where d.table_name = 'gala_events' and d.sync_txid >= p_cursor and not exists (select 1 from gala_events x where x.id::text = d.row_id)
+          union all select d.table_name, d.row_id from sync_deleted d where d.table_name = 'staff_users' and d.sync_txid >= p_cursor and not exists (select 1 from staff_users x where x.id::text = d.row_id)
+          union all select d.table_name, d.row_id from sync_deleted d where d.table_name = 'sponsorship_tiers' and d.sync_txid >= p_cursor and not exists (select 1 from sponsorship_tiers x where x.id::text = d.row_id)
+          union all select d.table_name, d.row_id from sync_deleted d where d.table_name = 'sponsors' and d.sync_txid >= p_cursor and not exists (select 1 from sponsors x where x.id::text = d.row_id)
+          union all select d.table_name, d.row_id from sync_deleted d where d.table_name = 'orders' and d.sync_txid >= p_cursor and not exists (select 1 from orders x where x.id::text = d.row_id)
+          union all select d.table_name, d.row_id from sync_deleted d where d.table_name = 'payments' and d.sync_txid >= p_cursor and not exists (select 1 from payments x where x.id::text = d.row_id)
+          union all select d.table_name, d.row_id from sync_deleted d where d.table_name = 'event_tables' and d.sync_txid >= p_cursor and not exists (select 1 from event_tables x where x.id::text = d.row_id)
+          union all select d.table_name, d.row_id from sync_deleted d where d.table_name = 'guests' and d.sync_txid >= p_cursor and not exists (select 1 from guests x where x.id::text = d.row_id)
+          union all select d.table_name, d.row_id from sync_deleted d where d.table_name = 'seats' and d.sync_txid >= p_cursor and not exists (select 1 from seats x where x.id::text = d.row_id)
+          union all select d.table_name, d.row_id from sync_deleted d where d.table_name = 'check_ins' and d.sync_txid >= p_cursor and not exists (select 1 from check_ins x where x.id::text = d.row_id)
+          union all select d.table_name, d.row_id from sync_deleted d where d.table_name = 'email_log' and d.sync_txid >= p_cursor and not exists (select 1 from email_log x where x.id::text = d.row_id)
+          union all select d.table_name, d.row_id from sync_deleted d where d.table_name = 'salesforce_sync' and d.sync_txid >= p_cursor and not exists (select 1 from salesforce_sync x where x.id::text = d.row_id)
+          union all select d.table_name, d.row_id from sync_deleted d where d.table_name = 'import_runs' and d.sync_txid >= p_cursor and not exists (select 1 from import_runs x where x.id::text = d.row_id)
+          union all select d.table_name, d.row_id from sync_deleted d where d.table_name = 'import_review' and d.sync_txid >= p_cursor and not exists (select 1 from import_review x where x.id::text = d.row_id)
+          union all select d.table_name, d.row_id from sync_deleted d where d.table_name = 'tier_mappings' and d.sync_txid >= p_cursor and not exists (select 1 from tier_mappings x where x.id::text = d.row_id)) d) end,
+    'counts', jsonb_build_object('gala_events', (select count(*) from gala_events), 'staff_users', (select count(*) from staff_users), 'sponsorship_tiers', (select count(*) from sponsorship_tiers), 'sponsors', (select count(*) from sponsors), 'orders', (select count(*) from orders), 'payments', (select count(*) from payments), 'event_tables', (select count(*) from event_tables), 'guests', (select count(*) from guests), 'seats', (select count(*) from seats), 'check_ins', (select count(*) from check_ins), 'email_log', (select count(*) from email_log), 'salesforce_sync', (select count(*) from salesforce_sync), 'import_runs', (select count(*) from import_runs), 'import_review', (select count(*) from import_review), 'tier_mappings', (select count(*) from tier_mappings))
+  ) into v_out;
+  return v_out;
+end $$;
+
+-- Tombstones older than a week go (cron.sql, daily); a cursor at or below the newest one removed gets everything again.
+create or replace function sync_prune() returns int
+language plpgsql security definer set search_path = public as $$
+declare n int; v_max xid8;
+begin
+  with d as (delete from sync_deleted where deleted_at < now() - interval '7 days' returning sync_txid)
+  select count(*), max(sync_txid) into n, v_max from d;
+  if v_max is not null then update sync_state set floor = greatest(floor, v_max) where id = 1; end if;
+  return n;
+end $$;
+
 -- ---------------------------------------------------------------------
 -- 9. Who may call what
 -- ---------------------------------------------------------------------
@@ -2636,7 +2760,8 @@ begin
               'staff_set_prospect_stage','staff_set_sponsorship_goal','staff_set_sponsor_arrivals',
               'staff_update_gala_event','staff_set_material_status','staff_set_order_deadline','salesforce_outbox','salesforce_mark_synced',
               'comp_level','staff_save_level','staff_copy_levels','staff_retire_level','staff_start_gala',
-              'report_ny','report_paid','staff_report_attendance','staff_report_sponsors','staff_report_needs','staff_report_payments','staff_report_guests')
+              'report_ny','report_paid','staff_report_attendance','staff_report_sponsors','staff_report_needs','staff_report_payments','staff_report_guests',
+              'staff_sync','sync_touch','sync_tombstone','sync_prune')
   loop
     execute format('revoke all on function %s from public, anon, authenticated', f);
   end loop;
@@ -2665,12 +2790,12 @@ grant execute on function
   staff_add_gala_page(text), staff_remove_gala_page(text),
   staff_resolve_import_review(text, text),
   staff_export_badges(boolean), staff_export_checkin(), staff_export_salesforce(),
-  staff_queue_guest_list_reminders(int), staff_email_queue()
+  staff_queue_guest_list_reminders(int), staff_email_queue(), staff_sync(xid8, text)
   to authenticated;
 
 -- Edge functions (service role)
 grant execute on function gl_import(jsonb, text, text), email_mark_sent(text, text), email_mark_failed(text, text), email_claim(int), hash_token(text),
-  salesforce_outbox(), salesforce_mark_synced(jsonb, text), sync_gala_pages()
+  salesforce_outbox(), salesforce_mark_synced(jsonb, text), sync_gala_pages(), sync_prune()
   to service_role;
 
 -- ---------------------------------------------------------------------
