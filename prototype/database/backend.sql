@@ -597,14 +597,16 @@ create or replace function portal_get_view(p_token text) returns jsonb
 language plpgsql stable security definer set search_path = public as $$
 declare
   o orders := portal_order(p_token);
-  v_applied numeric; v_paid numeric; v_balance numeric; v_n int; v_view jsonb; v_show boolean;
+  v_paid numeric; v_balance numeric; v_n int; v_view jsonb; v_show boolean;
 begin
   -- Arrivals stay hidden unless AAFE has switched them on: a checked-in seat then reads as badge ready.
   select sponsor_arrivals_visible into v_show from gala_events where id = o.event_id;
   v_show := coalesce(v_show, false);
-  select coalesce(sum(original_amount - refunded_amount), 0), coalesce(sum(gross_amount - refunded_amount), 0), count(*)
-    into v_applied, v_paid, v_n from payments where order_id = o.id;
-  v_balance := greatest(0, o.commitment_amount - v_applied);
+  -- What the staff app and the sponsor report count (shared/src/data.ts orderMoney, #170): per payment, the amount toward
+  -- the commitment less any refund, never below 0. Not the gross: it includes a fee the donor chose to cover.
+  select coalesce(sum(greatest(original_amount - refunded_amount, 0)), 0), count(*)
+    into v_paid, v_n from payments where order_id = o.id;
+  v_balance := case when o.status in ('cancelled', 'comp') then 0 else greatest(0, o.commitment_amount - v_paid) end;
 
   select jsonb_build_object(
     'orderId', o.id,
@@ -901,7 +903,7 @@ begin
   values (v_id, o.id, p_method, 'none', nullif(trim(p_check_number), ''), p_amount, 0, p_amount, 0, 0, p_amount,
           (p_received::timestamp + time '12:00') at time zone 'America/New_York', me.id, 'unreconciled');
 
-  select sum(original_amount - refunded_amount) into v_applied from payments where order_id = o.id;
+  select sum(greatest(original_amount - refunded_amount, 0)) into v_applied from payments where order_id = o.id;   -- per payment, never below 0 (#170)
   v_status := case when o.status = 'comp' then 'comp' when v_applied + 0.005 >= o.commitment_amount then 'paid' else 'partially_paid' end;
   update orders set status = v_status, updated_at = now() where id = o.id;
   perform write_audit('staff', me.name, 'payment', v_id, o.id, 'payment.recorded', o.status, v_status, true,
@@ -1410,7 +1412,7 @@ begin
       end if;
       -- A refund or amount change: paid or partly paid from everything received, checks and wires included.
       if v_changed and o.status in ('paid','partially_paid') then
-        select sum(original_amount - refunded_amount) into v_applied from payments where order_id = o.id;
+        select sum(greatest(original_amount - refunded_amount, 0)) into v_applied from payments where order_id = o.id;   -- per payment, never below 0 (#170)
         update orders set status = case when v_applied + 0.005 >= commitment_amount then 'paid' else 'partially_paid' end,
                updated_at = now() where id = o.id;
       end if;
