@@ -6,7 +6,7 @@ import type { DB, ImportReview } from '@shared/types'
 import { PageHead } from '../App'
 import { useStaff } from '../store'
 import { canDo } from '../api'
-import { GalaPageNotSetError, REVIEW, prepareImport, sampleExport, type ImportResult } from '../importer'
+import { GalaPageNotSetError, REVIEW, importProblem, prepareImport, sampleExport, type ImportResult } from '../importer'
 
 // Give Lively import (docs/import-matching-spec.md). The import engine reads the export in the browser and shows what it found;
 // nothing is saved until a gala admin chooses Import, and staff_import_givelively() writes all of it or nothing. Re-uploading
@@ -36,7 +36,7 @@ export default function Import() {
         if (!on) return
         setPrep(null)
         if (e instanceof GalaPageNotSetError) setPages(e.pages)
-        else { setPages(null); setError(e instanceof Error ? e.message : String(e)) }
+        else { setPages(null); setError(importProblem(e)) }
       })
     return () => { on = false }
   }, [file, db])
@@ -74,7 +74,7 @@ export default function Import() {
                 <button className="btn-primary" onClick={() => input.current?.click()}><FileUp size={15} /> Choose the CSV file</button>
                 {!api.live && <button className="btn-ghost" data-testid="import-sample" onClick={() => { const s = sampleExport(db); setResult(null); setFile({ csv: s.csv, name: s.fileName }) }}><Sparkles size={15} /> Try a sample export (invented)</button>}
               </div>
-              {error && <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-800" role="alert">This file can't be imported: {error}.</p>}
+              {error && <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-800" role="alert">{error}</p>}
               {pages && <PagePicker pages={pages} onPick={(p) => void act(api.setGalaPage(p), `Give Lively page set to "${p}"`)} />}
               {prep && <Preview prep={prep} db={db} onMap={(name, tierId, page) => void act(api.setTierMapping(name, tierId, page), `"${name}" linked`)}
                 onAddPage={(p) => void act(api.addGalaPage(p), `"${p}" added; link its ticket types below`)} onImport={doImport} />}
