@@ -92,7 +92,8 @@ ok(Object.keys(portalEdit).sort().join() === 'dietary_needs,title' && portalEdit
   && portalEdit.dietary_needs?.to === 'vegetarian', 'portal edit logs old and new values of the changed fields only')
 ok(editView.activity.every((a) => Object.keys(a).sort().join() === 'action,at,summary'), 'portal activity never shows the old and new values')
 ok((await db.query(`select count(*)::int n from pg_proc where proname = 'write_audit'`)).rows[0].n === 1, 'one write_audit after re-running backend.sql')
-ok((await err('authenticated', RM, `select staff_set_seat_status($1,'badge_ready')`, [gid]))?.startsWith('invalid_transition'), 'cannot skip review')
+ok((await err('authenticated', RM, `select staff_set_seat_status($1,'badge_ready')`, [gid])) === "invalid_transition: this guest's status changed (now submitted); check the latest and try again",
+  'cannot skip review, and the refusal says the status changed and what to do (Gate 3)')
 await as('authenticated', RM, `select staff_set_seat_status($1,'reviewed')`, [gid])
 ok((await err('authenticated', RM, `select staff_set_seat_status($1,'badge_ready')`, [gid]))?.includes('assign a table'), 'badge_ready needs seat')
 const taken = (await db.query(`select table_id, seat_number from guests where table_id is not null limit 1`)).rows[0]
