@@ -3,7 +3,7 @@
   "private": true,
   "description": "Repo-wide checks only (the coding standard's lint). The apps and the import engine keep their own package.json.",
   "scripts": {
-    "lint": "eslint --max-warnings 0 import-engine/src prototype/shared/src/offlineCheckin.ts prototype/shared/src/supabase.ts prototype/shared/src/guestNeeds.ts prototype/checkin-app/src/liveDoor.ts prototype/staff-app/src/importer.ts prototype/supabase/functions"
+    "lint": "eslint --max-warnings 0 import-engine/src prototype/shared/src/offlineCheckin.ts prototype/shared/src/doorSync.ts prototype/shared/src/supabase.ts prototype/shared/src/guestNeeds.ts prototype/checkin-app/src/liveDoor.ts prototype/staff-app/src/importer.ts prototype/supabase/functions"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",

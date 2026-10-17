@@ -254,7 +254,7 @@ Decided Oct 6, from AAFE's prospect tracker. One row per sponsor prospect per ga
 
 Decided Oct 6: if the venue's internet drops, the iPad keeps checking guests in and syncs later. `shared/src/offlineCheckin.ts` (`CheckInDesk`) does the iPad side with no React or Supabase, so the check-in screen only wires it up:
 
-1. While online, save the list: `desk.saveSnapshot(await rpc('staff_checkin_snapshot'))`. Refresh it every few minutes.
+1. While online, keep the list: `desk.saveSnapshot(await syncDoorList(call, desk.snapshot))`, where `call` is `door_sync(p_cursor, p_event)` (`shared/src/doorSync.ts`). The first call brings the whole list; after that only what changed since the saved cursor, merged in. The check-in app asks every 15 seconds.
 2. At the door, online or not: `desk.scan(code)`, `desk.checkIn(guestId)`, `desk.checkInException({ name, order_id, type, note })`. Every check-in is saved on the iPad first. A QR code is checked against the saved hashes, so scanning works offline.
 3. When online: `desk.sync((items) => rpc('staff_sync_check_ins', { p_items: items }))`.
 4. Banner: `desk.banner(navigator.onLine)` gives "Offline · 3 check-ins waiting". Conflicts and refused items are in `desk.notices()`.
@@ -280,7 +280,7 @@ Errors come back as the Postgres message: `forbidden`, `not_found`, `invalid_lin
 ## Not done yet
 
 - **Guest Portal is connected** when `guest-portal/.env.local` is set, and runs offline on the synthetic data when it isn't (the `OPEN-*.html` files). The landing page's demo cards still come from the built-in data. Their links work against the backend only if `seed.sql` was loaded.
-- **Staff App is connected** when `staff-app/.env.local` is set (issues #8, #9). Every page action goes through `staff-app/src/api.ts`: one `staff_*` call from the table above, then a reload of what the role may read. Gala admins and relationship managers read the tables (RLS); a check-in volunteer loads only `staff_checkin_snapshot()`, with no emails, phones, payments, notes or QR codes. Without the env file the same actions run on the demo data with the same role rules.
+- **Staff App is connected** when `staff-app/.env.local` is set (issues #8, #9). Every page action goes through `staff-app/src/api.ts`: one `staff_*` call from the table above, then a reload of what the role may read. Gala admins and relationship managers read the tables (RLS); a check-in volunteer loads only the door list, kept by changes with `door_sync()` as on the iPad, with no emails, phones, payments, notes or QR codes. Without the env file the same actions run on the demo data with the same role rules.
   - Live, Sponsors shows "Resend portal link" only (links are stored hashed, so there is nothing to copy), and relationship guests show their invitation status instead of a QR code.
   - Live, the Give Lively "Pull now" on Integrations (gala admins) runs `givelively-sync` right away, as the 15-minute schedule does, and shows its counts or its reason when it can't run (secrets or the gala's page name not set). It needs the function deployed (step 3).
   - Still simulated in both modes: the CSV import on Integrations (live CSV imports go through the Import page).
