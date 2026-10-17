@@ -6,6 +6,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { addAudit, displayName, loadDB, uid } from '@shared/data'
 import { needStatus } from '@shared/guestNeeds'
+import { syncDoorList, type DoorSync } from '@shared/doorSync'
 import type { Snapshot } from '@shared/offlineCheckin'
 import type { AuditEntry, DB, EmailLog, GalaEvent, Guest, Material, PayMethod, PipelineStage, Role, Sector, StaffUser, Tier } from '@shared/types'
 import * as store from './store'
@@ -492,7 +493,7 @@ export function liveApi(client: SupabaseClient, reload: () => Promise<void>): St
 // ---- WHAT EACH ROLE LOADS ---------------------------------------------------------------------------------
 
 /**
- * The door list a check-in volunteer works from: staff_checkin_snapshot() in the database, or the same shape from the demo
+ * The door list a check-in volunteer works from: door_sync() in the database (merged by doorSync.ts), or the same shape from the demo
  * data. One type with the iPad app (shared/src/offlineCheckin.ts), so the staff app reads what the database really returns.
  */
 export type CheckinSnapshot = Snapshot
@@ -648,7 +649,8 @@ export interface SyncAnswer {
  * this role may no longer read leaves no deleted marker), and every 4 hours regardless.
  * One request at a time: an older answer merged after a newer one would bring old rows back. A call made while one is
  * waiting shares it; a call made while one is running waits and asks again, since it may follow a change of its own.
- * A refresh that changed nothing returns the same object, so React doesn't redraw. Volunteers get only the door list.
+ * A refresh that changed nothing returns the same object, so React doesn't redraw. Volunteers get only the door list,
+ * kept the same way with door_sync(cursor), as on the iPad (doorSync.ts).
  * One loader per signed-in person (App.tsx makes a new one on sign-in).
  */
 export function liveLoader(client: SupabaseClient): (user: StaffUser) => Promise<DB> {
@@ -693,15 +695,24 @@ export function liveLoader(client: SupabaseClient): (user: StaffUser) => Promise
     return last
   }
 
-  return async (user) => {
-    if (user.role === 'check_in_volunteer') {
-      const { data, error } = await client.rpc('staff_checkin_snapshot')
+  let door: Snapshot | null = null, doorDb: DB | null = null
+  const runDoor = async (user: StaffUser): Promise<DB> => {
+    const next = await syncDoorList(async (from, ev) => {
+      const { data, error } = await client.rpc('door_sync', { p_cursor: from, p_event: ev })
       if (error) throw new Error(error.message)
-      if (data == null) throw new Error('no_open_gala')   // the server answers null when no gala is open
-      return volunteerDb(data as CheckinSnapshot, user)
-    }
+      return data as DoorSync | null
+    }, door)
+    if (!next) { door = null; throw new Error('no_open_gala') }   // the server answers null when no gala is open
+    const same = door !== null && next.guests === door.guests && next.unnamed_seats === door.unnamed_seats
+      && next.exceptions === door.exceptions && next.event_name === door.event_name
+    door = next
+    if (!same || !doorDb) doorDb = volunteerDb(next, user)
+    return doorDb
+  }
+
+  return async (user) => {
     if (waiting) return waiting
-    const next = tail.then(() => { waiting = null; return run() })
+    const next = tail.then(() => { waiting = null; return user.role === 'check_in_volunteer' ? runDoor(user) : run() })
     waiting = next
     tail = next.catch(() => undefined)
     return next
