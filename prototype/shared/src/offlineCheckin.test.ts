@@ -103,10 +103,22 @@ describe('syncing', () => {
     d.checkIn('g-1'); d.checkIn('g-2')
     const sent: QueuedCheckIn[][] = []
     const res = await d.sync(async (items) => { sent.push(items); return answer('checked_in')(items) })
-    expect(res).toEqual({ synced: 2, conflicts: 0, errors: 0, offline: false })
+    expect(res).toEqual({ synced: 2, conflicts: 0, errors: 0, offline: false, refused: false })
     expect(sent[0]!.map((i) => i.client_id)).toEqual(['door-1-id1', 'door-1-id2'])
     expect(d.pending()).toEqual([])
     expect(d.banner(true)).toBeNull()
+  })
+
+  it('tells a network failure from a refusal, and keeps the check-ins either way (Gate 3)', async () => {
+    const d = desk()
+    d.saveSnapshot(SNAP)
+    d.checkIn(SNAP.guests[0].id, 'search')
+    expect(await d.sync(async () => { throw new TypeError('Load failed') })).toMatchObject({ offline: true, refused: false })
+    expect(await d.sync(async () => { throw new Error('JWT expired') })).toMatchObject({ offline: false, refused: true })
+    expect(d.pending()).toHaveLength(1)
+    d.forgetGuests()
+    expect(d.snapshot).toBeNull()
+    expect(d.pending()).toHaveLength(1)
   })
 
   it('keeps everything when still offline', async () => {
