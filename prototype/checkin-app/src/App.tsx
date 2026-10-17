@@ -127,15 +127,20 @@ function LiveApp({ prefs }: { prefs: Prefs }) {
     setDoor('loading')
     import('./liveDoor').then((m) => m.loadDoor(staff)).then((d) => setDoor(d ?? 'closed'), () => setDoor('error'))
   }, [staff])
+  // The gala closed while the door was open: its list has left the iPad (liveDoor), so show the closed screen.
+  useEffect(() => {
+    if (typeof door !== 'object') return
+    return door.subscribe(() => { if (door.status.closed) { door.stop(); setDoor('closed') } })
+  }, [door])
   // Sign-out sends waiting check-ins first; if some can't be sent, it stops and says so (signOut.ts).
-  const [blocked, setBlocked] = useState<{ waiting: number; canForce: boolean } | null>(null)
+  const [blocked, setBlocked] = useState<{ waiting: number; canForce: boolean; refused: boolean } | null>(null)
   const [leaving, setLeaving] = useState(false)
   const leave = async (force = false) => {
     const m = typeof staff === 'object' ? await import('./liveDoor') : null
     if (m && typeof staff === 'object' && !force) {
       setLeaving(true)
       const r = await m.checkLiveSignOut(staff).finally(() => setLeaving(false))
-      if (!r.ok) { setBlocked({ waiting: r.waiting, canForce: r.canForce }); return }
+      if (!r.ok) { setBlocked({ waiting: r.waiting, canForce: r.canForce, refused: r.refused }); return }
     }
     setBlocked(null)
     // Close the guest-list screen before its saved list goes, so nothing redraws from a list that's gone.
@@ -146,7 +151,7 @@ function LiveApp({ prefs }: { prefs: Prefs }) {
   }
   const blockedModal = blocked && (
     <Modal open onClose={() => setBlocked(null)} title="Check-ins not sent yet">
-      <p className="text-lg text-navy-900" data-testid="signout-blocked">{waitingMessage(blocked.waiting, blocked.canForce)}</p>
+      <p className="text-lg text-navy-900" data-testid="signout-blocked">{waitingMessage(blocked.waiting, blocked.canForce, blocked.refused)}</p>
       <div className="mt-6 flex flex-wrap justify-end gap-3">
         {blocked.canForce && <button className="btn-ghost tap h-14 px-6 text-base" onClick={() => void leave(true)} data-testid="signout-anyway"><LogOut size={18} /> Sign out anyway</button>}
         <button className="btn-primary tap h-14 px-8 text-base" onClick={() => { setBlocked(null); void leave() }} data-testid="signout-retry"><RefreshCw size={18} /> Try again</button>
@@ -487,6 +492,7 @@ function CatChip({ label, n, inN, on, onClick, testid }: { label: string; n: num
 
 function SyncPill({ s }: { s: DoorStatus }) {
   const base = 'inline-flex h-11 items-center gap-2 rounded-full px-4 text-sm font-semibold'
+  if (s.refused) return <span className={`${base} bg-red-50 text-red-800 ring-1 ring-red-200`} data-testid="sync-status"><AlertTriangle size={18} /> {s.pending ? `Not syncing: ask a gala admin · ${s.pending} saved here` : 'Not syncing: ask a gala admin'}</span>
   if (s.online === false) return <span className={`${base} bg-amber-50 text-amber-800 ring-1 ring-amber-200`} data-testid="sync-status"><CloudOff size={18} /> {s.pending ? `Offline – ${s.pending} waiting to sync` : 'Offline – check-ins save on this iPad'}</span>
   if (s.pending > 0) return <span className={`${base} bg-cream-100 text-navy-800`} data-testid="sync-status"><RefreshCw size={18} className="animate-spin" /> Syncing {s.pending}…</span>
   if (s.online === null) return <span className={`${base} bg-cream-100 text-navy-700`} data-testid="sync-status"><RefreshCw size={18} /> Connecting…</span>

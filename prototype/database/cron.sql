@@ -22,6 +22,9 @@ revoke all on function call_edge_function(text) from public, anon, authenticated
 
 select cron.schedule('givelively-sync', '*/15 * * * *', $$ select call_edge_function('givelively-sync') $$);
 select cron.schedule('send-emails',     '* * * * *',    $$ select call_edge_function('send-emails') $$);
+-- pg_cron keeps a row for every run and never deletes them (about 1,540 a day with the two jobs above); the free plan's
+-- database stops taking writes at 500 MB. A week of history is enough (docs/operations.md).
+select cron.schedule('cron-history-cleanup', '30 8 * * *', $$ delete from cron.job_run_details where end_time < now() - interval '7 days' $$);
 
 -- Check: select * from cron.job_run_details order by start_time desc limit 10;
 -- Stop:  select cron.unschedule('givelively-sync');
