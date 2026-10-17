@@ -31,6 +31,10 @@ To run the actual workflow files instead, in Docker, `act` works too (`act pull_
 
 How we write code, adapted from NASA/JPL's "Power of Ten" for TypeScript and SQL, and the checks that enforce it: [`docs/CODING-STANDARD.md`](docs/CODING-STANDARD.md). `npm install` at the repo root, then `npm run lint` (zero warnings allowed); it also runs in `ci-local` and on every pull request.
 
+## Running it
+
+What could stop the tool on its free plans, how to back it up and restore it, and a checklist for gala night: [`docs/operations.md`](docs/operations.md). The security review: [`docs/security-review.md`](docs/security-review.md).
+
 ## Project hub
 
 Aisling keeps a browsable version of the docs for her own tracking in a separate repo, [AAFE Gala Guest Project Hub](https://github.com/Erimx-Bokhus/aafe-gala-guest-project-hub). It moved out of `hub/` on Oct 11, 2026, with its history, so its edits don't run this repo's six checks. Nobody else needs to clone it.
