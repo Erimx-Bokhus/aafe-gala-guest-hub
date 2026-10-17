@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 // Session handling in the staff app: who gets in after the emailed link, and who is signed straight back out.
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import type { StaffUser } from '@shared/types'
 import { loadDB } from '@shared/data'
@@ -36,6 +36,14 @@ async function renderApp(opts: { session: boolean; staff: StaffUser | null; staf
   return render(<App />)
 }
 
+// The first import of the whole staff app takes 1 to 4.3 s while other test files run alongside (12 timed runs, Oct 17),
+// later ones about 0.1 s. Inside the first test it once passed the 5-second limit, and that test's late render then
+// signed out during the next one. Done once here, with its own time, every test gets the fast import.
+beforeAll(async () => {
+  vi.doMock('@shared/supabase', () => ({ supabase: null }))
+  await import('./App')
+  vi.doUnmock('@shared/supabase')
+}, 30_000)
 afterEach(() => { cleanup(); signOut.mockReset(); rpc.mockClear(); tableRead.mockReset(); unsubscribe.mockReset(); vi.doUnmock('@shared/supabase'); history.replaceState(null, '', '/') })
 
 describe('staff app session (live mode)', () => {
