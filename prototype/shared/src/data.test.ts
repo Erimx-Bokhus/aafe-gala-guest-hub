@@ -19,6 +19,17 @@ test('an unknown choice falls back to the small set', () => {
   expect(loadDB().guests).toHaveLength(48)
 })
 
+// Oct 17: the hosted portal listed Small-demo links, which the hosted database ("Full gala, fixed") doesn't have.
+test('a build connected to Supabase uses the set the hosted database holds, whatever this browser saved', async () => {
+  localStorage.setItem('aafe-demo-data', 'small')
+  vi.resetModules()
+  vi.doMock('./supabase', () => ({ supabase: {} }))
+  const live = await import('./data')
+  expect(live.demoSet()).toBe('full-fixed')
+  expect(live.loadDB().orders.some((o) => o.portal_token === 'ac-6w9k3p5d')).toBe(false)   // the Small-demo link from the screenshot
+  vi.doUnmock('./supabase')
+})
+
 test('blocked storage falls back to the small set', () => {
   vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('blocked') })
   expect(demoSet()).toBe('small')
