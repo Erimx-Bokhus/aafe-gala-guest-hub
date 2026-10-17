@@ -1,7 +1,7 @@
 // AAFE STAFF APP (the "client app": AAFE's gala team)
 // Reads everything the guest portal writes (same database), plus Give Lively + Salesforce data.
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { Activity, Armchair, BadgeCheck, CalendarDays, ClipboardList, CreditCard, FileUp, Heart, LayoutDashboard, LogOut, Menu, Plug, ScanLine, Table2, TrendingUp, X, Layers, FileSpreadsheet } from 'lucide-react'
+import { Activity, BadgeCheck, CalendarDays, ClipboardList, CreditCard, FileUp, Heart, LayoutDashboard, LogOut, Menu, Plug, ScanLine, Table2, TrendingUp, X, Layers, FileSpreadsheet } from 'lucide-react'
 import { loadDB } from '@shared/data'
 import { AafeLogo } from '@shared/Logo'
 import { DisplayControls, go, Link, PrototypeBanner, Toast, useDisplayPrefs, useRoute } from '@shared/ui'
@@ -18,7 +18,6 @@ import Reports from './pages/Reports'
 import Sponsors, { SponsorDetail } from './pages/Sponsors'
 import GuestList from './pages/GuestList'
 import Payments from './pages/Payments'
-import Seating from './pages/Seating'
 import Relationship from './pages/Relationship'
 import Badges from './pages/Badges'
 import CheckIn from './pages/CheckIn'
@@ -35,7 +34,6 @@ const NAV: { to: string; label: string; icon: typeof LayoutDashboard; roles: Rol
   { to: '/pipeline', label: 'Sponsor pipeline', icon: TrendingUp, roles: ['gala_admin', 'relationship_manager'] },
   { to: '/guests', label: 'Guest list', icon: Table2, roles: ['gala_admin', 'relationship_manager'] },
   { to: '/payments', label: 'Payments & fees', icon: CreditCard, roles: ['gala_admin', 'relationship_manager'] },
-  { to: '/seating', label: 'Seating chart', icon: Armchair, roles: ['gala_admin', 'relationship_manager'] },
   { to: '/relationship', label: 'Relationship guests', icon: Heart, roles: ['gala_admin', 'relationship_manager'] },
   { to: '/badges', label: 'Badges', icon: BadgeCheck, roles: ['gala_admin', 'relationship_manager'] },
   { to: '/checkin', label: 'iPad check-in', icon: ScanLine, roles: ['gala_admin', 'relationship_manager', 'check_in_volunteer'] },
@@ -140,7 +138,6 @@ export default function App() {
   else if (p === '/sponsors') page = <Sponsors />
   else if (p === '/guests') page = <GuestList />
   else if (p === '/payments') page = <Payments />
-  else if (p === '/seating') page = <Seating />
   else if (p === '/relationship') page = <Relationship />
   else if (p === '/badges') page = <Badges />
   else if (p === '/checkin') page = <CheckIn />
