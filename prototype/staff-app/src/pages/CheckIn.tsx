@@ -117,7 +117,7 @@ export default function CheckIn() {
       <section className="mt-8">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-navy-500">Recent arrivals</h2>
         <ul className="mt-2 divide-y divide-navy-100 text-sm">
-          {db.check_ins.filter((c) => c.event_id === db.meta.current_event_id).slice(-6).reverse().map((c) => { const g = guests.find((x) => x.id === c.guest_id); return <li key={c.id} className="flex justify-between gap-3 py-2"><span className="text-navy-800">{g ? `${g.first_name} ${g.last_name}` : c.arrival_name} <span className="text-xs text-navy-500">· {c.type} · {c.method}</span></span><span className="shrink-0 text-xs text-navy-500">{fmtDate(c.checked_in_at, 'en-US', true)} · {c.checked_in_by}</span></li> })}
+          {db.check_ins.filter((c) => c.event_id === db.meta.current_event_id).sort((a, b) => Date.parse(b.checked_in_at) - Date.parse(a.checked_in_at)).slice(0, 6).map((c) => { const g = guests.find((x) => x.id === c.guest_id); return <li key={c.id} className="flex justify-between gap-3 py-2"><span className="text-navy-800">{g ? `${g.first_name} ${g.last_name}` : c.arrival_name} <span className="text-xs text-navy-500">· {c.type} · {c.method}</span></span><span className="shrink-0 text-xs text-navy-500">{fmtDate(c.checked_in_at, 'en-US', true)} · {c.checked_in_by}</span></li> })}
         </ul>
       </section>
 
