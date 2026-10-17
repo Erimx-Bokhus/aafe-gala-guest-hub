@@ -7,7 +7,7 @@ import { AafeLogo } from '@shared/Logo'
 import { DisplayControls, go, Link, PrototypeBanner, Toast, useDisplayPrefs, useRoute } from '@shared/ui'
 import type { DB, Role, StaffUser } from '@shared/types'
 import { StaffCtx } from './store'
-import { demoApi, demoSnapshot, errorText, liveApi, loadLiveDb, volunteerDb } from './api'
+import { demoApi, demoSnapshot, errorText, liveApi, liveLoader, volunteerDb } from './api'
 import { useRefreshWhileOpen } from './useRefreshWhileOpen'
 import Login from './pages/Login'
 import { currentStaff, signInFromLink, signOut, supabase } from '@shared/supabase'
@@ -69,16 +69,20 @@ export default function App() {
   const userRef = useRef(user)
   userRef.current = user
   const latest = useRef(0)
+  // A fresh copy for each person who signs in; after the first load it fetches only what changed (api.ts liveLoader).
+  const load = useMemo(() => (supabase ? liveLoader(supabase) : null), [userKey]) // eslint-disable-line react-hooks/exhaustive-deps
   const reload = useCallback(async () => {
     const u = userRef.current
-    if (!supabase || !u) return
+    if (!load || !u) return
     const n = ++latest.current
-    try { const d = await loadLiveDb(supabase, u); if (n === latest.current) { setLiveDb(d); setLoadError('') } }
+    try { const d = await load(u); if (n === latest.current) { setLiveDb(d); setLoadError('') } }
     catch (e) { if (n === latest.current) setLoadError(errorText(e)) }
-  }, [userKey]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [load])
   useEffect(() => { setLiveDb(null); void reload() }, [reload])
-  // ...and while the app stays open, so sponsors' names, door check-ins and other staff's changes show up.
-  useRefreshWhileOpen(useMemo(() => (supabase && userKey ? () => void reload() : null), [reload, userKey]))
+  // ...and while the app stays open, so sponsors' names, door check-ins and other staff's changes show up. Every 10 s
+  // costs about half a kilobyte when nothing changed; a volunteer's door list still comes whole, so every 30 s.
+  useRefreshWhileOpen(useMemo(() => (supabase && userKey ? () => void reload() : null), [reload, userKey]),
+    user?.role === 'check_in_volunteer' ? 30_000 : 10_000)
   const api = useMemo(() => (!userRef.current ? null : supabase ? liveApi(supabase, reload) : demoApi(userRef.current, update, () => full.current)), [userKey, reload, update]) // eslint-disable-line react-hooks/exhaustive-deps
   const act = useCallback(async (p: Promise<unknown>, done?: string) => {
     try { await p; if (done) toast(done); return true }
