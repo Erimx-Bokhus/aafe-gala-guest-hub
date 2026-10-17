@@ -76,6 +76,17 @@ describe('readExport', () => {
     await expect(readExport(csv)).rejects.toThrow(/row 3 has a quote \(\"\) that never closes/)
   })
 
+  // Gate 3: each refusal says what to do, and ends without a period (the staff app adds one: "This file can't be imported: ….").
+  it('says what to do about an empty file, missing columns or an unclosed quote', async () => {
+    const reason = (csv: string) => readExport(csv).then(() => '', (e: unknown) => (e instanceof ExportFormatError ? e.message : 'not a format error'))
+    expect(await reason('')).toBe('the file is empty. Download the attendee export from Give Lively again')
+    expect(await reason('First Name,Last Name,Email\nA,B,c@example.org\n'))
+      .toBe("missing columns: Tier Purchased, Amount Spent, Date/Time of Purchase. Check that this is Give Lively's attendee export")
+    const unclosed = await reason('Email,Amount Spent,Date/Time of Purchase,Tier Purchased,Last Name,First Name\n' +
+      'ana.ruiz@example.org,$500.00,2027-03-02 10:00:00 AM EST,"Ticket,Ruiz,Ana\n')
+    expect(unclosed).toMatch(/can't be read\. Export the file from Give Lively again and upload it without opening it$/)
+  })
+
   it('rejects a row the CSV reader stumbled on (a stray quote), and keeps the rest (Oct 12 audit)', async () => {
     const [head, a, b, c] = exportCsv({}, { Email: 'sam.lee@example.org' }, { Email: 'ana.ruiz@example.org' }).split('\n')
     const { rows, rejected } = await readExport([head, a, b!.replace('Ticket', '"Ticket'), c].join('\n'))
