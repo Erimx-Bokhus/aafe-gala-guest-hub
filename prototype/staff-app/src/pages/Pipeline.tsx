@@ -5,7 +5,7 @@ import { Field, Modal, Pill, fmtDate, money } from '@shared/ui'
 import type { PipelineStage, Sector } from '@shared/types'
 import { PageHead } from '../App'
 import { SECTORS, STAGES, parseAmount, useStaff, type ProspectInput } from '../store'
-import { canDo, type PipelineBoard, type PipelineProspect } from '../api'
+import { canDo, errorText, type PipelineBoard, type PipelineProspect } from '../api'
 
 // Sponsor pipeline (AAFE's prospect tracker; staff_pipeline() in backend.sql). Staff move the early stages; a pledge moves a
 // sponsor to closed won and a payment to payment received by themselves. The smallest working version: Natalie's design
@@ -25,7 +25,7 @@ export default function Pipeline() {
   // The board is read from the server (or the demo) again whenever the gala's data changes.
   useEffect(() => {
     let on = true
-    api.pipeline().then((b) => { if (on) { setBoard(b); setError('') } }, (e: unknown) => { if (on) setError(e instanceof Error ? e.message : String(e)) })
+    api.pipeline().then((b) => { if (on) { setBoard(b); setError('') } }, (e: unknown) => { if (on) setError(errorText(e)) })
     return () => { on = false }
   }, [api, db])
 

@@ -5,6 +5,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { loadDB } from '@shared/data'
 import type { StaffUser } from '@shared/types'
 import { demoApi, errorText, liveApi } from './api'
+import { NOT_CONNECTED, pollFailure } from '../../supabase/functions/_shared/givelively-sync.ts'
 
 const staff = (role: StaffUser['role']): StaffUser => ({ id: `st-${role}`, name: `Test ${role}`, email: `${role}@aafe-demo.example.org`, role })
 function demo(user: StaffUser) {
@@ -43,12 +44,15 @@ describe('live', () => {
     expect(reload).toHaveBeenCalledOnce()
     expect(counts).toMatchObject({ created: 1, updated: 1, needs_review: 1, not_settled: 1 })
   })
-  it("shows the function's own reason when it can't run", async () => {
-    const notSet = client(500, { error: 'not_configured', message: 'Set GIVELIVELY_ORG_ID and GIVELIVELY_API_KEY.' })
-    const e1 = await liveApi(notSet.c, async () => {}).pullGiveLively().catch((e) => e)
-    expect(errorText(e1)).toBe('Set GIVELIVELY_ORG_ID and GIVELIVELY_API_KEY.')
-    const down = client(502, { error: 'givelively_error', message: 'Give Lively returned HTTP 503.' })
-    expect(errorText(await liveApi(down.c, async () => {}).pullGiveLively().catch((e) => e))).toBe('Give Lively returned HTTP 503.')
+  it("shows the function's own words when it can't run: what happened and what to do, never a setting's name (Gate 3)", async () => {
+    const shown = async (status: number, body: unknown) => errorText(await liveApi(client(status, body).c, async () => {}).pullGiveLively().catch((e) => e))
+    expect(await shown(500, { error: 'not_configured', message: NOT_CONNECTED }))
+      .toBe("Give Lively isn't connected: its keys aren't set in Supabase. Ask your technical partner.")
+    expect(await shown(502, { error: 'givelively_error', message: pollFailure(404) }))
+      .toBe("Give Lively didn't accept AAFE's org ID or API key. Ask your technical partner to check them.")
+    expect(await shown(502, { error: 'givelively_error', message: pollFailure(503) }))
+      .toBe("Couldn't reach Give Lively. Try again in a few minutes; the 15-minute schedule keeps trying.")
+    expect(pollFailure(null)).toBe(pollFailure(503))
     const refused = client(403, { error: 'forbidden' })
     expect(errorText(await liveApi(refused.c, async () => {}).pullGiveLively().catch((e) => e))).toBe('Your role can’t do that.')
   })

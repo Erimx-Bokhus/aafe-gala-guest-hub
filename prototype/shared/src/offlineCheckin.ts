@@ -108,6 +108,11 @@ export interface KeyValueStore {
 }
 
 const KEYS = { snapshot: 'snapshot', queue: 'queue', notices: 'notices' }
+
+/** A failure to reach AAFE's database at all (Chrome, Safari on the iPad, Firefox, Node), as opposed to a refusal from it. */
+export const isNetworkError = (e: unknown) =>
+  /Failed to fetch|Load failed|NetworkError|fetch failed|Network request failed/i.test(
+    typeof e === 'object' && e !== null && 'message' in e ? String(e.message) : String(e))   // supabase-js errors are plain objects
 /** Items per sync call; the database takes at most 1,000. */
 export const BATCH = 200
 
@@ -125,10 +130,22 @@ export const clock = (iso: string) =>
 export const alreadyMessage = (at: string | null | undefined, by: string | null | undefined, device: string | null | undefined) =>
   `Already checked in${at ? ` at ${clock(at)}` : ''}${device || by ? ` by ${device || by}` : ''}`
 
+/** A QR code no guest has: the door says what to do next (iPad, demo door and staff app alike). */
+export const unknownCodeMessage = (code: string) =>
+  `No guest found for code “${code.trim()}”. The ticket may have been replaced. Search the guest by name, or add an approved exception.`
+
+/** Why the server refused a synced check-in, as the door should hear it: the server's raw reason never reaches the screen. */
+function refusedMessage(name: string, error: string | undefined): string {
+  const again = name === 'A guest' ? 'the guest' : name
+  if (/^not_found/.test(error ?? '')) return `${name} wasn't counted: they're no longer on tonight's list. Ask a gala admin before letting them in.`
+  if (/more than a day old/.test(error ?? '')) return `${name} wasn't counted: this iPad's clock looks wrong. Check the date and time, then check ${again} in again.`
+  return `${name} wasn't counted. Check ${again} in again; if this comes back, tell a gala admin.`
+}
+
 const fold = (s: string | null | undefined) => (s ?? '').normalize('NFKD').replace(/\p{M}/gu, '').toLowerCase().trim()
 
 /** What one sync did: sent, refused because another door was first, refused for another reason, or still offline. */
-export interface SyncTotals { synced: number; conflicts: number; errors: number; offline: boolean }
+export interface SyncTotals { synced: number; conflicts: number; errors: number; offline: boolean; refused: boolean }
 
 export class CheckInDesk {
   private readonly store: KeyValueStore
@@ -247,10 +264,11 @@ export class CheckInDesk {
 
   /**
    * Sends waiting check-ins, oldest first. Answered items leave the queue; conflicts and refusals become
-   * notices for staff. If `send` throws (still offline), everything stays queued. Never runs twice at once.
+   * notices for staff. If `send` throws, everything stays queued: `offline` when the network failed, `refused` when
+   * AAFE's database answered but wouldn't take them (the sign-in expired, the role was removed). Never runs twice at once.
    */
   async sync(send: (items: QueuedCheckIn[]) => Promise<SyncResult[]>): Promise<SyncTotals> {
-    const totals: SyncTotals = { synced: 0, conflicts: 0, errors: 0, offline: false }
+    const totals: SyncTotals = { synced: 0, conflicts: 0, errors: 0, offline: false, refused: false }
     if (this.syncing) return totals
     this.syncing = true
     try {
@@ -260,8 +278,9 @@ export class CheckInDesk {
       for (let round = 0; round < rounds; round++) {
         const batch = this.pending().slice(0, BATCH)
         if (!batch.length) break
-        const results = await send(batch).catch(() => null)
-        if (!results) { totals.offline = true; break }
+        let failed: unknown = null
+        const results = await send(batch).catch((e: unknown) => { failed = e; return null })
+        if (!results) { if (isNetworkError(failed)) totals.offline = true; else totals.refused = true; break }
         if (!this.record(batch, results, totals)) break   // the server answered none of them; try again later
       }
     } finally {
@@ -292,12 +311,9 @@ export class CheckInDesk {
   private noticeFor(item: QueuedCheckIn, r: SyncResult): Notice | null {
     if (r.status !== 'conflict' && r.status !== 'error') return null
     const guest = item.kind === 'guest' ? this.snapshot?.guests.find((g) => g.id === item.guest_id) : undefined
-    const name = item.kind === 'guest' ? (guest ? `${guest.first_name} ${guest.last_name}` : item.guest_id) : item.name
+    const name = item.kind === 'guest' ? (guest ? `${guest.first_name} ${guest.last_name}` : 'A guest') : item.name
     const guest_id = item.kind === 'guest' ? item.guest_id : null
-    if (r.status === 'error') {
-      return { client_id: item.client_id, guest_id, name, kind: 'error',
-        message: `${name}: not synced (${r.error ?? 'refused'}). Check this guest in again or tell a gala admin.` }
-    }
+    if (r.status === 'error') return { client_id: item.client_id, guest_id, name, kind: 'error', message: refusedMessage(name, r.error) }
     if (item.kind === 'guest') this.markFirst(item.guest_id, r)
     return { client_id: item.client_id, guest_id, name, kind: 'conflict',
       message: `${name}: ${alreadyMessage(r.first_at, r.first_by, r.first_device)}. This iPad's check-in at ${clock(item.at)} was not counted.` }
@@ -306,6 +322,12 @@ export class CheckInDesk {
   /** After gala night: remove the saved list, the queue and notices from the iPad. */
   clear() {
     for (const k of Object.values(KEYS)) this.store.removeItem(this.prefix + k)
+  }
+
+  /** The gala closed: the guest list and notices (names) leave the iPad; check-ins not yet synced stay, to sync if it reopens. */
+  forgetGuests() {
+    this.store.removeItem(this.prefix + KEYS.snapshot)
+    this.store.removeItem(this.prefix + KEYS.notices)
   }
 
   // ---- Internals

@@ -127,15 +127,20 @@ function LiveApp({ prefs }: { prefs: Prefs }) {
     setDoor('loading')
     import('./liveDoor').then((m) => m.loadDoor(staff)).then((d) => setDoor(d ?? 'closed'), () => setDoor('error'))
   }, [staff])
+  // The gala closed while the door was open: its list has left the iPad (liveDoor), so show the closed screen.
+  useEffect(() => {
+    if (typeof door !== 'object') return
+    return door.subscribe(() => { if (door.status.closed) { door.stop(); setDoor('closed') } })
+  }, [door])
   // Sign-out sends waiting check-ins first; if some can't be sent, it stops and says so (signOut.ts).
-  const [blocked, setBlocked] = useState<{ waiting: number; canForce: boolean } | null>(null)
+  const [blocked, setBlocked] = useState<{ waiting: number; canForce: boolean; refused: boolean } | null>(null)
   const [leaving, setLeaving] = useState(false)
   const leave = async (force = false) => {
     const m = typeof staff === 'object' ? await import('./liveDoor') : null
     if (m && typeof staff === 'object' && !force) {
       setLeaving(true)
       const r = await m.checkLiveSignOut(staff).finally(() => setLeaving(false))
-      if (!r.ok) { setBlocked({ waiting: r.waiting, canForce: r.canForce }); return }
+      if (!r.ok) { setBlocked({ waiting: r.waiting, canForce: r.canForce, refused: r.refused }); return }
     }
     setBlocked(null)
     // Close the guest-list screen before its saved list goes, so nothing redraws from a list that's gone.
@@ -146,7 +151,7 @@ function LiveApp({ prefs }: { prefs: Prefs }) {
   }
   const blockedModal = blocked && (
     <Modal open onClose={() => setBlocked(null)} title="Check-ins not sent yet">
-      <p className="text-lg text-navy-900" data-testid="signout-blocked">{waitingMessage(blocked.waiting, blocked.canForce)}</p>
+      <p className="text-lg text-navy-900" data-testid="signout-blocked">{waitingMessage(blocked.waiting, blocked.canForce, blocked.refused)}</p>
       <div className="mt-6 flex flex-wrap justify-end gap-3">
         {blocked.canForce && <button className="btn-ghost tap h-14 px-6 text-base" onClick={() => void leave(true)} data-testid="signout-anyway"><LogOut size={18} /> Sign out anyway</button>}
         <button className="btn-primary tap h-14 px-8 text-base" onClick={() => { setBlocked(null); void leave() }} data-testid="signout-retry"><RefreshCw size={18} /> Try again</button>
@@ -156,15 +161,19 @@ function LiveApp({ prefs }: { prefs: Prefs }) {
 
   if (staff === 'checking') return <Waiting prefs={prefs} text="Checking your sign-in…" />
   if (staff === 'out' || staff === 'not-staff') return <LiveSignIn prefs={prefs} notice={staff === 'not-staff' ? 'That account isn’t on the AAFE staff list. Ask the gala admin to add you.'
-    : linkFailed ? 'That sign-in link didn’t work. It works once and expires after about an hour: ask for a new one.' : ''} />
+    : linkFailed ? 'That sign-in link didn’t work. It works once and expires after about an hour: ask for a new one.'
+    : navigator.onLine ? '' : 'This iPad is offline and not signed in. Connect to Wi-Fi to sign in.'} />
   if (door === 'loading') return <Waiting prefs={prefs} text="Loading tonight’s guest list…" />
   if (door === 'closed' || door === 'error') return (
     <Shell prefs={prefs}>
       <div className="mt-10 rounded-2xl border-2 border-navy-100 bg-surface p-6" role="alert">
         <h1 className="text-2xl font-semibold text-navy-900">{door === 'closed' ? 'Tonight’s gala is closed' : 'The guest list didn’t load'}</h1>
-        <p className="mt-2 text-lg text-navy-700">{door === 'closed' ? 'The guest list has been cleared from this iPad.' : 'Check the internet connection, then try again. Nothing was lost.'}</p>
+        <p className="mt-2 text-lg text-navy-700">{door === 'closed'
+          ? 'The guest list has been cleared from this iPad. If guests are still arriving, ask a gala admin to reopen the gala in the staff app, then tap Try again.'
+          : 'Check the internet connection, then try again. Nothing was lost.'}</p>
         <div className="mt-6 flex flex-wrap gap-3">
-          {door === 'error' && <button className="btn-primary tap h-14 px-6 text-base" onClick={() => setStaff({ ...staff })}><RefreshCw size={18} /> Try again</button>}
+          {/* Loads the door again: a reopened gala's list comes back, as does one that failed to load. */}
+          <button className="btn-primary tap h-14 px-6 text-base" onClick={() => setStaff({ ...staff })} data-testid="door-retry"><RefreshCw size={18} /> Try again</button>
           <button className="btn-ghost tap h-14 px-6 text-base" disabled={leaving} onClick={() => void leave()}><LogOut size={18} /> {leaving ? 'Sending check-ins…' : 'Sign out'}</button>
         </div>
       </div>
@@ -190,13 +199,13 @@ function LiveSignIn({ prefs, notice }: { prefs: Prefs; notice: string }) {
     if (sent) {
       // The 6-digit code from the same email: signs this iPad in, even from the Home Screen app.
       try { await verifySignInCode(email, code) }
-      catch { setErr('That code didn’t work. Codes work once and expire after an hour: send a new one.') }
+      catch { setErr(navigator.onLine ? 'That code didn’t work. Codes work once and expire after an hour: send a new one.' : 'No internet connection. Connect to Wi-Fi, then type the code again.') }
       finally { setBusy(false) }
       return
     }
     try { await sendSignInLink(email); setSent(true) }
     // Same message whether or not the email is invited, so the form doesn't reveal who is on the staff list.
-    catch { setErr('We couldn’t send a sign-in email. Check the email, or ask the gala admin to invite you.') }
+    catch { setErr('We couldn’t send a sign-in email. Check the internet connection and the email address; if both are right, ask the gala admin to invite you.') }
     finally { setBusy(false) }
   }
   return (
@@ -487,6 +496,7 @@ function CatChip({ label, n, inN, on, onClick, testid }: { label: string; n: num
 
 function SyncPill({ s }: { s: DoorStatus }) {
   const base = 'inline-flex h-11 items-center gap-2 rounded-full px-4 text-sm font-semibold'
+  if (s.refused) return <span className={`${base} bg-red-50 text-red-800 ring-1 ring-red-200`} data-testid="sync-status"><AlertTriangle size={18} /> {s.pending ? `Not syncing: ask a gala admin · ${s.pending} saved here` : 'Not syncing: ask a gala admin'}</span>
   if (s.online === false) return <span className={`${base} bg-amber-50 text-amber-800 ring-1 ring-amber-200`} data-testid="sync-status"><CloudOff size={18} /> {s.pending ? `Offline – ${s.pending} waiting to sync` : 'Offline – check-ins save on this iPad'}</span>
   if (s.pending > 0) return <span className={`${base} bg-cream-100 text-navy-800`} data-testid="sync-status"><RefreshCw size={18} className="animate-spin" /> Syncing {s.pending}…</span>
   if (s.online === null) return <span className={`${base} bg-cream-100 text-navy-700`} data-testid="sync-status"><RefreshCw size={18} /> Connecting…</span>

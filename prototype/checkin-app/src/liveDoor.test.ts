@@ -2,14 +2,19 @@
 // The live door list follows the server while the iPad is open (the Oct 12 audit's "frozen list" finding): a guest
 // added after the door opened (a sponsor naming a guest, a comp added in the staff app) appears on the next refresh,
 // and a refresh that only changes who arrived keeps the same list, so the screen doesn't re-sort every few seconds.
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Snapshot, SnapshotGuest } from '@shared/offlineCheckin'
 import type { StaffUser } from '@shared/types'
 
-const server = vi.hoisted(() => ({ snapshot: null as unknown }))
+const server = vi.hoisted(() => ({ snapshot: null as unknown, syncError: null as string | null, lists: 0, undoError: null as { message: string } | null }))
 vi.mock('@shared/supabase', () => ({
   supabase: {
-    rpc: async (fn: string) => ({ data: fn === 'staff_checkin_snapshot' ? server.snapshot : [], error: null }),
+    rpc: async (fn: string, args: { p_items?: { client_id: string }[] }) => {
+      if (fn === 'staff_undo_check_in' && server.undoError) return { data: null, error: server.undoError }
+      if (fn === 'staff_checkin_snapshot') { server.lists++; return { data: server.snapshot, error: null } }
+      if (server.syncError) return { data: null, error: { message: server.syncError } }
+      return { data: (args.p_items ?? []).map((i) => ({ client_id: i.client_id, status: 'checked_in' })), error: null }
+    },
   },
 }))
 const { loadDoor } = await import('./liveDoor')
@@ -25,7 +30,10 @@ const list = (guests: SnapshotGuest[], at: string): Snapshot => ({
 })
 const KENJI: StaffUser = { id: 'st-test-door', name: 'Door Tester', email: 'door@example.org', role: 'check_in_volunteer' }
 
-beforeEach(() => localStorage.clear())
+beforeEach(() => { localStorage.clear(); server.syncError = null; server.lists = 0; server.undoError = null })
+afterEach(() => vi.useRealTimers())
+/** The list is fetched once a minute: move the clock past that before a refresh is expected. */
+const aMinuteLater = () => { vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(Date.now() + 61_000) }
 
 describe('live door list', () => {
   it('clears the list from the iPad once no gala is open (the server answers null)', async () => {
@@ -46,6 +54,7 @@ describe('live door list', () => {
       guest('g-3', 'Lily', 'Huang', { order_id: 'ord-2', sponsor: 'Mott Harbor (synthetic)' })], '2027-05-20T22:00:05Z')
     const changed = vi.fn()
     door.subscribe(changed)
+    aMinuteLater()
     door.start()
     await vi.waitFor(() => expect(changed).toHaveBeenCalled())
     door.stop()
@@ -63,11 +72,90 @@ describe('live door list', () => {
       guest('g-2', 'Ben', 'Ortiz')], '2027-05-20T23:01:05Z')
     const changed = vi.fn()
     door.subscribe(changed)
+    aMinuteLater()
     door.start()
     await vi.waitFor(() => expect(changed).toHaveBeenCalled())
     door.stop()
 
     expect(door.guests).toBe(before)
     expect([...door.arrivals().keys()]).toEqual(['g-1'])
+  })
+
+  // Gate 3: about 280 KB a fetch on the full gala; every 5 seconds, six iPads would use a large share of the free
+  // plan's 5 GB of data a month in one evening.
+  it('sends check-ins every 5 seconds but fetches the whole list once a minute, or when the connection comes back', async () => {
+    server.snapshot = list([guest('g-1', 'Ana', 'Diaz'), guest('g-2', 'Ben', 'Ortiz')], '2027-05-20T22:00:00Z')
+    const door = (await loadDoor(KENJI))!
+    expect(server.lists).toBe(1)
+    vi.useFakeTimers({ toFake: ['Date', 'setInterval', 'clearInterval'] })
+    door.start()
+    door.checkIn(['g-1'], 'search')
+    await vi.advanceTimersByTimeAsync(55_000)              // eleven ticks: check-ins sent, no list
+    expect(door.status.pending).toBe(0)
+    expect(server.lists).toBe(1)
+    await vi.advanceTimersByTimeAsync(10_000)              // past a minute: one list
+    expect(server.lists).toBe(2)
+    window.dispatchEvent(new Event('online'))              // back online: catch up at once
+    await vi.advanceTimersByTimeAsync(0)
+    expect(server.lists).toBe(3)
+    door.stop()
+  })
+
+  it('tells "offline" from "AAFE refused" (an expired sign-in), and keeps the check-ins either way', async () => {
+    server.snapshot = list([guest('g-1', 'Ana', 'Diaz')], '2027-05-20T22:00:00Z')
+    const door = (await loadDoor(KENJI))!
+    const changed = vi.fn()
+    door.subscribe(changed)
+    server.syncError = 'TypeError: Failed to fetch'
+    door.checkIn(['g-1'], 'search')
+    await vi.waitFor(() => expect(door.status.online).toBe(false))
+    expect(door.status.refused).toBe(false)
+    server.syncError = 'JWT expired'
+    door.start()
+    await vi.waitFor(() => expect(door.status.refused).toBe(true))
+    door.stop()
+    expect(door.status.online).not.toBe(false)
+    expect(door.status.pending).toBe(1)
+  })
+
+  it('a gala closed mid-shift: its list leaves the iPad, check-ins not synced yet stay queued', async () => {
+    server.snapshot = list([guest('g-1', 'Ana', 'Diaz'), guest('g-2', 'Ben', 'Ortiz')], '2027-05-20T22:00:00Z')
+    const door = (await loadDoor(KENJI))!
+    server.syncError = 'no gala is open'
+    door.checkIn(['g-2'], 'search')
+    server.snapshot = null
+    aMinuteLater()
+    door.start()
+    await vi.waitFor(() => expect(door.status.closed).toBe(true))
+    door.stop()
+    expect(JSON.stringify({ ...localStorage })).not.toContain('Ortiz')
+    expect(door.status.pending).toBe(1)
+  })
+})
+
+// Gate 3: every failure at the door says what happened and what to do.
+describe('what the door says when something fails', () => {
+  it('an unknown QR code says the ticket may have been replaced and what to do instead', async () => {
+    server.snapshot = list([guest('g-1', 'Ana', 'Diaz')], '2027-05-20T22:00:00Z')
+    const door = (await loadDoor(KENJI))!
+    expect(await door.scan(' AAFE-NOT-A-TICKET ')).toBe(
+      'No guest found for code “AAFE-NOT-A-TICKET”. The ticket may have been replaced. Search the guest by name, or add an approved exception.')
+  })
+
+  it('an undo that fails says why, in words, and what to do', async () => {
+    server.snapshot = list([guest('g-1', 'Ana', 'Diaz')], '2027-05-20T22:00:00Z')
+    const door = (await loadDoor(KENJI))!
+    const undo = async (message: string) => { server.undoError = { message }; return door.undo(['c-synced']) }
+    try {
+      expect(await undo('not_found: no check-in to undo'))
+        .toBe("That check-in is still sending. In a few seconds, tap the guest's name and choose Undo check-in.")
+      expect(await undo('forbidden: only Kenji Abe or a gala admin can undo this check-in'))
+        .toBe('Only Kenji Abe or a gala admin can undo this check-in')
+      expect(await undo('TypeError: Failed to fetch'))
+        .toBe('Undo needs a connection for a check-in that has already synced. Try again once this iPad is back online.')
+      expect(await undo('JWT expired')).toBe("Undo didn't go through. Try again, or ask a gala admin to undo it.")
+    } finally {
+      server.undoError = null
+    }
   })
 })

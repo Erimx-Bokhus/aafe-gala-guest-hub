@@ -103,10 +103,22 @@ describe('syncing', () => {
     d.checkIn('g-1'); d.checkIn('g-2')
     const sent: QueuedCheckIn[][] = []
     const res = await d.sync(async (items) => { sent.push(items); return answer('checked_in')(items) })
-    expect(res).toEqual({ synced: 2, conflicts: 0, errors: 0, offline: false })
+    expect(res).toEqual({ synced: 2, conflicts: 0, errors: 0, offline: false, refused: false })
     expect(sent[0]!.map((i) => i.client_id)).toEqual(['door-1-id1', 'door-1-id2'])
     expect(d.pending()).toEqual([])
     expect(d.banner(true)).toBeNull()
+  })
+
+  it('tells a network failure from a refusal, and keeps the check-ins either way (Gate 3)', async () => {
+    const d = desk()
+    d.saveSnapshot(SNAP)
+    d.checkIn(SNAP.guests[0].id, 'search')
+    expect(await d.sync(async () => { throw new TypeError('Load failed') })).toMatchObject({ offline: true, refused: false })
+    expect(await d.sync(async () => { throw new Error('JWT expired') })).toMatchObject({ offline: false, refused: true })
+    expect(d.pending()).toHaveLength(1)
+    d.forgetGuests()
+    expect(d.snapshot).toBeNull()
+    expect(d.pending()).toHaveLength(1)
   })
 
   it('keeps everything when still offline', async () => {
@@ -147,6 +159,26 @@ describe('syncing', () => {
     expect(res.errors).toBe(1)
     expect(d.notices()[0]).toMatchObject({ kind: 'error', name: 'José Núñez' })
     expect(d.pending().map((q) => q.client_id)).toEqual(['door-1-id2'])
+  })
+
+  it("a refusal says what happened and what to do, in words: never the server's code or a guest ID (Gate 3)", async () => {
+    const refused = async (error: string, guestId = 'g-2') => {
+      const d = desk()
+      if (guestId !== 'g-2') d.saveSnapshot({ ...SNAP, guests: [...SNAP.guests, guest(guestId, 'Gone', 'Later')] })
+      d.checkIn(guestId)
+      if (guestId !== 'g-2') d.saveSnapshot(SNAP)   // the guest left the list before the check-in synced
+      await d.sync(answer('error', { error }))
+      return d.notices()[0]?.message ?? ''
+    }
+    expect(await refused("not_found: guest is not on this gala's list"))
+      .toBe("Mei Chan wasn't counted: they're no longer on tonight's list. Ask a gala admin before letting them in.")
+    expect(await refused('invalid_input: check-in time is more than a day old'))
+      .toBe("Mei Chan wasn't counted: this iPad's clock looks wrong. Check the date and time, then check Mei Chan in again.")
+    expect(await refused('deadlock detected'))
+      .toBe("Mei Chan wasn't counted. Check Mei Chan in again; if this comes back, tell a gala admin.")
+    const unknown = await refused('not_found: no such order on this gala', 'g-gone')
+    expect(unknown).toBe("A guest wasn't counted: they're no longer on tonight's list. Ask a gala admin before letting them in.")
+    expect(unknown).not.toContain('g-gone')
   })
 
   it(`sends in batches of ${BATCH}`, async () => {

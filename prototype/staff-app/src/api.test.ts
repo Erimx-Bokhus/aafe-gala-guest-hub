@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { loadDB } from '@shared/data'
 import type { DB, StaffUser } from '@shared/types'
-import { ROLES, demoApi, demoSnapshot, errorText, liveApi, loadLiveDb, selectAll, volunteerDb, type CheckinSnapshot } from './api'
+import { ROLES, checkInErrorText, demoApi, demoSnapshot, errorText, liveApi, liveLoader, volunteerDb, type CheckinSnapshot, type SyncAnswer } from './api'
 import { prepareImport, sampleExport } from './importer'
 import { queueGuestListReminders, salesforceSyncNow } from './store'
 
@@ -146,6 +146,22 @@ describe('live mode: one staff_* function per action', () => {
     expect(reload).not.toHaveBeenCalled()
   })
 
+  it('reloads when the server says a record changed since the page loaded, so staff see the latest (Gate 3)', async () => {
+    const { c } = client({ error: { message: "invalid_transition: this guest's status changed (now reviewed); check the latest and try again" } })
+    const reload = vi.fn().mockResolvedValue(undefined)
+    const e = await liveApi(c, reload).setSeatStatus('g-1', 'reviewed').catch((x: unknown) => x)
+    expect(errorText(e)).toBe("This guest's status changed (now reviewed); check the latest and try again.")
+    expect(reload).toHaveBeenCalledOnce()
+  })
+
+  it('says so plainly when no gala is open, for a manager and a volunteer alike (Gate 3)', async () => {
+    const vol = client({ data: null })   // staff_checkin_snapshot() answers null when no gala is open
+    const e1 = await liveLoader(vol.c)(VOL).catch((x: unknown) => x)
+    const mgr = client({ data: everything(loadDB(), { event: null }) })   // staff_sync() names no gala either
+    const e2 = await liveLoader(mgr.c)(ADMIN).catch((x: unknown) => x)
+    for (const e of [e1, e2]) expect(errorText(e)).toBe('No gala is open right now. Ask a gala admin to check the gala’s status.')
+  })
+
   it('reads the QR result from the server', async () => {
     const { c, rpc } = client({ data: { guest_id: 'g-9', already_checked_in: true } })
     expect(await liveApi(c, async () => {}).checkInByCode('ABC')).toEqual({ guestId: 'g-9', already: true })
@@ -154,20 +170,17 @@ describe('live mode: one staff_* function per action', () => {
 
   it("loads this year's gala as the server says, even with next year's in planning", async () => {
     const d = loadDB(), now = d.meta.current_event_id
-    const tables = { ...d, gala_events: [...d.gala_events, { ...d.gala_events.find((e) => e.id === now)!, id: 'ev-2099', year: 2099, status: 'planning' }] } as unknown as Record<string, unknown[]>
-    const rows = (t: string) => ({ select: () => ({ order: () => ({
-      range: async (a: number, b: number) => ({ data: (tables[t] ?? []).slice(a, b + 1), error: null }),
-      limit: async () => ({ data: [], error: null }) }) }) })
-    const rpc = vi.fn().mockResolvedValue({ data: now, error: null })
-    const ldb = await loadLiveDb({ rpc, from: rows } as unknown as SupabaseClient, ADMIN)
-    expect(rpc).toHaveBeenCalledWith('staff_current_event')
+    const next = { ...d, gala_events: [...d.gala_events, { ...d.gala_events.find((e) => e.id === now)!, id: 'ev-2099', year: 2099, status: 'planning' as const }] }
+    const { c, rpc } = client({ data: everything(next) })
+    const ldb = await liveLoader(c)(ADMIN)
+    expect(rpc).toHaveBeenCalledWith('staff_sync', { p_cursor: null, p_event: null })
     expect(ldb.meta.current_event_id).toBe(now)
   })
 
   it('loads a volunteer from the door list only, never the tables', async () => {
     const snap: CheckinSnapshot = demoSnapshot(loadDB())
     const { c, rpc, from } = client({ data: snap })
-    const vdb: DB = await loadLiveDb(c, VOL)
+    const vdb: DB = await liveLoader(c)(VOL)
     expect(rpc).toHaveBeenCalledWith('staff_checkin_snapshot')
     expect(from).not.toHaveBeenCalled()
     expect(vdb.guests).toHaveLength(snap.guests.length)
@@ -184,6 +197,30 @@ describe('error text', () => {
 
   it("shows the server's own reason when it gives one", () => {
     expect(errorText(new Error('forbidden: only Kenji Abe or a gala admin can undo this check-in'))).toBe('Only Kenji Abe or a gala admin can undo this check-in.')
+  })
+
+  // Gate 3: every failure staff can hit says what happened and what to do.
+  it('says what happened and what to do for a lost connection, an expired sign-in, a guest off the list and an expired ticket', () => {
+    for (const m of ['TypeError: Failed to fetch', 'Load failed', 'NetworkError when attempting to fetch resource.', 'fetch failed']) {
+      expect(errorText(new Error(m))).toBe('Couldn’t reach AAFE’s database. Check the internet connection and try again.')
+    }
+    expect(errorText({ message: 'JWT expired' })).toBe('Your sign-in has expired. Sign out and sign in again; this change wasn’t saved.')
+    expect(errorText(new Error('invalid JWT'))).toBe('Your sign-in has expired. Sign out and sign in again; this change wasn’t saved.')
+    expect(errorText(new Error("not_found: guest is not on this gala's list")))
+      .toBe('This guest is no longer on tonight’s list (their order may have been cancelled). Ask a gala admin, or add an approved exception.')
+    expect(errorText(new Error('not_found: no draft with that id'))).toMatch(/^That record wasn’t found/)
+    expect(errorText(new Error('expired: QR code has expired'))).toBe('This ticket’s QR code has expired. Check the guest in by name.')
+  })
+
+  it('ends with one period, never two, when the server already wrote one', () => {
+    const m = errorText(new Error("invalid_input: a demo gala can't be added to a project that holds real galas. Use a project without the demo sets for real data."))
+    expect(m).toBe("A demo gala can't be added to a project that holds real galas. Use a project without the demo sets for real data.")
+  })
+
+  it('a check-in that fails with the internet down says what still works at the door', () => {
+    expect(checkInErrorText(new Error('TypeError: Failed to fetch')))
+      .toBe('Not checked in. If the internet is down, use the iPad check-in app (it works offline) or the printed list.')
+    expect(checkInErrorText(new Error('forbidden'))).toBe('Your role can’t do that.')
   })
 })
 
@@ -215,16 +252,117 @@ describe('the volunteer door list keeps walk-in details', () => {
   })
 })
 
-describe('paged reads', () => {
-  it('reads a table of 2,500 rows in id order, each row once', async () => {
-    const rows = Array.from({ length: 2500 }, (_, i) => ({ id: `r${String(i).padStart(4, '0')}` }))
-    const order = vi.fn()
-    const client = { from: () => ({ select: () => ({ order: (col: string) => { order(col); return { range: async (a: number, b: number) => ({ data: rows.slice(a, b + 1), error: null }) } } }) }) }
-    const got = await selectAll(client as unknown as SupabaseClient, 'guests')
-    expect(got).toHaveLength(2500)
-    expect(new Set(got.map((r) => (r as { id: string }).id)).size).toBe(2500)
-    expect(order).toHaveBeenCalledWith('id')
-    expect(order).toHaveBeenCalledTimes(3)
+// Gate 3, data use: after the first load, the staff app fetches only what changed (staff_sync in backend.sql).
+const SYNCED = ['gala_events', 'staff_users', 'sponsorship_tiers', 'sponsors', 'orders', 'payments', 'event_tables', 'guests', 'seats',
+  'check_ins', 'email_log', 'salesforce_sync', 'import_runs', 'import_review', 'tier_mappings'] as const
+// Every database row has an id; the demo data's Salesforce rows don't, so they get one here.
+const tablesOf = (d: DB) => Object.fromEntries(SYNCED.map((t) => [t, ((d[t] ?? []) as object[]).map((r, i) => ('id' in r ? r : { ...r, id: `${t}-${i}` }))]))
+const countsOf = (d: DB) => Object.fromEntries(SYNCED.map((t) => [t, (d[t] ?? []).length]))
+/** staff_sync()'s answer with no cursor: every row, as of cursor 100. */
+function everything(d: DB, over: Partial<SyncAnswer> = {}): SyncAnswer {
+  return { cursor: '100', full: true, event: d.meta.current_event_id, rows: { ...tablesOf(d), audit_log: d.audit_log }, deleted: [], counts: countsOf(d), ...over } as SyncAnswer
+}
+/** An answer with a cursor: only `rows` and `deleted`, counted as `after` holds them. */
+function changes(after: DB, rows: Record<string, unknown[]> = {}, deleted: SyncAnswer['deleted'] = [], cursor = '101'): SyncAnswer {
+  return { cursor, full: false, event: after.meta.current_event_id, rows, deleted, counts: countsOf(after) } as SyncAnswer
+}
+const answers = (...list: (SyncAnswer | Error)[]) => {
+  const rpc = vi.fn()
+  for (const a of list) rpc.mockResolvedValueOnce(a instanceof Error ? { data: null, error: { message: a.message } } : { data: a, error: null })
+  return { load: liveLoader({ rpc } as unknown as SupabaseClient), rpc }
+}
+
+describe('the staff app fetches only what changed (Gate 3, data use)', () => {
+  const d = loadDB(), ev = d.meta.current_event_id
+  const g = d.guests[0], ci = d.check_ins[0]
+  const edited = { ...g, title: 'Board chair (edited)' }
+  const after: DB = { ...d, guests: d.guests.map((x) => (x.id === g.id ? edited : x)), check_ins: d.check_ins.slice(1) }
+
+  it('loads everything once, then asks from its cursor and merges an edit and a deletion', async () => {
+    expect(ci).toBeTruthy()
+    const { load, rpc } = answers(everything(d), changes(after, { guests: [edited] }, [{ table: 'check_ins', id: String(ci.id) }]))
+    const first = await load(ADMIN)
+    expect(first.guests).toHaveLength(d.guests.length)
+    const second = await load(ADMIN)
+    expect(rpc).toHaveBeenLastCalledWith('staff_sync', { p_cursor: '100', p_event: ev })
+    expect(second.guests).toHaveLength(d.guests.length)
+    expect(second.guests.find((x) => x.id === g.id)?.title).toBe('Board chair (edited)')
+    expect(second.check_ins.some((c) => c.id === ci.id)).toBe(false)
+    expect(second.check_ins).toHaveLength(d.check_ins.length - 1)
+  })
+
+  it('gives back the same object when nothing changed, so the page doesn’t redraw', async () => {
+    const { load } = answers(everything(d), changes(d))
+    const first = await load(ADMIN)
+    expect(await load(ADMIN)).toBe(first)
+  })
+
+  it('loads everything again when a count no longer matches its copy (a row it may no longer read)', async () => {
+    const gone: DB = { ...d, guests: d.guests.slice(1) }
+    const { load, rpc } = answers(everything(d), changes(gone), everything(gone, { cursor: '102' }))
+    await load(ADMIN)
+    const got = await load(ADMIN)
+    expect(rpc).toHaveBeenCalledTimes(3)
+    expect(rpc).toHaveBeenLastCalledWith('staff_sync', { p_cursor: null, p_event: ev })
+    expect(got.guests).toHaveLength(d.guests.length - 1)
+  })
+
+  it('loads everything again every 4 hours, whatever the checks say', async () => {
+    const t = Date.now()
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(t)
+    try {
+      const { load, rpc } = answers(everything(d), changes(d), everything(d, { cursor: '103' }))
+      await load(ADMIN)
+      clock.mockReturnValue(t + 3.9 * 3600_000)
+      await load(ADMIN)
+      expect(rpc).toHaveBeenLastCalledWith('staff_sync', { p_cursor: '100', p_event: ev })
+      clock.mockReturnValue(t + 4 * 3600_000)
+      await load(ADMIN)
+      expect(rpc).toHaveBeenLastCalledWith('staff_sync', { p_cursor: null, p_event: ev })
+    } finally {
+      clock.mockRestore()
+    }
+  })
+
+  it('keeps its cursor when a refresh fails, so nothing is skipped', async () => {
+    const { load, rpc } = answers(everything(d), new Error('TypeError: Failed to fetch'), changes(d, { guests: [edited] }))
+    await load(ADMIN)
+    await expect(load(ADMIN)).rejects.toThrow('Failed to fetch')
+    const got = await load(ADMIN)
+    expect(rpc).toHaveBeenLastCalledWith('staff_sync', { p_cursor: '100', p_event: ev })
+    expect(got.guests.find((x) => x.id === g.id)?.title).toBe('Board chair (edited)')
+  })
+
+  it('asks one at a time: calls made while one runs share the next request, which asks again', async () => {
+    const open: ((v: unknown) => void)[] = []
+    const rpc = vi.fn(() => new Promise((r) => open.push(r)))
+    const load = liveLoader({ rpc } as unknown as SupabaseClient)
+    const a = load(ADMIN)
+    await vi.waitFor(() => expect(rpc).toHaveBeenCalledTimes(1))
+    const b = load(ADMIN), c = load(ADMIN)   // e.g. this person's own save, and the 10-second refresh
+    await new Promise((r) => setTimeout(r, 10))
+    expect(rpc).toHaveBeenCalledTimes(1)     // never two requests at once
+    open[0]({ data: everything(d), error: null })
+    const first = await a
+    await vi.waitFor(() => expect(rpc).toHaveBeenCalledTimes(2))
+    open[1]({ data: changes(d), error: null })
+    expect(await b).toBe(first)
+    expect(await c).toBe(first)
+    expect(rpc).toHaveBeenCalledTimes(2)     // b and c shared one request
+  })
+
+  it('turns amounts into numbers and keeps the newest 1,000 change-log entries', async () => {
+    const o = d.orders[0]
+    const audit = Array.from({ length: 1000 }, (_, i) => ({ ...d.audit_log[0], id: i + 1 }))
+    const { load } = answers(
+      everything({ ...d, audit_log: audit } as DB, { rows: { ...tablesOf(d), orders: d.orders.map((x) => ({ ...x, commitment_amount: String(x.commitment_amount) })), audit_log: audit } }),
+      changes(d, { audit_log: [{ ...d.audit_log[0], id: 1001 }] }))
+    const first = await load(ADMIN)
+    expect(first.orders.find((x) => x.id === o.id)?.commitment_amount).toBe(Number(o.commitment_amount))
+    const second = await load(ADMIN)
+    expect(second.audit_log).toHaveLength(1000)
+    expect(second.audit_log[0].id).toBe(2)
+    expect(second.audit_log.at(-1)?.id).toBe(1001)
   })
 })
 

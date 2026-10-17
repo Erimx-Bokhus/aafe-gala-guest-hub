@@ -4,11 +4,19 @@
 // hash (hard rule 6). Undo: a check-in still on the iPad is taken off the queue; a synced one goes through
 // staff_undo_check_in(), which allows only the person who made it or a gala admin.
 import type { PostgrestError } from '@supabase/supabase-js'
-import { CheckInDesk, type KeyValueStore, type QueuedCheckIn, type Snapshot, type SyncResult } from '@shared/offlineCheckin'
+import { CheckInDesk, isNetworkError, unknownCodeMessage, type KeyValueStore, type QueuedCheckIn, type Snapshot, type SyncResult } from '@shared/offlineCheckin'
 import { needStatus } from '@shared/guestNeeds'
 import { supabase } from '@shared/supabase'
 import type { StaffUser } from '@shared/types'
 import { CATEGORY, seatLabel, type Arrival, type Door, type DoorGuest, type ExceptionRow, type Gala } from './door'
+
+/** Check-ins made at this door go to AAFE every 5 seconds. */
+export const SYNC_EVERY_MS = 5_000
+/**
+ * The whole list (other doors' arrivals, guests added since) comes once a minute: on the full gala it's about 280 KB, and
+ * every 5 seconds six iPads would use a large share of the free plan's 5 GB of data a month in one evening (Gate 3).
+ */
+export const LIST_EVERY_MS = 60_000
 import { checkSignOut } from './signOut'
 
 /** localStorage, or memory when the browser blocks it (the door keeps working either way). */
@@ -57,7 +65,7 @@ export async function loadDoor(staff: StaffUser): Promise<Door | null> {
   try {
     const s = await rpc<Snapshot | null>('staff_checkin_snapshot')
     // No open gala (the server answers null once it's closed): the guest list leaves the iPad (Gate 2 review, Oct 15).
-    if (!s || s.status === 'closed') { desk.clear(); return null }
+    if (!s || s.status === 'closed') { desk.forgetGuests(); return null }
     if (desk.snapshot && desk.snapshot.event_id !== s.event_id) desk.clear()
     desk.saveSnapshot(s)
   } catch (e) {
@@ -111,15 +119,16 @@ function scanMessage(out: Awaited<ReturnType<CheckInDesk['scan']>>, code: string
     case 'already': return `${out.guest.first_name} ${out.guest.last_name}: ${out.message}. Don't admit this ticket twice.`
     case 'expired_code': return `This ticket's code for ${out.guest.first_name} ${out.guest.last_name} has expired. Check the guest in by name.`
     case 'unknown_code':
-    case 'not_found': return `No guest found for code “${code.trim()}”.`
+    case 'not_found': return unknownCodeMessage(code)
   }
 }
 
-/** Undo the iPad couldn't do on its own: still sending, needs a connection, or the server's own reason. */
+/** Undo the iPad couldn't do on its own: still sending, no connection, someone else's check-in (the server names who may), or anything else. */
 function undoProblem(m: string): string {
-  if (/no check-in to undo/i.test(m)) return 'That check-in is still sending. Try Undo again in a moment.'
-  if (/fetch|network|failed/i.test(m)) return 'Undo needs a connection for a check-in that has already synced.'
-  return m
+  if (/no check-in to undo/i.test(m)) return "That check-in is still sending. In a few seconds, tap the guest's name and choose Undo check-in."
+  if (isNetworkError(m)) return 'Undo needs a connection for a check-in that has already synced. Try again once this iPad is back online.'
+  if (/^Only /.test(m)) return m
+  return "Undo didn't go through. Try again, or ask a gala admin to undo it."
 }
 
 /** What staff do at the door: check in, scan a ticket, add a walk-in, undo. `kick` sends it and refreshes the screen. */
@@ -154,40 +163,48 @@ function doorActions(desk: CheckInDesk, kick: () => void): Pick<Door, 'checkIn' 
 
 function liveDoor(desk: CheckInDesk, s0: Snapshot): Door {
   const listeners = new Set<() => void>()
-  let online: boolean | null = null, timer: ReturnType<typeof setInterval> | null = null, busy = false
+  let online: boolean | null = null, refused = false, closed = false, timer: ReturnType<typeof setInterval> | null = null, busy = false
+  let listAt = Date.now()   // the list this door opened with was just fetched
   const emit = () => { listeners.forEach((f) => { f() }) }
   const gala: Gala = { id: s0.event_id, name: s0.event_name, event_date: s0.event_date ?? '', doors_time: s0.doors_time ?? null, venue_name: s0.venue_name ?? null }
   // Arrivals already come from the latest list (desk.guests()); a list that only changed who arrived keeps the same
   // arrays, so the screen doesn't re-sort every few seconds.
   let view = buildView(s0)
 
-  /** Send what's waiting, then fetch the latest list (other doors' check-ins). */
-  async function tick() {
+  /** Send what's waiting; once a minute (or when asked), also fetch the latest list (other doors' check-ins). */
+  async function tick(withList = false) {
     if (busy) return
     busy = true
     try {
       const r = await desk.sync((items) => rpc<SyncResult[]>('staff_sync_check_ins', { p_items: items }))
+      refused = r.refused
       if (r.offline) { online = false; return }
-      const s = await rpc<Snapshot>('staff_checkin_snapshot')
+      online = true
+      if (!withList && Date.now() - listAt < LIST_EVERY_MS) return
+      const s = await rpc<Snapshot | null>('staff_checkin_snapshot')
+      listAt = Date.now()
+      // The gala closed: its list leaves the iPad; check-ins not synced yet stay queued in case it reopens.
+      if (!s || s.status === 'closed') { desk.forgetGuests(); closed = true; return }
       if (s.event_id === gala.id) {
         desk.saveSnapshot(s)
         const next = buildView(s)
         if (next.key !== view.key) view = next
       }
-      online = true
-    } catch {
-      online = false
+    } catch (e) {
+      if (isNetworkError(e)) online = false
+      else refused = true
     } finally {
       busy = false
       emit()
     }
   }
   const kick = () => { emit(); void tick() }
+  const back = () => { emit(); void tick(true) }   // the connection came back: send, and catch up on the list
   return {
     gala,
     get guests() { return view.guests },
     get sponsors() { return view.sponsors },
-    get status() { return { online, pending: desk.pending().length } },
+    get status() { return { online, pending: desk.pending().length, refused, closed } },
     arrivals: () => arrivalsOf(desk),
     exceptions: () => exceptionsOf(desk),
     notices: () => desk.notices(),
@@ -197,13 +214,13 @@ function liveDoor(desk: CheckInDesk, s0: Snapshot): Door {
     start() {
       if (timer) return
       void tick()
-      timer = setInterval(() => void tick(), 5000)
-      window.addEventListener('online', kick)
+      timer = setInterval(() => void tick(), SYNC_EVERY_MS)
+      window.addEventListener('online', back)
     },
     stop() {
       if (timer) clearInterval(timer)
       timer = null
-      window.removeEventListener('online', kick)
+      window.removeEventListener('online', back)
     },
   }
 }

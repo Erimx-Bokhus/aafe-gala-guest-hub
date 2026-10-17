@@ -86,6 +86,8 @@ export interface ReadResult {
   dateRange: { earliest: string; latest: string } | null
 }
 
+/** The file can't be imported as it is. Its message ends without a period: the staff app shows it as
+ *  "This file can't be imported: <message>." (staff-app/src/importer.ts, importProblem). */
 export class ExportFormatError extends Error {}
 
 const text = z.string().transform((s) => s.trim())
@@ -147,7 +149,7 @@ export async function readExport(csv: string): Promise<ReadResult> {
   // (\n) line breaks, e.g. after an edit in a text editor, would otherwise run two rows together.
   const parsed = Papa.parse<string[]>(csv.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n'), { header: false, skipEmptyLines: false, newline: '\n' })
   const [header, ...records] = parsed.data
-  if (!header) throw new ExportFormatError('the file is empty')
+  if (!header) throw new ExportFormatError('the file is empty. Download the attendee export from Give Lively again')
   const readErrors = readerErrors(parsed.errors)
   const sheet = mapColumns(header)
   checkNotDamaged(records, sheet.columns)
@@ -179,7 +181,7 @@ function readerErrors(errors: ParseError[]): Map<number, string> {
   const unclosed = errors.find((e) => e.code === 'MissingQuotes')
   if (unclosed) {
     throw new ExportFormatError(`row ${(unclosed.row ?? 0) + 1} has a quote (") that never closes, so the rows after it can't be read. ` +
-      'Fix that cell in a spreadsheet, or export the file from Give Lively again.')
+      'Export the file from Give Lively again and upload it without opening it')
   }
   const byRow = new Map<number, string>()
   for (const e of errors) if (e.row != null && e.row > 0) byRow.set(e.row + 1, `couldn't read this row (${e.message})`)
@@ -199,7 +201,9 @@ function mapColumns(header: string[]): Sheet {
     else if (field && !columns.has(field)) columns.set(field, i)
   })
   const missing = Object.entries(REQUIRED_COLUMNS).filter(([, f]) => !columns.has(f)).map(([label]) => label)
-  if (missing.length) throw new ExportFormatError(`missing column${missing.length > 1 ? 's' : ''}: ${missing.join(', ')}`)
+  if (missing.length) {
+    throw new ExportFormatError(`missing column${missing.length > 1 ? 's' : ''}: ${missing.join(', ')}. Check that this is Give Lively's attendee export`)
+  }
   return { header, columns, phoneColumns }
 }
 
