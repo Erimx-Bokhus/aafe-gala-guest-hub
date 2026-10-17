@@ -9,6 +9,13 @@ export const OVERLAP_MS = 10 * 60 * 1000
 /** Where the next poll starts reading: null (everything) on the first run. */
 export const pollStart = (cursorMs: number | null | undefined) => (cursorMs ? cursorMs - OVERLAP_MS : null)
 
+/** What staff see when the sync can't run; the raw detail goes only to givelively_sync_state.last_error. */
+export const NOT_CONNECTED = "Give Lively isn't connected: its keys aren't set in Supabase. Ask your technical partner."
+/** A poll Give Lively refused (404: a wrong org ID or API key) or that never got an answer (null) or a good one. */
+export const pollFailure = (status: number | null) => (status === 404
+  ? "Give Lively didn't accept AAFE's org ID or API key. Ask your technical partner to check them."
+  : "Couldn't reach Give Lively. Try again in a few minutes; the 15-minute schedule keeps trying.")
+
 /** An error message with the API key taken out: a network error can quote the request URL, which contains the key. */
 export const withoutKey = (message: string, key: string) =>
   key ? message.replaceAll(encodeURIComponent(key), '***').replaceAll(key, '***') : message
