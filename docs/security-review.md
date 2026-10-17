@@ -8,7 +8,7 @@ the pull request that adds this file.
 | --- | --- |
 | 1. Roles on every page and server function | Done: 4 findings fixed |
 | 2. Sponsor links and QR e-tickets (hard rule 6) | Done: 2 findings fixed |
-| 3. Sign-in limits | Guide written; waits for stable's settings to be read from the Supabase dashboard |
+| 3. Sign-in limits | Done: stable's settings confirmed Oct 16; guide written |
 | 4. Dependency scan | Done: nothing the apps ship; 8 build-tool findings explained |
 | 5. Supabase security advisors | Done: 3 notices, each explained |
 | 6. No secrets in code or built apps | Done: clean |
@@ -66,8 +66,17 @@ night, staff and volunteers couldn't get their codes. The guide now says what to
 step 2, "Sign-in on gala night"): custom SMTP through Resend, an hourly email limit above the number of people signing
 in, codes that expire within an hour, and iPads signed in before doors open.
 
-**Open:** read stable's three settings (SMTP, email rate limit, code expiry) from the Supabase dashboard and record them
-here. Nightly's sign-in settings are still to be set (sign-ups off, the code in the email, Resend, its addresses).
+Stable's settings, read from the Supabase dashboard on Oct 16:
+
+| Setting | Stable | Enough for gala night? |
+| --- | --- | --- |
+| Email sender | Custom SMTP on, through a team Gmail account (sender "AAFE Gala (test)") | Yes for the prototype: codes reach any address. Gmail is a personal sender (about 500 emails a day, and Supabase warns about deliverability), so AAFE's project uses Resend with AAFE's own domain |
+| Emails per hour | 30 | Yes: fewer staff and volunteers than that sign in within an hour |
+| Sign-ins, and code checks | 30 per 5 minutes per IP address, each | Yes, but every iPad at the venue shares one address: sign them in before doors open |
+| Time between emails to one person | 60 seconds | Yes: a second "send me a code" waits a minute |
+| Code expiry | 3600 seconds (an hour), 6 digits | Yes |
+
+Nightly's sign-in settings are still to be set (sign-ups off, the code in the email, the sender, its addresses).
 
 ## 4. Dependencies
 
