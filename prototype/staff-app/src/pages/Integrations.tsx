@@ -56,11 +56,12 @@ export default function Integrations() {
   const lastSync = db.salesforce_sync.map((s) => s.last_synced_at).filter(Boolean).sort().at(-1)
   // Unsent emails from staff_email_queue(): drafts to approve, approved ones waiting for the sender, and failed ones.
   const [queue, setQueue] = useState<QueuedEmail[]>([])
+  const [queueFailed, setQueueFailed] = useState(false)
   const managers = canDo(user.role, 'emailQueue')
   useEffect(() => {
     if (!managers) return
     let on = true
-    api.emailQueue().then((q) => { if (on) setQueue(q) }, () => {})
+    api.emailQueue().then((q) => { if (on) { setQueue(q); setQueueFailed(false) } }, () => { if (on) setQueueFailed(true) })
     return () => { on = false }
   }, [api, db, managers])
   const drafts = queue.filter((e) => e.state === 'draft')
@@ -76,7 +77,8 @@ export default function Integrations() {
   }
   const pullNow = () => once('pull', () => api.pullGiveLively().then((c) => { setLastPull(new Date().toISOString()); toast(pullSummary(c)) }))
 
-  const syncNow = () => once('sync', () => api.syncSalesforce().then((r) => toast(r.failed ? `Salesforce: ${r.sent} sent, ${r.failed} failed (${r.first_error})` : `Salesforce: ${r.sent} record${r.sent === 1 ? '' : 's'} sent`)))
+  // Salesforce's own reason for a record it refused stays in the sync log; staff get what to do.
+  const syncNow = () => once('sync', () => api.syncSalesforce().then((r) => toast(r.failed ? `Salesforce: ${r.sent} sent, ${r.failed} not sent. Try Sync now later.` : `Salesforce: ${r.sent} record${r.sent === 1 ? '' : 's'} sent`)))
 
   return (
     <div>
@@ -128,6 +130,7 @@ export default function Integrations() {
 
         <section className="card overflow-hidden xl:col-span-2">
           <div className="border-b border-navy-100 px-5 py-3"><div className="flex flex-wrap items-center justify-between gap-2"><h2 className="font-semibold text-navy-900">Email log</h2>{managers && <button className="btn-ghost btn-sm" data-testid="draft-reminders" onClick={remind}><BellRing size={14} /> Draft guest-list reminders</button>}</div><p className="text-xs text-navy-500">Nothing sends on its own. Give Lively purchases, pledges and payments create a draft guest-list email; staff approve or discard it below. QR invitations and resent links are sent by the staff member who reviews them.</p></div>
+          {queueFailed && <p className="border-b border-navy-100 bg-red-50 px-5 py-3 text-sm text-red-800" role="alert" data-testid="email-queue-failed">Couldn’t load the emails waiting for approval. Reload the page; if it keeps happening, ask the gala admin.</p>}
           {queue.length > 0 && (
             <div className="border-b border-navy-100 bg-brand-50 px-5 py-3" data-testid="email-drafts">
               <h3 className="text-sm font-semibold text-navy-900">Waiting for approval ({drafts.length}){queue.length > drafts.length && <span className="font-normal text-navy-600"> · {queue.length - drafts.length} approved or stuck</span>}</h3>
@@ -147,7 +150,7 @@ export default function Integrations() {
                     ) : e.state === 'approved' ? (
                       <Pill tone="gray">Approved by {e.approved_by} · sending</Pill>
                     ) : (
-                      <span className="flex items-center gap-2"><Pill tone="red">Not sent after {e.attempts} tries{e.last_error ? `: ${e.last_error}` : ''}</Pill><button className="btn-ghost btn-sm" onClick={() => void act(api.cancelEmail(e.id), 'Draft discarded')}>Discard</button></span>
+                      <span className="flex items-center gap-2"><span className="max-w-md text-xs font-medium text-red-800" title={e.last_error ?? undefined}>Not sent after {e.attempts} tries. Check the address, discard it and send again; if it fails again, ask the technical partner.</span><button className="btn-ghost btn-sm" onClick={() => void act(api.cancelEmail(e.id), 'Draft discarded')}>Discard</button></span>
                     )}
                   </li>
                 ))}

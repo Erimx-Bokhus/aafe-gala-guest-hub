@@ -139,21 +139,40 @@ export const ROLES: Record<Exclude<keyof StaffApi, 'live'>, Role[]> = {
 }
 export const canDo = (role: Role, action: keyof typeof ROLES) => ROLES[action].includes(role)
 
+const messageOf = (e: unknown) =>
+  (e instanceof Error ? e.message : typeof e === 'object' && e && 'message' in e ? String((e as { message: unknown }).message) : String(e)) || ''
+const NETWORK = /Failed to fetch|Load failed|NetworkError|fetch failed/i
+/** Fixed answers, checked in order: the guest-not-on-the-list rule comes before the general not-found one. */
+const PLAIN: [RegExp, string][] = [
+  [NETWORK, 'Couldn’t reach AAFE’s database. Check the internet connection and try again.'],
+  [/JWT expired|invalid JWT/i, 'Your sign-in has expired. Sign out and sign in again; this change wasn’t saved.'],
+  [/^forbidden$/, 'Your role can’t do that.'],
+  [/^seat_taken$/, 'That seat is already taken.'],
+  [/^no_open_gala/, 'No gala is open right now. Ask a gala admin to check the gala’s status.'],
+  [/^not_found: guest is not on this gala/, 'This guest is no longer on tonight’s list (their order may have been cancelled). Ask a gala admin, or add an approved exception.'],
+  [/^not_found/, 'That record wasn’t found. It may have changed; the page has been refreshed.'],
+  [/^expired/, 'This ticket’s QR code has expired. Check the guest in by name.'],
+]
+
 /** Plain-language text for the errors the staff_* functions raise ('forbidden', 'seat_taken', 'invalid_input: …'). */
 export function errorText(e: unknown): string {
-  const m = (e instanceof Error ? e.message : typeof e === 'object' && e && 'message' in e ? String((e as { message: unknown }).message) : String(e)) || ''
-  if (m === 'forbidden') return 'Your role can’t do that.'
-  // "forbidden: only Kenji Abe or a gala admin can undo this check-in": the server's own reason says more.
-  const reason = m.match(/^forbidden:\s*(.+)$/)
-  if (reason) return reason[1].charAt(0).toUpperCase() + reason[1].slice(1) + '.'
-  if (m === 'seat_taken') return 'That seat is already taken.'
-  if (m === 'not_found' || m.startsWith('not_found')) return 'That record wasn’t found. It may have changed; the page has been refreshed.'
-  if (m.startsWith('expired')) return 'That QR code has expired.'
-  // not_configured / givelively_error: a server function's own explanation (its settings aren't set, Give Lively unreachable).
-  const detail = m.match(/^(?:invalid_input|invalid_transition|seat_locked|not_configured|givelively_error):\s*(.+)$/)
-  if (detail) return detail[1].charAt(0).toUpperCase() + detail[1].slice(1) + '.'
+  const m = messageOf(e)
+  const plain = PLAIN.find(([re]) => re.test(m))
+  if (plain) return plain[1]
+  // "forbidden: only Kenji Abe or a gala admin can undo this check-in", or a server function's own explanation
+  // (not_configured: its settings aren't set; givelively_error: Give Lively unreachable): the server's reason says more.
+  const reason = m.match(/^(?:forbidden|invalid_input|invalid_transition|seat_locked|not_configured|givelively_error):\s*(.+)$/)
+  if (reason) {
+    const r = reason[1]
+    return r.charAt(0).toUpperCase() + r.slice(1) + (/[.!?]$/.test(r) ? '' : '.')   // one final period, never two
+  }
   return 'Something went wrong. Try again, or ask the gala admin.'
 }
+
+/** A failed check-in on the staff app's check-in page: with the internet down, it says what still works at the door. */
+export const checkInErrorText = (e: unknown) => (NETWORK.test(messageOf(e))
+  ? 'Not checked in. If the internet is down, use the iPad check-in app (it works offline) or the printed list.'
+  : errorText(e))
 
 const forbidden = () => Promise.reject(new Error('forbidden'))
 
@@ -388,7 +407,8 @@ export function demoApi(user: StaffUser, update: (fn: (d: DB) => DB) => void, fu
 export function liveApi(client: SupabaseClient, reload: () => Promise<void>): StaffApi {
   const call = async <T = unknown>(fn: string, args: Record<string, unknown>): Promise<T> => {
     const { data, error } = await client.rpc(fn, args)
-    if (error) { if (error.message.startsWith('not_found')) void reload(); throw new Error(error.message) }
+    // Gone or changed since this page loaded: reload so staff see the latest before they try again.
+    if (error) { if (/^(?:not_found|invalid_transition)/.test(error.message)) void reload(); throw new Error(error.message) }
     return data as T
   }
   const write = async (fn: string, args: Record<string, unknown>) => { await call(fn, args); await reload() }
@@ -623,6 +643,7 @@ export async function loadLiveDb(client: SupabaseClient, user: StaffUser): Promi
   if (user.role === 'check_in_volunteer') {
     const { data, error } = await client.rpc('staff_checkin_snapshot')
     if (error) throw new Error(error.message)
+    if (data == null) throw new Error('no_open_gala')   // the server answers null when no gala is open
     return volunteerDb(data as CheckinSnapshot, user)
   }
   const [lists, audit, cur] = await Promise.all([
@@ -637,7 +658,7 @@ export async function loadLiveDb(client: SupabaseClient, user: StaffUser): Promi
   if (cur.error) throw new Error(cur.error.message)
   const db = Object.fromEntries(TABLES.map((t, i) => [t, lists[i]])) as unknown as Omit<DB, 'meta' | 'audit_log'>
   const current = db.gala_events.find((e) => e.id === cur.data)
-  if (!current) throw new Error('not_found: no open gala in the database')
+  if (!current) throw new Error('no_open_gala')
   // Numbers come back from Postgres numeric columns as strings in some setups; the pages do arithmetic on them.
   const num = <T extends object>(rows: T[], keys: (keyof T)[]) => rows.map((r) => ({ ...r, ...Object.fromEntries(keys.map((k) => [k, Number(r[k] ?? 0)])) }))
   return {
