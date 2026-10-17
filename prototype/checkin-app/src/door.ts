@@ -27,7 +27,13 @@ export interface Gala { id: string; name: string; event_date: string; doors_time
 /** `handle` names the check-in for Undo. */
 export interface Arrival { handle: string; at: string; by: string; queued: boolean }
 export interface ExceptionRow { handle: string; name: string; type: string; at: string; by: string; queued: boolean }
-export interface DoorStatus { online: boolean | null; pending: number }
+export interface DoorStatus {
+  online: boolean | null; pending: number
+  /** Reachable, but AAFE's database won't take this iPad's check-ins (sign-in expired, role removed): ask a gala admin. */
+  refused?: boolean
+  /** The gala closed while the door was open: the list has left the iPad. */
+  closed?: boolean
+}
 
 export interface Door {
   gala: Gala
