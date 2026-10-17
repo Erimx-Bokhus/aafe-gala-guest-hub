@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type MouseEvent } from 'react'
+import { useEffect, useMemo, useState, type ChangeEvent, type MouseEvent } from 'react'
 import { Award, CheckCircle2, CircleDashed, Clock, Facebook, Instagram, Linkedin, Lock, Mail, MapPin, Pencil, Phone, Plus, Twitter, Youtube } from 'lucide-react'
 import { Field, Modal, Toast, fmtDate, money } from '@shared/ui'
 import type { DB } from '@shared/types'
@@ -9,8 +9,6 @@ import { namesLeftText } from './namesLeft'
 import { NONE, parseAccessibilityNeeds, parseDietaryNeeds, serializeAccessibilityNeeds, serializeDietaryNeeds, type AccessibilityOption, type DietaryOption } from '@shared/guestNeeds'
 import { LIVE, fetchPortalView, getPortalView, removeAttendee, removeAttendeeLive, saveAttendee, saveAttendeeLive, type AttendeeInput, type PortalView } from './portalApi'
 import Hero, { MissionStrip } from './Hero'
-import WelcomeScreen from './WelcomeScreen'
-import { dismissPortalWelcome, shouldShowPortalWelcome } from './portalWelcome'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const EMPTY: AttendeeInput = { first_name: '', last_name: '', title: '', organization: '', email: '', dietary_needs: '', accessibility_needs: '' }
@@ -195,15 +193,9 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
   const [editing, setEditing] = useState<number | null>(null)
   const [removing, setRemoving] = useState<number | null>(null)
   const [contactOpen, setContactOpen] = useState(false)
-  const [welcomeOpen, setWelcomeOpen] = useState(() => shouldShowPortalWelcome(token))
   const [toast, setToast] = useState<string | null>(null)
   const [justSaved, setJustSaved] = useState(false)
   useEffect(() => { if (LIVE) { setLiveView(undefined); fetchPortalView(token).then(setLiveView, () => setLiveView('failed')) } }, [token])
-  useEffect(() => { setWelcomeOpen(shouldShowPortalWelcome(token)) }, [token])
-  const closeWelcome = useCallback(() => {
-    dismissPortalWelcome(token)
-    setWelcomeOpen(false)
-  }, [token])
   const view = LIVE ? liveView : localView
   // Why a save was refused, without saying more than the sponsor should know (a checked-in seat is just "locked").
   const saveProblem = (e: unknown) => {
@@ -456,18 +448,6 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
         {contactOpen && <ContactPanel lang={lang} onClose={() => setContactOpen(false)} />}
       </Modal>
       <Toast msg={toast} onDone={() => setToast(null)} />
-      {welcomeOpen && <WelcomeScreen
-        lang={lang}
-        invitationText={t.invitationFallback}
-        title={t.invitationTitle(view.organization)}
-        description={t.invitationBody}
-        date={eventDate.toLocaleDateString(loc, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
-        doors={view.event.doors ? t.doorsAt(view.event.doors) : undefined}
-        venue={venueName}
-        city={venueCity || undefined}
-        action={t.viewGuestList}
-        onClose={closeWelcome}
-      />}
     </main>
   )
 }
