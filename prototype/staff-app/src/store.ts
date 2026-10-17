@@ -58,7 +58,7 @@ export function assignSeat(db: DB, actor: string, guestId: string, tableId: stri
   const t = db.event_tables.find((x) => x.id === tableId)
   const reprint = g.badge_status === 'printed' && (g.table_id !== tableId || g.seat_number !== seatNo)
   return addAudit({ ...db, guests: db.guests.map((x) => (x.id === guestId ? { ...x, table_id: tableId, seat_number: seatNo, badge_status: reprint ? 'reprint_needed' as const : x.badge_status, updated_at: nowIso() } : x)) },
-    { actor_type: 'staff', actor, entity: 'guest', entity_id: guestId, order_id: g.order_id, action: tableId ? 'seat.assigned' : 'seat.unassigned', from_state: g.table_id ? `${g.table_id}/${g.seat_number}` : null, to_state: tableId ? `${tableId}/${seatNo}` : null, guest_visible: false, summary: tableId ? `${name(g)} seated at Table ${t?.number}, seat ${seatNo}.` : `${name(g)} removed from seating chart.` })
+    { actor_type: 'staff', actor, entity: 'guest', entity_id: guestId, order_id: g.order_id, action: tableId ? 'seat.assigned' : 'seat.unassigned', from_state: g.table_id ? `${g.table_id}/${g.seat_number}` : null, to_state: tableId ? `${tableId}/${seatNo}` : null, guest_visible: false, summary: tableId ? `${name(g)} seated at Table ${t?.number}, seat ${seatNo}.` : `${name(g)} no longer has a table.` })
 }
 
 /** Seat every unseated guest of an order at one table (first open seats). */

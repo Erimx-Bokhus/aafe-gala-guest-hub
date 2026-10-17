@@ -12,7 +12,7 @@ the pull request that adds this file.
 | 4. Dependency scan | Done: nothing the apps ship; 8 build-tool findings explained |
 | 5. Supabase security advisors | Done: 3 notices, each explained |
 | 6. No secrets in code or built apps | Done: clean |
-| 7. Data-handling promises | 5 fixed in code or wording; **retention waits for AAFE (Oct 19)** |
+| 7. Data-handling promises | 5 fixed in code or wording; **retention waits for AAFE's answer on the 60-day window** |
 
 ## 1. Roles
 
@@ -127,8 +127,10 @@ Fixed:
 
 Open:
 - **Retention is not built.** The promise is to delete guests' contact, food and access details within 60 days of the
-  gala, copies included (the change log's old values, Give Lively's records, the email log, review items). AAFE decides on
-  Oct 19 whether food and access details are kept from year to year; the deletion is built then. Gate 2 stays open until
+  gala, copies included (the change log's old values, Give Lively's records, the email log, review items). Whether food and
+  access details go with them or are kept year to year is Natalie's call (pending in `decisions.md`); the deletion is built
+  once AAFE confirms the window. Gate 2 stays open until
   it is.
-- **Guest email: optional or required?** The sponsor portal requires it; the promise says optional. On the Oct 19 list.
+- **Guest email: optional or required?** The sponsor portal requires it; the promise says optional. A team decision, not
+  AAFE's (off the Oct 19 list, Oct 17); it goes in `decisions.md` when written.
 - Low: a guest keeps "last updated by"; where a guest first came from is in the change log, not on the guest.

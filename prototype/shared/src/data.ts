@@ -4,6 +4,7 @@ import small from './seed.json'
 import fullAsSent from './seed.full-as-sent.json'
 import fullFixed from './seed.full-fixed.json'
 import type { AuditEntry, DB, GuestType, PayMethod } from './types'
+import { supabase } from './supabase'
 
 // The three labeled demo data sets (decisions Oct 7-8), one at a time. The same sets load into Supabase
 // with npm run db:load -- <set>.
@@ -12,6 +13,9 @@ export type DemoSet = keyof typeof DEMO_SET_LABEL
 const DEMO_DATA: Record<DemoSet, unknown> = { small, 'full-as-sent': fullAsSent, 'full-fixed': fullFixed }
 const DEMO_KEY = 'aafe-demo-data'
 export function demoSet(): DemoSet {
+  // ponytail: the hosted test projects are loaded with `npm run db:load full-fixed`, so a connected build lists that
+  // set's sample links (the portal's landing page), the ones that open. Another set loaded there: change this line.
+  if (supabase) return 'full-fixed'
   try { const v = window.localStorage.getItem(DEMO_KEY); if (v && v in DEMO_SET_LABEL) return v as DemoSet } catch { /* storage blocked */ }
   return 'small'
 }
@@ -80,11 +84,10 @@ export const staffName = (db: DB, id: string) => db.staff_users.find((s) => s.id
 export function orderMoney(db: DB, orderId: string) {
   const o = db.orders.find((x) => x.id === orderId)!
   const pays = db.payments.filter((p) => p.order_id === orderId).sort((a, b) => a.received_at.localeCompare(b.received_at))
-  const paid = pays.reduce((s, p) => s + p.gross_amount, 0)
-  const applied = pays.reduce((s, p) => s + p.original_amount, 0)
+  const paid = pays.reduce((s, p) => s + Math.max(p.original_amount - p.refunded_amount, 0), 0)
   const fees = pays.reduce((s, p) => s + p.transaction_fee_amount, 0)
   const net = pays.reduce((s, p) => s + p.net_amount, 0)
-  const balance = Math.max(0, o.commitment_amount - applied)
+  const balance = o.status === 'cancelled' || o.status === 'comp' ? 0 : Math.max(0, o.commitment_amount - paid)
   return { pays, paid, fees, net, balance, commitment: o.commitment_amount }
 }
 

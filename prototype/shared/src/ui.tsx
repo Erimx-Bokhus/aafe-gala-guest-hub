@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { AArrowDown, AArrowUp, Globe, Moon, Sun, X } from 'lucide-react'
 import { chooseDemoSet, DEMO_SET_LABEL, demoSet, type DemoSet } from './data'
+import { supabase } from './supabase'
 
 // ---------- hash router (works on any static host) ----------
 // Hash router that also works inside sandboxed preview iframes (where the host page
@@ -72,11 +73,15 @@ export function LanguageSelect<T extends string>({ value, onChange, options, lab
 }
 
 // ---------- banners / pills ----------
-/** dataSwitch: the staff app and portal let you pick a demo data set; the iPad app has its own door list. */
+/**
+ * dataSwitch: the staff app and portal let you pick a demo data set; the iPad app has its own door list. Only in demo
+ * mode: a build connected to Supabase reads whatever set the database holds, so the menu would change nothing and
+ * send testers to links that set doesn't have (Oct 17, a Small-demo link "expired" on the hosted portal).
+ */
 export function PrototypeBanner({ dataSwitch = false }: { dataSwitch?: boolean }) {
   return <div role="note" className="proto-banner no-print px-4 py-1.5 text-center text-xs font-medium tracking-wide">
     Capstone prototype — synthetic demonstration data only. Not a production AAFE system.
-    {dataSwitch && <label className="ml-2 inline-flex items-center gap-1">Demo data:
+    {dataSwitch && !supabase && <label className="ml-2 inline-flex items-center gap-1">Demo data:
       <select value={demoSet()} onChange={(e) => chooseDemoSet(e.target.value as DemoSet)} className="rounded bg-transparent font-semibold underline decoration-dotted">
         {(Object.keys(DEMO_SET_LABEL) as DemoSet[]).map((k) => <option key={k} value={k}>{DEMO_SET_LABEL[k]}</option>)}
       </select></label>}
