@@ -1097,6 +1097,47 @@ end $$;
 -- code hash (so a scanned code is checked on the iPad), and who has arrived. No email, phone, payment,
 -- dietary needs, staff notes, or accessibility details: only a yes/no flag, since the list is saved on the iPad. A hash can't be turned back into a working code. Like checkin_list(),
 -- it is a read, so it isn't logged (the iPad refreshes it often).
+-- One door-list line per guest of a gala: the iPad's list (staff_checkin_snapshot) and its changes (door_sync) are built
+-- here, so the two can't drift apart. p_since: only guests whose line could have changed since that transaction, i.e.
+-- any of the seven rows behind it (guest, order, sponsor, level, table, seat, check-in) was written at or after it
+-- (Sync near the top explains the cursor). Runs with the caller's rights; only the two door functions call it.
+create or replace function door_entries(p_event text, p_since xid8) returns table (id text, last_name text, first_name text, entry jsonb)
+language sql stable set search_path = public as $$
+  select g.id, g.last_name, g.first_name, jsonb_build_object(
+    'id', g.id, 'order_id', g.order_id, 'first_name', g.first_name, 'last_name', g.last_name, 'display_name', g.display_name, 'title', g.title,
+    'organization', g.organization, 'sponsor', sp.organization_name, 'package', tr.name, 'guest_type', g.guest_type,
+    'table_number', t.number, 'seat_number', g.seat_number, 'has_access_needs', has_need(g.accessibility_needs),
+    'qr_hash', case when s.qr_token_expires_at > now() then s.qr_token_hash end,
+    'qr_expires_at', case when s.qr_token_expires_at > now() then s.qr_token_expires_at end,
+    'arrived', g.attendance_status = 'checked_in' or ci.id is not null,
+    'checkin_id', ci.id, 'checkin_client_id', ci.client_id, 'checked_in_at', ci.checked_in_at, 'checked_in_by', ci.checked_in_by, 'device', ci.device)
+  from guests g join orders o on o.id = g.order_id join sponsors sp on sp.id = o.sponsor_id
+  join sponsorship_tiers tr on tr.id = o.tier_id
+  left join event_tables t on t.id = g.table_id
+  left join seats s on s.guest_id = g.id and s.status <> 'cancelled'
+  left join check_ins ci on ci.guest_id = g.id and ci.event_id = p_event
+  where o.event_id = p_event and o.status <> 'cancelled'
+    and (p_since is null or greatest(g.sync_txid, o.sync_txid, sp.sync_txid, tr.sync_txid, t.sync_txid, s.sync_txid, ci.sync_txid) >= p_since)
+$$;
+
+-- Unnamed sponsor seats, so the desk knows which sponsors may bring a walk-in.
+create or replace function door_unnamed_seats(p_event text) returns jsonb
+language sql stable set search_path = public as $$
+  select coalesce(jsonb_agg(jsonb_build_object('order_id', o.id, 'sponsor', sp.organization_name, 'count', u.n) order by sp.organization_name), '[]')
+  from (select order_id, count(*)::int n from seats where guest_id is null and status <> 'cancelled' group by order_id) u
+  join orders o on o.id = u.order_id join sponsors sp on sp.id = o.sponsor_id
+  where o.event_id = p_event and o.status <> 'cancelled'
+$$;
+
+-- Walk-ins and other approved exceptions so far tonight (their notes stay off the iPad).
+create or replace function door_exceptions(p_event text) returns jsonb
+language sql stable set search_path = public as $$
+  select coalesce(jsonb_agg(jsonb_build_object('id', ci.id, 'client_id', ci.client_id, 'name', ci.arrival_name, 'type', ci.type,
+           'order_id', ci.order_id, 'checked_in_at', ci.checked_in_at, 'checked_in_by', ci.checked_in_by, 'device', ci.device)
+         order by ci.checked_in_at desc), '[]')
+  from check_ins ci where ci.event_id = p_event and ci.guest_id is null
+$$;
+
 create or replace function staff_checkin_snapshot() returns jsonb
 language plpgsql stable security definer set search_path = public as $$
 declare v jsonb;
@@ -1106,36 +1147,50 @@ begin
     'event_id', e.id, 'event_name', e.name, 'generated_at', now(),
     -- For the iPad's sign-in screen; a 'closed' gala tells the iPad to clear its saved list.
     'event_date', e.event_date, 'doors_time', e.doors_time, 'venue_name', e.venue_name, 'status', e.status,
-    'guests', coalesce((
-      select jsonb_agg(jsonb_build_object(
-        'id', g.id, 'order_id', g.order_id, 'first_name', g.first_name, 'last_name', g.last_name, 'display_name', g.display_name, 'title', g.title,
-        'organization', g.organization, 'sponsor', sp.organization_name, 'package', tr.name, 'guest_type', g.guest_type,
-        'table_number', t.number, 'seat_number', g.seat_number, 'has_access_needs', has_need(g.accessibility_needs),
-        'qr_hash', case when s.qr_token_expires_at > now() then s.qr_token_hash end,
-        'qr_expires_at', case when s.qr_token_expires_at > now() then s.qr_token_expires_at end,
-        'arrived', g.attendance_status = 'checked_in' or ci.id is not null,
-        'checkin_id', ci.id, 'checkin_client_id', ci.client_id, 'checked_in_at', ci.checked_in_at, 'checked_in_by', ci.checked_in_by, 'device', ci.device)
-        order by g.last_name, g.first_name)
-      from guests g join orders o on o.id = g.order_id join sponsors sp on sp.id = o.sponsor_id
-      join sponsorship_tiers tr on tr.id = o.tier_id
-      left join event_tables t on t.id = g.table_id
-      left join seats s on s.guest_id = g.id and s.status <> 'cancelled'
-      left join check_ins ci on ci.guest_id = g.id and ci.event_id = e.id
-      where o.event_id = e.id and o.status <> 'cancelled'), '[]'),
-    -- Unnamed sponsor seats, so the desk knows which sponsors may bring a walk-in.
-    'unnamed_seats', coalesce((
-      select jsonb_agg(jsonb_build_object('order_id', o.id, 'sponsor', sp.organization_name, 'count', u.n) order by sp.organization_name)
-      from (select order_id, count(*)::int n from seats where guest_id is null and status <> 'cancelled' group by order_id) u
-      join orders o on o.id = u.order_id join sponsors sp on sp.id = o.sponsor_id
-      where o.event_id = e.id and o.status <> 'cancelled'), '[]'),
-    -- Walk-ins and other approved exceptions so far tonight (their notes stay off the iPad).
-    'exceptions', coalesce((
-      select jsonb_agg(jsonb_build_object('id', ci.id, 'client_id', ci.client_id, 'name', ci.arrival_name, 'type', ci.type,
-               'order_id', ci.order_id, 'checked_in_at', ci.checked_in_at, 'checked_in_by', ci.checked_in_by, 'device', ci.device)
-             order by ci.checked_in_at desc)
-      from check_ins ci where ci.event_id = e.id and ci.guest_id is null), '[]'))
+    'guests', coalesce((select jsonb_agg(d.entry order by d.last_name, d.first_name) from door_entries(e.id, null) d), '[]'),
+    'unnamed_seats', door_unnamed_seats(e.id),
+    'exceptions', door_exceptions(e.id))
   into v from gala_events e where e.id = current_event_id();
   return v;
+end $$;
+
+-- The door list by changes (Gate 3, data use, part 3): what staff_checkin_snapshot sends, but after the first call only
+-- what changed since the cursor (the same cursor as staff_sync: nothing still being saved is missed). The iPad merges
+-- 'guests' into its saved list by id and drops 'removed'; 'unnamed_seats' and 'exceptions' come whole, and only when
+-- something under them changed (null otherwise). Everything comes again with no cursor, a different gala, or a cursor
+-- older than pruned tombstones; 'count' lets the iPad check its copy. Same fields as the snapshot, for volunteers too.
+-- null: no gala is open. A check-in deleted without touching its guest would be missed: staff_undo_check_in, the only
+-- delete, also resets the guest (test-door-sync.mjs holds it).
+create or replace function door_sync(p_cursor xid8 default null, p_event text default null) returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+declare e gala_events; v_full boolean;
+begin
+  perform require_staff(array['gala_admin','relationship_manager','check_in_volunteer']);
+  select * into e from gala_events where id = current_event_id();
+  if e.id is null then return null; end if;
+  v_full := p_cursor is null or p_cursor <= (select floor from sync_state where id = 1) or p_event is distinct from e.id;
+  return jsonb_build_object(
+    'cursor', pg_snapshot_xmin(pg_current_snapshot())::text, 'full', v_full,
+    'event_id', e.id, 'event_name', e.name, 'generated_at', now(),
+    'event_date', e.event_date, 'doors_time', e.doors_time, 'venue_name', e.venue_name, 'status', e.status,
+    'guests', coalesce((select jsonb_agg(d.entry order by d.last_name, d.first_name)
+                          from door_entries(e.id, case when v_full then null else p_cursor end) d), '[]'),
+    -- Off the list since the cursor: deleted, or their order was cancelled or moved to another gala.
+    'removed', case when v_full then '[]'::jsonb else coalesce((select jsonb_agg(x.id) from (
+        select d.row_id id from sync_deleted d where d.table_name = 'guests' and d.sync_txid >= p_cursor
+          and not exists (select 1 from guests g where g.id = d.row_id)
+        union
+        select g.id from guests g join orders o on o.id = g.order_id
+         where greatest(g.sync_txid, o.sync_txid) >= p_cursor and (o.event_id <> e.id or o.status = 'cancelled')) x), '[]') end,
+    'unnamed_seats', case when v_full or exists (select 1 from seats where sync_txid >= p_cursor)
+                            or exists (select 1 from orders where sync_txid >= p_cursor)
+                            or exists (select 1 from sponsors where sync_txid >= p_cursor)
+                            or exists (select 1 from sync_deleted where table_name in ('seats', 'orders') and sync_txid >= p_cursor)
+                          then door_unnamed_seats(e.id) end,
+    'exceptions', case when v_full or exists (select 1 from check_ins where sync_txid >= p_cursor)
+                         or exists (select 1 from sync_deleted where table_name = 'check_ins' and sync_txid >= p_cursor)
+                       then door_exceptions(e.id) end,
+    'count', (select count(*) from guests g join orders o on o.id = g.order_id where o.event_id = e.id and o.status <> 'cancelled'));
 end $$;
 
 -- Undo a check-in from the iPad (Oct 8): only the staff member who made it, or a gala admin. p_id is the
@@ -2763,7 +2818,7 @@ begin
               'staff_update_gala_event','staff_set_material_status','staff_set_order_deadline','salesforce_outbox','salesforce_mark_synced',
               'comp_level','staff_save_level','staff_copy_levels','staff_retire_level','staff_start_gala',
               'report_ny','report_paid','staff_report_attendance','staff_report_sponsors','staff_report_needs','staff_report_payments','staff_report_guests',
-              'staff_sync','sync_touch','sync_tombstone','sync_prune')
+              'staff_sync','sync_touch','sync_tombstone','sync_prune','door_entries','door_unnamed_seats','door_exceptions','door_sync')
   loop
     execute format('revoke all on function %s from public, anon, authenticated', f);
   end loop;
@@ -2792,7 +2847,7 @@ grant execute on function
   staff_add_gala_page(text), staff_remove_gala_page(text),
   staff_resolve_import_review(text, text),
   staff_export_badges(boolean), staff_export_checkin(), staff_export_salesforce(),
-  staff_queue_guest_list_reminders(int), staff_email_queue(), staff_sync(xid8, text)
+  staff_queue_guest_list_reminders(int), staff_email_queue(), staff_sync(xid8, text), door_sync(xid8, text)
   to authenticated;
 
 -- Edge functions (service role)
