@@ -4,6 +4,7 @@ import small from './seed.json'
 import fullAsSent from './seed.full-as-sent.json'
 import fullFixed from './seed.full-fixed.json'
 import type { AuditEntry, DB, GuestType, PayMethod } from './types'
+import { supabase } from './supabase'
 
 // The three labeled demo data sets (decisions Oct 7-8), one at a time. The same sets load into Supabase
 // with npm run db:load -- <set>.
@@ -12,6 +13,9 @@ export type DemoSet = keyof typeof DEMO_SET_LABEL
 const DEMO_DATA: Record<DemoSet, unknown> = { small, 'full-as-sent': fullAsSent, 'full-fixed': fullFixed }
 const DEMO_KEY = 'aafe-demo-data'
 export function demoSet(): DemoSet {
+  // ponytail: the hosted test projects are loaded with `npm run db:load full-fixed`, so a connected build lists that
+  // set's sample links (the portal's landing page), the ones that open. Another set loaded there: change this line.
+  if (supabase) return 'full-fixed'
   try { const v = window.localStorage.getItem(DEMO_KEY); if (v && v in DEMO_SET_LABEL) return v as DemoSet } catch { /* storage blocked */ }
   return 'small'
 }

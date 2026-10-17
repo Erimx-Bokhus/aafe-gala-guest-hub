@@ -5,7 +5,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { loadDB } from '@shared/data'
 import type { DB } from '@shared/types'
 import Portal from './Portal'
-import { portalWelcomeStorageKey, resetPortalWelcomeMemoryForTests } from './portalWelcome'
 import { getPortalView } from './portalApi'
 
 const TOKEN = 'ac-6w9k3p5d'
@@ -16,27 +15,30 @@ function PortalHarness({ initialDb, onDbChange }: { initialDb: DB; onDbChange: (
 }
 
 beforeEach(() => {
-  resetPortalWelcomeMemoryForTests()
   localStorage.clear()
-  localStorage.setItem(portalWelcomeStorageKey(TOKEN), '1')
   window.history.replaceState(null, '', `#/s/${TOKEN}`)
 })
 
 afterEach(() => {
   cleanup()
   localStorage.clear()
-  resetPortalWelcomeMemoryForTests()
   window.history.replaceState(null, '', '#/')
 })
 
 describe('the sponsor link stays a secret, and contact never pretends to send', () => {
-  it('keeps no copy of the sponsor link in browser storage', async () => {
-    localStorage.removeItem(portalWelcomeStorageKey(TOKEN))
-    expect(portalWelcomeStorageKey(TOKEN)).not.toContain(TOKEN)
+  it('opens the guest list header without a welcome dialog', () => {
+    window.history.replaceState(null, '', `#/s/${TOKEN}`)
     render(<PortalHarness initialDb={loadDB()} onDbChange={() => undefined} />)
-    fireEvent.click(screen.getByRole('button', { name: 'View your guest list' }))
-    await waitFor(() => expect(localStorage.getItem(portalWelcomeStorageKey(TOKEN))).toBe('1'))
-    expect(Object.keys(localStorage).some((k) => k.includes(TOKEN) || localStorage.getItem(k)?.includes(TOKEN))).toBe(false)
+    expect(screen.getByRole('heading', { name: 'Your guests' })).toBeTruthy()
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('keeps no copy of the sponsor link in browser storage (hard rule 6)', () => {
+    window.history.replaceState(null, '', `#/s/${TOKEN}`)
+    render(<PortalHarness initialDb={loadDB()} onDbChange={() => undefined} />)
+    for (const store of [localStorage, sessionStorage]) {
+      expect(Object.keys(store).some((k) => k.includes(TOKEN) || store.getItem(k)?.includes(TOKEN))).toBe(false)
+    }
   })
 
   it("contact shows AAFE's gala inbox instead of a form that says sent", () => {
@@ -45,41 +47,6 @@ describe('the sponsor link stays a secret, and contact never pretends to send', 
     expect(screen.getByTestId('contact-email').getAttribute('href')).toBe('mailto:gala@aafe.org')
     expect(screen.queryByTestId('contact-form')).toBeNull()
     expect(screen.queryByTestId('contact-sent')).toBeNull()
-  })
-})
-
-describe('sponsor welcome invitation', () => {
-  it('shows on the first visit, remembers closing, and focuses the guest-list heading', async () => {
-    localStorage.removeItem(portalWelcomeStorageKey(TOKEN))
-    const db = loadDB()
-    const first = render(<PortalHarness initialDb={db} onDbChange={() => undefined} />)
-    const dialog = screen.getByRole('dialog', { name: 'Thank you, Acme Community Partners!' })
-    expect(dialog.getAttribute('aria-modal')).toBe('true')
-    expect(screen.getByText('Your sponsorship makes this night possible. Next, add the names of your guests.')).toBeTruthy()
-
-    fireEvent.click(screen.getByRole('button', { name: 'View your guest list' }))
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Thank you, Acme Community Partners!' })).toBeNull())
-    expect(localStorage.getItem(portalWelcomeStorageKey(TOKEN))).toBe('1')
-    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'Your guests' })))
-
-    first.unmount()
-    render(<PortalHarness initialDb={db} onDbChange={() => undefined} />)
-    expect(screen.queryByRole('dialog', { name: 'Thank you, Acme Community Partners!' })).toBeNull()
-  })
-
-  it('closes with Escape and returns focus to the page', async () => {
-    localStorage.removeItem(portalWelcomeStorageKey(TOKEN))
-    render(<PortalHarness initialDb={loadDB()} onDbChange={() => undefined} />)
-    fireEvent.keyDown(document, { key: 'Escape' })
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Thank you, Acme Community Partners!' })).toBeNull())
-    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'Your guests' })))
-  })
-
-  it('shows when ?welcome=1 is present, even if this token was already dismissed', () => {
-    localStorage.setItem(portalWelcomeStorageKey(TOKEN), '1')
-    window.history.replaceState(null, '', `#/s/${TOKEN}?welcome=1`)
-    render(<PortalHarness initialDb={loadDB()} onDbChange={() => undefined} />)
-    expect(screen.getByRole('dialog', { name: 'Thank you, Acme Community Partners!' })).toBeTruthy()
   })
 })
 
