@@ -6,12 +6,29 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Snapshot, SnapshotGuest } from '@shared/offlineCheckin'
 import type { StaffUser } from '@shared/types'
 
-const server = vi.hoisted(() => ({ snapshot: null as unknown, syncError: null as string | null, lists: 0, undoError: null as { message: string } | null }))
+const server = vi.hoisted(() => ({
+  snapshot: null as Snapshot | null, syncError: null as string | null, lists: 0, undoError: null as { message: string } | null,
+  sent: [] as SnapshotGuest[], cursors: [] as (string | null)[],
+}))
+/** door_sync() for one iPad: everything without a cursor, else the lines changed or gone since its last answer. */
+function doorSync(cursor: string | null) {
+  const s = server.snapshot
+  if (!s) return null
+  const full = cursor === null, before = new Map(server.sent.map((g) => [g.id, JSON.stringify(g)]))
+  server.cursors.push(cursor)
+  server.sent = s.guests
+  return {
+    ...s, cursor: String(server.cursors.length), full, count: s.guests.length,
+    guests: full ? s.guests : s.guests.filter((g) => before.get(g.id) !== JSON.stringify(g)),
+    removed: full ? [] : [...before.keys()].filter((id) => !s.guests.some((g) => g.id === id)),
+    unnamed_seats: full ? s.unnamed_seats : null, exceptions: full ? s.exceptions : null,   // no test here changes these
+  }
+}
 vi.mock('@shared/supabase', () => ({
   supabase: {
-    rpc: async (fn: string, args: { p_items?: { client_id: string }[] }) => {
+    rpc: async (fn: string, args: { p_items?: { client_id: string }[]; p_cursor?: string | null }) => {
       if (fn === 'staff_undo_check_in' && server.undoError) return { data: null, error: server.undoError }
-      if (fn === 'staff_checkin_snapshot') { server.lists++; return { data: server.snapshot, error: null } }
+      if (fn === 'door_sync') { server.lists++; return { data: doorSync(args.p_cursor ?? null), error: null } }
       if (server.syncError) return { data: null, error: { message: server.syncError } }
       return { data: (args.p_items ?? []).map((i) => ({ client_id: i.client_id, status: 'checked_in' })), error: null }
     },
@@ -30,9 +47,9 @@ const list = (guests: SnapshotGuest[], at: string): Snapshot => ({
 })
 const KENJI: StaffUser = { id: 'st-test-door', name: 'Door Tester', email: 'door@example.org', role: 'check_in_volunteer' }
 
-beforeEach(() => { localStorage.clear(); server.syncError = null; server.lists = 0; server.undoError = null })
+beforeEach(() => { localStorage.clear(); server.syncError = null; server.lists = 0; server.undoError = null; server.sent = []; server.cursors = [] })
 afterEach(() => vi.useRealTimers())
-/** The list is fetched once a minute: move the clock past that before a refresh is expected. */
+/** The list is refreshed every 15 seconds: move the clock past that before a refresh is expected. */
 const aMinuteLater = () => { vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(Date.now() + 61_000) }
 
 describe('live door list', () => {
@@ -81,24 +98,34 @@ describe('live door list', () => {
     expect([...door.arrivals().keys()]).toEqual(['g-1'])
   })
 
-  // Gate 3: about 280 KB a fetch on the full gala; every 5 seconds, six iPads would use a large share of the free
-  // plan's 5 GB of data a month in one evening.
-  it('sends check-ins every 5 seconds but fetches the whole list once a minute, or when the connection comes back', async () => {
+  // Gate 3, data use: check-ins go every 5 seconds; other doors' arrivals come every 15, as changes only.
+  it('sends check-ins every 5 seconds but asks for list changes every 15, or when the connection comes back', async () => {
     server.snapshot = list([guest('g-1', 'Ana', 'Diaz'), guest('g-2', 'Ben', 'Ortiz')], '2027-05-20T22:00:00Z')
     const door = (await loadDoor(KENJI))!
     expect(server.lists).toBe(1)
     vi.useFakeTimers({ toFake: ['Date', 'setInterval', 'clearInterval'] })
     door.start()
     door.checkIn(['g-1'], 'search')
-    await vi.advanceTimersByTimeAsync(55_000)              // eleven ticks: check-ins sent, no list
+    await vi.advanceTimersByTimeAsync(10_000)              // two ticks: check-ins sent, no list
     expect(door.status.pending).toBe(0)
     expect(server.lists).toBe(1)
-    await vi.advanceTimersByTimeAsync(10_000)              // past a minute: one list
+    await vi.advanceTimersByTimeAsync(5_000)               // 15 seconds: one ask
     expect(server.lists).toBe(2)
     window.dispatchEvent(new Event('online'))              // back online: catch up at once
     await vi.advanceTimersByTimeAsync(0)
     expect(server.lists).toBe(3)
     door.stop()
+  })
+
+  it('after the first list, asks only for what changed, also after the iPad restarts', async () => {
+    server.snapshot = list([guest('g-1', 'Ana', 'Diaz'), guest('g-2', 'Ben', 'Ortiz')], '2027-05-20T22:00:00Z')
+    await loadDoor(KENJI)
+    server.snapshot = list([guest('g-1', 'Ana', 'Diaz', { arrived: true, checked_in_at: '2027-05-20T23:01:00Z', checked_in_by: 'Door 2', checkin_id: 'c-1' }),
+      guest('g-2', 'Ben', 'Ortiz')], '2027-05-20T23:01:05Z')
+    const door = (await loadDoor(KENJI))!   // the app reopened: the saved list and its cursor are still on the iPad
+    expect(server.cursors).toEqual([null, '1'])
+    expect([...door.arrivals().keys()]).toEqual(['g-1'])
+    expect(door.guests.map((g) => g.last_name)).toEqual(['Diaz', 'Ortiz'])
   })
 
   it('tells "offline" from "AAFE refused" (an expired sign-in), and keeps the check-ins either way', async () => {

@@ -39,7 +39,7 @@ time it opens the app while online.
 ## Run it
 **Live, on Supabase:** copy `.env.example` to `.env.local` with the project URL and anon key (never the service_role
 key; the build refuses it), add the app's address to Supabase → Authentication → URL Configuration → Redirect URLs,
-then `npm run dev:ipad`. The door list comes from `staff_checkin_snapshot()`; nothing is bundled.
+then `npm run dev:ipad`. The door list comes from `door_sync()`: the whole list once, then only what changed (`shared/src/doorSync.ts`); nothing is bundled.
 
 **Demo, no keys:**
 ```
@@ -60,7 +60,7 @@ server through Vite's `/api` proxy, so several iPads share check-ins. Or double-
 | `../shared/public/checkin/` | The install file (`manifest.webmanifest`) and the app icons: AAFE's mark on white |
 | `../shared/public/checkin-sw.js` | The offline helper: keeps a copy of the app on the iPad, never guest data |
 | `src/door.ts` | What the screen needs from either mode (`Door`), and `LIVE`, fixed at build time from the keys |
-| `src/liveDoor.ts` | Live: the list from `staff_checkin_snapshot()`, check-ins through `CheckInDesk` and `staff_sync_check_ins()` (works offline, first arrival wins), QR codes matched on their hash, undo through `staff_undo_check_in()`; the saved list is per person and cleared on sign-out or when the gala closes |
+| `src/liveDoor.ts` | Live: the list from `door_sync()`, by changes every 15 seconds, check-ins through `CheckInDesk` and `staff_sync_check_ins()` (works offline, first arrival wins), QR codes matched on their hash, undo through `staff_undo_check_in()`; the saved list is per person and cleared on sign-out or when the gala closes |
 | `src/demoDoor.ts` | Demo: the bundled door list and the demo sync server; left out of a build with keys |
 | `src/doorlist.json` | The door list: 553 invented guests, only door-safe fields (no email, phone, payment, dietary or notes) |
 | `make_door_list.mjs` | Rebuilds the door list from `shared/src/seed.json` (read the caution at the top first) |
