@@ -67,6 +67,14 @@ describe('reports', () => {
     expect([...rows].sort((a, b) => a.received.localeCompare(b.received)).map((r) => r.received)).toEqual(rows.map((r) => r.received))
   })
 
+  it('payment report totals still match the underlying payment ledger', () => {
+    const rows = demoPayments(db)
+    const payments = db.payments.filter((p) => db.orders.some((o) => o.event_id === cur && o.id === p.order_id))
+    expect(rows.reduce((sum, r) => sum + r.amount, 0)).toBeCloseTo(payments.reduce((sum, p) => sum + p.original_amount, 0), 2)
+    expect(rows.reduce((sum, r) => sum + r.refunded, 0)).toBeCloseTo(payments.reduce((sum, p) => sum + p.refunded_amount, 0), 2)
+    expect(rows.reduce((sum, r) => sum + r.net, 0)).toBeCloseTo(payments.reduce((sum, p) => sum + p.net_amount, 0), 2)
+  })
+
   it('times read as New York time, 24-hour, so they sort, like the database', () => {
     expect(ny('2027-05-20T23:04:00Z')).toBe('2027-05-20 19:04')
     expect(ny('2027-05-21T04:30:00Z')).toBe('2027-05-21 00:30')
