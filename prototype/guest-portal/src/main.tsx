@@ -5,7 +5,6 @@ import '@shared/theme.css'
 import './typography.css'
 import './buttons.css'
 import './hero-glass.css'
-import './welcome.css'
 import App from './App'
 
 createRoot(document.getElementById('root')!).render(<StrictMode><div data-app-ready style={{ display: 'contents' }}><App /></div></StrictMode>)
