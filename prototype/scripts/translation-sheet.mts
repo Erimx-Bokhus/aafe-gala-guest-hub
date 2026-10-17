@@ -33,7 +33,6 @@ export const SAMPLES: Record<string, unknown[]> = {
   balanceOf: ['$15,000', '$25,000'],
   doorsAt: ['6:00 PM'],
   editInSeat: [3],
-  invitationTitle: ['AAFE Foundation'],
   namedOf: [5, 8],
   removeTitle: ['Ana Díaz', 3],
 }
