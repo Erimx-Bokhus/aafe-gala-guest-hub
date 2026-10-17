@@ -156,15 +156,19 @@ function LiveApp({ prefs }: { prefs: Prefs }) {
 
   if (staff === 'checking') return <Waiting prefs={prefs} text="Checking your sign-in…" />
   if (staff === 'out' || staff === 'not-staff') return <LiveSignIn prefs={prefs} notice={staff === 'not-staff' ? 'That account isn’t on the AAFE staff list. Ask the gala admin to add you.'
-    : linkFailed ? 'That sign-in link didn’t work. It works once and expires after about an hour: ask for a new one.' : ''} />
+    : linkFailed ? 'That sign-in link didn’t work. It works once and expires after about an hour: ask for a new one.'
+    : navigator.onLine ? '' : 'This iPad is offline and not signed in. Connect to Wi-Fi to sign in.'} />
   if (door === 'loading') return <Waiting prefs={prefs} text="Loading tonight’s guest list…" />
   if (door === 'closed' || door === 'error') return (
     <Shell prefs={prefs}>
       <div className="mt-10 rounded-2xl border-2 border-navy-100 bg-surface p-6" role="alert">
         <h1 className="text-2xl font-semibold text-navy-900">{door === 'closed' ? 'Tonight’s gala is closed' : 'The guest list didn’t load'}</h1>
-        <p className="mt-2 text-lg text-navy-700">{door === 'closed' ? 'The guest list has been cleared from this iPad.' : 'Check the internet connection, then try again. Nothing was lost.'}</p>
+        <p className="mt-2 text-lg text-navy-700">{door === 'closed'
+          ? 'The guest list has been cleared from this iPad. If guests are still arriving, ask a gala admin to reopen the gala in the staff app, then tap Try again.'
+          : 'Check the internet connection, then try again. Nothing was lost.'}</p>
         <div className="mt-6 flex flex-wrap gap-3">
-          {door === 'error' && <button className="btn-primary tap h-14 px-6 text-base" onClick={() => setStaff({ ...staff })}><RefreshCw size={18} /> Try again</button>}
+          {/* Loads the door again: a reopened gala's list comes back, as does one that failed to load. */}
+          <button className="btn-primary tap h-14 px-6 text-base" onClick={() => setStaff({ ...staff })} data-testid="door-retry"><RefreshCw size={18} /> Try again</button>
           <button className="btn-ghost tap h-14 px-6 text-base" disabled={leaving} onClick={() => void leave()}><LogOut size={18} /> {leaving ? 'Sending check-ins…' : 'Sign out'}</button>
         </div>
       </div>
@@ -190,13 +194,13 @@ function LiveSignIn({ prefs, notice }: { prefs: Prefs; notice: string }) {
     if (sent) {
       // The 6-digit code from the same email: signs this iPad in, even from the Home Screen app.
       try { await verifySignInCode(email, code) }
-      catch { setErr('That code didn’t work. Codes work once and expire after an hour: send a new one.') }
+      catch { setErr(navigator.onLine ? 'That code didn’t work. Codes work once and expire after an hour: send a new one.' : 'No internet connection. Connect to Wi-Fi, then type the code again.') }
       finally { setBusy(false) }
       return
     }
     try { await sendSignInLink(email); setSent(true) }
     // Same message whether or not the email is invited, so the form doesn't reveal who is on the staff list.
-    catch { setErr('We couldn’t send a sign-in email. Check the email, or ask the gala admin to invite you.') }
+    catch { setErr('We couldn’t send a sign-in email. Check the internet connection and the email address; if both are right, ask the gala admin to invite you.') }
     finally { setBusy(false) }
   }
   return (
