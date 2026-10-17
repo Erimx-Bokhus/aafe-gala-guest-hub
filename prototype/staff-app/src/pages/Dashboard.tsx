@@ -38,7 +38,7 @@ export default function Dashboard() {
         <Kpi label="Net to AAFE" value={money(gross - fees, true)} />
         <Kpi label="Seats named" value={`${named} / ${seats.length}`} sub={`${seats.length - named} still unnamed`} />
         <Kpi label="Needs staff review" value={review} sub="Submitted from guest portal" tone="amber" />
-        <Kpi label="Not yet seated" value={unseated} sub={<Link to="/seating" className="text-brand-600 underline">Open seating chart</Link>} />
+        <Kpi label="No table yet" value={unseated} sub={<Link to="/guests" className="text-brand-600 underline">Pick tables in the guest list</Link>} />
         <Kpi label="Arrived" value={arrived} sub="Event-day check-ins" />
       </div>
 
