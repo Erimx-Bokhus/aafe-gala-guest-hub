@@ -38,6 +38,7 @@ const ADMIN_ONLY = ['givelively_raw']
 // One invented row in each table that starts empty, so every table is really probed.
 await db.exec(`
 insert into givelively_raw (transaction_id, payload, import_status) values ('gl-test-1', '{"note": "synthetic"}', 'skipped');
+insert into sync_deleted (table_name, row_id) values ('guests', 'g-test-deleted');
 insert into import_runs (id, event_id, source, started_by) values ('run-test-1', current_event_id(), 'csv', 'test');
 insert into import_review (id, run_id, event_id, reason) values ('rev-test-1', 'run-test-1', current_event_id(), 'refund');
 insert into tier_mappings (id, event_id, givelively_name, name_key, tier_id, created_by)
@@ -122,6 +123,7 @@ const STAFF_FUNCTIONS = {
   staff_export_salesforce: ['gala_admin'], staff_set_order_deadline: ['gala_admin'],
   staff_save_level: ['gala_admin'], staff_copy_levels: ['gala_admin'], staff_retire_level: ['gala_admin'], staff_start_gala: ['gala_admin'],
   staff_report_attendance: ['gala_admin'], staff_report_sponsors: MANAGERS, staff_report_needs: MANAGERS, staff_report_payments: MANAGERS, staff_report_guests: ['gala_admin'],
+  staff_sync: MANAGERS,
 }
 // Return who you are (or nothing), so they need no role check.
 const SELF = ['staff_me', 'staff_role']
@@ -190,7 +192,9 @@ const exposed = (await db.query(`select p.proname f from pg_proc p where p.prona
   and (has_function_privilege('anon', p.oid, 'execute') or has_function_privilege('authenticated', p.oid, 'execute'))`)).rows.map((r) => r.f)
 ok(exposed.length === 1 && exposed[0] === 'staff_role', `only staff_role() is an owner-rights function the API can call: ${exposed}`)
 const moved = (await db.query(`select count(*)::int n from pg_proc where pronamespace = 'private'::regnamespace and prosecdef`)).rows[0].n
-ok(moved === PORTAL.length + Object.keys(STAFF_FUNCTIONS).length + 1, `every portal and staff function, and staff_me, runs from the private schema (${moved})`)
+// staff_sync runs with the caller's rights (its access rules decide what it returns), so it has no private copy.
+const INVOKER = ['staff_sync']
+ok(moved === PORTAL.length + Object.keys(STAFF_FUNCTIONS).length - INVOKER.length + 1, `every portal and staff function with elevated rights, and staff_me, runs from the private schema (${moved})`)
 
 console.log(`access: ${count.pass} passed, ${count.fail} failed`)
 if (count.fail) process.exitCode = 1
