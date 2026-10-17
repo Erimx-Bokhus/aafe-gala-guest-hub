@@ -2,8 +2,9 @@ import { useMemo, useState } from 'react'
 import { Download, Search } from 'lucide-react'
 import { sponsorOf } from '@shared/data'
 import { Pill, ago, downloadCsv } from '@shared/ui'
-import type { Guest } from '@shared/types'
+import type { EventTable, Guest } from '@shared/types'
 import { PageHead } from '../App'
+import { canDo } from '../api'
 import { SeatPill } from '../components'
 import { useStaff } from '../store'
 import { curOrders } from './Dashboard'
@@ -26,11 +27,36 @@ function Cell({ g, k, w }: { g: Guest; k: keyof Guest; w: string }) {
     onBlur={() => { if (v !== String(g[k] ?? '')) void act(api.updateGuest(g.id, { [k]: v || (k.endsWith('needs') ? null : '') })) }} />
 }
 
+/** The guest's table, for the badge (decided Oct 17: replaces the seating chart). Picking a table takes its first open seat. */
+function TablePicker({ g, tables }: { g: Guest; tables: EventTable[] }) {
+  const { db, api, act, user } = useStaff()
+  const name = `${g.first_name} ${g.last_name}`
+  const taken = (t: EventTable) => new Set(db.guests.filter((x) => x.table_id === t.id && x.id !== g.id).map((x) => x.seat_number))
+  const freeSeat = (t: EventTable) => Array.from({ length: t.capacity }, (_, i) => i + 1).find((n) => !taken(t).has(n)) ?? null
+  const pick = (id: string) => {
+    if (!id) { void act(api.assignSeat(g.id, null, null), `${name}: no table`); return }
+    const t = tables.find((x) => x.id === id)
+    const seat = t ? freeSeat(t) : null
+    if (!t || seat === null) throw new Error(`Table ${id} has no open seat; full tables can't be picked`)
+    void act(api.assignSeat(g.id, t.id, seat), `${name} → Table ${t.number}`)
+  }
+  return (
+    <select aria-label={`Table for ${name}`} className="input w-36 py-1 text-sm" value={g.table_id ?? ''} disabled={!canDo(user.role, 'assignSeat')} onChange={(e) => pick(e.target.value)}>
+      <option value="">No table</option>
+      {tables.map((t) => {
+        const open = t.capacity - taken(t).size
+        return <option key={t.id} value={t.id} disabled={open < 1 && t.id !== g.table_id}>Table {t.number}{t.id === g.table_id ? '' : open < 1 ? ' (full)' : ` (${open} open)`}</option>
+      })}
+    </select>
+  )
+}
+
 export default function GuestList() {
   const { db, api, act } = useStaff()
   const [q, setQ] = useState('')
   const [status, setStatus] = useState('all')
   const orderIds = new Set(curOrders(db).map((o) => o.id))
+  const tables = db.event_tables.filter((t) => t.event_id === db.meta.current_event_id).sort((a, b) => a.number - b.number)
   const rows = useMemo(() => db.guests.filter((g) => orderIds.has(g.order_id)).map((g) => {
     const o = db.orders.find((x) => x.id === g.order_id)!
     return { g, o, sponsor: sponsorOf(db, o.sponsor_id).organization_name, seat: db.seats.find((s) => s.guest_id === g.id)!, table: db.event_tables.find((t) => t.id === g.table_id) }
@@ -45,7 +71,7 @@ export default function GuestList() {
 
   return (
     <div>
-      <PageHead title="Guest list" sub="Everything guests enter in the portal lands here. Click any cell to edit — like a spreadsheet, but every change is timestamped." actions={<button className="btn-ghost" onClick={exportCsv}><Download size={15} /> Export CSV</button>} />
+      <PageHead title="Guest list" sub="Everything guests enter in the portal lands here. Click any cell to edit — like a spreadsheet, but every change is timestamped. Pick each guest’s table here; it prints on the badge." actions={<button className="btn-ghost" onClick={exportCsv}><Download size={15} /> Export CSV</button>} />
       <div className="mb-4 flex flex-wrap gap-2">
         <div className="relative w-full max-w-xs"><Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-navy-300" /><input className="input pl-9" placeholder="Search guests or sponsors" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search guests" /></div>
         <select className="input w-48" value={status} onChange={(e) => setStatus(e.target.value)} aria-label="Filter by status">
@@ -58,14 +84,14 @@ export default function GuestList() {
           <thead className="sticky top-0 z-10 bg-cream-100"><tr>
             <th className="th sticky left-0 z-20 border-b border-navy-100 bg-cream-100">Sponsor</th>
             {EDITABLE.map((c) => <th key={c.k} className="th border-b border-navy-100">{c.label}</th>)}
-            <th className="th border-b border-navy-100">Table · seat</th><th className="th border-b border-navy-100">Status</th><th className="th border-b border-navy-100">Badge</th><th className="th border-b border-navy-100">Last change</th><th className="th border-b border-navy-100"></th>
+            <th className="th border-b border-navy-100">Table</th><th className="th border-b border-navy-100">Status</th><th className="th border-b border-navy-100">Badge</th><th className="th border-b border-navy-100">Last change</th><th className="th border-b border-navy-100"></th>
           </tr></thead>
           <tbody>
-            {rows.map(({ g, sponsor, seat, table }) => (
+            {rows.map(({ g, sponsor, seat }) => (
               <tr key={g.id} className="hover:bg-navy-50">
                 <td className="sticky left-0 border-b border-navy-100 bg-surface px-3 py-1.5 text-sm"><div className="w-44 truncate font-medium text-navy-800" title={sponsor}>{sponsor}</div>{g.guest_type === 'comp_relationship' && <Pill tone="brand">Comp</Pill>}</td>
                 {EDITABLE.map((c) => <td key={c.k} className="border-b border-navy-100 px-1 py-1"><Cell g={g} k={c.k} w={c.w} /></td>)}
-                <td className="whitespace-nowrap border-b border-navy-100 px-3 text-sm tabular-nums">{table ? `T${table.number} · S${g.seat_number}` : <span className="text-amber-700">—</span>}</td>
+                <td className="border-b border-navy-100 px-1 py-1"><TablePicker g={g} tables={tables} /></td>
                 <td className="border-b border-navy-100 px-3"><SeatPill s={seat.status} /></td>
                 <td className="border-b border-navy-100 px-3"><Pill tone={BADGE_TONE[g.badge_status]}>{g.badge_status.replace('_', ' ')}</Pill></td>
                 <td className="whitespace-nowrap border-b border-navy-100 px-3 text-xs text-navy-500">{g.last_updated_by === 'guest_portal' ? 'Guest portal' : 'Staff'} · {ago(g.updated_at)}</td>
