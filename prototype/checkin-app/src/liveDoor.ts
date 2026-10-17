@@ -55,9 +55,10 @@ export const checkLiveSignOut = (staff: StaffUser) =>
 export async function loadDoor(staff: StaffUser): Promise<Door | null> {
   const desk = deskFor(staff)
   try {
-    const s = await rpc<Snapshot>('staff_checkin_snapshot')
+    const s = await rpc<Snapshot | null>('staff_checkin_snapshot')
+    // No open gala (the server answers null once it's closed): the guest list leaves the iPad (Gate 2 review, Oct 15).
+    if (!s || s.status === 'closed') { desk.clear(); return null }
     if (desk.snapshot && desk.snapshot.event_id !== s.event_id) desk.clear()
-    if (s.status === 'closed') { desk.clear(); return null }
     desk.saveSnapshot(s)
   } catch (e) {
     if (!desk.snapshot) throw e   // no connection and nothing saved: nothing to show
