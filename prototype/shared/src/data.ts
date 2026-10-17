@@ -80,11 +80,10 @@ export const staffName = (db: DB, id: string) => db.staff_users.find((s) => s.id
 export function orderMoney(db: DB, orderId: string) {
   const o = db.orders.find((x) => x.id === orderId)!
   const pays = db.payments.filter((p) => p.order_id === orderId).sort((a, b) => a.received_at.localeCompare(b.received_at))
-  const paid = pays.reduce((s, p) => s + p.gross_amount, 0)
-  const applied = pays.reduce((s, p) => s + p.original_amount, 0)
+  const paid = pays.reduce((s, p) => s + Math.max(p.original_amount - p.refunded_amount, 0), 0)
   const fees = pays.reduce((s, p) => s + p.transaction_fee_amount, 0)
   const net = pays.reduce((s, p) => s + p.net_amount, 0)
-  const balance = Math.max(0, o.commitment_amount - applied)
+  const balance = o.status === 'cancelled' || o.status === 'comp' ? 0 : Math.max(0, o.commitment_amount - paid)
   return { pays, paid, fees, net, balance, commitment: o.commitment_amount }
 }
 
