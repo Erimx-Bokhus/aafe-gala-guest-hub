@@ -5,6 +5,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { loadDB } from '@shared/data'
 import type { StaffUser } from '@shared/types'
 import { demoApi, errorText, liveApi } from './api'
+import { NOT_CONNECTED } from '../../supabase/functions/_shared/salesforce.ts'
 
 const staff = (role: StaffUser['role']): StaffUser => ({ id: `st-${role}`, name: `Test ${role}`, email: `${role}@aafe-demo.example.org`, role })
 function demo(user: StaffUser) {
@@ -43,9 +44,10 @@ describe('live', () => {
     expect(invoke).toHaveBeenCalledWith('salesforce-push', { method: 'POST' })
     expect(reload).toHaveBeenCalledOnce()
   })
-  it("shows the function's own reason when it can't run", async () => {
-    const notSet = client(500, { error: 'not_configured', message: 'Set SALESFORCE_BASE_URL and SALESFORCE_TOKEN.' })
-    expect(errorText(await liveApi(notSet.c, async () => {}).syncSalesforce().catch((e) => e))).toBe('Set SALESFORCE_BASE_URL and SALESFORCE_TOKEN.')
+  it("shows the function's own words when it can't run: what happened and what to do, never a setting's name (Gate 3)", async () => {
+    const notSet = client(500, { error: 'not_configured', message: NOT_CONNECTED })
+    expect(errorText(await liveApi(notSet.c, async () => {}).syncSalesforce().catch((e) => e)))
+      .toBe("Salesforce isn't connected: its keys aren't set in Supabase. Ask your technical partner.")
     const refused = client(403, { error: 'forbidden' })
     expect(errorText(await liveApi(refused.c, async () => {}).syncSalesforce().catch((e) => e))).toBe('Your role can’t do that.')
   })

@@ -3,12 +3,18 @@
 // This file gives the engine what it needs from the gala's data, in demo and live mode alike.
 import { levelsOf } from '@shared/data'
 import {
-  GalaPageNotSetError, prepareUpload, tierMappingKey, toGlImport,
+  ExportFormatError, GalaPageNotSetError, prepareUpload, tierMappingKey, toGlImport,
   type GlImportRow, type GlImportRun, type PreparedUpload, type UploadContext,
 } from '../../../import-engine/src/index.ts'
 import type { DB, ReviewReason } from '@shared/types'
 
 export { GalaPageNotSetError, tierMappingKey, type GlImportRow, type GlImportRun, type PreparedUpload }
+
+/** What the upload screen says when a file can't be read: the engine's own reason for a format problem, else what to do. */
+export function importProblem(e: unknown): string {
+  if (e instanceof ExportFormatError) return `This file can't be imported: ${e.message}.`
+  return 'Something in this file stopped the import. Download the export from Give Lively again and retry; if it happens again, ask the technical partner.'
+}
 
 /** What staff_import_givelively() returns (and the demo, in the same shape). */
 export interface ImportResult {

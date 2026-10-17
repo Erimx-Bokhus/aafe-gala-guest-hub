@@ -1,6 +1,7 @@
 // Demo door (no Supabase keys): the bundled invented door list, and check-ins shared between iPads through the
 // demo sync server on one computer (sync-server/, port 8787). Loaded only in a build without keys (door.ts LIVE).
 import { EXCEPTION_TYPES, SyncClient, newCheckinId } from '@shared/checkinSync'
+import { unknownCodeMessage } from '@shared/offlineCheckin'
 import type { CheckIn } from '@shared/types'
 import type { Arrival, Door, DoorGuest, ExceptionRow, Gala } from './door'
 import door from './doorlist.json'
@@ -46,7 +47,7 @@ export function demoDoor(staffName: string): Door {
     },
     async scan(code) {
       const g = GUESTS.find((x) => x.qr_token && x.qr_token.toLowerCase() === code.trim().toLowerCase())
-      if (!g) return `No guest found for code “${code.trim()}”.`
+      if (!g) return unknownCodeMessage(code)
       const a = arrivals().get(g.id)
       if (a) return `Already checked in: ${g.first_name} ${g.last_name} at ${time(a.at)} by ${a.by}. Don't admit this ticket twice.`
       api.checkIn([g.id], 'qr')

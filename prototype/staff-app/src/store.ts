@@ -491,7 +491,7 @@ export function prospectError(db: DB, p: ProspectInput): string | null {
       const org = (p.organization ?? '').trim()
       if (!org || !(p.contact_name ?? '').trim()) return 'invalid_input: organization and contact name are required'
       const sp = db.sponsors.find((s) => s.organization_name.trim().toLowerCase() === org.toLowerCase())
-      if (sp) return `invalid_input: ${org} is already a sponsor (${sp.id}); add them by sponsor_id`
+      if (sp) return `invalid_input: ${sp.organization_name} is already a sponsor: choose them from the existing sponsors instead`
     } else {
       if (!db.sponsors.some((s) => s.id === p.sponsor_id)) return 'not_found: sponsor'
       if (list.some((x) => x.event_id === ev && x.sponsor_id === p.sponsor_id)) return "invalid_input: this sponsor is already in this gala's pipeline"

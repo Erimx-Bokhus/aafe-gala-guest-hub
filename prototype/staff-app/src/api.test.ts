@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { loadDB } from '@shared/data'
 import type { DB, StaffUser } from '@shared/types'
-import { ROLES, demoApi, demoSnapshot, errorText, liveApi, loadLiveDb, selectAll, volunteerDb, type CheckinSnapshot } from './api'
+import { ROLES, checkInErrorText, demoApi, demoSnapshot, errorText, liveApi, loadLiveDb, selectAll, volunteerDb, type CheckinSnapshot } from './api'
 import { prepareImport, sampleExport } from './importer'
 import { queueGuestListReminders, salesforceSyncNow } from './store'
 
@@ -146,6 +146,23 @@ describe('live mode: one staff_* function per action', () => {
     expect(reload).not.toHaveBeenCalled()
   })
 
+  it('reloads when the server says a record changed since the page loaded, so staff see the latest (Gate 3)', async () => {
+    const { c } = client({ error: { message: "invalid_transition: this guest's status changed (now reviewed); check the latest and try again" } })
+    const reload = vi.fn().mockResolvedValue(undefined)
+    const e = await liveApi(c, reload).setSeatStatus('g-1', 'reviewed').catch((x: unknown) => x)
+    expect(errorText(e)).toBe("This guest's status changed (now reviewed); check the latest and try again.")
+    expect(reload).toHaveBeenCalledOnce()
+  })
+
+  it('says so plainly when no gala is open, for a manager and a volunteer alike (Gate 3)', async () => {
+    const vol = client({ data: null })   // staff_checkin_snapshot() answers null when no gala is open
+    const e1 = await loadLiveDb(vol.c, VOL).catch((x: unknown) => x)
+    const none = { select: () => ({ order: () => ({ range: async () => ({ data: [], error: null }), limit: async () => ({ data: [], error: null }) }) }) }
+    const rpc = vi.fn().mockResolvedValue({ data: null, error: null })   // staff_current_event() answers null too
+    const e2 = await loadLiveDb({ rpc, from: () => none } as unknown as SupabaseClient, ADMIN).catch((x: unknown) => x)
+    for (const e of [e1, e2]) expect(errorText(e)).toBe('No gala is open right now. Ask a gala admin to check the gala’s status.')
+  })
+
   it('reads the QR result from the server', async () => {
     const { c, rpc } = client({ data: { guest_id: 'g-9', already_checked_in: true } })
     expect(await liveApi(c, async () => {}).checkInByCode('ABC')).toEqual({ guestId: 'g-9', already: true })
@@ -184,6 +201,30 @@ describe('error text', () => {
 
   it("shows the server's own reason when it gives one", () => {
     expect(errorText(new Error('forbidden: only Kenji Abe or a gala admin can undo this check-in'))).toBe('Only Kenji Abe or a gala admin can undo this check-in.')
+  })
+
+  // Gate 3: every failure staff can hit says what happened and what to do.
+  it('says what happened and what to do for a lost connection, an expired sign-in, a guest off the list and an expired ticket', () => {
+    for (const m of ['TypeError: Failed to fetch', 'Load failed', 'NetworkError when attempting to fetch resource.', 'fetch failed']) {
+      expect(errorText(new Error(m))).toBe('Couldn’t reach AAFE’s database. Check the internet connection and try again.')
+    }
+    expect(errorText({ message: 'JWT expired' })).toBe('Your sign-in has expired. Sign out and sign in again; this change wasn’t saved.')
+    expect(errorText(new Error('invalid JWT'))).toBe('Your sign-in has expired. Sign out and sign in again; this change wasn’t saved.')
+    expect(errorText(new Error("not_found: guest is not on this gala's list")))
+      .toBe('This guest is no longer on tonight’s list (their order may have been cancelled). Ask a gala admin, or add an approved exception.')
+    expect(errorText(new Error('not_found: no draft with that id'))).toMatch(/^That record wasn’t found/)
+    expect(errorText(new Error('expired: QR code has expired'))).toBe('This ticket’s QR code has expired. Check the guest in by name.')
+  })
+
+  it('ends with one period, never two, when the server already wrote one', () => {
+    const m = errorText(new Error("invalid_input: a demo gala can't be added to a project that holds real galas. Use a project without the demo sets for real data."))
+    expect(m).toBe("A demo gala can't be added to a project that holds real galas. Use a project without the demo sets for real data.")
+  })
+
+  it('a check-in that fails with the internet down says what still works at the door', () => {
+    expect(checkInErrorText(new Error('TypeError: Failed to fetch')))
+      .toBe('Not checked in. If the internet is down, use the iPad check-in app (it works offline) or the printed list.')
+    expect(checkInErrorText(new Error('forbidden'))).toBe('Your role can’t do that.')
   })
 })
 

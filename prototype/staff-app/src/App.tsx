@@ -103,7 +103,7 @@ export default function App() {
           return me
         })
       } catch {
-        setNotice('Sign-in failed. Try again, or ask the gala admin.')
+        setNotice('Sign-in failed. Check the internet connection and try again, or ask the gala admin.')
         setUser(null)
       } finally { setAuthChecked(true) }
     }
@@ -186,6 +186,8 @@ export default function App() {
             </div>
             <DisplayControls prefs={prefs} />
           </header>
+          {/* A background refresh failed while the last good data stays on screen: say so, it may be out of date. */}
+          {loadError && <p className="no-print border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900 sm:px-6" role="status" data-testid="stale-data">Couldn’t refresh: what you see may be out of date. Check the internet connection; the app keeps trying.</p>}
           <main className="px-4 py-6 sm:px-6 lg:px-8" onClick={() => menu && setMenu(false)}>{page}</main>
         </div>
       </div>
