@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
 import { useState } from 'react'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { loadDB } from '@shared/data'
 import type { DB } from '@shared/types'
 import Portal from './Portal'
 import { portalWelcomeStorageKey, resetPortalWelcomeMemoryForTests } from './portalWelcome'
+import { getPortalView } from './portalApi'
 
 const TOKEN = 'ac-6w9k3p5d'
 
@@ -134,5 +135,37 @@ describe('guest-facing slot wording', () => {
 
     fireEvent.click(screen.getByTestId('remove-seat-1'))
     expect(screen.getByRole('dialog').textContent).toContain('Remove Jordan Lee from Guest 1?')
+  })
+})
+
+// Gate 3: when the live portal can't load or save, the sponsor reads what happened and what to do, never why a seat
+// is locked (a checked-in guest stays private: scripts/test-arrivals.mjs).
+describe('live portal failures', () => {
+  async function renderLive(api: { fetch: () => Promise<unknown>; save?: () => Promise<unknown> }) {
+    vi.resetModules()
+    vi.doMock('./portalApi', async (actual) => ({ ...(await actual<typeof import('./portalApi')>()), LIVE: true,
+      fetchPortalView: api.fetch, saveAttendeeLive: api.save ?? (() => Promise.reject(new Error('not mocked'))) }))
+    const { default: LivePortal } = await import('./Portal')
+    render(<LivePortal db={loadDB()} update={() => {}} token={TOKEN} lang="en" />)
+  }
+  afterEach(() => { vi.doUnmock('./portalApi') })
+
+  it("a list that couldn't load says to check the connection and reload, not that the link is bad", async () => {
+    await renderLive({ fetch: () => Promise.reject(new Error('Failed to fetch')) })
+    expect((await screen.findByRole('alert')).textContent).toBe('We couldn’t load your guest list. Please check your connection and reload this page.')
+    expect(screen.queryByText('This guest-list link is not valid or has expired.')).toBeNull()
+  })
+
+  it('a locked seat says it can no longer be changed online; an expired link says to ask for a new one', async () => {
+    const view = { ...getPortalView(loadDB(), TOKEN)!, deadline: null }
+    const save = vi.fn()
+      .mockRejectedValueOnce(new Error('seat_locked: this seat can no longer be changed online; please contact AAFE'))
+      .mockRejectedValueOnce(new Error('invalid_link'))
+    await renderLive({ fetch: async () => view, save })
+    fireEvent.click(await screen.findByTestId('edit-seat-1'))
+    fireEvent.click(screen.getByTestId('save-attendee'))
+    expect(await screen.findByText('This seat can no longer be changed online. Please contact the AAFE Gala Planning Team.')).toBeTruthy()
+    fireEvent.click(screen.getByTestId('save-attendee'))
+    expect(await screen.findByText('This guest-list link is not valid or has expired. Please contact the AAFE Gala Planning Team for a new link.')).toBeTruthy()
   })
 })
