@@ -31,7 +31,14 @@ describe('the sponsor link stays a secret, and contact never pretends to send', 
     render(<PortalHarness initialDb={loadDB()} onDbChange={() => undefined} />)
     expect(screen.getByRole('heading', { name: 'Your guests' })).toBeTruthy()
     expect(screen.queryByRole('dialog')).toBeNull()
-    expect(Object.keys(localStorage).some((k) => k.includes(TOKEN) || localStorage.getItem(k)?.includes(TOKEN))).toBe(false)
+  })
+
+  it('keeps no copy of the sponsor link in browser storage (hard rule 6)', () => {
+    window.history.replaceState(null, '', `#/s/${TOKEN}`)
+    render(<PortalHarness initialDb={loadDB()} onDbChange={() => undefined} />)
+    for (const store of [localStorage, sessionStorage]) {
+      expect(Object.keys(store).some((k) => k.includes(TOKEN) || store.getItem(k)?.includes(TOKEN))).toBe(false)
+    }
   })
 
   it("contact shows AAFE's gala inbox instead of a form that says sent", () => {
