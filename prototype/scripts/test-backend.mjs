@@ -68,6 +68,14 @@ ok(seats === 10, 'pledge creates 10 gold seats')
 ok((await db.query(`select count(*)::int n from email_log where order_id=$1 and status='queued' and template='portal_link'`, [ord])).rows[0].n === 1, 'pledge queues portal link')
 await as('authenticated', RM, `select staff_record_payment($1,'check',10000,'2026-10-02','1234')`, [ord])
 ok((await db.query(`select status from orders where id=$1`, [ord])).rows[0].status === 'partially_paid', 'partial payment status')
+// A full Give Lively refund returns the covered fee too, so it's larger than the amount it cancels. It counts as 0, not
+// as minus the fee: a sponsor who then pays the whole commitment by check is paid, not partly paid (as in #170).
+const ord2 = (await as('authenticated', RM, `select staff_add_pledge('Refund Org','Sam Ito','sam@test.example.org','gold','check') id`))[0].id
+await db.exec(`insert into payments select (jsonb_populate_record(null::payments, to_jsonb(p) || jsonb_build_object('id', 'pay-refunded-fee', 'order_id', '${ord2}',
+  'original_amount', 1000, 'covered_fee_amount', 30, 'gross_amount', 1030, 'refunded_amount', 1030, 'net_amount', 0))).* from payments p limit 1`)
+const c2 = (await db.query(`select commitment_amount::float c from orders where id=$1`, [ord2])).rows[0].c
+await as('authenticated', RM, `select staff_record_payment($1, 'check', $2, '2026-10-03', '5002')`, [ord2, c2])
+ok((await db.query(`select status from orders where id=$1`, [ord2])).rows[0].status === 'paid', 'a fully refunded payment counts 0, not minus its covered fee')
 
 // Email: drafts never send until staff approve (hard rule 4)
 const draft = (await db.query(`select id from email_log where order_id=$1 and status='queued' and template='portal_link'`, [ord])).rows[0].id
@@ -176,6 +184,15 @@ const pv = (await as('anon', null, `select portal_get_view('lotus-link') v`))[0]
 ok(pv.organization === 'Lotus Bank' && pv.contactName === 'Hana Kim', 'portal shows sponsor from Give Lively')
 ok(pv.tierName.startsWith('Gold') && pv.seats.length === 10 && pv.seats.every((s) => s.status === 'unnamed'), 'portal shows 10 empty table seats')
 ok(pv.money.status === 'paid' && pv.money.paid === 25000 && pv.money.payments.length === 1, 'portal shows Give Lively payment as paid')
+// The sponsor sees what the staff app counts (#170, shared/src/data.ts orderMoney): paid toward the commitment, less
+// refunds, never below 0. Not the gross, which includes a fee the donor chose to cover.
+await db.exec(`update payments set covered_fee_amount = 300, gross_amount = original_amount + 300, refunded_amount = 5000 where order_id = '${tOrd}'`)
+const pr = (await as('anon', null, `select portal_get_view('lotus-link') v`))[0].v
+ok(pr.money.paid === 20000 && pr.money.balance === pr.money.commitment - 20000 && pr.money.status === 'partial', `portal: paid is the amount toward the commitment less refunds, not the gross (${pr.money.paid})`)
+await db.exec(`update payments set refunded_amount = original_amount + 300 where order_id = '${tOrd}'`)
+const po = (await as('anon', null, `select portal_get_view('lotus-link') v`))[0].v
+ok(po.money.paid === 0 && po.money.balance === po.money.commitment, `portal: a refund larger than the payment never makes paid negative (${po.money.paid})`)
+await db.exec(`update payments set covered_fee_amount = 0, gross_amount = original_amount, refunded_amount = 0 where order_id = '${tOrd}'`)
 ok(pv.activity.some((a) => a.summary.includes('Lotus Bank')), 'portal activity shows the purchase')
 
 // ---- Import engine -> gl_import (docs/import-matching-spec.md, database test cases)
