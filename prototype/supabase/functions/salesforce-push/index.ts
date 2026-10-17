@@ -5,7 +5,7 @@
 //
 // Settings: SALESFORCE_BASE_URL (the org's instance URL; in the demo, the salesforce-mock function) and
 // SALESFORCE_TOKEN (an access token). Not set: does nothing and says so. The demo never talks to a real org.
-import { EXTERNAL_ID, pushAll, summarize, type SfAnswer, type SfRecord } from '../_shared/salesforce.ts'
+import { EXTERNAL_ID, NOT_CONNECTED, pushAll, summarize, type SfAnswer, type SfRecord } from '../_shared/salesforce.ts'
 import { admin, caller, cors, env, json } from '../_shared/supabase.ts'
 
 const API = 'v61.0'
@@ -16,7 +16,7 @@ Deno.serve(async (req) => {
   if (!who) return json({ error: 'forbidden' }, 403)
 
   const base = env('SALESFORCE_BASE_URL').replace(/\/$/, ''), token = env('SALESFORCE_TOKEN')
-  if (!base || !token) return json({ error: 'not_configured', message: 'Set SALESFORCE_BASE_URL and SALESFORCE_TOKEN.' }, 500)
+  if (!base || !token) return json({ error: 'not_configured', message: NOT_CONNECTED }, 500)
 
   const db = admin()
   const { data: outbox, error } = await db.rpc('salesforce_outbox')

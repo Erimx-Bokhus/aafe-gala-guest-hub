@@ -752,8 +752,10 @@ begin
   select * into g from guests where id = p_guest_id;
   select * into st from seats where guest_id = p_guest_id for update;
   if g.id is null or st.id is null then raise exception 'not_found'; end if;
+  -- The staff app offers only the next step, so a refusal here means the seat changed since the page loaded
+  -- (another person, the portal or the door): say so in words; the app reloads on invalid_transition.
   if not ((p_to = 'reviewed' and st.status = 'submitted') or (p_to = 'badge_ready' and st.status = 'reviewed')) then
-    raise exception 'invalid_transition: % -> %', st.status, p_to;
+    raise exception 'invalid_transition: this guest''s status changed (now %); check the latest and try again', replace(st.status, '_', ' ');
   end if;
   if p_to = 'badge_ready' and (g.table_id is null or g.seat_number is null) then
     raise exception 'invalid_transition: assign a table and seat first';
@@ -1967,7 +1969,9 @@ begin
         raise exception 'invalid_input: organization and contact name are required';
       end if;
       select id into v_sp from sponsors where lower(btrim(organization_name)) = lower(v_org) limit 1;
-      if v_sp is not null then raise exception 'invalid_input: % is already a sponsor (%); add them by sponsor_id', v_org, v_sp; end if;
+      if v_sp is not null then   -- named as staff will find them in the list
+        raise exception 'invalid_input: % is already a sponsor: choose them from the existing sponsors instead', (select organization_name from sponsors where id = v_sp);
+      end if;
       v_sp := new_id('sp');
       insert into sponsors (id, organization_name, primary_contact_name, primary_contact_email, phone, relationship_owner_id)
       values (v_sp, v_org, btrim(p ->> 'contact_name'), btrim(coalesce(p ->> 'contact_email', '')), '', me.id);

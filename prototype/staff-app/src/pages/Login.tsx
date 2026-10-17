@@ -29,7 +29,7 @@ export default function Login({ db, prefs, notice, onLogin }: { db: DB; prefs: P
       }
       try { await sendSignInLink(email); setSent(true) }
       // Same message whether or not the email is invited, so the form doesn't reveal who is on the staff list.
-      catch { setErr('We couldn’t send a sign-in email. Check the email, or ask the gala admin to invite you.') }
+      catch { setErr('We couldn’t send a sign-in email. Check the internet connection and the email address; if both are right, ask the gala admin to invite you.') }
       finally { setBusy(false) }
       return
     }

@@ -5,7 +5,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { loadDB } from '@shared/data'
 import type { DB, StaffUser } from '@shared/types'
 import { demoApi, liveApi } from './api'
-import { GalaPageNotSetError, prepareImport, sampleExport } from './importer'
+import { GalaPageNotSetError, importProblem, prepareImport, sampleExport } from './importer'
 import { addGalaPage, demoImport, setGalaPage, setTierMapping } from './store'
 import { GALA_PAGE, exportCsv } from '../../../import-engine/test/helpers.ts'
 // @ts-expect-error plain JavaScript helper shared with the backend tests
@@ -189,5 +189,17 @@ describe('live mode', () => {
       ['staff_add_gala_page', { p_page_name: 'Other' }], ['staff_set_tier_mapping', { p_givelively_name: 'Ticket', p_tier_id: 'community_ticket', p_page: 'Other' }],
       ['staff_remove_gala_page', { p_page_name: 'Other' }]])
     expect(reload).toHaveBeenCalledTimes(7)
+  })
+})
+
+describe('what the upload screen says when a file stops it (Gate 3)', () => {
+  it("gives the engine's reason for a format problem, with one period; for anything else, what to do", async () => {
+    const empty = await prepareImport('', 'empty.csv', loadDB()).catch((e: unknown) => e)
+    expect(importProblem(empty)).toBe("This file can't be imported: the file is empty. Download the attendee export from Give Lively again.")
+    const unclosed = await prepareImport('Email,Amount Spent,Date/Time of Purchase,Tier Purchased,Last Name,First Name\n' +
+      'ana.ruiz@example.org,$500.00,2027-03-02 10:00:00 AM EST,"Ticket,Ruiz,Ana\n', 'quote.csv', loadDB()).catch((e: unknown) => e)
+    expect(importProblem(unclosed)).toMatch(/can't be read\. Export the file from Give Lively again and upload it without opening it\.$/)
+    expect(importProblem(new Error('internal error: a purchase time always matches PATTERN here')))
+      .toBe('Something in this file stopped the import. Download the export from Give Lively again and retry; if it happens again, ask the technical partner.')
   })
 })

@@ -6,10 +6,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Snapshot, SnapshotGuest } from '@shared/offlineCheckin'
 import type { StaffUser } from '@shared/types'
 
-const server = vi.hoisted(() => ({ snapshot: null as unknown, syncError: null as string | null, lists: 0 }))
+const server = vi.hoisted(() => ({ snapshot: null as unknown, syncError: null as string | null, lists: 0, undoError: null as { message: string } | null }))
 vi.mock('@shared/supabase', () => ({
   supabase: {
     rpc: async (fn: string, args: { p_items?: { client_id: string }[] }) => {
+      if (fn === 'staff_undo_check_in' && server.undoError) return { data: null, error: server.undoError }
       if (fn === 'staff_checkin_snapshot') { server.lists++; return { data: server.snapshot, error: null } }
       if (server.syncError) return { data: null, error: { message: server.syncError } }
       return { data: (args.p_items ?? []).map((i) => ({ client_id: i.client_id, status: 'checked_in' })), error: null }
@@ -29,7 +30,7 @@ const list = (guests: SnapshotGuest[], at: string): Snapshot => ({
 })
 const KENJI: StaffUser = { id: 'st-test-door', name: 'Door Tester', email: 'door@example.org', role: 'check_in_volunteer' }
 
-beforeEach(() => { localStorage.clear(); server.syncError = null; server.lists = 0 })
+beforeEach(() => { localStorage.clear(); server.syncError = null; server.lists = 0; server.undoError = null })
 afterEach(() => vi.useRealTimers())
 /** The list is fetched once a minute: move the clock past that before a refresh is expected. */
 const aMinuteLater = () => { vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(Date.now() + 61_000) }
@@ -129,5 +130,32 @@ describe('live door list', () => {
     door.stop()
     expect(JSON.stringify({ ...localStorage })).not.toContain('Ortiz')
     expect(door.status.pending).toBe(1)
+  })
+})
+
+// Gate 3: every failure at the door says what happened and what to do.
+describe('what the door says when something fails', () => {
+  it('an unknown QR code says the ticket may have been replaced and what to do instead', async () => {
+    server.snapshot = list([guest('g-1', 'Ana', 'Diaz')], '2027-05-20T22:00:00Z')
+    const door = (await loadDoor(KENJI))!
+    expect(await door.scan(' AAFE-NOT-A-TICKET ')).toBe(
+      'No guest found for code “AAFE-NOT-A-TICKET”. The ticket may have been replaced. Search the guest by name, or add an approved exception.')
+  })
+
+  it('an undo that fails says why, in words, and what to do', async () => {
+    server.snapshot = list([guest('g-1', 'Ana', 'Diaz')], '2027-05-20T22:00:00Z')
+    const door = (await loadDoor(KENJI))!
+    const undo = async (message: string) => { server.undoError = { message }; return door.undo(['c-synced']) }
+    try {
+      expect(await undo('not_found: no check-in to undo'))
+        .toBe("That check-in is still sending. In a few seconds, tap the guest's name and choose Undo check-in.")
+      expect(await undo('forbidden: only Kenji Abe or a gala admin can undo this check-in'))
+        .toBe('Only Kenji Abe or a gala admin can undo this check-in')
+      expect(await undo('TypeError: Failed to fetch'))
+        .toBe('Undo needs a connection for a check-in that has already synced. Try again once this iPad is back online.')
+      expect(await undo('JWT expired')).toBe("Undo didn't go through. Try again, or ask a gala admin to undo it.")
+    } finally {
+      server.undoError = null
+    }
   })
 })

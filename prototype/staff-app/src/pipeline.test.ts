@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { loadDB } from '@shared/data'
 import type { DB, StaffUser } from '@shared/types'
-import { demoApi, liveApi, type PipelineBoard } from './api'
+import { demoApi, errorText, liveApi, type PipelineBoard } from './api'
 import { parseAmount } from './store'
 // @ts-expect-error plain JavaScript helper shared with the backend tests
 import { openTestDb } from '../../scripts/test-db.mjs'
@@ -117,6 +117,14 @@ describe('the pipeline, in demo mode', () => {
     await expect(as(DANIEL).setSponsorshipGoal(1)).rejects.toThrow('forbidden')
     await as(MEI).setSponsorshipGoal(100000)
     expect((await as(DANIEL).pipeline()).goal).toBe(100000)
+  })
+
+  it('adding an organization that is already a sponsor says what to do, without an internal id (Gate 3)', async () => {
+    const { api } = demo(DANIEL)
+    const sp = loadDB().sponsors.find((x) => x.organization_name === 'Acme Community Partners')!
+    const e = await api.saveProspect({ organization: 'acme community partners', contact_name: 'X' }).catch((x: unknown) => x)
+    expect(errorText(e)).toBe('Acme Community Partners is already a sponsor: choose them from the existing sponsors instead.')
+    expect(String(e)).not.toContain(sp.id)
   })
 })
 
