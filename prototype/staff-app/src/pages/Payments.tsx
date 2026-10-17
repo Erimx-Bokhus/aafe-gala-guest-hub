@@ -6,6 +6,7 @@ import type { PayMethod } from '@shared/types'
 import { Kpi, PageHead } from '../App'
 import { RecordPaymentModal } from '../components'
 import { useStaff } from '../store'
+import { nyDate } from '../date'
 
 // Per-ticket fee ledger. Columns mirror Give Lively's "Line Items (All)" report.
 export default function Payments() {
@@ -20,7 +21,7 @@ export default function Payments() {
   const exportCsv = () => downloadCsv(`aafe-payments-fees-${year}-SYNTHETIC.csv`, [
     ['Capstone prototype — synthetic demonstration data only'],
     ['Date', 'Sponsor', 'Package', 'Method', 'Give Lively txn', 'Check #', 'Original', 'Donor-covered fee', 'Gross', 'Processor fee', 'Net', 'Reconciliation'],
-    ...pays.map((p) => { const o = db.orders.find((x) => x.id === p.order_id)!; return [p.received_at.slice(0, 10), sponsorOf(db, o.sponsor_id).organization_name, tierOf(db, o.tier_id).name, METHOD_LABEL[p.method], p.givelively_transaction_id, p.check_number, p.original_amount, p.covered_fee_amount, p.gross_amount, p.transaction_fee_amount, p.net_amount, p.reconciliation_status] }),
+    ...pays.map((p) => { const o = db.orders.find((x) => x.id === p.order_id)!; return [nyDate(p.received_at), sponsorOf(db, o.sponsor_id).organization_name, tierOf(db, o.tier_id).name, METHOD_LABEL[p.method], p.givelively_transaction_id, p.check_number, p.original_amount, p.covered_fee_amount, p.gross_amount, p.transaction_fee_amount, p.net_amount, p.reconciliation_status] }),
     ['TOTAL', '', '', '', '', '', sum('original_amount'), sum('covered_fee_amount'), sum('gross_amount'), sum('transaction_fee_amount'), sum('net_amount'), ''],
   ])
   const c = (n: number) => money(n, true)
