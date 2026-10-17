@@ -6,10 +6,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Snapshot, SnapshotGuest } from '@shared/offlineCheckin'
 import type { StaffUser } from '@shared/types'
 
-const server = vi.hoisted(() => ({ snapshot: null as unknown }))
+const server = vi.hoisted(() => ({ snapshot: null as unknown, undoError: null as { message: string } | null }))
 vi.mock('@shared/supabase', () => ({
   supabase: {
-    rpc: async (fn: string) => ({ data: fn === 'staff_checkin_snapshot' ? server.snapshot : [], error: null }),
+    rpc: async (fn: string) => (fn === 'staff_undo_check_in' && server.undoError ? { data: null, error: server.undoError }
+      : { data: fn === 'staff_checkin_snapshot' ? server.snapshot : [], error: null }),
   },
 }))
 const { loadDoor } = await import('./liveDoor')
@@ -69,5 +70,31 @@ describe('live door list', () => {
 
     expect(door.guests).toBe(before)
     expect([...door.arrivals().keys()]).toEqual(['g-1'])
+  })
+})
+
+// Gate 3: every failure at the door says what happened and what to do.
+describe('what the door says when something fails', () => {
+  it('an unknown QR code says the ticket may have been replaced and what to do instead', async () => {
+    server.snapshot = list([guest('g-1', 'Ana', 'Diaz')], '2027-05-20T22:00:00Z')
+    const door = (await loadDoor(KENJI))!
+    expect(await door.scan(' AAFE-NOT-A-TICKET ')).toBe(
+      'No guest found for code “AAFE-NOT-A-TICKET”. The ticket may have been replaced. Search the guest by name, or add an approved exception.')
+  })
+
+  it('an undo that fails says why, in words, and what to do', async () => {
+    server.snapshot = list([guest('g-1', 'Ana', 'Diaz')], '2027-05-20T22:00:00Z')
+    const door = (await loadDoor(KENJI))!
+    const undo = async (message: string) => { server.undoError = { message }; return door.undo(['c-synced']) }
+    try {
+      expect(await undo('not_found: no check-in to undo'))
+        .toBe("That check-in is still sending. In a few seconds, tap the guest's name and choose Undo check-in.")
+      expect(await undo('forbidden: only Kenji Abe or a gala admin can undo this check-in'))
+        .toBe('Only Kenji Abe or a gala admin can undo this check-in')
+      expect(await undo('TypeError: Failed to fetch')).toBe("Undo didn't go through. Try again, or ask a gala admin to undo it.")
+      expect(await undo('JWT expired')).toBe("Undo didn't go through. Try again, or ask a gala admin to undo it.")
+    } finally {
+      server.undoError = null
+    }
   })
 })

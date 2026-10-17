@@ -4,7 +4,7 @@
 // hash (hard rule 6). Undo: a check-in still on the iPad is taken off the queue; a synced one goes through
 // staff_undo_check_in(), which allows only the person who made it or a gala admin.
 import type { PostgrestError } from '@supabase/supabase-js'
-import { CheckInDesk, type KeyValueStore, type QueuedCheckIn, type Snapshot, type SyncResult } from '@shared/offlineCheckin'
+import { CheckInDesk, unknownCodeMessage, type KeyValueStore, type QueuedCheckIn, type Snapshot, type SyncResult } from '@shared/offlineCheckin'
 import { needStatus } from '@shared/guestNeeds'
 import { supabase } from '@shared/supabase'
 import type { StaffUser } from '@shared/types'
@@ -111,15 +111,15 @@ function scanMessage(out: Awaited<ReturnType<CheckInDesk['scan']>>, code: string
     case 'already': return `${out.guest.first_name} ${out.guest.last_name}: ${out.message}. Don't admit this ticket twice.`
     case 'expired_code': return `This ticket's code for ${out.guest.first_name} ${out.guest.last_name} has expired. Check the guest in by name.`
     case 'unknown_code':
-    case 'not_found': return `No guest found for code “${code.trim()}”.`
+    case 'not_found': return unknownCodeMessage(code)
   }
 }
 
-/** Undo the iPad couldn't do on its own: still sending, needs a connection, or the server's own reason. */
+/** Undo the iPad couldn't do on its own: still sending, someone else's check-in (the server names who may), or anything else. */
 function undoProblem(m: string): string {
-  if (/no check-in to undo/i.test(m)) return 'That check-in is still sending. Try Undo again in a moment.'
-  if (/fetch|network|failed/i.test(m)) return 'Undo needs a connection for a check-in that has already synced.'
-  return m
+  if (/no check-in to undo/i.test(m)) return "That check-in is still sending. In a few seconds, tap the guest's name and choose Undo check-in."
+  if (/^Only /.test(m)) return m
+  return "Undo didn't go through. Try again, or ask a gala admin to undo it."
 }
 
 /** What staff do at the door: check in, scan a ticket, add a walk-in, undo. `kick` sends it and refreshes the screen. */
