@@ -7,6 +7,8 @@
 // AAFE's org would need that field (Text, External ID, Unique) on each object below before a real connection.
 
 export const EXTERNAL_ID = 'AAFE_Gala_Id__c'
+/** What staff see when salesforce-push can't run (SALESFORCE_BASE_URL or SALESFORCE_TOKEN not set). */
+export const NOT_CONNECTED = "Salesforce isn't connected: its keys aren't set in Supabase. Ask your technical partner."
 /** Salesforce takes at most 200 records per sObject Collections call. */
 export const BATCH = 200
 
