@@ -127,8 +127,9 @@ Fixed:
 
 Open:
 - **Retention is not built.** The promise is to delete guests' contact, food and access details within 60 days of the
-  gala, copies included (the change log's old values, Give Lively's records, the email log, review items). Food and access
-  details go with them, not kept from year to year (decided Oct 17); the deletion is built once AAFE confirms the window. Gate 2 stays open until
+  gala, copies included (the change log's old values, Give Lively's records, the email log, review items). Whether food and
+  access details go with them or are kept year to year is Natalie's call (pending in `decisions.md`); the deletion is built
+  once AAFE confirms the window. Gate 2 stays open until
   it is.
 - **Guest email: optional or required?** The sponsor portal requires it; the promise says optional. A team decision, not
   AAFE's (off the Oct 19 list, Oct 17); it goes in `decisions.md` when written.
