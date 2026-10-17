@@ -35,12 +35,22 @@ describe('signing out of the iPad (audit bug 1)', () => {
 
   it('stops a volunteer when check-ins can’t be sent, and keeps them on the iPad', async () => {
     const d = deskWithTwoWaiting()
-    expect(await checkSignOut(d, offline, 'check_in_volunteer')).toEqual({ ok: false, waiting: 2, canForce: false })
+    expect(await checkSignOut(d, offline, 'check_in_volunteer')).toEqual({ ok: false, waiting: 2, canForce: false, refused: false })
     expect(d.pending()).toHaveLength(2)
   })
 
   it('lets a gala admin choose to sign out anyway', async () => {
-    expect(await checkSignOut(deskWithTwoWaiting(), offline, 'gala_admin')).toEqual({ ok: false, waiting: 2, canForce: true })
+    expect(await checkSignOut(deskWithTwoWaiting(), offline, 'gala_admin')).toEqual({ ok: false, waiting: 2, canForce: true, refused: false })
+  })
+
+  it('says to ask a gala admin, not to find the internet, when AAFE refuses the check-ins (Gate 3)', async () => {
+    const refusing = async (): Promise<SyncResult[]> => { throw new Error('JWT expired') }
+    const r = await checkSignOut(deskWithTwoWaiting(), refusing, 'check_in_volunteer')
+    expect(r).toEqual({ ok: false, waiting: 2, canForce: false, refused: true })
+    const text = waitingMessage(2, false, true)
+    expect(text).toContain('Ask a gala admin before signing out')
+    expect(text).not.toContain('internet')
+    expect(waitingMessage(2, false)).toContain('Connect to the internet')
   })
 
   it('signs out at once when nothing is waiting, without calling the server', async () => {
