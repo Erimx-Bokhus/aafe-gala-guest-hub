@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { Camera, CheckCircle2, Download, QrCode, Search, UserPlus } from 'lucide-react'
 import { GUEST_TYPE_LABEL, hasSponsor, sponsorOf } from '@shared/data'
+import { unknownCodeMessage } from '@shared/offlineCheckin'
 import { Field, Modal, downloadCsv, fmtDate } from '@shared/ui'
 import { useStaff } from '../store'
 import { curOrders } from './Dashboard'
-import { canDo, errorText } from '../api'
+import { canDo, checkInErrorText } from '../api'
 import { checkinCsv } from '../exports'
 
 // iPad check-in. Volunteers see ONLY name, title, organization, sponsor, table/seat and status.
@@ -29,7 +30,11 @@ export default function CheckIn() {
   const arrive = async (gid: string, method: 'qr' | 'search') => {
     const g = guests.find((x) => x.id === gid)!
     if (g.attendance_status === 'checked_in') { toast(`${g.first_name} ${g.last_name} is already checked in`); return }
-    await act(api.checkIn(gid, method).then((r) => { setLast(gid); toast(r.already ? `${g.first_name} ${g.last_name} is already checked in` : `${g.first_name} ${g.last_name} checked in`) }))
+    // Not through act(): a failed check-in says what still works at the door when the internet is down.
+    try {
+      const r = await api.checkIn(gid, method)
+      setLast(gid); toast(r.already ? `${g.first_name} ${g.last_name} is already checked in` : `${g.first_name} ${g.last_name} checked in`)
+    } catch (e) { toast(checkInErrorText(e)) }
   }
   // The door list never holds QR codes (the database keeps only their hash), so the server matches the code.
   const byCode = async (c: string) => {
@@ -40,7 +45,7 @@ export default function CheckIn() {
       setLast(r.guestId); setCode('')
       toast(`${g ? `${g.first_name} ${g.last_name}` : 'Guest'} ${r.already ? 'is already checked in' : 'checked in'}`)
     } catch (e) {
-      toast(e instanceof Error && e.message.startsWith('not_found') ? 'No guest found for that code' : errorText(e))
+      toast(e instanceof Error && e.message.startsWith('not_found: unknown QR code') ? unknownCodeMessage(c) : checkInErrorText(e))
     }
   }
 

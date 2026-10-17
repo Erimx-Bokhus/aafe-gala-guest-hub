@@ -53,7 +53,8 @@ const pr = await save({ organization: 'Lantern Example Foundation', contact_name
 let p = await prospect(pr)
 ok(p.stage === 'not_started' && Number(p.ask_amount) === 25000 && p.sector === 'foundation', 'a new prospect starts at not started, with its ask')
 ok((await lastLog(pr))?.action === 'prospect.created' && (await lastLog(pr)).actor === RM.name, 'adding a prospect is logged')
-ok((await saveErr({ organization: ' lantern example foundation ', contact_name: 'X' }))?.includes('already a sponsor'), 'the same organization is not added twice')
+ok((await saveErr({ organization: ' lantern example foundation ', contact_name: 'X' })) === 'invalid_input: Lantern Example Foundation is already a sponsor: choose them from the existing sponsors instead',
+  'the same organization is not added twice, and the refusal says what to do without an internal id (Gate 3)')
 const lanternSponsor = p.sponsor_id
 ok((await saveErr({ sponsor_id: lanternSponsor }))?.includes('already in this gala'), 'one prospect per sponsor per gala')
 ok((await saveErr({ organization: 'Bad Sector Co', contact_name: 'X', sector: 'aliens' }))?.startsWith('invalid_input'), 'sector must be one of AAFE\'s six')

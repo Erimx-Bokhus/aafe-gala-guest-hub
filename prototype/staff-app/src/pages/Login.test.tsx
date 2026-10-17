@@ -72,6 +72,8 @@ describe('live sign-in (Supabase configured)', () => {
     fireEvent.click(screen.getByRole('button', { name: /Email me a sign-in code/ }))
     const msg = await screen.findByText(/couldn.t send a sign-in email/)
     expect(msg.textContent).not.toMatch(/Signups|not allowed|not invited|staff list/i)
+    // Gate 3: the likeliest cause first (no connection), then the address, then who to ask.
+    expect(msg.textContent).toBe('We couldn’t send a sign-in email. Check the internet connection and the email address; if both are right, ask the gala admin to invite you.')
   })
 
   it('shows why a sign-in was refused', async () => {

@@ -130,6 +130,18 @@ export const clock = (iso: string) =>
 export const alreadyMessage = (at: string | null | undefined, by: string | null | undefined, device: string | null | undefined) =>
   `Already checked in${at ? ` at ${clock(at)}` : ''}${device || by ? ` by ${device || by}` : ''}`
 
+/** A QR code no guest has: the door says what to do next (iPad, demo door and staff app alike). */
+export const unknownCodeMessage = (code: string) =>
+  `No guest found for code “${code.trim()}”. The ticket may have been replaced. Search the guest by name, or add an approved exception.`
+
+/** Why the server refused a synced check-in, as the door should hear it: the server's raw reason never reaches the screen. */
+function refusedMessage(name: string, error: string | undefined): string {
+  const again = name === 'A guest' ? 'the guest' : name
+  if (/^not_found/.test(error ?? '')) return `${name} wasn't counted: they're no longer on tonight's list. Ask a gala admin before letting them in.`
+  if (/more than a day old/.test(error ?? '')) return `${name} wasn't counted: this iPad's clock looks wrong. Check the date and time, then check ${again} in again.`
+  return `${name} wasn't counted. Check ${again} in again; if this comes back, tell a gala admin.`
+}
+
 const fold = (s: string | null | undefined) => (s ?? '').normalize('NFKD').replace(/\p{M}/gu, '').toLowerCase().trim()
 
 /** What one sync did: sent, refused because another door was first, refused for another reason, or still offline. */
@@ -299,12 +311,9 @@ export class CheckInDesk {
   private noticeFor(item: QueuedCheckIn, r: SyncResult): Notice | null {
     if (r.status !== 'conflict' && r.status !== 'error') return null
     const guest = item.kind === 'guest' ? this.snapshot?.guests.find((g) => g.id === item.guest_id) : undefined
-    const name = item.kind === 'guest' ? (guest ? `${guest.first_name} ${guest.last_name}` : item.guest_id) : item.name
+    const name = item.kind === 'guest' ? (guest ? `${guest.first_name} ${guest.last_name}` : 'A guest') : item.name
     const guest_id = item.kind === 'guest' ? item.guest_id : null
-    if (r.status === 'error') {
-      return { client_id: item.client_id, guest_id, name, kind: 'error',
-        message: `${name}: not synced (${r.error ?? 'refused'}). Check this guest in again or tell a gala admin.` }
-    }
+    if (r.status === 'error') return { client_id: item.client_id, guest_id, name, kind: 'error', message: refusedMessage(name, r.error) }
     if (item.kind === 'guest') this.markFirst(item.guest_id, r)
     return { client_id: item.client_id, guest_id, name, kind: 'conflict',
       message: `${name}: ${alreadyMessage(r.first_at, r.first_by, r.first_device)}. This iPad's check-in at ${clock(item.at)} was not counted.` }

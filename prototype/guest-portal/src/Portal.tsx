@@ -190,31 +190,41 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
   const t = DICT[lang]
   const loc = LOCALE[lang]
   const localView = useMemo(() => (LIVE ? null : getPortalView(db, token)), [db, token])
-  // LIVE: undefined = loading, null = invalid link
-  const [liveView, setLiveView] = useState<PortalView | null | undefined>(undefined)
+  // LIVE: undefined = loading, null = invalid link, 'failed' = couldn't load (the connection, most likely)
+  const [liveView, setLiveView] = useState<PortalView | null | 'failed' | undefined>(undefined)
   const [editing, setEditing] = useState<number | null>(null)
   const [removing, setRemoving] = useState<number | null>(null)
   const [contactOpen, setContactOpen] = useState(false)
   const [welcomeOpen, setWelcomeOpen] = useState(() => shouldShowPortalWelcome(token))
   const [toast, setToast] = useState<string | null>(null)
   const [justSaved, setJustSaved] = useState(false)
-  useEffect(() => { if (LIVE) { setLiveView(undefined); fetchPortalView(token).then(setLiveView, () => setLiveView(null)) } }, [token])
+  useEffect(() => { if (LIVE) { setLiveView(undefined); fetchPortalView(token).then(setLiveView, () => setLiveView('failed')) } }, [token])
   useEffect(() => { setWelcomeOpen(shouldShowPortalWelcome(token)) }, [token])
   const closeWelcome = useCallback(() => {
     dismissPortalWelcome(token)
     setWelcomeOpen(false)
   }, [token])
   const view = LIVE ? liveView : localView
+  // Why a save was refused, without saying more than the sponsor should know (a checked-in seat is just "locked").
+  const saveProblem = (e: unknown) => {
+    const m = e instanceof Error ? e.message : ''
+    return m === 'invalid_link' ? `${t.notFound} ${t.notFoundHelp}` : m.startsWith('seat_locked') ? t.seatLocked : t.saveFailed
+  }
   const save = (slot: number, v: AttendeeInput, after: () => void) => {
     if (!LIVE) { update((d) => saveAttendee(d, token, slot, v)); after(); return }
-    saveAttendeeLive(token, slot, v).then((nv) => { setLiveView(nv); after() }, () => setToast(t.saveFailed))
+    saveAttendeeLive(token, slot, v).then((nv) => { setLiveView(nv); after() }, (e: unknown) => setToast(saveProblem(e)))
   }
   const remove = (slot: number, after: () => void) => {
     if (!LIVE) { update((d) => removeAttendee(d, token, slot)); after(); return }
-    removeAttendeeLive(token, slot).then((nv) => { setLiveView(nv); after() }, () => setToast(t.saveFailed))
+    removeAttendeeLive(token, slot).then((nv) => { setLiveView(nv); after() }, (e: unknown) => setToast(saveProblem(e)))
   }
 
   if (view === undefined) return <main aria-busy="true" className="mx-auto max-w-xl px-5 py-20 text-center"><div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-brand-200 border-t-brand-500" /></main>
+  if (view === 'failed') return (
+    <main className="mx-auto max-w-xl px-5 py-20 text-center">
+      <p className="type-h6 text-navy-900" role="alert">{t.loadFailed}</p>
+    </main>
+  )
   if (!view) return (
     <main className="mx-auto max-w-xl px-5 py-20 text-center">
       <Lock className="mx-auto text-navy-300" size={32} />
