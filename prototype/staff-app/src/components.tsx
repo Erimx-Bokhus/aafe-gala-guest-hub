@@ -4,6 +4,7 @@ import { Field, Modal, Pill, money, type Tone } from '@shared/ui'
 import type { SeatStatus } from '@shared/types'
 import { useStaff } from './store'
 import { curOrders } from './pages/Dashboard'
+import { nyDate } from './date'
 
 /**
  * Saves a form once: the button disables until the server answers, so a double-click can't record a payment twice.
@@ -40,7 +41,7 @@ export function RecordPaymentModal({ open, onClose, orderId }: { open: boolean; 
   const bal = oid ? orderMoney(db, oid).balance : 0
   const [method, setMethod] = useState<'check' | 'ach_direct' | 'wire'>('check')
   const [amount, setAmount] = useState('')
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
+  const [date, setDate] = useState(() => nyDate(new Date()))
   const [checkNo, setCheckNo] = useState('')
   const amt = Number(amount || bal)
   const valid = oid && amt > 0 && (method !== 'check' || checkNo.trim())
