@@ -110,7 +110,7 @@ const ALL_STAFF = ['gala_admin', 'relationship_manager', 'check_in_volunteer']
 const MANAGERS = ['gala_admin', 'relationship_manager']
 const STAFF_FUNCTIONS = {
   staff_current_event: ALL_STAFF, checkin_list: ALL_STAFF, staff_check_in: ALL_STAFF, staff_check_in_qr: ALL_STAFF, staff_check_in_exception: ALL_STAFF,
-  staff_export_checkin: ALL_STAFF, staff_checkin_snapshot: ALL_STAFF, staff_sync_check_ins: ALL_STAFF, staff_undo_check_in: ALL_STAFF,
+  staff_export_checkin: ALL_STAFF, staff_checkin_snapshot: ALL_STAFF, staff_sync_check_ins: ALL_STAFF, staff_undo_check_in: ALL_STAFF, door_sync: ALL_STAFF,
   staff_update_guest: MANAGERS, staff_set_seat_status: MANAGERS, staff_mark_printed: MANAGERS, staff_assign_seat: MANAGERS,
   staff_seat_order_at_table: MANAGERS, staff_record_payment: MANAGERS, staff_add_pledge: MANAGERS, staff_add_comp_guest: MANAGERS,
   staff_send_qr_invite: MANAGERS, staff_resend_portal_link: MANAGERS, staff_resolve_import_review: MANAGERS,
