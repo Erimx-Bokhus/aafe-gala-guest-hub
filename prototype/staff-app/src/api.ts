@@ -624,49 +624,86 @@ export function volunteerDb(snap: CheckinSnapshot, user: StaffUser): DB {
 // The change log's readable columns (backend.sql grants these, not its change details): AuditEntry's fields.
 const AUDIT_COLUMNS = 'id,at,actor_type,actor,entity,entity_id,order_id,action,from_state,to_state,guest_visible,summary'
 const TABLES = ['gala_events', 'staff_users', 'sponsorship_tiers', 'sponsors', 'orders', 'payments', 'event_tables', 'guests', 'seats', 'check_ins', 'email_log', 'salesforce_sync', 'import_runs', 'import_review', 'tier_mappings'] as const
-const PAGE = 1000 // Supabase returns at most 1,000 rows per request
-
-export async function selectAll(client: SupabaseClient, table: string): Promise<unknown[]> {
-  const rows: unknown[] = []
-  for (let from = 0; ; from += PAGE) {
-    // Sorted by id so each page starts where the last ended: without a sort, Postgres may return rows in a different
-    // order on each request (likely on gala night, when check-ins rewrite rows), so rows could repeat or go missing.
-    const { data, error } = await client.from(table).select('*').order('id').range(from, from + PAGE - 1)
-    if (error) throw new Error(error.message)
-    rows.push(...data)
-    if (data.length < PAGE) return rows
-  }
+const AUDIT_KEPT = 1000            // the Activity page shows the newest entries; a full load sends this many
+const FULL_EVERY_MS = 4 * 3600_000 // everything again now and then, whatever the checks say: a safety net
+// Numbers come back from Postgres numeric columns as strings in some setups; the pages do arithmetic on them.
+const NUMERIC: Partial<Record<string, string[]>> = {
+  sponsorship_tiers: ['contribution_amount', 'included_seat_count'],
+  orders: ['commitment_amount'],
+  payments: ['original_amount', 'covered_fee_amount', 'gross_amount', 'transaction_fee_amount', 'refunded_amount', 'net_amount'],
 }
 
-/** What the signed-in person may read. Managers read the tables (row-level security allows them); volunteers get only the door list. */
-export async function loadLiveDb(client: SupabaseClient, user: StaffUser): Promise<DB> {
-  if (user.role === 'check_in_volunteer') {
-    const { data, error } = await client.rpc('staff_checkin_snapshot')
+type Row = Record<string, unknown> & { id: string | number }
+/** staff_sync()'s answer (backend.sql): the rows written since the cursor, the rows deleted, and how many each table holds. */
+export interface SyncAnswer {
+  cursor: string; full: boolean; event: string | null
+  rows: Record<string, Row[]>; deleted: { table: string; id: string }[]; counts: Record<string, number>
+}
+
+/**
+ * What the signed-in person may read, kept up to date with only what changed (Gate 3, data use). The first call loads
+ * everything (about 1.1 MB for a full gala); after that, staff_sync(cursor) sends only the rows written since, so a
+ * refresh where nothing changed is about half a kilobyte. Rows are merged by id and deleted ones dropped.
+ * Everything comes again when the gala being run changes, when a table's row count no longer matches this copy (a row
+ * this role may no longer read leaves no deleted marker), and every 4 hours regardless.
+ * One request at a time: an older answer merged after a newer one would bring old rows back. A call made while one is
+ * waiting shares it; a call made while one is running waits and asks again, since it may follow a change of its own.
+ * A refresh that changed nothing returns the same object, so React doesn't redraw. Volunteers get only the door list.
+ * One loader per signed-in person (App.tsx makes a new one on sign-in).
+ */
+export function liveLoader(client: SupabaseClient): (user: StaffUser) => Promise<DB> {
+  const copy = new Map<string, Map<string, Row>>()
+  let cursor: string | null = null, event: string | null = null, fullAt = 0, last: DB | null = null
+  let waiting: Promise<DB> | null = null, tail: Promise<unknown> = Promise.resolve()
+
+  const ask = async (from: string | null): Promise<SyncAnswer> => {
+    const { data, error } = await client.rpc('staff_sync', { p_cursor: from, p_event: event })
     if (error) throw new Error(error.message)
-    if (data == null) throw new Error('no_open_gala')   // the server answers null when no gala is open
-    return volunteerDb(data as CheckinSnapshot, user)
+    return data as SyncAnswer
   }
-  const [lists, audit, cur] = await Promise.all([
-    Promise.all(TABLES.map((t) => selectAll(client, t))),
-    // The change log only grows; the Activity page shows the latest, so load the newest 1,000.
-    client.from('audit_log').select(AUDIT_COLUMNS).order('id', { ascending: false }).limit(PAGE),
+  const merge = (s: SyncAnswer): boolean => {
+    if (s.full) { for (const t of [...TABLES, 'audit_log']) copy.set(t, new Map()); fullAt = Date.now() }
+    for (const d of s.deleted) copy.get(d.table)?.delete(d.id)
+    for (const [t, list] of Object.entries(s.rows)) {
+      const keys = NUMERIC[t] ?? []
+      for (const r of list) copy.get(t)?.set(String(r.id), keys.length ? { ...r, ...Object.fromEntries(keys.map((k) => [k, Number(r[k] ?? 0)])) } : r)
+    }
+    cursor = s.cursor
+    event = s.event
+    return s.full || s.deleted.length > 0 || Object.values(s.rows).some((l) => l.length > 0)
+  }
+  // Only tables this app keeps: one the server added later must not force everything on every refresh.
+  const drifted = (s: SyncAnswer) => Object.entries(s.counts).some(([t, n]) => copy.has(t) && copy.get(t)!.size !== n)
+  const byId = (a: Row, b: Row) => (a.id < b.id ? -1 : 1)
+
+  const run = async (): Promise<DB> => {
+    let s = await ask(Date.now() - fullAt >= FULL_EVERY_MS ? null : cursor)
+    let changed = merge(s)
+    if (!s.full && drifted(s)) { s = await ask(null); changed = merge(s) }
+    if (!changed && last) return last
+    last = null   // if what follows fails, the next refresh builds again from the merged copy
+    const audit = [...copy.get('audit_log')!.values()].sort(byId).slice(-AUDIT_KEPT)
+    copy.set('audit_log', new Map(audit.map((a) => [String(a.id), a])))
+    const db = Object.fromEntries(TABLES.map((t) => [t, [...copy.get(t)!.values()].sort(byId)])) as unknown as Omit<DB, 'meta' | 'audit_log'>
     // This year's gala is the server's answer (current_event_id), never worked out here: with next year's gala in
     // planning, the newest open year would show 2028 while every save still goes to 2027.
-    client.rpc('staff_current_event'),
-  ])
-  if (audit.error) throw new Error(audit.error.message)
-  if (cur.error) throw new Error(cur.error.message)
-  const db = Object.fromEntries(TABLES.map((t, i) => [t, lists[i]])) as unknown as Omit<DB, 'meta' | 'audit_log'>
-  const current = db.gala_events.find((e) => e.id === cur.data)
-  if (!current) throw new Error('no_open_gala')
-  // Numbers come back from Postgres numeric columns as strings in some setups; the pages do arithmetic on them.
-  const num = <T extends object>(rows: T[], keys: (keyof T)[]) => rows.map((r) => ({ ...r, ...Object.fromEntries(keys.map((k) => [k, Number(r[k] ?? 0)])) }))
-  return {
-    ...db,
-    meta: { ...loadDB().meta, current_event_id: current.id },
-    sponsorship_tiers: num(db.sponsorship_tiers, ['contribution_amount', 'included_seat_count']),
-    orders: num(db.orders, ['commitment_amount']),
-    payments: num(db.payments, ['original_amount', 'covered_fee_amount', 'gross_amount', 'transaction_fee_amount', 'refunded_amount', 'net_amount']),
-    audit_log: [...(audit.data as DB['audit_log'])].reverse(),
+    const current = db.gala_events.find((e) => e.id === s.event)
+    if (!current) throw new Error('no_open_gala')
+    last = { ...db, meta: { ...loadDB().meta, current_event_id: current.id }, audit_log: audit as unknown as AuditEntry[] }
+    return last
+  }
+
+  return async (user) => {
+    if (user.role === 'check_in_volunteer') {
+      const { data, error } = await client.rpc('staff_checkin_snapshot')
+      if (error) throw new Error(error.message)
+      if (data == null) throw new Error('no_open_gala')   // the server answers null when no gala is open
+      return volunteerDb(data as CheckinSnapshot, user)
+    }
+    if (waiting) return waiting
+    const next = tail.then(() => { waiting = null; return run() })
+    waiting = next
+    tail = next.catch(() => undefined)
+    return next
   }
 }
