@@ -50,8 +50,8 @@ The two apps never talk to each other directly. Both read and write the **same d
 
 ### C. Staff prepare the event (Staff App)
 1. **Guest list.** Review portal submissions (`submitted → reviewed`) and fix spelling inline in the spreadsheet view.
-2. **Seating chart.** Assign each guest a table and seat, either by tapping a guest and then a seat, or by seating a whole sponsor group at once.
-3. **Badges.** A seat moves to `reviewed → badge_ready` once it has a table and seat. Print the sheet or export a CSV for the printer, then mark the badges printed. If anyone later edits the name, title, organization or seat, the badge flips to **reprint needed**.
+2. **Tables.** Pick each guest's table in the guest list's Table column (there is no seating chart, decided Oct 17). The tool takes the table's first open seat; full tables can't be picked.
+3. **Badges.** A seat moves to `reviewed → badge_ready` once it has a table and seat. Print the sheet or export a CSV for the printer, then mark the badges printed. If anyone later edits the name, title, organization or table, the badge flips to **reprint needed**.
 4. **Payments and fees.** Each row shows Original, Donor-covered fee, Gross, **Give Lively (processor) fee** and Net, with totals and a by-method breakdown.
 5. **Salesforce.** Push new sponsors, payments and attendance to Salesforce for the year-over-year history.
 

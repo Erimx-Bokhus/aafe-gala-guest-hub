@@ -17,7 +17,7 @@ Until the final PRDs (Natalie's and Pursuit's) arrive, this file plus the hub's 
 - **iPad check-in:** A to Z by last name, search by name, organization or sponsor, tick and check in, approved exceptions (walk-ins, unnamed sponsor seats), keeps working offline. Raised to must-have Oct 7. [call; Natalie's PRD]
 - **After-gala results:** expected, arrived and no-shows; each sponsor's seats, arrivals, committed, paid and balance. [Natalie's PRD, Oct 7]
 - **Give Lively fee analytics:** fees and net per sponsor and in total, from the payment records. [Natalie's PRD, Oct 7]
-- **Seating map, staff-controlled:** staff place guests and sponsor groups at tables themselves; nothing seats people automatically and guests don't choose. [Natalie's PRD, Oct 7; client: staff assign seats]
+- **Table per guest, staff-controlled:** staff pick each guest's table in the guest list, for the badge; nothing seats people automatically and guests don't choose. Replaces the seating map (decided Oct 17). [Natalie's PRD, Oct 7; client: staff assign seats, the table number on the badge is what matters]
 - **Salesforce push, simulated:** the results go to a stand-in endpoint in the demo, never a real Salesforce org; the Salesforce-ready file stays the real deliverable. [Natalie's PRD, Oct 7]
 - **Logo / program materials status** per sponsor. [intake, call]
 - **Staff-approved follow-up emails** (draft, approve, send). [call]
