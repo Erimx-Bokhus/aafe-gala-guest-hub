@@ -839,7 +839,7 @@ begin
   return v_n;
 end $$;
 
--- assignSeat (p_table_id null = remove from seating chart)
+-- assignSeat: the guest list's Table picker (p_table_id null = no table)
 create or replace function staff_assign_seat(p_guest_id text, p_table_id text, p_seat int) returns void
 language plpgsql security definer set search_path = public as $$
 declare me staff_users := require_staff(array['gala_admin','relationship_manager']); g guests; t event_tables;
@@ -862,7 +862,7 @@ begin
     case when p_table_id is null then 'seat.unassigned' else 'seat.assigned' end,
     case when g.table_id is null then null else g.table_id || '/' || g.seat_number end,
     case when p_table_id is null then null else p_table_id || '/' || p_seat end, false,
-    case when p_table_id is null then format('%s %s removed from seating chart.', g.first_name, g.last_name)
+    case when p_table_id is null then format('%s %s no longer has a table.', g.first_name, g.last_name)
          else format('%s %s seated at Table %s, seat %s.', g.first_name, g.last_name, t.number, p_seat) end);
 end $$;
 
