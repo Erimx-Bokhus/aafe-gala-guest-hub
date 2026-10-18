@@ -20,15 +20,16 @@ ok((await one(`select count(*)::int n from orders o join sponsorship_tiers t on 
 ok((await one(`select count(*)::int n from sponsorship_tiers where event_id = 'ev-2026'`)).n > 0, '2026 has its own levels')
 
 // A database loaded before levels were per gala is upgraded: levels with no gala become this gala's, and past
-// orders move to their own gala's copies.
-await db.exec(`update orders set tier_id = 'gold' where id = 'ord-26-meri'; update sponsorship_tiers set event_id = null where id in ('gold', 'silver')`)
+// orders move to their own gala's copies. Such a database has shared levels and no record of the step (schema_upgrades).
+const BEFORE_THE_STEP = `delete from schema_upgrades where id = '2026-10-14 levels per gala';`
+await db.exec(`update orders set tier_id = 'gold' where id = 'ord-26-meri'; update sponsorship_tiers set event_id = null where id in ('gold', 'silver'); ${BEFORE_THE_STEP}`)
 await db.exec(readFileSync(D + 'backend.sql', 'utf8'))
 ok((await one(`select tier_id from orders where id = 'ord-26-meri'`)).tier_id === 'gold-2026', 'upgrade: a 2026 order on a shared level moves to 2026\'s copy')
 ok((await one(`select count(*)::int n from sponsorship_tiers where event_id is null`)).n === 0, 'upgrade: no level is left without a gala')
 // With next year's gala already in planning, the upgrade still gives shared levels to this year's gala, by the same rule
 // as current_event_id(), and orders them by amount (review of #133).
 await db.exec(`insert into gala_events (id, year, name, event_date, status, is_synthetic) values ('ev-2099', 2099, 'Planning test gala (demo)', '2099-05-21', 'planning', true);
-  update sponsorship_tiers set event_id = null, sort_order = 0 where id = 'silver'`)
+  update sponsorship_tiers set event_id = null, sort_order = 0 where id = 'silver'; ${BEFORE_THE_STEP}`)
 await db.exec(readFileSync(D + 'backend.sql', 'utf8'))
 const silver = await one(`select event_id, sort_order from sponsorship_tiers where id = 'silver'`)
 ok(silver.event_id === cur, `upgrade with a planning gala: shared levels go to this year's gala, not next year's (${silver.event_id})`)
