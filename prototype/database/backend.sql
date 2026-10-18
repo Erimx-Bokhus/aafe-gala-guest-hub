@@ -29,6 +29,42 @@
 -- 1. Additions to schema.sql
 -- ---------------------------------------------------------------------
 
+-- Database upgrades (Gate 1, box 7). This file runs again on every change, so three kinds of statement live here:
+--   * shape, safe to repeat: add column if not exists, indexes, constraints redefined;
+--   * what a run does to data just loaded, following the data itself: seed tokens hashed, QR codes moved to seats,
+--     blank display names filled (a demo load needs these every time; npm run db:load re-runs this file);
+--   * one-time changes to data already in a database: each runs once, recorded in schema_upgrades, and never decided by
+--     "does this column exist yet". Add a new one with upgrade_step(), named by its date.
+create table if not exists schema_upgrades (
+  id          text primary key,      -- 'YYYY-MM-DD what', the day it was written
+  note        text not null,
+  ran         boolean not null,      -- false: the database already had it when it first met this table, so it was recorded, not run
+  applied_at  timestamptz not null default now()
+);
+alter table schema_upgrades enable row level security;   -- read by gala admins and relationship managers (section 3); written only here
+
+-- True the first time a database reaches step p_id, which is then recorded; false every time after.
+-- Call it in the step's own do block: if the step fails, the block undoes the record too, so it runs again when fixed.
+create or replace function upgrade_step(p_id text, p_note text) returns boolean
+language plpgsql set search_path = public as $$
+begin
+  insert into schema_upgrades (id, note, ran) values (p_id, p_note, true) on conflict (id) do nothing;
+  return found;
+end $$;
+
+-- The steps written before this table (Oct 14) decided by a guess. A database meeting the table for the first time
+-- that already shows a step's result has had it: recorded as done, not run. This is the one time the guess is made.
+do $$ begin
+  if exists (select 1 from schema_upgrades) then return; end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'sponsorship_tiers' and column_name = 'guaranteed_seating') then
+    insert into schema_upgrades (id, note, ran) values ('2026-10-14 guaranteed seating', 'Already had it: levels say whether they come with a table', false);
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'sponsorship_tiers' and column_name = 'event_id')
+     and not exists (select 1 from sponsorship_tiers where event_id is null) then
+    insert into schema_upgrades (id, note, ran) values ('2026-10-14 levels per gala', 'Already had it: every level belongs to one gala', false);
+  end if;
+end $$;
+
 -- Give Lively poller cursor + run status (one row).
 create table if not exists givelively_sync_state (
   id            int primary key default 1 check (id = 1),
@@ -162,9 +198,9 @@ alter table gala_events add column if not exists givelively_page_name text; -- e
 -- page selling discounted tickets to partners. Their purchases import like the main page's.
 alter table gala_events add column if not exists givelively_other_pages text[] not null default '{}';
 alter table orders      add column if not exists givelively_page text;  -- the Give Lively page it was bought on (null: imported before Oct 15)
+alter table sponsorship_tiers add column if not exists guaranteed_seating boolean not null default false;
 do $$ begin
-  if not exists (select 1 from information_schema.columns where table_name = 'sponsorship_tiers' and column_name = 'guaranteed_seating') then
-    alter table sponsorship_tiers add column guaranteed_seating boolean not null default false;
+  if upgrade_step('2026-10-14 guaranteed seating', 'Levels say whether they come with a table: sponsorships yes, tickets no') then
     -- Sponsorships come with a table; tickets are admittance only (AAFE's 2026 flyer). Staff can change it.
     update sponsorship_tiers set guaranteed_seating = true where tier_category = 'sponsorship';
   end if;
@@ -433,7 +469,7 @@ $$;
 do $$
 declare cur text := current_event_id(); r record;
 begin
-  if not exists (select 1 from sponsorship_tiers where event_id is null) then return; end if;
+  if not upgrade_step('2026-10-14 levels per gala', 'Each gala has its own levels; past galas keep copies at their own prices') then return; end if;
   for r in select distinct o.event_id, o.tier_id, e.year from orders o join gala_events e on e.id = o.event_id
             join sponsorship_tiers t on t.id = o.tier_id where t.event_id is null and o.event_id is distinct from cur loop
     insert into sponsorship_tiers (id, event_id, sort_order, retired, name, contribution_amount, included_seat_count, tier_category, required_materials, guaranteed_seating)
@@ -533,7 +569,7 @@ begin
   foreach t in array array['gala_events','staff_users','sponsorship_tiers','sponsors','orders','payments',
     'event_tables','guests','seats','check_ins','email_log','audit_log','salesforce_sync',
     'givelively_sync_state','givelively_raw','import_runs','import_review','tier_mappings','sponsor_prospects',
-    'sync_deleted','sync_state']
+    'sync_deleted','sync_state','schema_upgrades']
   loop
     execute format('alter table %I enable row level security', t);
     execute format('drop policy if exists staff_read on %I', t);
@@ -548,7 +584,7 @@ begin
   -- Staff read the gala's records directly: the staff app loads them.
   foreach t in array array['gala_events','staff_users','sponsorship_tiers','sponsors','orders','payments','event_tables','seats',
     'check_ins','audit_log','salesforce_sync','givelively_sync_state','import_runs','tier_mappings','sponsor_prospects',
-    'sync_deleted','sync_state']
+    'sync_deleted','sync_state','schema_upgrades']
   loop
     execute format($p$create policy staff_read on %I for select to authenticated
                      using (staff_role() in ('gala_admin','relationship_manager'))$p$, t);
@@ -2875,7 +2911,8 @@ begin
               'staff_update_gala_event','staff_set_material_status','staff_set_order_deadline','salesforce_outbox','salesforce_mark_synced',
               'comp_level','staff_save_level','staff_copy_levels','staff_retire_level','staff_start_gala',
               'report_ny','report_paid','staff_report_attendance','staff_report_sponsors','staff_report_needs','staff_report_payments','staff_report_guests',
-              'staff_sync','sync_touch','sync_tombstone','sync_prune','door_entries','door_unnamed_seats','door_exceptions','door_sync')
+              'staff_sync','sync_touch','sync_tombstone','sync_prune','door_entries','door_unnamed_seats','door_exceptions','door_sync',
+              'upgrade_step')
   loop
     execute format('revoke all on function %s from public, anon, authenticated', f);
   end loop;
