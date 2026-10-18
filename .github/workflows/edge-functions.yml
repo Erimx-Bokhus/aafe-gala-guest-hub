@@ -3,10 +3,8 @@ name: Server function type-check
 # Type-checks the Supabase Edge Functions (Give Lively sync, email sender, mock) with Deno,
 # the runtime they deploy to. No keys needed: it only compiles them, it doesn't run them.
 on:
-  push:
-    branches: [main]
-    paths: ['prototype/supabase/functions/**', '.github/workflows/edge-functions.yml']
-  # Every pull request, so it can be a required check on main.
+  # Every pull request, so it can be a required check on main. No run after each merge into main: the pull request
+  # already tested it.
   pull_request:
 
 # A newer push to the same pull request cancels the older run still in progress (saves Actions minutes).
