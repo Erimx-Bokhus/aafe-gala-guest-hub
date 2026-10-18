@@ -10,6 +10,7 @@ The gala tool handles six-figure sponsorships, guest names that go onto badges, 
 - TypeScript runs in `strict` mode in every package.
 - The SQL rules (S1–S7) are checked by the backend test suites (`npm run test:backend` in `prototype/`).
 - `node scripts/ci-local.mjs` runs all of it on a laptop first, then the same checks run on every pull request.
+- **The fast lane (Oct 18).** Push with `node scripts/ci-local.mjs --push` instead of `git push`: it runs all seven checks on your last commit and, only if they all pass, pushes it and marks it `local-ci` on GitHub right away (GitHub's checks wait a few seconds for the mark). For a pull request on that exact commit, if it already includes the latest base branch, GitHub's two long checks (backend, frontend) then pass in seconds instead of running again; otherwise they run in full. The secret scan and the real-data guard always run on GitHub. The mark is trust-based: anyone with write access can set it, so it saves Actions minutes, it doesn't prove anything. Nothing runs again after a merge into `main` (the pull request already tested the merged code); a weekly full run on `main` and the Actions tab's **Run workflow** button catch what a laptop missed.
 - **Exceptions** are allowed only with a reason, on the line itself: `// eslint-disable-next-line <rule> -- <why this is safe>`. A reviewer reads every one.
 
 ## Stages
