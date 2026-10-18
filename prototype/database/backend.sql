@@ -29,6 +29,42 @@
 -- 1. Additions to schema.sql
 -- ---------------------------------------------------------------------
 
+-- Database upgrades (Gate 1, box 7). This file runs again on every change, so three kinds of statement live here:
+--   * shape, safe to repeat: add column if not exists, indexes, constraints redefined;
+--   * what a run does to data just loaded, following the data itself: seed tokens hashed, QR codes moved to seats,
+--     blank display names filled (a demo load needs these every time; npm run db:load re-runs this file);
+--   * one-time changes to data already in a database: each runs once, recorded in schema_upgrades, and never decided by
+--     "does this column exist yet". Add a new one with upgrade_step(), named by its date.
+create table if not exists schema_upgrades (
+  id          text primary key,      -- 'YYYY-MM-DD what', the day it was written
+  note        text not null,
+  ran         boolean not null,      -- false: the database already had it when it first met this table, so it was recorded, not run
+  applied_at  timestamptz not null default now()
+);
+alter table schema_upgrades enable row level security;   -- read by gala admins and relationship managers (section 3); written only here
+
+-- True the first time a database reaches step p_id, which is then recorded; false every time after.
+-- Call it in the step's own do block: if the step fails, the block undoes the record too, so it runs again when fixed.
+create or replace function upgrade_step(p_id text, p_note text) returns boolean
+language plpgsql set search_path = public as $$
+begin
+  insert into schema_upgrades (id, note, ran) values (p_id, p_note, true) on conflict (id) do nothing;
+  return found;
+end $$;
+
+-- The steps written before this table (Oct 14) decided by a guess. A database meeting the table for the first time
+-- that already shows a step's result has had it: recorded as done, not run. This is the one time the guess is made.
+do $$ begin
+  if exists (select 1 from schema_upgrades) then return; end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'sponsorship_tiers' and column_name = 'guaranteed_seating') then
+    insert into schema_upgrades (id, note, ran) values ('2026-10-14 guaranteed seating', 'Already had it: levels say whether they come with a table', false);
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'sponsorship_tiers' and column_name = 'event_id')
+     and not exists (select 1 from sponsorship_tiers where event_id is null) then
+    insert into schema_upgrades (id, note, ran) values ('2026-10-14 levels per gala', 'Already had it: every level belongs to one gala', false);
+  end if;
+end $$;
+
 -- Give Lively poller cursor + run status (one row).
 create table if not exists givelively_sync_state (
   id            int primary key default 1 check (id = 1),
@@ -144,6 +180,13 @@ alter table gala_events add column if not exists sponsor_arrivals_note text;   -
 -- Give Lively import (docs/import-matching-spec.md, section 9).
 alter table payments    add column if not exists purchase_key text;   -- SHA-256(email | UTC purchase time); see purchase_key()
 create unique index if not exists payments_purchase_key_uq on payments (purchase_key) where purchase_key is not null;
+-- The processor fee AAFE's ticket export doesn't carry (Gate 1): null means not known yet, not $0, so fee totals and
+-- net aren't understated; the sync fills it in when it sees the same purchase. Net is unknown while the fee is.
+alter table payments    alter column transaction_fee_amount drop not null;
+alter table payments    alter column net_amount drop not null;
+-- A wallet behind a card payment (Apple Pay, Google Pay, PayPal, Venmo, a donor-advised fund): recorded as card, with
+-- the wallet named here (Gate 1, decided Oct 17: card plus detail), instead of "payment method not recognized".
+alter table payments    add column if not exists method_detail text;
 alter table guests      add column if not exists display_name text;   -- the name exactly as typed; printed on badges
 -- The display name IS the guest's name (badges, check-in, table chart, exports, portal); first and last are a
 -- best guess for sorting and search (import-engine/src/names.ts). Guests saved before Oct 10 get "First Last".
@@ -155,9 +198,9 @@ alter table gala_events add column if not exists givelively_page_name text; -- e
 -- page selling discounted tickets to partners. Their purchases import like the main page's.
 alter table gala_events add column if not exists givelively_other_pages text[] not null default '{}';
 alter table orders      add column if not exists givelively_page text;  -- the Give Lively page it was bought on (null: imported before Oct 15)
+alter table sponsorship_tiers add column if not exists guaranteed_seating boolean not null default false;
 do $$ begin
-  if not exists (select 1 from information_schema.columns where table_name = 'sponsorship_tiers' and column_name = 'guaranteed_seating') then
-    alter table sponsorship_tiers add column guaranteed_seating boolean not null default false;
+  if upgrade_step('2026-10-14 guaranteed seating', 'Levels say whether they come with a table: sponsorships yes, tickets no') then
     -- Sponsorships come with a table; tickets are admittance only (AAFE's 2026 flyer). Staff can change it.
     update sponsorship_tiers set guaranteed_seating = true where tier_category = 'sponsorship';
   end if;
@@ -207,8 +250,9 @@ create table if not exists import_review (
 create index if not exists import_review_open on import_review (event_id, status, reason);
 -- zero_amount (Oct 12 audit): a $0 or blank-amount purchase, left for staff instead of dropped (gl_import).
 alter table import_review drop constraint if exists import_review_reason_check;
+-- disputed (Gate 1): a chargeback on a Give Lively payment; staff decide, nothing is cancelled (gl_import).
 alter table import_review add constraint import_review_reason_check check (reason in ('unknown_tier','guest_text_changed',
-  'email_name_conflict','double_booked','possible_duplicate','refund','missing_from_source','zero_amount'));
+  'email_name_conflict','double_booked','possible_duplicate','refund','missing_from_source','zero_amount','disputed'));
 
 -- Give Lively tier name -> tier, once per gala ("Ticket" -> Supporter).
 create table if not exists tier_mappings (
@@ -230,6 +274,17 @@ do $$ begin
     alter table tier_mappings add constraint tier_mappings_event_id_page_key_name_key_key unique (event_id, page_key, name_key);
   end if;
 end $$;
+
+-- A gala's food and access totals, kept after each guest's answers are deleted (decided Oct 18, decisions.md):
+-- how many guests chose each option, never who. Written once per gala by staff_clear_needs().
+create table if not exists gala_need_totals (
+  event_id  text not null references gala_events(id),
+  kind      text not null check (kind in ('dietary','accessibility')),
+  choice    text not null,   -- an option of shared/src/guestNeeds.ts, 'Other', or 'Any need', 'None', 'Not answered'
+  guests    int  not null check (guests >= 0),
+  saved_at  timestamptz not null default now(),
+  primary key (event_id, kind, choice)
+);
 
 -- ---------------------------------------------------------------------
 -- Sync: the staff app fetches only what changed (Gate 3, data use, Oct 17)
@@ -425,7 +480,7 @@ $$;
 do $$
 declare cur text := current_event_id(); r record;
 begin
-  if not exists (select 1 from sponsorship_tiers where event_id is null) then return; end if;
+  if not upgrade_step('2026-10-14 levels per gala', 'Each gala has its own levels; past galas keep copies at their own prices') then return; end if;
   for r in select distinct o.event_id, o.tier_id, e.year from orders o join gala_events e on e.id = o.event_id
             join sponsorship_tiers t on t.id = o.tier_id where t.event_id is null and o.event_id is distinct from cur loop
     insert into sponsorship_tiers (id, event_id, sort_order, retired, name, contribution_amount, included_seat_count, tier_category, required_materials, guaranteed_seating)
@@ -525,7 +580,7 @@ begin
   foreach t in array array['gala_events','staff_users','sponsorship_tiers','sponsors','orders','payments',
     'event_tables','guests','seats','check_ins','email_log','audit_log','salesforce_sync',
     'givelively_sync_state','givelively_raw','import_runs','import_review','tier_mappings','sponsor_prospects',
-    'sync_deleted','sync_state']
+    'sync_deleted','sync_state','schema_upgrades','gala_need_totals']
   loop
     execute format('alter table %I enable row level security', t);
     execute format('drop policy if exists staff_read on %I', t);
@@ -540,7 +595,7 @@ begin
   -- Staff read the gala's records directly: the staff app loads them.
   foreach t in array array['gala_events','staff_users','sponsorship_tiers','sponsors','orders','payments','event_tables','seats',
     'check_ins','audit_log','salesforce_sync','givelively_sync_state','import_runs','tier_mappings','sponsor_prospects',
-    'sync_deleted','sync_state']
+    'sync_deleted','sync_state','schema_upgrades','gala_need_totals']
   loop
     execute format($p$create policy staff_read on %I for select to authenticated
                      using (staff_role() in ('gala_admin','relationship_manager'))$p$, t);
@@ -1350,6 +1405,22 @@ end $$;
 
 -- Same key as import-engine/src/purchaseKey.ts: SHA-256 of
 -- "<email, trimmed and lower-cased>|<purchase time in UTC, to the second>".
+-- Give Lively's "Payment Method" -> how the payment is recorded (Gate 1). Wallets go through Stripe as card payments,
+-- so they're card, with the wallet named in method_detail; null: not recognized (gl_import records card and flags it).
+-- The same rule as staff-app/src/store.ts paymentMethodOf, for demo mode.
+create or replace function payment_method_detail(p_method text) returns text
+language sql immutable set search_path = public as $$
+  select case when p_method ~* 'apple' then 'Apple Pay' when p_method ~* 'google' then 'Google Pay'
+              when p_method ~* 'paypal' then 'PayPal' when p_method ~* 'venmo' then 'Venmo'
+              when p_method ~* 'daf|donor.?advised' then 'Donor-advised fund' end
+$$;
+create or replace function payment_method_of(p_method text) returns text
+language sql immutable set search_path = public as $$
+  select case when coalesce(p_method, '') ~* 'amex|american' then 'amex'
+              when coalesce(p_method, '') ~* 'bank|ach' then 'givelively_ach'
+              when coalesce(p_method, '') ~* 'card|visa|master|discover' or payment_method_detail(p_method) is not null then 'card' end
+$$;
+
 create or replace function purchase_key(p_email text, p_at timestamptz) returns text
 language sql immutable set search_path = public as $$
   select encode(sha256(convert_to(
@@ -1407,9 +1478,9 @@ create or replace function gl_import(p_rows jsonb, p_actor text, p_run_id text d
 language plpgsql security definer set search_path = public as $$
 declare
   r jsonb; p payments; o orders; t sponsorship_tiers; e gala_events; v_sp text; v_order text; v_pay text;
-  v_method text; v_qty int; v_seats int; v_commit numeric; v_review text[]; v_name text; v_org text; v_key text;
+  v_method text; v_detail text; v_qty int; v_seats int; v_commit numeric; v_review text[]; v_name text; v_org text; v_key text;
   v_at timestamptz; v_original numeric; v_gross numeric; v_fee numeric; v_refunded numeric; v_text text;
-  v_cancel boolean; v_changed boolean; v_named int; v_conflict text[]; f jsonb; v_page text;
+  v_cancel boolean; v_changed boolean; v_named int; v_conflict text[]; f jsonb; v_page text; v_disputed boolean;
   v_created int := 0; v_updated int := 0; v_skipped int := 0; v_flagged int := 0; v_unknown int := 0;
   v_prefilled int := 0; v_reviews int := 0; v_zero int := 0; v_applied numeric;
 begin
@@ -1440,6 +1511,8 @@ begin
       v_zero := v_zero + 1; continue;
     end if;
     v_text := nullif(btrim(r ->> 'guest_text'), '');
+    -- A dispute (chargeback) status from the sync or a report that has the column; blank, "none" or "false": no dispute.
+    v_disputed := coalesce(btrim(r ->> 'dispute'), '') !~* '^(false|no|none|0|null|n/?a|not disputed)?$';
     v_cancel := coalesce((r ->> 'cancelled')::boolean, false) or coalesce((r ->> 'cancel_only')::boolean, false)
              -- The failure words match the sync's classify() and the import engine's CANCELLED_STATUS (test-audit-fixes checks all three).
              -- A partial refund keeps the order (spec case 19).
@@ -1468,6 +1541,13 @@ begin
           p.gross_amount::text, v_gross::text, false, format('Give Lively amount changed to %s.', money_fmt(v_gross)));
         v_changed := true;
       end if;
+      -- A fee the upload didn't carry, now that the sync reports it: net follows (Gate 1).
+      if p.transaction_fee_amount is null and v_fee is not null then
+        update payments set transaction_fee_amount = v_fee, net_amount = gross_amount - v_fee - refunded_amount where id = p.id;
+        perform write_audit('system', p_actor, 'payment', p.id, p.order_id, 'payment.fee_known', null, v_fee::text, false,
+          format('Give Lively processor fee: %s.', money_fmt(v_fee)));
+        v_changed := true;
+      end if;
       -- A refund or amount change: paid or partly paid from everything received, checks and wires included.
       if v_changed and o.status in ('paid','partially_paid') then
         select sum(greatest(original_amount - refunded_amount, 0)) into v_applied from payments where order_id = o.id;   -- per payment, never below 0 (#170)
@@ -1482,6 +1562,14 @@ begin
         perform write_audit('system', p_actor, 'order', o.id, o.id, 'order.cancelled', o.status, 'cancelled', false,
           'Refunded or failed in Give Lively; seats cancelled.');
         if add_import_review(p_run_id, v_key, o.id, 'refund', jsonb_build_object('status', r ->> 'status', 'refunded', v_refunded)) then v_reviews := v_reviews + 1; end if;
+        v_changed := true;
+      end if;
+      -- Disputed (a chargeback): a staff review, never a cancellation, since the dispute may still go AAFE's way (Gate 1).
+      if v_disputed and add_import_review(p_run_id, v_key, o.id, 'disputed', jsonb_build_object('status', btrim(r ->> 'dispute'))) then
+        v_reviews := v_reviews + 1;
+        update payments set reconciliation_status = 'needs_review' where id = p.id;
+        perform write_audit('system', p_actor, 'payment', p.id, o.id, 'payment.disputed', null, btrim(r ->> 'dispute'), false,
+          format('Disputed in Give Lively (%s); nothing cancelled.', btrim(r ->> 'dispute')));
         v_changed := true;
       end if;
       -- Guest list text changed in Give Lively: fill only if nobody has named a seat yet; otherwise ask staff.
@@ -1545,18 +1633,15 @@ begin
     v_seats := case when t.included_seat_count = 0 then 0
                     else coalesce(nullif(r ->> 'seats', '')::int, t.included_seat_count * v_qty) end;
 
-    v_method := case when coalesce(r ->> 'method', '') ~* 'amex|american' then 'amex'
-                     when coalesce(r ->> 'method', '') ~* 'bank|ach' then 'givelively_ach'
-                     when coalesce(r ->> 'method', '') ~* 'card|visa|master|discover' then 'card' end;
+    v_method := payment_method_of(r ->> 'method');
+    v_detail := payment_method_detail(r ->> 'method');
     if v_method is null then
       v_method := 'card';
       v_review := v_review || format('payment method "%s" not recognized', coalesce(r ->> 'method', ''));
     end if;
-    if v_fee is null then
-      v_fee := 0;
-      -- The JSON sync reports the fee; AAFE's ticket export has no fee column, so only the sync is flagged.
-      if coalesce(r ->> 'txn', '') <> '' then v_review := v_review || 'Give Lively fee missing'::text; end if;
-    end if;
+    -- No fee: AAFE's ticket export has no fee column, so the fee stays unknown (null), not $0, and net with it; the sync
+    -- fills both in when it sees the same purchase. The JSON sync reports the fee, so one missing there is flagged.
+    if v_fee is null and coalesce(r ->> 'txn', '') <> '' then v_review := v_review || 'Give Lively fee missing'::text; end if;
 
     -- Buyer -> sponsor: same email AND same last name. Same email, different last name is a shared
     -- inbox: a new sponsor so the order isn't lost, and a staff review. The contact's name must be the last
@@ -1593,11 +1678,15 @@ begin
                       then format(' Discounted: paid %s, %s at the level''s price.', money_fmt(v_commit), money_fmt(t.contribution_amount * v_qty)) else '' end
               || case when cardinality(v_review) > 0 then ' CHECK: ' || array_to_string(v_review, '; ') || '.' else '' end,
             nullif(btrim(r ->> 'campaign'), ''));
-    insert into payments (id, order_id, method, processor, givelively_transaction_id, purchase_key, original_amount, covered_fee_amount,
+    insert into payments (id, order_id, method, method_detail, processor, givelively_transaction_id, purchase_key, original_amount, covered_fee_amount,
                           gross_amount, transaction_fee_amount, refunded_amount, net_amount, received_at, recorded_by, reconciliation_status)
-    values (v_pay, v_order, v_method, 'stripe', nullif(r ->> 'txn', ''), v_key, v_original, coalesce(nullif(r ->> 'covered', '')::numeric, 0), v_gross,
+    values (v_pay, v_order, v_method, v_detail, 'stripe', nullif(r ->> 'txn', ''), v_key, v_original, coalesce(nullif(r ->> 'covered', '')::numeric, 0), v_gross,
             v_fee, v_refunded, coalesce(nullif(r ->> 'net', '')::numeric, v_gross - v_fee - v_refunded),
             v_at, 'givelively_sync', case when cardinality(v_review) > 0 then 'needs_review' else 'matched' end);
+    if v_disputed and add_import_review(p_run_id, v_key, v_order, 'disputed', jsonb_build_object('status', btrim(r ->> 'dispute'))) then
+      v_reviews := v_reviews + 1;
+      update payments set reconciliation_status = 'needs_review' where id = v_pay;
+    end if;
     perform create_seats(v_order, v_seats);
     perform write_audit('system', p_actor, 'order', v_order, v_order, 'order.created', null, 'paid', true,
       format('%s recorded for %s (givelively).', t.name || case when v_qty > 1 then ' × ' || v_qty else '' end, v_org));
@@ -1675,7 +1764,7 @@ drop function if exists public.staff_set_tier_mapping(text, text);
 drop function if exists private.staff_set_tier_mapping(text, text);
 create or replace function staff_set_tier_mapping(p_givelively_name text, p_tier_id text, p_page text default null) returns void
 language plpgsql security definer set search_path = public as $$
-declare me staff_users := require_staff(array['gala_admin']); e gala_events; v_old text; v_page text := '';
+declare me staff_users := require_staff(array['gala_admin']); e gala_events; v_old text; v_page text := ''; v_lookback boolean;
 begin
   if name_key(p_givelively_name) = '' then raise exception 'invalid_input: tier name is required'; end if;
   if not exists (select 1 from sponsorship_tiers where id = p_tier_id and event_id = current_event_id()) then raise exception 'not_found: tier'; end if;
@@ -1688,12 +1777,19 @@ begin
   insert into tier_mappings (id, event_id, givelively_name, name_key, page_key, tier_id, created_by)
   values (new_id('tm'), e.id, btrim(p_givelively_name), name_key(p_givelively_name), v_page, p_tier_id, me.name)
   on conflict (event_id, page_key, name_key) do update set tier_id = excluded.tier_id, created_by = excluded.created_by, created_at = now();
+  -- A purchase the sync held for this tier (its review has no upload run) would never come back: the sync only reads what's
+  -- new since its last poll. So the next poll looks back over all purchases once, as adding a page does; re-reading
+  -- imports nothing twice (Gate 1). A purchase held from an upload comes back with the next upload.
+  select exists (select 1 from import_review where status = 'open' and reason = 'unknown_tier' and run_id is null
+                   and name_key(details ->> 'tier_purchased') = name_key(p_givelively_name) and name_key(details ->> 'page') = v_page) into v_lookback;
+  if v_lookback then update givelively_sync_state set cursor_ms = null where id = 1; end if;
   update import_review set status = 'resolved', resolution = 'mapped to ' || p_tier_id, resolved_by = me.name, resolved_at = now()
    where status = 'open' and reason = 'unknown_tier' and name_key(details ->> 'tier_purchased') = name_key(p_givelively_name)
      and name_key(details ->> 'page') = v_page;
   perform write_audit('staff', me.name, 'tier_mapping', name_key(p_givelively_name), null, 'tier_mapping.set', v_old, p_tier_id, false,
-    format('Give Lively tier "%s"%s mapped to %s.', btrim(p_givelively_name),
-           case when v_page <> '' then format(' on "%s"', btrim(p_page)) else '' end, p_tier_id));
+    format('Give Lively tier "%s"%s mapped to %s.%s', btrim(p_givelively_name),
+           case when v_page <> '' then format(' on "%s"', btrim(p_page)) else '' end, p_tier_id,
+           case when v_lookback then ' The next sync looks back over all purchases for the ones it held.' else '' end));
 end $$;
 
 -- The Give Lively pages of the gala being run now, for the sync (service role only): its main page and any others.
@@ -2535,10 +2631,12 @@ end $$;
 
 -- ---------------------------------------------------------------------
 -- 8b. SALESFORCE STAND-IN  (the salesforce-push edge function; _shared/salesforce.ts maps the rows)
--- Give Lively's own connector already sends its online donations to AAFE's Salesforce (NPSP). This sends what
--- Give Lively doesn't know, for the current gala: the gala (a Campaign), check, ACH, wire, comp and staff-entered
--- orders (Opportunity) with their sponsors (Account) and payments (npe01__OppPayment__c), and every named guest
--- (Contact) with their gala-night status (CampaignMember). No phones, dietary or accessibility details.
+-- Give Lively's own connector already sends its online purchases to AAFE's Salesforce (NPSP): the buyer (Contact,
+-- matched by email), the Opportunity, and the event's Campaign. This sends what Give Lively doesn't know, for the
+-- current gala: check, ACH, wire and staff-entered orders (Opportunity) with their sponsors (Account) and payments
+-- (npe01__OppPayment__c), and every named guest, comps included (Contact, matched by email) with their gala-night
+-- status (CampaignMember of the gala's Campaign, Give Lively's own when it has one). No phones, dietary or
+-- accessibility details. A comp is guests only: no Account or Opportunity (Gate 1, box 5).
 -- In the demo it goes to the salesforce-mock function, never a real org (requirements: Salesforce push, simulated).
 -- ponytail: each run sends the whole gala; upserts on our ids make that safe. Send only what changed since the last
 -- sync (salesforce_sync.last_synced_at) if a gala ever outgrows a few thousand records.
@@ -2548,9 +2646,11 @@ create unique index if not exists salesforce_sync_record on salesforce_sync (ent
 create or replace function salesforce_outbox() returns jsonb
 language sql stable security definer set search_path = public as $$
   with e as (select * from gala_events where id = current_event_id()),
-  o as (select o.* from orders o join e on e.id = o.event_id where o.source <> 'givelively')
+  o as (select o.* from orders o join e on e.id = o.event_id
+         where o.source not in ('givelively', 'comp') and o.status <> 'comp')
   select jsonb_build_object(
-    'campaign', (select jsonb_build_object('id', e.id, 'name', e.name, 'date', e.event_date) from e),
+    -- Give Lively names the event's Campaign after its page: that's the one to use when it exists.
+    'campaign', (select jsonb_build_object('id', e.id, 'name', e.name, 'date', e.event_date, 'givelively_name', e.givelively_page_name) from e),
     'accounts', coalesce((select jsonb_agg(jsonb_build_object('id', sp.id, 'name', sp.organization_name) order by sp.id)
                             from sponsors sp where sp.id in (select sponsor_id from o)), '[]'),
     'opportunities', coalesce((select jsonb_agg(jsonb_build_object('id', o.id, 'account_id', o.sponsor_id,
@@ -2688,13 +2788,87 @@ begin
   return v;
 end $$;
 
+-- One guest's answer, as the staff app reads it (shared/src/guestNeeds.ts; scripts/test-needs-totals.mts holds the
+-- two to the same counts). need_status() is needStatus(): 'unanswered' (blank), 'none' ("None" or "No", any case),
+-- else 'some'. need_choices() is parseNeeds(): the options chosen, older names read as today's, anything else written
+-- counted as Other; none for exactly "None", "No" or "Yes".
+create or replace function need_status(p_value text) returns text
+language sql immutable set search_path = public as $$
+  select case when v = '' then 'unanswered' when v ~* '^(none|no)$' then 'none' else 'some' end
+    from (select regexp_replace(coalesce(p_value, ''), '^\s+|\s+$', '', 'g') v) x
+$$;
+create or replace function need_choices(p_value text, p_kind text) returns text[]
+language sql immutable set search_path = public as $$
+  select case when v in ('', 'No', 'Yes', 'None') then '{}'::text[]
+    else (select coalesce(array_agg(distinct case when a = any (case p_kind
+                    when 'dietary' then array['Vegetarian','Vegan','Halal','Kosher','Gluten-free','No pork','No beef','No shellfish','Nut allergy']
+                    else array['Wheelchair access','Step-free access','Hearing support','Visual support'] end) then a else 'Other' end), '{}')
+            from (select case w when 'Step-free seating' then 'Step-free access' when 'Hearing loop' then 'Hearing support' else w end a
+                    from regexp_split_to_table(v, '\s*[;,]\s*') w where w <> '') parts)
+  end from (select regexp_replace(coalesce(p_value, ''), '^\s+|\s+$', '', 'g') v) x
+$$;
+
+-- After the gala (decided Oct 18): save the gala's food and access totals, then delete every guest's answers, and
+-- their old values in the change log. Once per gala, and only once its date has passed. Gala admins only.
+-- The totals count the guests of the gala's orders that weren't cancelled, per option, as the Food and access report
+-- does; 'Any need', 'None' and 'Not answered' count guests, not choices.
+create or replace function staff_clear_needs(p_event_id text) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare me staff_users := require_staff(array['gala_admin']); e gala_events; v_cleared int; v jsonb;
+begin
+  select * into e from gala_events where id = p_event_id;
+  if not found then raise exception 'not_found: gala'; end if;
+  if e.event_date >= (now() at time zone 'America/New_York')::date then
+    raise exception 'invalid_input: % hasn''t happened yet: food and access answers are cleared after the gala', e.name;
+  end if;
+  if exists (select 1 from gala_need_totals where event_id = e.id) then
+    raise exception 'invalid_input: food and access answers for % were already cleared, and its totals saved', e.name;
+  end if;
+
+  insert into gala_need_totals (event_id, kind, choice, guests)
+  select e.id, k.kind, k.choice, count(n.status) filter (where case k.choice
+           when 'Any need' then n.status = 'some'
+           when 'None' then n.status = 'none'
+           when 'Not answered' then n.status = 'unanswered'
+           else n.status = 'some' and k.choice = any (n.choices) end)::int
+    from (select 'dietary' kind, unnest(array['Vegetarian','Vegan','Halal','Kosher','Gluten-free','No pork','No beef','No shellfish','Nut allergy',
+                                               'Other','Any need','None','Not answered']) choice
+          union all
+          select 'accessibility', unnest(array['Wheelchair access','Step-free access','Hearing support','Visual support',
+                                               'Other','Any need','None','Not answered'])) k
+    left join (select 'dietary' kind, need_status(g.dietary_needs) status, need_choices(g.dietary_needs, 'dietary') choices
+                 from guests g join orders o on o.id = g.order_id where o.event_id = e.id and o.status <> 'cancelled'
+               union all
+               select 'accessibility', need_status(g.accessibility_needs), need_choices(g.accessibility_needs, 'accessibility')
+                 from guests g join orders o on o.id = g.order_id where o.event_id = e.id and o.status <> 'cancelled') n on n.kind = k.kind
+   group by k.kind, k.choice;
+
+  update guests g set dietary_needs = null, accessibility_needs = null, updated_at = now()
+    from orders o where o.id = g.order_id and o.event_id = e.id and (g.dietary_needs is not null or g.accessibility_needs is not null);
+  get diagnostics v_cleared = row_count;
+  -- The change log keeps that a guest's answer changed, not what it was. The one exception to audit_log being
+  -- append-only: these answers can be health information, and keeping them here would undo the deletion.
+  update audit_log a set changes = (a.changes - 'dietary_needs' - 'accessibility_needs')
+       || (select coalesce(jsonb_object_agg(f, 'cleared after the gala'::text), '{}') from unnest(array['dietary_needs','accessibility_needs']) f where a.changes ? f)
+   where a.changes ?| array['dietary_needs','accessibility_needs']
+     and (a.order_id in (select id from orders where event_id = e.id)
+          or a.entity_id in (select g.id from guests g join orders o on o.id = g.order_id where o.event_id = e.id));
+
+  select jsonb_object_agg(kind, totals) into v from (
+    select kind, jsonb_object_agg(choice, guests) totals from gala_need_totals where event_id = e.id group by kind) t;
+  perform write_audit('staff', me.name, 'gala', e.id, null, 'gala.needs_cleared', null, null, false,
+    format('Food and access answers cleared for %s guest(s) of %s; only the totals are kept.', v_cleared, e.name));
+  return v;
+end $$;
+
 -- Payments: one row per payment on this gala's orders.
 create or replace function staff_report_payments() returns jsonb
 language plpgsql security definer set search_path = public as $$
 declare me staff_users := require_staff(array['gala_admin','relationship_manager']); v jsonb;
 begin
   select coalesce(jsonb_agg(jsonb_build_object(
-      'received', report_ny(p.received_at), 'sponsor', sp.organization_name, 'level', t.name, 'method', p.method, 'check_number', p.check_number,
+      'received', report_ny(p.received_at), 'sponsor', sp.organization_name, 'level', t.name, 'method', p.method, 'method_detail', p.method_detail,
+      'check_number', p.check_number,
       'amount', p.original_amount, 'fee_covered_by_donor', p.covered_fee_amount, 'gross', p.gross_amount, 'processor_fee', p.transaction_fee_amount,
       'refunded', p.refunded_amount, 'net', p.net_amount, 'givelively_transaction', p.givelively_transaction_id,
       'recorded_by', coalesce(rb.name, p.recorded_by), 'reconciliation', p.reconciliation_status)
@@ -2812,7 +2986,7 @@ begin
               'staff_assign_seat','staff_seat_order_at_table','staff_record_payment','staff_add_pledge','staff_add_comp_guest',
               'staff_send_qr_invite','staff_resend_portal_link','staff_approve_email','staff_cancel_email','checkin_list','staff_check_in','staff_check_in_qr',
               'staff_check_in_exception','gl_import','staff_import_givelively','email_mark_sent','email_mark_failed','email_claim',
-              'purchase_key','name_key','has_need','add_import_review','import_fill_guests','staff_set_tier_mapping','staff_set_gala_page','sync_gala_pages','staff_add_gala_page','staff_remove_gala_page',
+              'purchase_key','payment_method_of','payment_method_detail','name_key','has_need','add_import_review','import_fill_guests','staff_set_tier_mapping','staff_set_gala_page','sync_gala_pages','staff_add_gala_page','staff_remove_gala_page',
               'staff_resolve_import_review','seats_void_qr','guests_void_qr','gala_events_no_mixing','require_gala_order',
               'staff_export_badges','staff_export_checkin','staff_export_salesforce',
               'staff_queue_guest_list_reminders','staff_email_queue','staff_checkin_snapshot','staff_sync_check_ins','staff_undo_check_in',
@@ -2821,7 +2995,9 @@ begin
               'staff_update_gala_event','staff_set_material_status','staff_set_order_deadline','salesforce_outbox','salesforce_mark_synced',
               'comp_level','staff_save_level','staff_copy_levels','staff_retire_level','staff_start_gala',
               'report_ny','report_paid','staff_report_attendance','staff_report_sponsors','staff_report_needs','staff_report_payments','staff_report_guests',
-              'staff_sync','sync_touch','sync_tombstone','sync_prune','door_entries','door_unnamed_seats','door_exceptions','door_sync')
+              'need_status','need_choices','staff_clear_needs',
+              'staff_sync','sync_touch','sync_tombstone','sync_prune','door_entries','door_unnamed_seats','door_exceptions','door_sync',
+              'upgrade_step')
   loop
     execute format('revoke all on function %s from public, anon, authenticated', f);
   end loop;
@@ -2846,6 +3022,7 @@ grant execute on function
   staff_set_sponsor_arrivals(boolean, text), staff_update_gala_event(jsonb), staff_set_material_status(text, text, text), staff_set_order_deadline(text, date),
   staff_save_level(jsonb), staff_copy_levels(text, text), staff_retire_level(text, boolean), staff_start_gala(jsonb),
   staff_report_attendance(), staff_report_sponsors(), staff_report_needs(), staff_report_payments(), staff_report_guests(),
+  staff_clear_needs(text),
   staff_import_givelively(jsonb, jsonb), staff_set_tier_mapping(text, text, text), staff_set_gala_page(text),
   staff_add_gala_page(text), staff_remove_gala_page(text),
   staff_resolve_import_review(text, text),

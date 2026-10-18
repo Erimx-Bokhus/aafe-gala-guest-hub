@@ -7,10 +7,8 @@ import { fileURLToPath } from 'node:url'
 
 export const D = fileURLToPath(new URL('../database/', import.meta.url))
 
-export async function openTestDb() {
-  const db = new PGlite()
-  // Minimal Supabase stand-ins: API roles and auth.jwt() reading the request claims, as Supabase does.
-  await db.exec(`
+// Minimal Supabase stand-ins: API roles and auth.jwt() reading the request claims, as Supabase does.
+export const SUPABASE_STAND_INS = `
 create role anon nologin; create role authenticated nologin; create role service_role nologin bypassrls;
 create schema auth; grant usage on schema auth to anon, authenticated, service_role;
 create function auth.jwt() returns jsonb language sql stable as $$ select coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb $$;
@@ -18,7 +16,11 @@ grant usage on schema public to anon, authenticated, service_role;
 alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
 alter default privileges in schema public grant all on sequences to anon, authenticated, service_role;
 alter default privileges in schema public grant all on functions to anon, authenticated, service_role;
-`)
+`
+
+export async function openTestDb() {
+  const db = new PGlite()
+  await db.exec(SUPABASE_STAND_INS)
   await db.exec(readFileSync(D + 'schema.sql', 'utf8'))
   await db.exec(readFileSync(D + 'seed.sql', 'utf8'))
   await db.exec(readFileSync(D + 'backend.sql', 'utf8'))
