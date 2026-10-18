@@ -144,6 +144,13 @@ alter table gala_events add column if not exists sponsor_arrivals_note text;   -
 -- Give Lively import (docs/import-matching-spec.md, section 9).
 alter table payments    add column if not exists purchase_key text;   -- SHA-256(email | UTC purchase time); see purchase_key()
 create unique index if not exists payments_purchase_key_uq on payments (purchase_key) where purchase_key is not null;
+-- The processor fee AAFE's ticket export doesn't carry (Gate 1): null means not known yet, not $0, so fee totals and
+-- net aren't understated; the sync fills it in when it sees the same purchase. Net is unknown while the fee is.
+alter table payments    alter column transaction_fee_amount drop not null;
+alter table payments    alter column net_amount drop not null;
+-- A wallet behind a card payment (Apple Pay, Google Pay, PayPal, Venmo, a donor-advised fund): recorded as card, with
+-- the wallet named here (Gate 1, decided Oct 17: card plus detail), instead of "payment method not recognized".
+alter table payments    add column if not exists method_detail text;
 alter table guests      add column if not exists display_name text;   -- the name exactly as typed; printed on badges
 -- The display name IS the guest's name (badges, check-in, table chart, exports, portal); first and last are a
 -- best guess for sorting and search (import-engine/src/names.ts). Guests saved before Oct 10 get "First Last".
@@ -1350,6 +1357,22 @@ end $$;
 
 -- Same key as import-engine/src/purchaseKey.ts: SHA-256 of
 -- "<email, trimmed and lower-cased>|<purchase time in UTC, to the second>".
+-- Give Lively's "Payment Method" -> how the payment is recorded (Gate 1). Wallets go through Stripe as card payments,
+-- so they're card, with the wallet named in method_detail; null: not recognized (gl_import records card and flags it).
+-- The same rule as staff-app/src/store.ts paymentMethodOf, for demo mode.
+create or replace function payment_method_detail(p_method text) returns text
+language sql immutable set search_path = public as $$
+  select case when p_method ~* 'apple' then 'Apple Pay' when p_method ~* 'google' then 'Google Pay'
+              when p_method ~* 'paypal' then 'PayPal' when p_method ~* 'venmo' then 'Venmo'
+              when p_method ~* 'daf|donor.?advised' then 'Donor-advised fund' end
+$$;
+create or replace function payment_method_of(p_method text) returns text
+language sql immutable set search_path = public as $$
+  select case when coalesce(p_method, '') ~* 'amex|american' then 'amex'
+              when coalesce(p_method, '') ~* 'bank|ach' then 'givelively_ach'
+              when coalesce(p_method, '') ~* 'card|visa|master|discover' or payment_method_detail(p_method) is not null then 'card' end
+$$;
+
 create or replace function purchase_key(p_email text, p_at timestamptz) returns text
 language sql immutable set search_path = public as $$
   select encode(sha256(convert_to(
@@ -1407,7 +1430,7 @@ create or replace function gl_import(p_rows jsonb, p_actor text, p_run_id text d
 language plpgsql security definer set search_path = public as $$
 declare
   r jsonb; p payments; o orders; t sponsorship_tiers; e gala_events; v_sp text; v_order text; v_pay text;
-  v_method text; v_qty int; v_seats int; v_commit numeric; v_review text[]; v_name text; v_org text; v_key text;
+  v_method text; v_detail text; v_qty int; v_seats int; v_commit numeric; v_review text[]; v_name text; v_org text; v_key text;
   v_at timestamptz; v_original numeric; v_gross numeric; v_fee numeric; v_refunded numeric; v_text text;
   v_cancel boolean; v_changed boolean; v_named int; v_conflict text[]; f jsonb; v_page text;
   v_created int := 0; v_updated int := 0; v_skipped int := 0; v_flagged int := 0; v_unknown int := 0;
@@ -1466,6 +1489,13 @@ begin
                net_amount = v_gross - transaction_fee_amount - refunded_amount, reconciliation_status = 'needs_review' where id = p.id;
         perform write_audit('system', p_actor, 'payment', p.id, p.order_id, 'payment.amount_updated',
           p.gross_amount::text, v_gross::text, false, format('Give Lively amount changed to %s.', money_fmt(v_gross)));
+        v_changed := true;
+      end if;
+      -- A fee the upload didn't carry, now that the sync reports it: net follows (Gate 1).
+      if p.transaction_fee_amount is null and v_fee is not null then
+        update payments set transaction_fee_amount = v_fee, net_amount = gross_amount - v_fee - refunded_amount where id = p.id;
+        perform write_audit('system', p_actor, 'payment', p.id, p.order_id, 'payment.fee_known', null, v_fee::text, false,
+          format('Give Lively processor fee: %s.', money_fmt(v_fee)));
         v_changed := true;
       end if;
       -- A refund or amount change: paid or partly paid from everything received, checks and wires included.
@@ -1545,18 +1575,15 @@ begin
     v_seats := case when t.included_seat_count = 0 then 0
                     else coalesce(nullif(r ->> 'seats', '')::int, t.included_seat_count * v_qty) end;
 
-    v_method := case when coalesce(r ->> 'method', '') ~* 'amex|american' then 'amex'
-                     when coalesce(r ->> 'method', '') ~* 'bank|ach' then 'givelively_ach'
-                     when coalesce(r ->> 'method', '') ~* 'card|visa|master|discover' then 'card' end;
+    v_method := payment_method_of(r ->> 'method');
+    v_detail := payment_method_detail(r ->> 'method');
     if v_method is null then
       v_method := 'card';
       v_review := v_review || format('payment method "%s" not recognized', coalesce(r ->> 'method', ''));
     end if;
-    if v_fee is null then
-      v_fee := 0;
-      -- The JSON sync reports the fee; AAFE's ticket export has no fee column, so only the sync is flagged.
-      if coalesce(r ->> 'txn', '') <> '' then v_review := v_review || 'Give Lively fee missing'::text; end if;
-    end if;
+    -- No fee: AAFE's ticket export has no fee column, so the fee stays unknown (null), not $0, and net with it; the sync
+    -- fills both in when it sees the same purchase. The JSON sync reports the fee, so one missing there is flagged.
+    if v_fee is null and coalesce(r ->> 'txn', '') <> '' then v_review := v_review || 'Give Lively fee missing'::text; end if;
 
     -- Buyer -> sponsor: same email AND same last name. Same email, different last name is a shared
     -- inbox: a new sponsor so the order isn't lost, and a staff review. The contact's name must be the last
@@ -1593,9 +1620,9 @@ begin
                       then format(' Discounted: paid %s, %s at the level''s price.', money_fmt(v_commit), money_fmt(t.contribution_amount * v_qty)) else '' end
               || case when cardinality(v_review) > 0 then ' CHECK: ' || array_to_string(v_review, '; ') || '.' else '' end,
             nullif(btrim(r ->> 'campaign'), ''));
-    insert into payments (id, order_id, method, processor, givelively_transaction_id, purchase_key, original_amount, covered_fee_amount,
+    insert into payments (id, order_id, method, method_detail, processor, givelively_transaction_id, purchase_key, original_amount, covered_fee_amount,
                           gross_amount, transaction_fee_amount, refunded_amount, net_amount, received_at, recorded_by, reconciliation_status)
-    values (v_pay, v_order, v_method, 'stripe', nullif(r ->> 'txn', ''), v_key, v_original, coalesce(nullif(r ->> 'covered', '')::numeric, 0), v_gross,
+    values (v_pay, v_order, v_method, v_detail, 'stripe', nullif(r ->> 'txn', ''), v_key, v_original, coalesce(nullif(r ->> 'covered', '')::numeric, 0), v_gross,
             v_fee, v_refunded, coalesce(nullif(r ->> 'net', '')::numeric, v_gross - v_fee - v_refunded),
             v_at, 'givelively_sync', case when cardinality(v_review) > 0 then 'needs_review' else 'matched' end);
     perform create_seats(v_order, v_seats);
@@ -2694,7 +2721,8 @@ language plpgsql security definer set search_path = public as $$
 declare me staff_users := require_staff(array['gala_admin','relationship_manager']); v jsonb;
 begin
   select coalesce(jsonb_agg(jsonb_build_object(
-      'received', report_ny(p.received_at), 'sponsor', sp.organization_name, 'level', t.name, 'method', p.method, 'check_number', p.check_number,
+      'received', report_ny(p.received_at), 'sponsor', sp.organization_name, 'level', t.name, 'method', p.method, 'method_detail', p.method_detail,
+      'check_number', p.check_number,
       'amount', p.original_amount, 'fee_covered_by_donor', p.covered_fee_amount, 'gross', p.gross_amount, 'processor_fee', p.transaction_fee_amount,
       'refunded', p.refunded_amount, 'net', p.net_amount, 'givelively_transaction', p.givelively_transaction_id,
       'recorded_by', coalesce(rb.name, p.recorded_by), 'reconciliation', p.reconciliation_status)
@@ -2812,7 +2840,7 @@ begin
               'staff_assign_seat','staff_seat_order_at_table','staff_record_payment','staff_add_pledge','staff_add_comp_guest',
               'staff_send_qr_invite','staff_resend_portal_link','staff_approve_email','staff_cancel_email','checkin_list','staff_check_in','staff_check_in_qr',
               'staff_check_in_exception','gl_import','staff_import_givelively','email_mark_sent','email_mark_failed','email_claim',
-              'purchase_key','name_key','has_need','add_import_review','import_fill_guests','staff_set_tier_mapping','staff_set_gala_page','sync_gala_pages','staff_add_gala_page','staff_remove_gala_page',
+              'purchase_key','payment_method_of','payment_method_detail','name_key','has_need','add_import_review','import_fill_guests','staff_set_tier_mapping','staff_set_gala_page','sync_gala_pages','staff_add_gala_page','staff_remove_gala_page',
               'staff_resolve_import_review','seats_void_qr','guests_void_qr','gala_events_no_mixing','require_gala_order',
               'staff_export_badges','staff_export_checkin','staff_export_salesforce',
               'staff_queue_guest_list_reminders','staff_email_queue','staff_checkin_snapshot','staff_sync_check_ins','staff_undo_check_in',

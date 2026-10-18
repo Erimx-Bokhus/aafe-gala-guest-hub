@@ -20,7 +20,10 @@ export interface SponsorRow {
 export interface NeedsRow { name: string; last_name: string; organization: string | null; sponsor: string; category: GuestType; table: number | null; dietary_needs: string | null; accessibility_needs: string | null }
 export interface PaymentRow {
   received: string; sponsor: string; level: string; method: string; check_number: string | null; amount: number; fee_covered_by_donor: number; gross: number
-  processor_fee: number; refunded: number; net: number; givelively_transaction: string | null; recorded_by: string | null; reconciliation: string
+  /** Null: not known yet (AAFE's ticket export has no fee column), so the cell is left blank, not $0 (Gate 1). */
+  processor_fee: number | null; refunded: number; net: number | null; givelively_transaction: string | null; recorded_by: string | null; reconciliation: string
+  /** The wallet behind a card payment (Apple Pay, Google Pay, PayPal, Venmo, Donor-advised fund). */
+  method_detail?: string | null
 }
 export interface GuestRow {
   name: string; first_name: string; last_name: string; title: string | null; organization: string | null; email: string | null; category: GuestType; sponsor: string
@@ -101,7 +104,7 @@ export function demoPayments(db: DB): PaymentRow[] {
   return db.payments.filter((p) => ids.has(p.order_id)).sort((a, b) => a.received_at.localeCompare(b.received_at)).map((p): PaymentRow => {
     const o = ids.get(p.order_id)!
     return { received: ny(p.received_at) ?? '', sponsor: sponsor(o.sponsor_id)?.organization_name ?? '', level: tier(o.tier_id)?.name ?? '', method: p.method, check_number: p.check_number,
-      amount: p.original_amount, fee_covered_by_donor: p.covered_fee_amount, gross: p.gross_amount, processor_fee: p.transaction_fee_amount, refunded: p.refunded_amount, net: p.net_amount,
+      amount: p.original_amount, fee_covered_by_donor: p.covered_fee_amount, gross: p.gross_amount, processor_fee: p.transaction_fee_amount, refunded: p.refunded_amount, net: p.net_amount, method_detail: p.method_detail ?? null,
       givelively_transaction: p.givelively_transaction_id, recorded_by: db.staff_users.find((u) => u.id === p.recorded_by)?.name ?? p.recorded_by, reconciliation: p.reconciliation_status }
   })
 }
@@ -155,7 +158,7 @@ export const needsCsv = (rows: NeedsRow[], synthetic = true) => [...(synthetic ?
 
 export const paymentsCsv = (rows: PaymentRow[], synthetic = true) => [...(synthetic ? [NOTICE] : []),
   ['Received', 'Sponsor or buyer', 'Level', 'Method', 'Check number', 'Amount', 'Fee covered by donor', 'Gross', 'Processor fee', 'Refunded', 'Net to AAFE', 'Give Lively transaction', 'Recorded by', 'Reconciled'],
-  ...rows.map((r) => [r.received, r.sponsor, r.level, METHOD[r.method] ?? r.method, r.check_number, r.amount, r.fee_covered_by_donor, r.gross, r.processor_fee, r.refunded, r.net,
+  ...rows.map((r) => [r.received, r.sponsor, r.level, (METHOD[r.method] ?? r.method) + (r.method_detail ? ` (${r.method_detail})` : ''), r.check_number, r.amount, r.fee_covered_by_donor, r.gross, r.processor_fee, r.refunded, r.net,
     r.givelively_transaction, r.recorded_by, r.reconciliation === 'matched' ? 'Yes' : r.reconciliation === 'needs_review' ? 'Needs review' : 'Not yet'])]
 
 export const guestsCsv = (rows: GuestRow[], synthetic = true) => [...(synthetic ? [NOTICE] : []),
