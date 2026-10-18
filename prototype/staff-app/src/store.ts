@@ -158,6 +158,18 @@ export function addPledge(db: DB, user: StaffUser, p: { org: string; contact: st
   return d
 }
 
+/**
+ * Give Lively's "Payment Method" -> how the payment is recorded, the same rule as payment_method_of() and
+ * payment_method_detail() in backend.sql. Wallets go through Stripe as card payments, so they're card with the wallet
+ * named (Gate 1); `known` false: not recognized, recorded as card and flagged for review.
+ */
+export function paymentMethodOf(m: string): { method: PayMethod; detail: string | null; known: boolean } {
+  const detail = /apple/i.test(m) ? 'Apple Pay' : /google/i.test(m) ? 'Google Pay' : /paypal/i.test(m) ? 'PayPal' : /venmo/i.test(m) ? 'Venmo'
+    : /daf|donor.?advised/i.test(m) ? 'Donor-advised fund' : null
+  const method: PayMethod = /amex|american/i.test(m) ? 'amex' : /bank|ach/i.test(m) ? 'givelively_ach' : 'card'
+  return { method, detail, known: /amex|american|bank|ach|card|visa|master|discover/i.test(m) || detail !== null }
+}
+
 /** Give Lively "Line Items (All)" rows -> orders + payments. Skips transactions already imported. */
 export interface GLRow { txn: string; date: string; first: string; last: string; email: string; company: string; campaign: string; ticketLevel: string; method: string; original: number; covered: number; gross: number; fee: number; net: number }
 export function importGiveLively(db: DB, rows: GLRow[]): { db: DB; created: number; skipped: number } {
@@ -165,13 +177,13 @@ export function importGiveLively(db: DB, rows: GLRow[]): { db: DB; created: numb
   for (const r of rows) {
     if (d.payments.some((p) => p.givelively_transaction_id === r.txn)) { skipped++; continue }
     const tier = d.sponsorship_tiers.find((t) => r.ticketLevel.toLowerCase().includes(t.name.split(' — ')[0].toLowerCase())) ?? tierOf(d, 'community_ticket')
-    const method: PayMethod = /amex|american/i.test(r.method) ? 'amex' : /bank|ach/i.test(r.method) ? 'givelively_ach' : 'card'
+    const { method, detail } = paymentMethodOf(r.method)
     const org = r.company || `${r.first} ${r.last}`
     const sp = d.sponsors.find((s) => s.primary_contact_email.toLowerCase() === r.email.toLowerCase()) ?? { id: uid('sp'), organization_name: org, primary_contact_name: `${r.first} ${r.last}`, primary_contact_email: r.email, phone: '', relationship_owner_id: 'st-mei', salesforce_account_id: null, created_at: nowIso() }
     if (!d.sponsors.includes(sp)) d = { ...d, sponsors: [...d.sponsors, sp] }
     const fee = Number.isFinite(r.fee) && r.fee > 0 ? r.fee : processorFee(method, r.gross)
     const o = { id: uid('ord'), event_id: d.meta.current_event_id, sponsor_id: sp.id, tier_id: tier.id, source: 'givelively' as const, commitment_amount: tier.contribution_amount || r.original, status: 'paid' as const, portal_token: tier.included_seat_count ? secureToken() : null, portal_token_expires_at: null, portal_link_sent_at: null, guest_list_deadline: d.gala_events.find((e) => e.id === d.meta.current_event_id)!.guest_list_deadline, logo_status: tier.required_materials.includes('logo') ? 'pending' as const : 'not_required' as const, program_ad_status: 'not_required' as const, givelively_order_ref: r.txn, salesforce_opportunity_id: null, internal_notes: `Imported from Give Lively (${r.campaign}).`, created_at: nowIso(), updated_at: nowIso() }
-    const pay = { id: uid('pay'), order_id: o.id, method, processor: 'stripe' as const, givelively_transaction_id: r.txn, check_number: null, original_amount: r.original, covered_fee_amount: r.covered, gross_amount: r.gross, transaction_fee_amount: fee, refunded_amount: 0, net_amount: Math.round((r.gross - fee) * 100) / 100, received_at: new Date(r.date).toISOString(), recorded_by: 'givelively_sync', reconciliation_status: 'matched' as const, salesforce_opportunity_id: null }
+    const pay = { id: uid('pay'), order_id: o.id, method, method_detail: detail, processor: 'stripe' as const, givelively_transaction_id: r.txn, check_number: null, original_amount: r.original, covered_fee_amount: r.covered, gross_amount: r.gross, transaction_fee_amount: fee, refunded_amount: 0, net_amount: Math.round((r.gross - fee) * 100) / 100, received_at: new Date(r.date).toISOString(), recorded_by: 'givelively_sync', reconciliation_status: 'matched' as const, salesforce_opportunity_id: null }
     d = { ...d, orders: [...d.orders, o], payments: [...d.payments, pay] }
     d = createSeats(d, o.id, tier.included_seat_count)
     d = addAudit(d, { actor_type: 'system', actor: 'Give Lively sync', entity: 'order', entity_id: o.id, order_id: o.id, action: 'order.created', from_state: null, to_state: 'paid', guest_visible: true, summary: `${tier.name} recorded for ${org} (givelively).` })
@@ -245,8 +257,8 @@ export function demoImport(db: DB, user: StaffUser, rows: GlImportRow[], run: Gl
     const commit = tier.contribution_amount > 0 ? Math.min(price, original) : original
     const seats = tier.included_seat_count === 0 ? 0 : r.seats ?? tier.included_seat_count * qty
     const m = r.method ?? ''
-    const method: PayMethod = /amex|american/i.test(m) ? 'amex' : /bank|ach/i.test(m) ? 'givelively_ach' : 'card'
-    const flagged = !/amex|american|bank|ach|card|visa|master|discover/i.test(m)
+    const { method, detail, known } = paymentMethodOf(m)
+    const flagged = !known
     const name = `${r.first} ${r.last}`.trim(), org = r.company?.trim() || name || r.email
     // Buyer -> sponsor: same email and same last name; same email, different last name is a shared inbox.
     const sameEmail = d.sponsors.filter((s) => s.primary_contact_email.trim().toLowerCase() === r.email.trim().toLowerCase())
@@ -265,8 +277,9 @@ export function demoImport(db: DB, user: StaffUser, rows: GlImportRow[], run: Gl
       givelively_order_ref: null, salesforce_opportunity_id: null,
       internal_notes: `Imported from Give Lively (${r.campaign || 'no campaign'}).${commit < price ? ` Discounted: paid ${money(commit, true)}, ${money(price, true)} at the level's price.` : ''}${flagged ? ` CHECK: payment method "${m}" not recognized.` : ''}`,
       givelively_page: r.campaign?.trim() || null, created_at: nowIso(), updated_at: nowIso() }
-    const pay = { id: uid('pay'), order_id: o.id, method, processor: 'stripe' as const, givelively_transaction_id: null, check_number: null, original_amount: original,
-      covered_fee_amount: r.covered ?? 0, gross_amount: gross, transaction_fee_amount: 0, refunded_amount: refunded, net_amount: gross - refunded,
+    // AAFE's ticket export has no fee column: the fee is unknown (null), not $0, and so is net, as gl_import records it.
+    const pay = { id: uid('pay'), order_id: o.id, method, method_detail: detail, processor: 'stripe' as const, givelively_transaction_id: null, check_number: null, original_amount: original,
+      covered_fee_amount: r.covered ?? 0, gross_amount: gross, transaction_fee_amount: null, refunded_amount: refunded, net_amount: null,
       received_at: new Date(r.date).toISOString(), recorded_by: 'givelively_sync', reconciliation_status: flagged ? 'needs_review' as const : 'matched' as const,
       salesforce_opportunity_id: null, purchase_key: key }
     d = createSeats({ ...d, orders: [...d.orders, o], payments: [...d.payments, pay] }, o.id, seats)

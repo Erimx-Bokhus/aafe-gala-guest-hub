@@ -36,7 +36,8 @@ async function checkAll(db, as, label) {
   const pays = (await db.query(`select id, original_amount a, covered_fee_amount f, gross_amount g, transaction_fee_amount fee, refunded_amount r, net_amount net from payments`)).rows
   bad(`every payment's amounts are 0 or more, ${pays.length} payments`, pays.filter((p) => [p.a, p.f, p.g, p.fee, p.r].some((v) => num(v) < 0)).map((p) => p.id))
   bad('gross = amount + the fee the donor covered', pays.filter((p) => Math.abs(num(p.a) + num(p.f) - num(p.g)) > CENT).map((p) => `${p.id} ${p.a}+${p.f}≠${p.g}`))
-  bad('net = gross - processor fee - refunds', pays.filter((p) => Math.abs(num(p.g) - num(p.fee) - num(p.r) - num(p.net)) > CENT).map((p) => `${p.id} net ${p.net}`))
+  bad('net = gross - processor fee - refunds, and unknown while the fee is', pays.filter((p) => (p.fee == null ? p.net != null
+    : p.net == null || Math.abs(num(p.g) - num(p.fee) - num(p.r) - num(p.net)) > CENT)).map((p) => `${p.id} net ${p.net}`))
   bad('a refund is never more than the payment', pays.filter((p) => num(p.r) > num(p.g) + CENT).map((p) => `${p.id} ${p.r}>${p.g}`))
 
   // The sponsor portal: every open order's link shows the same paid and balance (links are stored hashed, so each
