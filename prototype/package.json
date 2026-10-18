@@ -14,12 +14,13 @@
     "dev:guest": "npm run dev -w guest-portal",
     "dev:staff": "npm run dev -w staff-app",
     "build": "npm run build -w guest-portal && npm run build -w staff-app && npm run build -w checkin-app",
-    "test:backend": "node scripts/test-backend.mjs && node scripts/test-access.mjs && node scripts/test-sql-standard.mjs && node scripts/test-emails.mjs && node scripts/test-audit.mjs && node scripts/test-offline-checkin.mjs && node scripts/test-pipeline.mjs && node scripts/test-arrivals.mjs && node scripts/test-gala-event.mjs && node scripts/test-gala-2026.mjs && node scripts/test-display-name.mjs && node scripts/test-demo-data.mjs && node scripts/test-givelively.mts && node scripts/test-givelively-sync.mts && node scripts/test-audit-fixes.mjs && node scripts/test-levels.mjs && node scripts/test-community-tickets.mjs && node scripts/test-reports.mjs && node scripts/test-sync.mjs && node scripts/test-door-sync.mjs && node scripts/test-money.mjs && node scripts/test-givelively-2027.mjs && node scripts/test-import-excel.mjs && node scripts/test-salesforce.mts",
+    "test:backend": "node scripts/test-backend.mjs && node scripts/test-access.mjs && node scripts/test-sql-standard.mjs && node scripts/test-emails.mjs && node scripts/test-audit.mjs && node scripts/test-offline-checkin.mjs && node scripts/test-pipeline.mjs && node scripts/test-arrivals.mjs && node scripts/test-gala-event.mjs && node scripts/test-gala-2026.mjs && node scripts/test-display-name.mjs && node scripts/test-demo-data.mjs && node scripts/test-demo-drift.mjs && node scripts/test-givelively.mts && node scripts/test-givelively-sync.mts && node scripts/test-audit-fixes.mjs && node scripts/test-levels.mjs && node scripts/test-community-tickets.mjs && node scripts/test-reports.mjs && node scripts/test-sync.mjs && node scripts/test-door-sync.mjs && node scripts/test-money.mjs && node scripts/test-givelively-2027.mjs && node scripts/test-import-excel.mjs && node scripts/test-salesforce.mts",
     "db:backend": "supabase db query --linked -f database/backend.sql",
     "db:advisors": "supabase db advisors --linked --type all",
     "test": "vitest run",
     "translations": "node scripts/translation-sheet.mts",
-    "db:load": "node scripts/load-demo-data.mjs"
+    "db:load": "node scripts/load-demo-data.mjs",
+    "db:drift": "node scripts/demo-drift.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.109.0",
