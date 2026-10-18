@@ -3,7 +3,7 @@
 import small from './seed.json'
 import fullAsSent from './seed.full-as-sent.json'
 import fullFixed from './seed.full-fixed.json'
-import type { AuditEntry, DB, GuestType, PayMethod } from './types'
+import type { AuditEntry, DB, GuestType, PayMethod, Payment } from './types'
 import { supabase } from './supabase'
 
 // The three labeled demo data sets (decisions Oct 7-8), one at a time. The same sets load into Supabase
@@ -48,6 +48,8 @@ export const METHOD_LABEL: Record<PayMethod, string> = {
   card: 'Card (Give Lively)', amex: 'Amex (Give Lively)', givelively_ach: 'Bank/ACH (Give Lively)',
   check: 'Check (mailed)', ach_direct: 'ACH to AAFE bank', wire: 'Wire',
 }
+/** A payment's method as staff read it, with the wallet behind a card payment: "Card (Give Lively) · Apple Pay". */
+export const methodLabel = (p: Pick<Payment, 'method' | 'method_detail'>) => METHOD_LABEL[p.method] + (p.method_detail ? ` · ${p.method_detail}` : '')
 
 export function addAudit(db: DB, e: Omit<AuditEntry, 'id' | 'at'> & { at?: string }): DB {
   const id = (db.audit_log.at(-1)?.id ?? 0) + 1
@@ -85,10 +87,12 @@ export function orderMoney(db: DB, orderId: string) {
   const o = db.orders.find((x) => x.id === orderId)!
   const pays = db.payments.filter((p) => p.order_id === orderId).sort((a, b) => a.received_at.localeCompare(b.received_at))
   const paid = pays.reduce((s, p) => s + Math.max(p.original_amount - p.refunded_amount, 0), 0)
-  const fees = pays.reduce((s, p) => s + p.transaction_fee_amount, 0)
-  const net = pays.reduce((s, p) => s + p.net_amount, 0)
+  // A fee AAFE's ticket export didn't carry is unknown (null), not $0: totals count the known ones and say how many aren't.
+  const fees = pays.reduce((s, p) => s + (p.transaction_fee_amount ?? 0), 0)
+  const net = pays.reduce((s, p) => s + (p.net_amount ?? 0), 0)
+  const feesUnknown = pays.filter((p) => p.transaction_fee_amount == null).length
   const balance = o.status === 'cancelled' || o.status === 'comp' ? 0 : Math.max(0, o.commitment_amount - paid)
-  return { pays, paid, fees, net, balance, commitment: o.commitment_amount }
+  return { pays, paid, fees, net, feesUnknown, balance, commitment: o.commitment_amount }
 }
 
 export function seatStats(db: DB, orderId: string) {
