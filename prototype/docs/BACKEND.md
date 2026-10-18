@@ -124,6 +124,34 @@ The flow is tested in `npm run test:backend` (fake feed → mapping → import �
 
 **For real AAFE use:** don't run `demo_givelively.sql` or deploy `givelively-mock`. Remove `GIVELIVELY_BASE_URL` and `EMAIL_REDIRECT_TO`.
 
+## Test emails on your laptop (your own Resend key)
+
+Stable and nightly send through Aisling's Resend account, and with no verified domain Resend delivers only to its account owner, so those emails all go to her. To see the emails yourself, run `send-emails` on your laptop with your own free Resend account and key. Stable and nightly aren't touched. Needs Docker (for the local Supabase).
+
+1. **Your key, once.** Sign up at resend.com, then:
+   ```bash
+   npx resend-cli@2.26.0 login
+   npm run email:local -- <the email you signed up to Resend with>
+   ```
+   It makes a sending-only key on your account, writes it with the other settings to `supabase/functions/.env` (git ignores it; the key is never shown), and sends you a test email. Every email the app sends is redirected to you, with the real recipient in the subject. `--replace` swaps in a new key and deletes the old one.
+2. **A local Supabase with the small demo set.**
+   ```bash
+   npx supabase start
+   npm run db:local
+   ```
+   `db:local` loads `schema.sql`, `seed.sql` and `backend.sql` through `psql` inside the local database's container (`supabase db query --local` runs only one statement at a time). To start over: `npx supabase db reset`, then `npm run db:local` again.
+3. **Run the sender** (reads `supabase/functions/.env`), and leave it running:
+   ```bash
+   npx supabase functions serve send-emails
+   ```
+4. **Approve a draft and send it.** In a second terminal, approve the guest-list reminder to Jordan Lee (the staff app's Approve button does the same), then call the sender with the `CRON_SECRET` from your `supabase/functions/.env` (in PowerShell, write `curl.exe`):
+   ```bash
+   npx supabase db query --local "update email_log set approved_by = 'Local test', approved_at = now() where id = 'em-022'"
+   curl -X POST http://127.0.0.1:54321/functions/v1/send-emails -H "x-cron-secret: <CRON_SECRET>"
+   ```
+   It answers `{"sent":1,…}` and the reminder arrives. Its link points at the portal on `http://localhost:5173/`; to open it, run the portal (`npm run dev:guest`) with `guest-portal/.env.local` pointing at your local Supabase (`npx supabase status` shows the address and anon key).
+5. **Done:** `npx supabase stop`. Delete your key at resend.com/api-keys when you no longer need it.
+
 ## Demo with a stand-in Salesforce (all synthetic)
 
 Give Lively's own Salesforce connector sends its online donations to AAFE's Salesforce (NPSP). `salesforce-push` sends what Give Lively doesn't know, for the current gala (`salesforce_outbox()` in `backend.sql`, mapped by `_shared/salesforce.ts`):
