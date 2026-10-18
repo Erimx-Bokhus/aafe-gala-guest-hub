@@ -275,6 +275,17 @@ do $$ begin
   end if;
 end $$;
 
+-- A gala's food and access totals, kept after each guest's answers are deleted (decided Oct 18, decisions.md):
+-- how many guests chose each option, never who. Written once per gala by staff_clear_needs().
+create table if not exists gala_need_totals (
+  event_id  text not null references gala_events(id),
+  kind      text not null check (kind in ('dietary','accessibility')),
+  choice    text not null,   -- an option of shared/src/guestNeeds.ts, 'Other', or 'Any need', 'None', 'Not answered'
+  guests    int  not null check (guests >= 0),
+  saved_at  timestamptz not null default now(),
+  primary key (event_id, kind, choice)
+);
+
 -- ---------------------------------------------------------------------
 -- Sync: the staff app fetches only what changed (Gate 3, data use, Oct 17)
 --   Every row the staff app reads carries the id of the transaction that last wrote it (sync_txid). staff_sync(cursor)
@@ -569,7 +580,7 @@ begin
   foreach t in array array['gala_events','staff_users','sponsorship_tiers','sponsors','orders','payments',
     'event_tables','guests','seats','check_ins','email_log','audit_log','salesforce_sync',
     'givelively_sync_state','givelively_raw','import_runs','import_review','tier_mappings','sponsor_prospects',
-    'sync_deleted','sync_state','schema_upgrades']
+    'sync_deleted','sync_state','schema_upgrades','gala_need_totals']
   loop
     execute format('alter table %I enable row level security', t);
     execute format('drop policy if exists staff_read on %I', t);
@@ -584,7 +595,7 @@ begin
   -- Staff read the gala's records directly: the staff app loads them.
   foreach t in array array['gala_events','staff_users','sponsorship_tiers','sponsors','orders','payments','event_tables','seats',
     'check_ins','audit_log','salesforce_sync','givelively_sync_state','import_runs','tier_mappings','sponsor_prospects',
-    'sync_deleted','sync_state','schema_upgrades']
+    'sync_deleted','sync_state','schema_upgrades','gala_need_totals']
   loop
     execute format($p$create policy staff_read on %I for select to authenticated
                      using (staff_role() in ('gala_admin','relationship_manager'))$p$, t);
@@ -2777,6 +2788,79 @@ begin
   return v;
 end $$;
 
+-- One guest's answer, as the staff app reads it (shared/src/guestNeeds.ts; scripts/test-needs-totals.mts holds the
+-- two to the same counts). need_status() is needStatus(): 'unanswered' (blank), 'none' ("None" or "No", any case),
+-- else 'some'. need_choices() is parseNeeds(): the options chosen, older names read as today's, anything else written
+-- counted as Other; none for exactly "None", "No" or "Yes".
+create or replace function need_status(p_value text) returns text
+language sql immutable set search_path = public as $$
+  select case when v = '' then 'unanswered' when v ~* '^(none|no)$' then 'none' else 'some' end
+    from (select regexp_replace(coalesce(p_value, ''), '^\s+|\s+$', '', 'g') v) x
+$$;
+create or replace function need_choices(p_value text, p_kind text) returns text[]
+language sql immutable set search_path = public as $$
+  select case when v in ('', 'No', 'Yes', 'None') then '{}'::text[]
+    else (select coalesce(array_agg(distinct case when a = any (case p_kind
+                    when 'dietary' then array['Vegetarian','Vegan','Halal','Kosher','Gluten-free','No pork','No beef','No shellfish','Nut allergy']
+                    else array['Wheelchair access','Step-free access','Hearing support','Visual support'] end) then a else 'Other' end), '{}')
+            from (select case w when 'Step-free seating' then 'Step-free access' when 'Hearing loop' then 'Hearing support' else w end a
+                    from regexp_split_to_table(v, '\s*[;,]\s*') w where w <> '') parts)
+  end from (select regexp_replace(coalesce(p_value, ''), '^\s+|\s+$', '', 'g') v) x
+$$;
+
+-- After the gala (decided Oct 18): save the gala's food and access totals, then delete every guest's answers, and
+-- their old values in the change log. Once per gala, and only once its date has passed. Gala admins only.
+-- The totals count the guests of the gala's orders that weren't cancelled, per option, as the Food and access report
+-- does; 'Any need', 'None' and 'Not answered' count guests, not choices.
+create or replace function staff_clear_needs(p_event_id text) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare me staff_users := require_staff(array['gala_admin']); e gala_events; v_cleared int; v jsonb;
+begin
+  select * into e from gala_events where id = p_event_id;
+  if not found then raise exception 'not_found: gala'; end if;
+  if e.event_date >= (now() at time zone 'America/New_York')::date then
+    raise exception 'invalid_input: % hasn''t happened yet: food and access answers are cleared after the gala', e.name;
+  end if;
+  if exists (select 1 from gala_need_totals where event_id = e.id) then
+    raise exception 'invalid_input: food and access answers for % were already cleared, and its totals saved', e.name;
+  end if;
+
+  insert into gala_need_totals (event_id, kind, choice, guests)
+  select e.id, k.kind, k.choice, count(n.status) filter (where case k.choice
+           when 'Any need' then n.status = 'some'
+           when 'None' then n.status = 'none'
+           when 'Not answered' then n.status = 'unanswered'
+           else n.status = 'some' and k.choice = any (n.choices) end)::int
+    from (select 'dietary' kind, unnest(array['Vegetarian','Vegan','Halal','Kosher','Gluten-free','No pork','No beef','No shellfish','Nut allergy',
+                                               'Other','Any need','None','Not answered']) choice
+          union all
+          select 'accessibility', unnest(array['Wheelchair access','Step-free access','Hearing support','Visual support',
+                                               'Other','Any need','None','Not answered'])) k
+    left join (select 'dietary' kind, need_status(g.dietary_needs) status, need_choices(g.dietary_needs, 'dietary') choices
+                 from guests g join orders o on o.id = g.order_id where o.event_id = e.id and o.status <> 'cancelled'
+               union all
+               select 'accessibility', need_status(g.accessibility_needs), need_choices(g.accessibility_needs, 'accessibility')
+                 from guests g join orders o on o.id = g.order_id where o.event_id = e.id and o.status <> 'cancelled') n on n.kind = k.kind
+   group by k.kind, k.choice;
+
+  update guests g set dietary_needs = null, accessibility_needs = null, updated_at = now()
+    from orders o where o.id = g.order_id and o.event_id = e.id and (g.dietary_needs is not null or g.accessibility_needs is not null);
+  get diagnostics v_cleared = row_count;
+  -- The change log keeps that a guest's answer changed, not what it was. The one exception to audit_log being
+  -- append-only: these answers can be health information, and keeping them here would undo the deletion.
+  update audit_log a set changes = (a.changes - 'dietary_needs' - 'accessibility_needs')
+       || (select coalesce(jsonb_object_agg(f, 'cleared after the gala'::text), '{}') from unnest(array['dietary_needs','accessibility_needs']) f where a.changes ? f)
+   where a.changes ?| array['dietary_needs','accessibility_needs']
+     and (a.order_id in (select id from orders where event_id = e.id)
+          or a.entity_id in (select g.id from guests g join orders o on o.id = g.order_id where o.event_id = e.id));
+
+  select jsonb_object_agg(kind, totals) into v from (
+    select kind, jsonb_object_agg(choice, guests) totals from gala_need_totals where event_id = e.id group by kind) t;
+  perform write_audit('staff', me.name, 'gala', e.id, null, 'gala.needs_cleared', null, null, false,
+    format('Food and access answers cleared for %s guest(s) of %s; only the totals are kept.', v_cleared, e.name));
+  return v;
+end $$;
+
 -- Payments: one row per payment on this gala's orders.
 create or replace function staff_report_payments() returns jsonb
 language plpgsql security definer set search_path = public as $$
@@ -2911,6 +2995,7 @@ begin
               'staff_update_gala_event','staff_set_material_status','staff_set_order_deadline','salesforce_outbox','salesforce_mark_synced',
               'comp_level','staff_save_level','staff_copy_levels','staff_retire_level','staff_start_gala',
               'report_ny','report_paid','staff_report_attendance','staff_report_sponsors','staff_report_needs','staff_report_payments','staff_report_guests',
+              'need_status','need_choices','staff_clear_needs',
               'staff_sync','sync_touch','sync_tombstone','sync_prune','door_entries','door_unnamed_seats','door_exceptions','door_sync',
               'upgrade_step')
   loop
@@ -2937,6 +3022,7 @@ grant execute on function
   staff_set_sponsor_arrivals(boolean, text), staff_update_gala_event(jsonb), staff_set_material_status(text, text, text), staff_set_order_deadline(text, date),
   staff_save_level(jsonb), staff_copy_levels(text, text), staff_retire_level(text, boolean), staff_start_gala(jsonb),
   staff_report_attendance(), staff_report_sponsors(), staff_report_needs(), staff_report_payments(), staff_report_guests(),
+  staff_clear_needs(text),
   staff_import_givelively(jsonb, jsonb), staff_set_tier_mapping(text, text, text), staff_set_gala_page(text),
   staff_add_gala_page(text), staff_remove_gala_page(text),
   staff_resolve_import_review(text, text),
