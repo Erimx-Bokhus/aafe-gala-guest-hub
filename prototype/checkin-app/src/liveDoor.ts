@@ -1,9 +1,10 @@
-// Live door (Supabase keys set): the signed-in staff member's door list from staff_checkin_snapshot(), check-ins
+// Live door (Supabase keys set): the signed-in staff member's door list, kept by changes with door_sync() (doorSync.ts), check-ins
 // saved on the iPad first (CheckInDesk, works offline) and sent with staff_sync_check_ins(); first arrival wins.
 // The server records who checked a guest in from the sign-in, never from the iPad. QR codes are matched on their
 // hash (hard rule 6). Undo: a check-in still on the iPad is taken off the queue; a synced one goes through
 // staff_undo_check_in(), which allows only the person who made it or a gala admin.
 import type { PostgrestError } from '@supabase/supabase-js'
+import { syncDoorList, type DoorSync } from '@shared/doorSync'
 import { CheckInDesk, isNetworkError, unknownCodeMessage, type KeyValueStore, type QueuedCheckIn, type Snapshot, type SyncResult } from '@shared/offlineCheckin'
 import { needStatus } from '@shared/guestNeeds'
 import { supabase } from '@shared/supabase'
@@ -13,10 +14,11 @@ import { CATEGORY, seatLabel, type Arrival, type Door, type DoorGuest, type Exce
 /** Check-ins made at this door go to AAFE every 5 seconds. */
 export const SYNC_EVERY_MS = 5_000
 /**
- * The whole list (other doors' arrivals, guests added since) comes once a minute: on the full gala it's about 280 KB, and
- * every 5 seconds six iPads would use a large share of the free plan's 5 GB of data a month in one evening (Gate 3).
+ * Other doors' arrivals and guests added since: every 15 seconds the iPad asks door_sync() for what changed (about
+ * 0.4 KB when nothing did) instead of the whole list (about 280 KB on the full gala), which came once a minute
+ * before (Gate 3, data use, part 3).
  */
-export const LIST_EVERY_MS = 60_000
+export const LIST_EVERY_MS = 15_000
 import { checkSignOut } from './signOut'
 
 /** localStorage, or memory when the browser blocks it (the door keeps working either way). */
@@ -44,6 +46,9 @@ async function rpc<T>(fn: string, args?: Record<string, unknown>): Promise<T> {
   if (res.error) throw res.error
   return res.data as T
 }
+/** The saved list brought up to date: what changed since its cursor, merged (doorSync.ts, test-door-sync.mjs). */
+const refreshList = (desk: CheckInDesk) =>
+  syncDoorList((cursor, event) => rpc<DoorSync | null>('door_sync', { p_cursor: cursor, p_event: event }), desk.snapshot)
 /** An error's message, whatever was thrown (a Supabase error is an object with a message, not always an Error). */
 function messageOf(e: unknown): string {
   if (typeof e === 'object' && e !== null && 'message' in e && typeof e.message === 'string') return e.message
@@ -63,7 +68,7 @@ export const checkLiveSignOut = (staff: StaffUser) =>
 export async function loadDoor(staff: StaffUser): Promise<Door | null> {
   const desk = deskFor(staff)
   try {
-    const s = await rpc<Snapshot | null>('staff_checkin_snapshot')
+    const s = await refreshList(desk)
     // No open gala (the server answers null once it's closed): the guest list leaves the iPad (Gate 2 review, Oct 15).
     if (!s || s.status === 'closed') { desk.forgetGuests(); return null }
     if (desk.snapshot && desk.snapshot.event_id !== s.event_id) desk.clear()
@@ -171,7 +176,7 @@ function liveDoor(desk: CheckInDesk, s0: Snapshot): Door {
   // arrays, so the screen doesn't re-sort every few seconds.
   let view = buildView(s0)
 
-  /** Send what's waiting; once a minute (or when asked), also fetch the latest list (other doors' check-ins). */
+  /** Send what's waiting; every 15 seconds (or when asked), also fetch what changed on the list (other doors' check-ins). */
   async function tick(withList = false) {
     if (busy) return
     busy = true
@@ -181,7 +186,7 @@ function liveDoor(desk: CheckInDesk, s0: Snapshot): Door {
       if (r.offline) { online = false; return }
       online = true
       if (!withList && Date.now() - listAt < LIST_EVERY_MS) return
-      const s = await rpc<Snapshot | null>('staff_checkin_snapshot')
+      const s = await refreshList(desk)
       listAt = Date.now()
       // The gala closed: its list leaves the iPad; check-ins not synced yet stay queued in case it reopens.
       if (!s || s.status === 'closed') { desk.forgetGuests(); closed = true; return }

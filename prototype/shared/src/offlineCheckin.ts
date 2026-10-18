@@ -2,7 +2,7 @@
 // drops, and sync later. Plain TypeScript with no React or Supabase, so the check-in screen wires it up
 // and the tests run it directly (offlineCheckin.test.ts).
 //
-//   1. While online, save the list:   desk.saveSnapshot(await rpc('staff_checkin_snapshot'))
+//   1. While online, keep the list:   desk.saveSnapshot(await syncDoorList(call, desk.snapshot))   (doorSync.ts)
 //   2. At the door (online or not):    desk.scan(code) / desk.checkIn(guestId) / desk.checkInException(...)
 //      Each check-in is saved on the iPad first, so nothing is lost if the connection drops mid-way.
 //   3. When online:                    desk.sync((items) => rpc('staff_sync_check_ins', { p_items: items }))
@@ -68,6 +68,9 @@ export interface Snapshot {
   venue_name?: string | null
   status?: 'planning' | 'live' | 'closed'
   exceptions?: SnapshotException[]
+  /** door_sync's cursor and when the whole list last came (doorSync.ts): the next refresh asks only for what changed. */
+  cursor?: string
+  full_at?: number
 }
 
 export type QueuedCheckIn =
