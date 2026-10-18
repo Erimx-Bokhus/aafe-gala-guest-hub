@@ -68,6 +68,7 @@ const ACTIONS = [
   ['staff_report_payments', RM, `select staff_report_payments()`, 'report.payments'],
   ['staff_report_guests', ADMIN, `select staff_report_guests()`, 'report.guests'],
   ['staff_clear_needs', ADMIN, `select staff_clear_needs('ev-2026')`, 'gala.needs_cleared'],
+  ['staff_delete_guest_contacts', ADMIN, `select staff_delete_guest_contacts('ev-2026')`, 'gala.contacts_deleted'],
 ]
 // Only read, so nothing to log.
 const READS = ['staff_me', 'staff_current_event', 'staff_role', 'staff_email_queue', 'checkin_list', 'staff_checkin_snapshot', 'staff_pipeline', 'staff_sync', 'door_sync']
