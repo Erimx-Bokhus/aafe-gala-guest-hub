@@ -1,6 +1,7 @@
-// Sends AAFE's Salesforce (NPSP) what Give Lively doesn't know: the gala, check, ACH, wire, comp and staff-entered
-// orders with their sponsors and payments, and every named guest with their gala-night status. What goes and how it
-// maps: salesforce_outbox() in backend.sql and _shared/salesforce.ts (tested in scripts/test-salesforce.mts).
+// Sends AAFE's Salesforce (NPSP) what Give Lively doesn't know: the check, ACH, wire and staff-entered orders with
+// their sponsors and payments, and every named guest, comps included, with their gala-night status, without
+// duplicating what Give Lively's own connector made. What goes and how it maps: salesforce_outbox() in backend.sql
+// and _shared/salesforce.ts (tested in scripts/test-salesforce.mts).
 // A gala admin runs it from the staff app ("Sync now"); a schedule could too (cron secret).
 //
 // Settings: SALESFORCE_BASE_URL (the org's instance URL; in the demo, the salesforce-mock function) and
@@ -22,17 +23,24 @@ Deno.serve(async (req) => {
   const { data: outbox, error } = await db.rpc('salesforce_outbox')
   if (error) return json({ error: 'db_error', message: error.message }, 500)
 
-  // One sObject Collections upsert per batch (Salesforce REST API), matched on our ids. Never log the token.
+  // Salesforce's REST API: SOQL queries and sObject Collections calls. Never log the token.
+  const call = async (path: string, init: RequestInit = {}) => {
+    const res = await fetch(`${base}${path}`, { ...init, headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } })
+    if (!res.ok) throw new Error(`Salesforce returned HTTP ${res.status}`)
+    return await res.json()
+  }
+  const send = (method: string, path: string, records: SfRecord[]) =>
+    call(`/services/data/${API}/composite/sobjects${path}`, { method, body: JSON.stringify({ allOrNone: false, records }) }) as Promise<SfAnswer[]>
   const results = await pushAll(outbox, {
-    upsert: async (sobject: string, records: SfRecord[]) => {
-      const res = await fetch(`${base}/services/data/${API}/composite/sobjects/${sobject}/${EXTERNAL_ID}`, {
-        method: 'PATCH',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ allOrNone: false, records }),
-      })
-      if (!res.ok) throw new Error(`Salesforce returned HTTP ${res.status}`)
-      return (await res.json()) as SfAnswer[]
+    query: async (soql: string) => {
+      let page = await call(`/services/data/${API}/query?q=${encodeURIComponent(soql)}`)
+      const rows = [...page.records]
+      // A big answer comes in pages; nextRecordsUrl is a path on the same instance.
+      while (!page.done && page.nextRecordsUrl) { page = await call(page.nextRecordsUrl); rows.push(...page.records) }
+      return rows
     },
+    upsert: (sobject: string, records: SfRecord[]) => send('PATCH', `/${sobject}/${EXTERNAL_ID}`, records),
+    save: (op: 'create' | 'update', records: SfRecord[]) => send(op === 'create' ? 'POST' : 'PATCH', '', records),
   })
 
   const actor = who === 'schedule' ? 'Salesforce sync' : `Salesforce sync (${who})`

@@ -2584,10 +2584,12 @@ end $$;
 
 -- ---------------------------------------------------------------------
 -- 8b. SALESFORCE STAND-IN  (the salesforce-push edge function; _shared/salesforce.ts maps the rows)
--- Give Lively's own connector already sends its online donations to AAFE's Salesforce (NPSP). This sends what
--- Give Lively doesn't know, for the current gala: the gala (a Campaign), check, ACH, wire, comp and staff-entered
--- orders (Opportunity) with their sponsors (Account) and payments (npe01__OppPayment__c), and every named guest
--- (Contact) with their gala-night status (CampaignMember). No phones, dietary or accessibility details.
+-- Give Lively's own connector already sends its online purchases to AAFE's Salesforce (NPSP): the buyer (Contact,
+-- matched by email), the Opportunity, and the event's Campaign. This sends what Give Lively doesn't know, for the
+-- current gala: check, ACH, wire and staff-entered orders (Opportunity) with their sponsors (Account) and payments
+-- (npe01__OppPayment__c), and every named guest, comps included (Contact, matched by email) with their gala-night
+-- status (CampaignMember of the gala's Campaign, Give Lively's own when it has one). No phones, dietary or
+-- accessibility details. A comp is guests only: no Account or Opportunity (Gate 1, box 5).
 -- In the demo it goes to the salesforce-mock function, never a real org (requirements: Salesforce push, simulated).
 -- ponytail: each run sends the whole gala; upserts on our ids make that safe. Send only what changed since the last
 -- sync (salesforce_sync.last_synced_at) if a gala ever outgrows a few thousand records.
@@ -2597,9 +2599,11 @@ create unique index if not exists salesforce_sync_record on salesforce_sync (ent
 create or replace function salesforce_outbox() returns jsonb
 language sql stable security definer set search_path = public as $$
   with e as (select * from gala_events where id = current_event_id()),
-  o as (select o.* from orders o join e on e.id = o.event_id where o.source <> 'givelively')
+  o as (select o.* from orders o join e on e.id = o.event_id
+         where o.source not in ('givelively', 'comp') and o.status <> 'comp')
   select jsonb_build_object(
-    'campaign', (select jsonb_build_object('id', e.id, 'name', e.name, 'date', e.event_date) from e),
+    -- Give Lively names the event's Campaign after its page: that's the one to use when it exists.
+    'campaign', (select jsonb_build_object('id', e.id, 'name', e.name, 'date', e.event_date, 'givelively_name', e.givelively_page_name) from e),
     'accounts', coalesce((select jsonb_agg(jsonb_build_object('id', sp.id, 'name', sp.organization_name) order by sp.id)
                             from sponsors sp where sp.id in (select sponsor_id from o)), '[]'),
     'opportunities', coalesce((select jsonb_agg(jsonb_build_object('id', o.id, 'account_id', o.sponsor_id,
