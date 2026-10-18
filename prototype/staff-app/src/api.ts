@@ -668,7 +668,8 @@ export function liveLoader(client: SupabaseClient): (user: StaffUser) => Promise
     for (const d of s.deleted) copy.get(d.table)?.delete(d.id)
     for (const [t, list] of Object.entries(s.rows)) {
       const keys = NUMERIC[t] ?? []
-      for (const r of list) copy.get(t)?.set(String(r.id), keys.length ? { ...r, ...Object.fromEntries(keys.map((k) => [k, Number(r[k] ?? 0)])) } : r)
+      // A null stays null: a payment's fee and net are unknown until the sync reports the fee (Gate 1), not $0.
+      for (const r of list) copy.get(t)?.set(String(r.id), keys.length ? { ...r, ...Object.fromEntries(keys.map((k) => [k, r[k] == null ? null : Number(r[k])])) } : r)
     }
     cursor = s.cursor
     event = s.event
