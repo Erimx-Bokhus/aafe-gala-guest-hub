@@ -20,7 +20,9 @@
     "test": "vitest run",
     "translations": "node scripts/translation-sheet.mts",
     "db:load": "node scripts/load-demo-data.mjs",
-    "db:drift": "node scripts/demo-drift.mjs"
+    "db:drift": "node scripts/demo-drift.mjs",
+    "email:local": "node scripts/setup-email-local.mjs",
+    "db:local": "node scripts/load-local-db.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.109.0",
