@@ -125,19 +125,28 @@ The flow is tested in `npm run test:backend` (fake feed → mapping → import �
 
 ## Demo with a stand-in Salesforce (all synthetic)
 
-Give Lively's own Salesforce connector sends its online donations to AAFE's Salesforce (NPSP). `salesforce-push` sends what Give Lively doesn't know, for the current gala (`salesforce_outbox()` in `backend.sql`, mapped by `_shared/salesforce.ts`):
+Give Lively's own Salesforce connector already sends its online purchases to AAFE's Salesforce (NPSP): the buyer as a Contact (matched by email), an Opportunity, and the event's Campaign (named after the Give Lively page) with the buyer as a member. It never sends guests or Accounts ([its documented sync logic](https://www.givelively.org/resources/see-our-salesforce-integration-logic-and-fields)). `salesforce-push` sends what Give Lively doesn't know, for the current gala (`salesforce_outbox()` in `backend.sql`, mapped by `_shared/salesforce.ts`):
 
 | Here | Salesforce |
 | --- | --- |
-| The gala | Campaign |
-| A sponsor with a check, ACH, wire, comp or staff-entered order | Account |
-| That order (not Give Lively's) | Opportunity, in the gala's Campaign; paid and comp are Closed Won, cancelled Closed Lost, the rest Pledged |
+| The gala | Campaign: Give Lively's own when there is one with the gala's Give Lively page name, else ours |
+| A sponsor with a check, ACH, wire or staff-entered order | Account |
+| That order (not Give Lively's, not a comp) | Opportunity, in the gala's Campaign; paid is Closed Won, cancelled Closed Lost, the rest Pledged |
 | A check, direct ACH or wire payment staff recorded | `npe01__OppPayment__c` |
-| Every named guest, Give Lively buyers' guests included | Contact (name and email), and a Campaign Member: Registered, Attended or No Show |
+| Every named guest, comps and Give Lively buyers' guests included | Contact (name and email), and a Campaign Member: Registered, Attended or No Show |
 
-No phones, dietary or accessibility details are sent. Records are upserted on our ids in a custom external-ID field, `AAFE_Gala_Id__c`, so a second sync updates them instead of adding duplicates, and a record whose parent is missing fails on its own while the rest go through. Each record's outcome is kept in `salesforce_sync`, the Account and Opportunity ids on the sponsor and order (the CSV export reads them), and one change-log line per run. A gala admin runs it from the staff app (Integrations, **Sync now**). Tested in `npm run test:backend` (`scripts/test-salesforce.mts`).
+**Nothing twice next to Give Lively's records (Gate 1, box 5).**
+- **Contacts by email, the way Give Lively matches them.** Before making any Contact, the push looks up the guests' emails in Email and NPSP's Personal, Work and Alternate Email.
+  - A guest Salesforce knows is linked to that Contact, never overwritten. When several match, Give Lively's own tie-break picks: most gifts, then a mailing address, then the latest updated.
+  - Only guests Salesforce doesn't know become Contacts, one per email (two guests sharing an inbox are one Contact).
+  - If the lookup fails, no Contact is made that run.
+- **One membership per Contact.** A guest already in the Campaign (Give Lively adds its buyers) keeps that membership; only its status changes.
+- **Comps are guests only.** No Account and no Opportunity: a comp is no gift, and its guests are Contacts and Campaign members like everyone's.
+- **When it can't tell, it makes nothing.** If two Campaigns carry the gala page's name, the sync says to put the gala's id in `AAFE_Gala_Id__c` on the right one; a Campaign with that id always wins.
 
-In the demo it goes to `salesforce-mock`, a stand-in org that answers Salesforce's sObject Collections upsert and keeps the records in `demo_salesforce_records`; it never talks to a real org (requirements: Salesforce push, simulated).
+No phones, dietary or accessibility details are sent. Our own records are upserted on our ids in a custom external-ID field, `AAFE_Gala_Id__c`, so a second sync updates them instead of adding duplicates, and a record whose parent is missing fails on its own while the rest go through. Each record's outcome is kept in `salesforce_sync`, the Account and Opportunity ids on the sponsor and order (the CSV export reads them), and one change-log line per run. A gala admin runs it from the staff app (Integrations, **Sync now**). Tested in `npm run test:backend` (`scripts/test-salesforce.mts`).
+
+In the demo it goes to `salesforce-mock`, a stand-in org that answers the calls the push makes (the SOQL lookups it sends, read by `salesforce-mock/soql.ts`, and sObject Collections upsert, create and update) and keeps the records in `demo_salesforce_records`. Like Salesforce, it refuses a second membership of one Contact and a change to a member's Campaign or Contact. It never talks to a real org (requirements: Salesforce push, simulated). The test seeds it with what Give Lively's connector would have made.
 
 1. In the SQL editor (after `backend.sql`), run `database/demo_salesforce.sql`.
 2. Deploy and point the push at the stand-in:
@@ -148,7 +157,12 @@ In the demo it goes to `salesforce-mock`, a stand-in org that answers Salesforce
    ```
 3. **Sync now** on Integrations, or `curl -X POST $F/salesforce-push -H "$H"` (as above). Then `select sobject, count(*) from demo_salesforce_records group by 1;` shows what "Salesforce" holds.
 
-**For real AAFE use:** don't run `demo_salesforce.sql` or deploy `salesforce-mock`. AAFE's org needs the `AAFE_Gala_Id__c` field (Text, External ID, Unique) on Campaign, Account, Opportunity, `npe01__OppPayment__c`, Contact and Campaign Member, and a connected app for the access token; then `SALESFORCE_BASE_URL` is the org's instance URL. Check first how Give Lively's connector names Accounts and Contacts, so the two don't create duplicates.
+**For real AAFE use:** don't run `demo_salesforce.sql` or deploy `salesforce-mock`. AAFE's org needs:
+- the `AAFE_Gala_Id__c` field (Text, External ID, Unique) on Campaign, Account, Opportunity, `npe01__OppPayment__c` and Contact;
+- Registered, Attended and No Show as member statuses on the gala's Campaign;
+- a connected app for the access token.
+
+Then `SALESFORCE_BASE_URL` is the org's instance URL. Run the first sync after Give Lively's first sale, so its Campaign already exists. Not matched yet: a sponsor organization AAFE already has as an Account (Give Lively makes none, so this isn't a duplicate of its records).
 
 ## Give Lively
 
