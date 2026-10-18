@@ -904,7 +904,10 @@ begin
           (p_received::timestamp + time '12:00') at time zone 'America/New_York', me.id, 'unreconciled');
 
   select sum(greatest(original_amount - refunded_amount, 0)) into v_applied from payments where order_id = o.id;   -- per payment, never below 0 (#170)
-  v_status := case when o.status = 'comp' then 'comp' when v_applied + 0.005 >= o.commitment_amount then 'paid' else 'partially_paid' end;
+  -- A comp or a cancelled order keeps its status: a check that arrives after a cancellation is recorded, and the order
+  -- stays cancelled (owing nothing) until staff decide otherwise (Oct 12 audit; Gate 1, money rules).
+  v_status := case when o.status in ('comp', 'cancelled') then o.status
+                   when v_applied + 0.005 >= o.commitment_amount then 'paid' else 'partially_paid' end;
   update orders set status = v_status, updated_at = now() where id = o.id;
   perform write_audit('staff', me.name, 'payment', v_id, o.id, 'payment.recorded', o.status, v_status, true,
     format('Payment received: %s.', money_fmt(p_amount)));
