@@ -145,9 +145,11 @@ function pushHead() {
   if (changed) return 'files differ from your last commit, so nothing was pushed; commit them and run again'
   const branch = quiet('git branch --show-current').stdout.trim()
   if (!branch) return 'not on a branch, so nothing was pushed'
-  const upstream = quiet('git rev-parse --abbrev-ref --symbolic-full-name @{u}').status === 0
+  if (branch === 'main') return 'this is main, which only changes through pull requests (CLAUDE.md), so nothing was pushed'
+  // A branch made from origin/main tracks main; push it to its own name (git's default refuses a different name).
+  const upstream = quiet('git rev-parse --abbrev-ref --symbolic-full-name @{u}').stdout.trim()
   console.log(`\nPushing ${branch}...`)
-  return sh(upstream ? 'git push --no-verify' : `git push --no-verify -u origin ${branch}`) ? null : 'the push failed'
+  return sh(upstream === `origin/${branch}` ? 'git push --no-verify' : `git push --no-verify -u origin ${branch}`) ? null : 'the push failed'
 }
 
 /** Marks HEAD "local-ci" on GitHub when this was a full pass on committed, pushed code; else says why not. */
