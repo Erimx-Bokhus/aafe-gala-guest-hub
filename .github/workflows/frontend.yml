@@ -43,13 +43,22 @@ jobs:
         run: |
           # The base branch as it is now (a re-run reuses the original event, whose base may be out of date).
           BASE_SHA=$(gh api "repos/$REPO/branches/$BASE_REF" --jq .commit.sha || echo unknown)
-          passed=$(gh api "repos/$REPO/commits/$HEAD_SHA/status" --jq '[.statuses[] | select(.context == "local-ci" and .state == "success")] | length' || echo 0)
           behind=$(gh api "repos/$REPO/compare/$BASE_SHA...$HEAD_SHA" --jq .behind_by || echo unknown)
-          if [ "$passed" -gt 0 ] && [ "$behind" = "0" ]; then
+          # ci-local.mjs --push marks the commit right after pushing it; give the mark a few seconds to arrive (free:
+          # every job is billed at least a minute anyway).
+          passed=0
+          for wait in 0 6 6 6 6; do
+            sleep "$wait"
+            passed=$(gh api "repos/$REPO/commits/$HEAD_SHA/status" --jq '[.statuses[] | select(.context == "local-ci" and .state == "success")] | length' || echo 0)
+            [ "$passed" -gt 0 ] 2>/dev/null && break
+          done
+          if [ "$passed" -gt 0 ] 2>/dev/null && [ "$behind" = "0" ]; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
             echo "::notice::local-ci passed on $HEAD_SHA, which includes the latest base ($BASE_SHA): not run again."
+          elif [ "$passed" -gt 0 ] 2>/dev/null; then
+            echo "Running in full: local-ci passed on this commit, but the base has moved on (commits behind: $behind)."
           else
-            echo "No local-ci mark on this exact code (mark: $passed, commits behind the base: $behind): running in full."
+            echo "Running in full: no local-ci mark on this commit."
           fi
       - uses: actions/checkout@v4
         if: steps.local.outputs.skip != 'true'
