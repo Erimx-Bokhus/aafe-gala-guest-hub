@@ -1,5 +1,6 @@
 // The Give Lively upload (slice C): the import engine prepares an export in the browser, and the demo's database step gives
 // the same result as staff_import_givelively() on the same data; roles, the page and tier pickers, the review queue, live calls.
+import { readFileSync } from 'node:fs'
 import { describe, expect, it, vi } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { loadDB } from '@shared/data'
@@ -202,4 +203,61 @@ describe('what the upload screen says when a file stops it (Gate 3)', () => {
     expect(importProblem(new Error('internal error: a purchase time always matches PATTERN here')))
       .toBe('Something in this file stopped the import. Download the export from Give Lively again and retry; if it happens again, ask the technical partner.')
   })
+})
+
+// Gate 1 (#146): what an upload records for each payment, the same in the demo and the database. AAFE's ticket export has no
+// processor fee column, so the fee is unknown (null), not $0, and net with it; a wallet is a card with the wallet named.
+describe("payments from an upload: Natalie's 2027 export and the wallets (Gate 1)", () => {
+  it('the demo and the database record each payment the same: method, wallet, fee and net unknown', async () => {
+    const MAIN = "AAFE's 53rd Annual Gala", COMMUNITY = "AAFE's 53rd Annual Gala (Community Tickets)"
+    const natalie = readFileSync(new URL('../../../import-engine/test/fixtures/gala-2027-demo/givelively-export.csv', import.meta.url), 'utf8')
+    const wallets = exportCsv(...['Apple Pay', 'Google Pay', 'PayPal', 'Venmo', 'DAF Pay', 'Mystery Wallet'].map((m, i) => ({
+      Email: `wallet${i}@example.org`, 'Last Name': `Buyer${i}`, 'Page Name': MAIN, 'Tier Purchased': 'Supporter Sponsor', 'Tier Category': 'Sponsorship',
+      'Amount Spent': '$1,000.00', 'Payment Method': m, 'Date/Time of Purchase': `2027-04-0${i + 1} 10:00:00 AM EDT` })))
+    const { db: pg, as } = await openTestDb()
+    const admin = (sql: string, params?: unknown[]) => as('authenticated', ADMIN_EMAIL, sql, params)
+    await admin('select staff_set_gala_page($1)', [MAIN])
+    await admin('select staff_add_gala_page($1)', [COMMUNITY])
+    await admin(`select staff_set_tier_mapping('Ticket', 'corporate_ticket')`)
+    await admin(`select staff_set_tier_mapping('Community Ticket', 'community_ticket', $1)`, [COMMUNITY])
+    let demo = setTierMapping(setTierMapping(addGalaPage(setGalaPage(loadDB(), ADMIN, MAIN), ADMIN, COMMUNITY), ADMIN, 'Ticket', 'corporate_ticket'),
+      ADMIN, 'Community Ticket', 'community_ticket', COMMUNITY)
+    for (const [csv, name] of [[natalie, 'AAFE-2027-GiveLively-export-DEMO.csv'], [wallets, 'wallets.csv']]) {
+      const { rows, run } = await prepareImport(csv, name, demo)
+      await admin('select staff_import_givelively($1, $2) r', [JSON.stringify(rows), JSON.stringify(run)])
+      demo = demoImport(demo, ADMIN, rows, run).db
+    }
+    const sql = (await pg.query(`select purchase_key, method, method_detail, transaction_fee_amount fee, net_amount net,
+        reconciliation_status = 'needs_review' flagged from payments where purchase_key is not null order by purchase_key`)).rows
+    const local = demo.payments.filter((p) => p.purchase_key && sql.some((r: { purchase_key: string }) => r.purchase_key === p.purchase_key))
+      .sort((a, b) => a.purchase_key!.localeCompare(b.purchase_key!))
+      .map((p) => ({ purchase_key: p.purchase_key, method: p.method, method_detail: p.method_detail ?? null, fee: p.transaction_fee_amount, net: p.net_amount,
+        flagged: p.reconciliation_status === 'needs_review' }))
+    expect(sql).toHaveLength(33)   // 27 from Natalie's file (not the raffle) and 6 wallets
+    expect(local).toEqual(sql)
+    expect(sql.every((p: { fee: unknown; net: unknown }) => p.fee === null && p.net === null)).toBe(true)
+    expect(sql.filter((p: { method_detail: string | null }) => p.method_detail).map((p: { method_detail: string }) => p.method_detail).sort())
+      .toEqual(['Apple Pay', 'Donor-advised fund', 'Google Pay', 'PayPal', 'Venmo'])
+    expect(sql.filter((p: { flagged: boolean }) => p.flagged)).toHaveLength(1)   // only the method nobody recognizes
+  }, 120_000)
+
+  it('a disputed payment in an upload: the same "disputed" review in the demo and the database, flagged, nothing cancelled', async () => {
+    const MAIN = "AAFE's 53rd Annual Gala"
+    const csv = ['First Name,Last Name,Email,Tier Purchased,Amount Spent,Date/Time of Purchase,Page Name,Payment Method,Dispute Status',
+      `Dana,Dispute,dana.dispute@example.org,Supporter Sponsor,"$1,000.00",2027-04-10 10:00:00 AM EDT,${MAIN},Stripe Card,needs_response`,
+      `Nora,Calm,nora.calm@example.org,Supporter Sponsor,"$1,000.00",2027-04-11 10:00:00 AM EDT,${MAIN},Stripe Card,none`].join('\n')
+    const { db: pg, as } = await openTestDb()
+    await as('authenticated', ADMIN_EMAIL, 'select staff_set_gala_page($1)', [MAIN])
+    const before = setGalaPage(loadDB(), ADMIN, MAIN)
+    const { rows, run } = await prepareImport(csv, 'disputes.csv', before)
+    const server = (await as('authenticated', ADMIN_EMAIL, 'select staff_import_givelively($1, $2) r', [JSON.stringify(rows), JSON.stringify(run)]))[0].r
+    const { db: after, result } = demoImport(before, ADMIN, rows, run)
+    expect(summary(result)).toEqual(summary(server))
+    const sqlReviews = (await pg.query(`select reason, details from import_review where reason = 'disputed'`)).rows
+    expect(sqlReviews).toEqual([{ reason: 'disputed', details: { status: 'needs_response' } }])
+    expect(after.import_review!.filter((v) => v.reason === 'disputed').map((v) => ({ reason: v.reason, details: v.details }))).toEqual(sqlReviews)
+    const flagged = (await pg.query(`select sp.primary_contact_email e, o.status from payments p join orders o on o.id = p.order_id join sponsors sp on sp.id = o.sponsor_id
+      where p.reconciliation_status = 'needs_review' and sp.primary_contact_email in ('dana.dispute@example.org', 'nora.calm@example.org')`)).rows
+    expect(flagged).toEqual([{ e: 'dana.dispute@example.org', status: 'paid' }])
+  }, 120_000)
 })
