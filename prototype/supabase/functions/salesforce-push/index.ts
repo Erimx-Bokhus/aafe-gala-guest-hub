@@ -6,8 +6,9 @@
 //
 // Settings: SALESFORCE_BASE_URL (the org's instance URL; in the demo, the salesforce-mock function) and
 // SALESFORCE_TOKEN (an access token). Not set: does nothing and says so. The demo never talks to a real org.
-import { EXTERNAL_ID, NOT_CONNECTED, pushAll, summarize, type SfAnswer, type SfRecord } from '../_shared/salesforce.ts'
+import { EXTERNAL_ID, NOT_CONNECTED, pushAll, summarize, type PushPorts, type SfAnswer, type SfRecord } from '../_shared/salesforce.ts'
 import { admin, caller, cors, env, json } from '../_shared/supabase.ts'
+import { isOwnStandIn, standInPorts } from '../salesforce-mock/standin.ts'
 
 const API = 'v61.0'
 
@@ -31,7 +32,7 @@ Deno.serve(async (req) => {
   }
   const send = (method: string, path: string, records: SfRecord[]) =>
     call(`/services/data/${API}/composite/sobjects${path}`, { method, body: JSON.stringify({ allOrNone: false, records }) }) as Promise<SfAnswer[]>
-  const results = await pushAll(outbox, {
+  const http: PushPorts = {
     query: async (soql: string) => {
       let page = await call(`/services/data/${API}/query?q=${encodeURIComponent(soql)}`)
       const rows = [...page.records]
@@ -41,7 +42,12 @@ Deno.serve(async (req) => {
     },
     upsert: (sobject: string, records: SfRecord[]) => send('PATCH', `/${sobject}/${EXTERNAL_ID}`, records),
     save: (op: 'create' | 'update', records: SfRecord[]) => send(op === 'create' ? 'POST' : 'PATCH', '', records),
-  })
+  }
+  // The demo's stand-in org is a function of this same project: its database functions, called directly (standin.ts).
+  const ports = isOwnStandIn(base, env('SUPABASE_URL'))
+    ? standInPorts(async (fn, args) => { const r = await db.rpc(fn, args); if (r.error) throw new Error(r.error.message); return r.data })
+    : http
+  const results = await pushAll(outbox, ports)
 
   const actor = who === 'schedule' ? 'Salesforce sync' : `Salesforce sync (${who})`
   const { error: e2 } = await db.rpc('salesforce_mark_synced', { p_results: results, p_actor: actor })
