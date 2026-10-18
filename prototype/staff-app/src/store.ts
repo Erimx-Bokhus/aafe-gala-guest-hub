@@ -128,8 +128,10 @@ export function cancelEmail(db: DB, user: StaffUser, emailId: string): DB {
 export function recordOfflinePayment(db: DB, user: StaffUser, orderId: string, p: { method: Extract<PayMethod, 'check' | 'ach_direct' | 'wire'>; amount: number; received: string; check_number?: string }): DB {
   const o = db.orders.find((x) => x.id === orderId)!
   const pay = { id: uid('pay'), order_id: orderId, method: p.method, processor: 'none' as const, givelively_transaction_id: null, check_number: p.check_number || null, original_amount: p.amount, covered_fee_amount: 0, gross_amount: p.amount, transaction_fee_amount: 0, refunded_amount: 0, net_amount: p.amount, received_at: new Date(p.received + 'T12:00:00').toISOString(), recorded_by: user.id, reconciliation_status: 'unreconciled' as const, salesforce_opportunity_id: null }
-  const applied = db.payments.filter((x) => x.order_id === orderId).reduce((s, x) => s + x.original_amount, 0) + p.amount
-  const status = applied + 0.005 >= o.commitment_amount ? 'paid' as const : 'partially_paid' as const
+  // Same rule as staff_record_payment: paid is each payment less its refund, never below 0 (#170), and a comp or a
+  // cancelled order keeps its status (Gate 1, money rules).
+  const applied = db.payments.filter((x) => x.order_id === orderId).reduce((s, x) => s + Math.max(x.original_amount - x.refunded_amount, 0), 0) + p.amount
+  const status = o.status === 'comp' || o.status === 'cancelled' ? o.status : applied + 0.005 >= o.commitment_amount ? 'paid' as const : 'partially_paid' as const
   let d: DB = { ...db, payments: [...db.payments, pay], orders: db.orders.map((x) => (x.id === orderId ? { ...x, status, updated_at: nowIso() } : x)), salesforce_sync: [...db.salesforce_sync, { entity: 'payment', entity_id: pay.id, sf_object: 'Opportunity', sf_id: null, status: 'pending', last_synced_at: null, error_message: null }] }
   d = addAudit(d, { actor_type: 'staff', actor: user.name, entity: 'payment', entity_id: pay.id, order_id: orderId, action: 'payment.recorded', from_state: o.status, to_state: status, guest_visible: true, summary: `Payment received: ${p.amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}.` })
   if (!o.portal_link_sent_at && o.portal_token && !d.email_log.some((e) => e.order_id === orderId && e.template === 'portal_link' && e.status === 'queued')) {
