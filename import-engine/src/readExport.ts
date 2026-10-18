@@ -8,7 +8,7 @@ import { parseAmount, parseCount, parseCoveredFee, parsePurchaseTime, ValueError
 
 export type Field =
   | 'first' | 'last' | 'email' | 'tierName' | 'tierCategory' | 'quantity' | 'seats' | 'gross' | 'refunded'
-  | 'covered' | 'purchasedAt' | 'method' | 'status' | 'pageName' | 'internalName' | 'company' | 'guestText'
+  | 'covered' | 'purchasedAt' | 'method' | 'status' | 'pageName' | 'internalName' | 'company' | 'guestText' | 'dispute'
 
 /**
  * Normalized header → field. The guest-list question is matched by its start (GUEST_TEXT_PREFIX).
@@ -34,6 +34,11 @@ const HEADERS: Record<string, Field | 'phone'> = {
   companyorganizationname: 'company',
   companyname: 'company',
   organizationname: 'company',
+  // A chargeback, in a report that has the column (AAFE's ticket export doesn't): a staff review, never a cancellation (Gate 1).
+  disputestatus: 'dispute',
+  dispute: 'dispute',
+  chargebackstatus: 'dispute',
+  chargeback: 'dispute',
   phonenumber: 'phone',
   phone: 'phone',
 }
@@ -70,6 +75,8 @@ export interface PurchaseRow {
   pageName: string | null
   internalName: string | null
   guestText: string | null
+  /** The dispute (chargeback) status, if the file has that column: gl_import raises a staff review for it. */
+  dispute: string | null
   /** Every column as exported, by header, except the phone number (never imported). */
   raw: Record<string, string>
 }
@@ -106,6 +113,7 @@ const RowSchema = z.object({
   pageName: optional,
   internalName: optional,
   guestText: optional,
+  dispute: optional,
 })
 
 /**
@@ -220,7 +228,7 @@ async function readRow(cells: string[], rowNumber: number, sheet: Sheet, readErr
   const checked = RowSchema.safeParse({
     first: cell('first'), last: cell('last'), email: cell('email'), tierName: cell('tierName'),
     tierCategory: cell('tierCategory'), company: cell('company'), method: cell('method'), status: cell('status'),
-    pageName: cell('pageName'), internalName: cell('internalName'), guestText: cell('guestText'),
+    pageName: cell('pageName'), internalName: cell('internalName'), guestText: cell('guestText'), dispute: cell('dispute'),
   })
   if (!checked.success) return { rowNumber, reason: checked.error.issues.map((e) => e.message).join('; ') }
   const v = readValues(cell)
@@ -231,7 +239,7 @@ async function readRow(cells: string[], rowNumber: number, sheet: Sheet, readErr
     buyer: { first: r.first, last: r.last, email: r.email.toLowerCase() }, company: r.company,
     tierName: r.tierName, tierCategory: r.tierCategory, quantity: v.quantity, seats: v.seats,
     gross: v.gross, refunded: v.refunded, covered: v.covered, method: r.method, status: r.status,
-    pageName: r.pageName, internalName: r.internalName, guestText: r.guestText, raw: rawCells(sheet, cells),
+    pageName: r.pageName, internalName: r.internalName, guestText: r.guestText, dispute: r.dispute, raw: rawCells(sheet, cells),
   }
 }
 

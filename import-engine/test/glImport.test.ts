@@ -9,7 +9,7 @@ describe('toGlImport', () => {
     expect(rows).toEqual([{
       purchase_key: await purchaseKey('grace.kim@example.org', '2027-02-05T22:14:46Z'),
       date: '2027-02-05T22:14:46Z', first: 'Grace', last: 'Kim', email: 'grace.kim@example.org', company: null,
-      campaign: "AAFE's 52nd Annual Gala", ticket_level: 'Ticket', tier_id: 'supporter', method: 'Stripe Card', status: 'succeeded',
+      campaign: "AAFE's 52nd Annual Gala", ticket_level: 'Ticket', tier_id: 'supporter', method: 'Stripe Card', status: 'succeeded', dispute: null,
       quantity: 2, seats: 2, original: 1000, covered: 30, gross: 1030, refunded: 0, cancelled: false,
       guest_text: 'Jane Doe jane@example.org\nme',
       guests: [

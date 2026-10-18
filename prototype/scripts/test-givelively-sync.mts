@@ -1,9 +1,10 @@
 // Give Lively sync: what happens to each donation a poll returns (supabase/functions/_shared/givelively-sync.ts),
 // run against the real gl_import() in PGlite. Runs with npm run test:backend.
 import { pollStart, OVERLAP_MS, syncDonations, withoutKey, type SyncPorts } from '../supabase/functions/_shared/givelively-sync.ts'
+import { normalize } from '../supabase/functions/_shared/givelively.ts'
 // @ts-expect-error plain JavaScript helper
 import { counter, openTestDb } from './test-db.mjs'
-const { db } = await openTestDb()
+const { db, as } = await openTestDb()
 const count = counter(), ok = count.ok
 const q = async (sql: string, params: unknown[] = []) => (await db.query(sql, params)).rows as any[]
 
@@ -126,6 +127,54 @@ ok(pollStart(1_800_000_000_000) === 1_800_000_000_000 - OVERLAP_MS && OVERLAP_MS
 const KEY = 'k3y/with+chars' // gitleaks:allow (an invented test key, not a credential)
 const netErr = `error sending request for url (https://secure.givelively.org/nonprofits/org/json_dataclips/${encodeURIComponent(KEY)}.json?start_time_ms=1): dns error`
 ok(!withoutKey(netErr, KEY).includes(encodeURIComponent(KEY)) && withoutKey(netErr, KEY).includes('***') && !withoutKey(`bad ${KEY}`, KEY).includes(KEY), 'a network error never carries the API key into the saved status')
+
+// ---- Gate 1 (#146): Give Lively's older field names, disputes, and a held tier coming back (the Oct 14 research).
+{
+  // Older names (page_name, donation_amount) and the event export's own column names are read, not stored as unmapped.
+  const old = normalize({ id: 'GL-OLD-1', donation_date: '2026-10-07T15:00:00Z', first_name: 'Ola', last_name: 'Older', email: 'ola@sync.example.org',
+    page_name: PAGE, ticket_level: 'Gold Sponsor', donation_amount: '25,000.00', payment_method: 'Credit Card', status: 'succeeded', quantity: 1 })
+  ok(old.campaign === PAGE && old.gross === 25000, `older names read: page_name ${old.campaign}, donation_amount ${old.gross}`)
+  const exported = normalize({ 'Transaction ID': 'GL-EXP-1', 'Date/Time of Purchase': '2026-10-07T16:00:00Z', 'First Name': 'Eve', 'Last Name': 'Export',
+    Email: 'eve@sync.example.org', 'Page Name': PAGE, 'Tier Purchased': 'Gold Sponsor', 'Tickets Purchased': '1', 'Amount Spent': '$25,000.00',
+    'Amount Refunded': '$0.00', 'Transaction Fee Covered': 'TRUE', 'Company/Organization Name': 'Export Partners' })
+  ok(exported.campaign === PAGE && exported.ticket_level === 'Gold Sponsor' && exported.gross === 25000 && exported.quantity === 1 && exported.company === 'Export Partners',
+    'the event export\'s column names are read too')
+  ok(exported.covered === null, `a covered fee that only says TRUE is unknown, not NaN (${exported.covered})`)
+  const c = await syncDonations([{ id: 'GL-OLD-1', donation_date: '2026-10-07T15:00:00Z', first_name: 'Ola', last_name: 'Older', email: 'ola@sync.example.org',
+    page_name: PAGE, ticket_level: 'Gold Sponsor', donation_amount: 25000, payment_method: 'Credit Card', status: 'succeeded', transaction_fee_amount: 550 }], [PAGE], ports)
+  ok(c.created === 1 && c.unmapped === 0, `a donation with the older names imports: ${JSON.stringify(c)}`)
+
+  // A dispute: a staff review and the payment flagged, nothing cancelled; asked again, no second review.
+  const disputedNew = await syncDonations([donation('GL-D1', { dispute_status: 'needs_response' })], [PAGE], ports)
+  const d1 = (await q(`select o.id, o.status, p.reconciliation_status rec from payments p join orders o on o.id = p.order_id where p.givelively_transaction_id = 'GL-D1'`))[0]
+  ok(disputedNew.created === 1 && d1?.status === 'paid' && d1.rec === 'needs_review', 'a purchase that arrives disputed is imported, flagged, not cancelled')
+  ok((await q(`select count(*)::int n from import_review where order_id = $1 and reason = 'disputed' and details ->> 'status' = 'needs_response'`, [d1.id]))[0].n === 1,
+    'and staff get a "disputed" review with Give Lively\'s status')
+  await syncDonations([donation('GL-D2')], [PAGE], ports)
+  const later = await syncDonations([donation('GL-D2', { dispute: { status: 'lost' } })], [PAGE], ports)
+  const d2 = (await q(`select o.id, o.status, p.reconciliation_status rec from payments p join orders o on o.id = p.order_id where p.givelively_transaction_id = 'GL-D2'`))[0]
+  ok(later.updated === 1 && d2.status === 'paid' && d2.rec === 'needs_review', `a dispute on a purchase imported earlier flags it and cancels nothing: ${JSON.stringify(later)}`)
+  ok((await q(`select count(*)::int n from audit_log where entity = 'payment' and action = 'payment.disputed' and order_id = $1`, [d2.id]))[0].n === 1, 'the dispute is in the change log')
+  await syncDonations([donation('GL-D2', { dispute: { status: 'lost' } })], [PAGE], ports)
+  ok((await q(`select count(*)::int n from import_review where order_id = $1 and reason = 'disputed'`, [d2.id]))[0].n === 1, 'the next poll adds no second review')
+  for (const none of ['', 'none', 'false', 'N/A']) {
+    const t = `GL-ND-${none || 'blank'}`
+    await syncDonations([donation(t, { dispute_status: none })], [PAGE], ports)
+    ok((await q(`select count(*)::int n from import_review r join payments p on p.order_id = r.order_id where p.givelively_transaction_id = $1 and r.reason = 'disputed'`, [t]))[0].n === 0,
+      `"${none}" is no dispute`)
+  }
+
+  // GL-S4 waited on its tier ("Mystery Package"). The sync had moved on; linking the tier makes the next poll look back.
+  await db.query(`update givelively_sync_state set cursor_ms = 1791300000000 where id = 1`)
+  await as('authenticated', 'mei.ortiz@aafe-demo.example.org', `select staff_set_tier_mapping('Mystery Package', 'silver')`)
+  ok((await q(`select cursor_ms from givelively_sync_state`))[0].cursor_ms === null, 'linking a tier the sync held resets its cursor: the next poll looks back over everything')
+  const back = await syncDonations(DONATIONS, [PAGE], ports)
+  ok(back.created === 1 && (await q(`select o.tier_id from payments p join orders o on o.id = p.order_id where p.givelively_transaction_id = 'GL-S4'`))[0]?.tier_id === 'silver',
+    `and the held purchase is imported on its new level, nothing else twice: ${JSON.stringify(back)}`)
+  await db.query(`update givelively_sync_state set cursor_ms = 1791300000000 where id = 1`)
+  await as('authenticated', 'mei.ortiz@aafe-demo.example.org', `select staff_set_tier_mapping('Brand New Tier', 'silver')`)
+  ok((await q(`select cursor_ms::text c from givelively_sync_state`))[0].c === '1791300000000', 'linking a tier nothing was held for leaves the cursor alone')
+}
 
 console.log(`givelively sync: ${count.pass} passed, ${count.fail} failed`)
 if (count.fail) process.exitCode = 1

@@ -19,6 +19,8 @@ export interface GlImportRow {
   tier_id?: string
   method: string | null
   status: string | null
+  /** The dispute (chargeback) status, when the file has it: a staff review in gl_import, never a cancellation. */
+  dispute?: string | null
   quantity: number | null
   seats?: number
   original: number
@@ -54,6 +56,7 @@ function baseRow(r: PurchaseRow): GlImportRow {
     ticket_level: r.tierName,
     method: r.method,
     status: r.status,
+    dispute: r.dispute,
     quantity: r.quantity,
     // Assumption until AAFE's samples confirm it: Amount Spent includes the fee the donor chose to cover.
     original: r.gross - (r.covered ?? 0),
