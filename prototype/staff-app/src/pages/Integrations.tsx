@@ -113,7 +113,7 @@ export default function Integrations() {
           <div className="flex items-start justify-between gap-3"><div><h2 className="text-lg font-semibold text-navy-900">Salesforce (Nonprofit Success Pack)</h2><p className="text-sm text-navy-600">The year-over-year historical ledger: who gave, how much, how, and who attended.</p></div>{demo ? <Pill tone="amber">Simulated</Pill> : <Pill tone="amber">Stand-in org</Pill>}</div>
           <div className="mt-4 overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b border-navy-100"><th className="th pl-0">This app</th><th className="th">Salesforce object</th></tr></thead>
             <tbody className="divide-y divide-navy-100">
-              {[['Gala', 'Campaign'], ['Sponsor with a check, ACH, wire or comp order', 'Account'], ['That order', 'Opportunity, in the gala’s Campaign'], ['Check, ACH or wire payment', 'npe01__OppPayment__c (Payment)'], ['Guest', 'Contact + Campaign Member: Registered, Attended or No Show']].map(([a, b]) => <tr key={a}><td className="py-2 pr-3 font-medium text-navy-800">{a}</td><td className="py-2 text-navy-600">{b}</td></tr>)}
+              {[['Gala', 'Campaign: Give Lively’s own, once it has made one'], ['Sponsor with a check, ACH or wire order', 'Account'], ['That order', 'Opportunity, in the gala’s Campaign'], ['Check, ACH or wire payment', 'npe01__OppPayment__c (Payment)'], ['Guest, comps included', 'Contact (the one Salesforce already has for that email, if any) + Campaign Member: Registered, Attended or No Show']].map(([a, b]) => <tr key={a}><td className="py-2 pr-3 font-medium text-navy-800">{a}</td><td className="py-2 text-navy-600">{b}</td></tr>)}
             </tbody></table></div>
           <div className="mt-4 grid grid-cols-3 gap-2 text-center text-sm">
             <div className="rounded-lg bg-cream-100 p-2"><div className="text-xl font-semibold tabular-nums">{synced}</div><div className="text-xs text-navy-500">synced</div></div>
@@ -125,7 +125,7 @@ export default function Integrations() {
             {/* Who actually came, for a Contact + Campaign Member import. Carries email, so gala admins only. */}
             {canDo(user.role, 'exportSalesforce') && <button className="btn-ghost" data-testid="export-salesforce" onClick={() => void act(api.exportSalesforce().then((rows) => downloadCsv('aafe-salesforce-attendees-SYNTHETIC.csv', salesforceCsv(rows))), 'Salesforce file downloaded')}><Download size={15} /> Download Salesforce file</button>}
           </div>
-          <p className="mt-2 text-xs text-navy-500">Give Lively’s own Salesforce connector sends its online donations. Sync now sends what Give Lively doesn’t know: checks, direct ACH and wires, comps, guests and who came, never phones or dietary and accessibility notes. Live, it goes to a stand-in org, not AAFE’s Salesforce.</p>
+          <p className="mt-2 text-xs text-navy-500">Give Lively’s own Salesforce connector sends its online donations. Sync now sends what Give Lively doesn’t know: checks, direct ACH and wires, guests (comps included) and who came, without making a second copy of anything Give Lively sent, and never phones or dietary and accessibility notes. Live, it goes to a stand-in org, not AAFE’s Salesforce.</p>
         </section>
 
         <section className="card overflow-hidden xl:col-span-2">
