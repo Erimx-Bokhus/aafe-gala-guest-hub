@@ -26,6 +26,7 @@ jobs:
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
-      # --node-modules-dir=auto: CI has no npm install here, so Deno fetches the npm packages the
-      # functions import (npm:@supabase/supabase-js) itself.
-      - run: deno check --node-modules-dir=auto supabase/functions/*/index.ts
+      # --node-modules-dir=none: Deno fetches the npm packages the functions import (npm:@supabase/supabase-js,
+      # npm:qrcode) into its own cache. Not "auto", which installs all of package.json into node_modules by version
+      # range, ignoring package-lock.json: harmless here, but on a laptop it changed the apps' React and Vite.
+      - run: deno check --node-modules-dir=none supabase/functions/*/index.ts
