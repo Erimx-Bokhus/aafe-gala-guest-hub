@@ -218,6 +218,7 @@ function describe(v: ImportReview, db: DB): string {
     case 'refund': return `${sponsor ?? 'This purchase'} was refunded in Give Lively (${d.status ?? 'refunded'}); its seats are cancelled.`
     case 'missing_from_source': return `${sponsor ?? 'A purchase'} from ${d.purchased_at ? fmtDate(String(d.purchased_at)) : 'earlier'} isn't in this export.`
     case 'guest_text_changed': return `${sponsor ?? 'A sponsor'}'s guest list changed in Give Lively after names were entered.`
+    case 'disputed': return `${sponsor ?? 'A purchase'}'s payment is disputed in Give Lively (${d.status ?? 'disputed'}). Nothing was cancelled: if the dispute is lost, cancel the order yourself.`
     case 'zero_amount': return `${d.buyer ?? d.email} got ${d.tickets ?? 'a'} "${d.tier_purchased}" ticket${Number(d.tickets) > 1 ? 's' : ''} for $0 in Give Lively${d.guest_text ? ` (guests: ${d.guest_text})` : ''}. Nothing was imported: if it's a comp, add the guests on Relationship guests.`
   }
 }

@@ -243,7 +243,16 @@ export function demoImport(db: DB, user: StaffUser, rows: GlImportRow[], run: Gl
       continue
     }
     const cancel = !!r.cancelled || CANCELLED_STATUS.test(r.status ?? '') || (refunded > 0 && refunded >= gross)
-    if (d.payments.some((p) => p.purchase_key === key)) { res.skipped++; continue }
+    // As gl_import: a dispute (chargeback) is a staff review, never a cancellation; blank, "none" or "false" is no dispute.
+    const disputed = !/^(false|no|none|0|null|n\/?a|not disputed)?$/i.test((r.dispute ?? '').trim())
+    const existing = d.payments.find((p) => p.purchase_key === key)
+    if (existing) {
+      if (disputed && review(key, existing.order_id, 'disputed', { status: r.dispute?.trim() })) {
+        d = { ...d, payments: d.payments.map((p) => (p.id === existing.id ? { ...p, reconciliation_status: 'needs_review' as const } : p)) }
+        res.review_items++; res.updated++
+      } else res.skipped++
+      continue
+    }
     // As gl_import: a purchase on another of the gala's pages gets a level only from a mapping made for that page.
     const page = (ev.givelively_other_pages ?? []).some((p) => nameKey(p) === nameKey(r.campaign)) ? nameKey(r.campaign) : ''
     const mapped = (d.tier_mappings ?? []).find((m) => m.event_id === ev.id && (m.page_key ?? '') === page && m.name_key === nameKey(r.ticket_level))
@@ -280,9 +289,10 @@ export function demoImport(db: DB, user: StaffUser, rows: GlImportRow[], run: Gl
     // AAFE's ticket export has no fee column: the fee is unknown (null), not $0, and so is net, as gl_import records it.
     const pay = { id: uid('pay'), order_id: o.id, method, method_detail: detail, processor: 'stripe' as const, givelively_transaction_id: null, check_number: null, original_amount: original,
       covered_fee_amount: r.covered ?? 0, gross_amount: gross, transaction_fee_amount: null, refunded_amount: refunded, net_amount: null,
-      received_at: new Date(r.date).toISOString(), recorded_by: 'givelively_sync', reconciliation_status: flagged ? 'needs_review' as const : 'matched' as const,
+      received_at: new Date(r.date).toISOString(), recorded_by: 'givelively_sync', reconciliation_status: flagged || disputed ? 'needs_review' as const : 'matched' as const,
       salesforce_opportunity_id: null, purchase_key: key }
     d = createSeats({ ...d, orders: [...d.orders, o], payments: [...d.payments, pay] }, o.id, seats)
+    if (disputed && review(key, o.id, 'disputed', { status: r.dispute?.trim() })) res.review_items++
     d = addAudit(d, { actor_type: 'system', actor, entity: 'order', entity_id: o.id, order_id: o.id, action: 'order.created', from_state: null, to_state: 'paid', guest_visible: true, summary: `${tier.name}${qty > 1 ? ` × ${qty}` : ''} recorded for ${org} (givelively).` })
     // Pre-fill: each named guest takes the next unnamed seat, as import_fill_guests does.
     for (const g of r.guests ?? []) {
