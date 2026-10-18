@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 // Demo mode (no Supabase): the pages run their actions through StaffApi with the same role rules as the server (issue #9).
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { loadDB } from '@shared/data'
 
@@ -11,6 +11,9 @@ async function renderDemo() {
   return render(<App />)
 }
 
+// The first import of the whole staff app takes up to 4.6 s while other test files run alongside (Oct 17): done once
+// here, with its own time, so it doesn't count against the first test's 5 seconds (App.test.tsx has the details).
+beforeAll(async () => { await renderDemo(); cleanup() }, 30_000)
 afterEach(() => { cleanup(); vi.doUnmock('@shared/supabase'); history.replaceState(null, '', '/') })
 
 describe('staff app (demo mode)', () => {

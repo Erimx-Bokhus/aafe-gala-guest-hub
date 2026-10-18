@@ -155,7 +155,7 @@ describe('live mode: one staff_* function per action', () => {
   })
 
   it('says so plainly when no gala is open, for a manager and a volunteer alike (Gate 3)', async () => {
-    const vol = client({ data: null })   // staff_checkin_snapshot() answers null when no gala is open
+    const vol = client({ data: null })   // door_sync() answers null when no gala is open
     const e1 = await liveLoader(vol.c)(VOL).catch((x: unknown) => x)
     const mgr = client({ data: everything(loadDB(), { event: null }) })   // staff_sync() names no gala either
     const e2 = await liveLoader(mgr.c)(ADMIN).catch((x: unknown) => x)
@@ -177,13 +177,18 @@ describe('live mode: one staff_* function per action', () => {
     expect(ldb.meta.current_event_id).toBe(now)
   })
 
-  it('loads a volunteer from the door list only, never the tables', async () => {
+  it('loads a volunteer from the door list only, never the tables, then asks only for what changed (Gate 3)', async () => {
     const snap: CheckinSnapshot = demoSnapshot(loadDB())
-    const { c, rpc, from } = client({ data: snap })
-    const vdb: DB = await liveLoader(c)(VOL)
-    expect(rpc).toHaveBeenCalledWith('staff_checkin_snapshot')
+    const all = { ...snap, cursor: '7', full: true, removed: [], count: snap.guests.length }
+    const { c, rpc, from } = client({ data: all })
+    const load = liveLoader(c)
+    const vdb: DB = await load(VOL)
+    expect(rpc).toHaveBeenCalledWith('door_sync', { p_cursor: null, p_event: null })
     expect(from).not.toHaveBeenCalled()
     expect(vdb.guests).toHaveLength(snap.guests.length)
+    rpc.mockResolvedValue({ data: { ...all, cursor: '8', full: false, guests: [], unnamed_seats: null, exceptions: null }, error: null })
+    expect(await load(VOL)).toBe(vdb)   // nothing changed: the same object, so React doesn't redraw
+    expect(rpc).toHaveBeenLastCalledWith('door_sync', { p_cursor: '7', p_event: snap.event_id })
   })
 })
 

@@ -1,6 +1,6 @@
 // What the door screen needs, whichever way the app runs:
 //   live (VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY set): staff sign in, the list comes from
-//     staff_checkin_snapshot(), check-ins sync through staff_sync_check_ins() (liveDoor.ts);
+//     door_sync() by changes, check-ins sync through staff_sync_check_ins() (liveDoor.ts);
 //   demo (no keys, e.g. OPEN-CheckIn-App.html): the bundled invented door list and the demo sync server (demoDoor.ts).
 // The screen (App.tsx) only talks to a Door, so both look and behave the same at the door.
 import type { Notice } from '@shared/offlineCheckin'
