@@ -5,6 +5,7 @@
 import { readFileSync } from 'node:fs'
 import { BATCH, EXTERNAL_ID, LOOKUP, pushAll, soqlText, summarize, toBatches, type Outbox, type PushPorts } from '../supabase/functions/_shared/salesforce.ts'
 import { parseSoql } from '../supabase/functions/salesforce-mock/soql.ts'
+import { isOwnStandIn, standInPorts, type Rpc } from '../supabase/functions/salesforce-mock/standin.ts'
 // @ts-expect-error plain JavaScript helper
 import { counter, D, openTestDb } from './test-db.mjs'
 const { db, as, err } = await openTestDb()
@@ -76,14 +77,19 @@ ok(!paid || batches[1].records.find((r) => r[EXTERNAL_ID] === paid.id)?.StageNam
 
 // ---- Push to the stand-in org, then record what it said
 const svc = async (sql: string, params: unknown[]) => (await as('service_role', null, sql, params))[0].r
-const ports: PushPorts = {
-  query: async (soql) => {
-    const p = parseSoql(soql)
-    return svc('select demo_salesforce_query($1, array(select jsonb_array_elements_text($2::jsonb)), $3, $4::jsonb) r', [p.sobject, JSON.stringify(p.fields), p.any, JSON.stringify(p.conds)])
-  },
-  upsert: (sobject, records) => svc('select demo_salesforce_upsert($1, $2::jsonb) r', [sobject, JSON.stringify(records)]),
-  save: (op, records) => svc('select demo_salesforce_save($1, $2::jsonb) r', [op, JSON.stringify(records)]),
+// The push's own stand-in ports (salesforce-mock/standin.ts, what salesforce-push uses in the demo), each database
+// function called by name as the service role, as supabase-js's rpc() does.
+const rpc: Rpc = (fn, args) => {
+  const names = Object.keys(args)
+  const cast = (v: unknown, i: number) => (Array.isArray(v) && v.every((x) => typeof x === 'string') ? `array(select jsonb_array_elements_text($${i}::jsonb))`
+    : typeof v === 'boolean' ? `$${i}::boolean` : typeof v === 'object' ? `$${i}::jsonb` : `$${i}`)
+  return svc(`select ${fn}(${names.map((k, i) => `${k} => ${cast(args[k], i + 1)}`).join(', ')}) r`,
+    names.map((k) => (typeof args[k] === 'object' ? JSON.stringify(args[k]) : args[k])))
 }
+const ports: PushPorts = standInPorts(rpc)
+ok(isOwnStandIn('https://x.supabase.co/functions/v1/salesforce-mock/', 'https://x.supabase.co') && !isOwnStandIn('https://x.supabase.co/functions/v1/salesforce-mock', 'https://y.supabase.co')
+  && !isOwnStandIn('https://aafe.my.salesforce.com', 'https://x.supabase.co') && !isOwnStandIn('https://x.supabase.co/functions/v1/salesforce-mock', ''),
+  "the push reaches the stand-in directly only when it is this project's own; any other address, a real org included, over HTTP")
 const steps: string[] = []
 const traced: PushPorts = {
   query: (soql) => { steps.push(`query ${parseSoql(soql).sobject}`); return ports.query(soql) },
