@@ -1,11 +1,8 @@
 name: Import engine tests
 
 on:
-  push:
-    branches: [main]
-    paths: ['import-engine/**', '.github/workflows/import-engine.yml']
-  # Runs on every pull request (no path filter) so it can be a required check on main;
-  # a path filter would leave PRs that don't touch these folders waiting forever.
+  # Every pull request (no path filter) so it can be a required check on main; a path filter would leave PRs that
+  # don't touch these folders waiting forever. No run after each merge into main: the pull request already tested it.
   pull_request:
 
 # A newer push to the same pull request cancels the older run still in progress (saves Actions minutes).
