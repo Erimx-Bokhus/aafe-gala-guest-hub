@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 // Session handling in the staff app: who gets in after the emailed link, and who is signed straight back out.
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import type { StaffUser } from '@shared/types'
 import { loadDB } from '@shared/data'
@@ -10,7 +10,8 @@ const signOut = vi.fn()
 // After sign-in a volunteer loads only the door list (issue #9); managers would read the tables.
 const rpc = vi.fn(async (fn: string): Promise<{ data: unknown; error: { message: string } | null }> => {
   const { demoSnapshot } = await vi.importActual<typeof import('./api')>('./api')
-  return fn === 'staff_checkin_snapshot' ? { data: demoSnapshot(loadDB()), error: null } : { data: null, error: { message: 'not mocked' } }
+  const s = demoSnapshot(loadDB())   // door_sync() with no cursor: the whole list
+  return fn === 'door_sync' ? { data: { ...s, cursor: '1', full: true, removed: [], count: s.guests.length }, error: null } : { data: null, error: { message: 'not mocked' } }
 })
 const tableRead = vi.fn()
 let authEvent: (event: string) => void = () => {}
@@ -36,6 +37,14 @@ async function renderApp(opts: { session: boolean; staff: StaffUser | null; staf
   return render(<App />)
 }
 
+// The first import of the whole staff app takes 1 to 4.3 s while other test files run alongside (12 timed runs, Oct 17),
+// later ones about 0.1 s. Inside the first test it once passed the 5-second limit, and that test's late render then
+// signed out during the next one. Done once here, with its own time, every test gets the fast import.
+beforeAll(async () => {
+  vi.doMock('@shared/supabase', () => ({ supabase: null }))
+  await import('./App')
+  vi.doUnmock('@shared/supabase')
+}, 30_000)
 afterEach(() => { cleanup(); signOut.mockReset(); rpc.mockClear(); tableRead.mockReset(); unsubscribe.mockReset(); vi.doUnmock('@shared/supabase'); history.replaceState(null, '', '/') })
 
 describe('staff app session (live mode)', () => {
@@ -57,17 +66,17 @@ describe('staff app session (live mode)', () => {
     await renderApp({ session: true, staff: { id: 'st-9', name: 'Kenji Abe', email: 'kenji.abe@aafe-demo.example.org', role: 'check_in_volunteer' } as StaffUser })
     await waitFor(() => expect(window.location.hash).toBe('#/checkin'))
     expect(await screen.findByText('Kenji Abe')).toBeTruthy()
-    expect(rpc).toHaveBeenCalledWith('staff_checkin_snapshot')
+    expect(rpc).toHaveBeenCalledWith('door_sync', { p_cursor: null, p_event: null })
     expect(tableRead).not.toHaveBeenCalled()
   })
 
   it("doesn't reload the gala when Supabase says \"signed in\" again for the same person (e.g. the tab regains focus)", async () => {
     await renderApp({ session: true, staff: { id: 'st-9', name: 'Kenji Abe', email: 'kenji.abe@aafe-demo.example.org', role: 'check_in_volunteer' } as StaffUser })
     expect(await screen.findByText('Kenji Abe')).toBeTruthy()
-    const loads = rpc.mock.calls.filter(([fn]) => fn === 'staff_checkin_snapshot').length
+    const loads = rpc.mock.calls.filter(([fn]) => fn === 'door_sync').length
     authEvent('SIGNED_IN')
     await new Promise((r) => setTimeout(r, 50))
-    expect(rpc.mock.calls.filter(([fn]) => fn === 'staff_checkin_snapshot').length).toBe(loads)
+    expect(rpc.mock.calls.filter(([fn]) => fn === 'door_sync').length).toBe(loads)
     expect(screen.queryByText('Loading the gala…')).toBeNull()
   })
 
@@ -89,7 +98,7 @@ describe('staff app failures say what happened and what to do', () => {
   })
 
   it('says so plainly when no gala is open', async () => {
-    rpc.mockImplementationOnce(async () => ({ data: null, error: null }))   // staff_checkin_snapshot() with no open gala
+    rpc.mockImplementationOnce(async () => ({ data: null, error: null }))   // door_sync() with no open gala
     await renderApp({ session: true, staff: KENJI })
     expect((await screen.findByRole('alert')).textContent).toBe('No gala is open right now. Ask a gala admin to check the gala’s status.')
   })
