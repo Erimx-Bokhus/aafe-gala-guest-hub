@@ -165,3 +165,13 @@ describe('readExport: names damaged by a spreadsheet save', () => {
     expect(saved.rejected).toEqual(clean.rejected)
   })
 })
+
+// Gate 1 (#146): a report with a dispute (chargeback) column; AAFE's ticket export has none, so the field is optional.
+describe('readExport: a dispute column', () => {
+  it('reads the dispute status when the file has the column, and null when it does not', async () => {
+    const withColumn = 'First Name,Last Name,Email,Tier Purchased,Amount Spent,Date/Time of Purchase,Dispute Status\n' +
+      'Dana,Dispute,dana@example.org,Ticket,$500.00,2027-04-10 10:00:00 AM EDT,needs_response\n'
+    expect((await readExport(withColumn)).rows[0]?.dispute).toBe('needs_response')
+    expect((await readExport(exportCsv({}))).rows[0]?.dispute).toBeNull()
+  })
+})

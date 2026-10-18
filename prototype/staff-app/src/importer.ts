@@ -63,6 +63,8 @@ export const REVIEW: Record<ReviewReason, { label: string; choices: [string, str
   missing_from_source: { label: 'Missing from the export', choices: ['Cancel the seats', 'Keep (partial export)'] },
   guest_text_changed: { label: 'Guest list changed in Give Lively', choices: ['Keep the current names', 'Use the new list'] },
   zero_amount: { label: '$0 purchase', choices: ['Added as comps', 'Not a guest'] },
+  // Gate 1: a chargeback. Nothing is cancelled; staff decide once Give Lively says how it ended.
+  disputed: { label: 'Disputed payment', choices: ['Keep the order', 'Cancel the order'] },
 }
 
 // ---- A small invented export for demo mode (hard rule 1: example.org emails, 555-01xx phones) ----

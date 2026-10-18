@@ -28,11 +28,12 @@ describe.each(SETS)('the money rules on the %s demo set', (set) => {
     expect(wrong).toEqual([])
   })
 
-  it('every payment: gross = amount + covered fee, net = gross - fee - refunds, a refund never above the payment', () => {
+  it('every payment: gross = amount + covered fee, net = gross - fee - refunds (unknown while the fee is), a refund never above the payment', () => {
     const db = load(set)
-    const wrong = db.payments.filter((p) => [p.original_amount, p.covered_fee_amount, p.gross_amount, p.transaction_fee_amount, p.refunded_amount].some((v) => v < 0)
+    const wrong = db.payments.filter((p) => [p.original_amount, p.covered_fee_amount, p.gross_amount, p.transaction_fee_amount ?? 0, p.refunded_amount].some((v) => v < 0)
       || Math.abs(p.original_amount + p.covered_fee_amount - p.gross_amount) > CENT
-      || Math.abs(p.gross_amount - p.transaction_fee_amount - p.refunded_amount - p.net_amount) > CENT
+      || (p.transaction_fee_amount == null ? p.net_amount != null
+        : p.net_amount == null || Math.abs(p.gross_amount - p.transaction_fee_amount - p.refunded_amount - p.net_amount) > CENT)
       || p.refunded_amount > p.gross_amount + CENT).map((p) => p.id)
     expect(wrong).toEqual([])
   })

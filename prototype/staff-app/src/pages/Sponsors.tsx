@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { ArrowLeft, Check, Copy, Mail, Plus, Search } from 'lucide-react'
-import { METHOD_LABEL, orderMoney, seatStats, sponsorOf, staffName, tierOf } from '@shared/data'
+import { methodLabel, orderMoney, seatStats, sponsorOf, staffName, tierOf } from '@shared/data'
 import { Link, Pill, fmtDate, money } from '@shared/ui'
 import type { AuditEntry, Material } from '@shared/types'
 import { PageHead } from '../App'
@@ -119,7 +119,7 @@ export function SponsorDetail({ id }: { id: string }) {
             <h2 className="font-semibold text-navy-900">Payments</h2>
             <div className="mt-2 grid grid-cols-3 gap-2 text-sm"><div><div className="text-navy-500">Commitment</div><div className="font-semibold">{money(o.commitment_amount)}</div></div><div><div className="text-navy-500">Received</div><div className="font-semibold">{money(m.paid, true)}</div></div><div><div className="text-navy-500">Balance</div><div className={`font-semibold ${m.balance ? 'text-rose-700' : ''}`}>{money(m.balance)}</div></div></div>
             <ul className="mt-3 divide-y divide-navy-100 border-t border-navy-100 text-sm">
-              {m.pays.map((p) => <li key={p.id} className="py-2"><div className="flex justify-between"><span className="font-semibold">{money(p.gross_amount, true)}</span><span className="text-navy-500">{fmtDate(p.received_at)}</span></div><div className="text-xs text-navy-500">{METHOD_LABEL[p.method]}{p.check_number ? ` #${p.check_number}` : ''}{p.givelively_transaction_id ? ` · ${p.givelively_transaction_id}` : ''} · fee {money(p.transaction_fee_amount, true)} · net {money(p.net_amount, true)}</div></li>)}
+              {m.pays.map((p) => <li key={p.id} className="py-2"><div className="flex justify-between"><span className="font-semibold">{money(p.gross_amount, true)}</span><span className="text-navy-500">{fmtDate(p.received_at)}</span></div><div className="text-xs text-navy-500">{methodLabel(p)}{p.check_number ? ` #${p.check_number}` : ''}{p.givelively_transaction_id ? ` · ${p.givelively_transaction_id}` : ''} · fee {p.transaction_fee_amount == null ? 'not in file' : money(p.transaction_fee_amount, true)}{p.net_amount == null ? '' : ` · net ${money(p.net_amount, true)}`}</div></li>)}
               {!m.pays.length && <li className="py-2 text-navy-500">No payments yet.</li>}
             </ul>
           </section>
