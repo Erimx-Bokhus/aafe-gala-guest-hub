@@ -164,6 +164,9 @@ In the demo it goes to `salesforce-mock`, a stand-in org that answers Salesforce
   - The sync and the CSV upload use the same failure words (failed, declined, cancelled, voided, reversed, returned), so one donation can't be live in one and cancelled in the other.
   - Give Lively's own fee is stored as reported and never recomputed. AAFE's ticket export has no fee column, so an uploaded purchase's fee is unknown (`null`), not $0, and so is its net; the sync fills both in when it sees the same purchase, logged as `payment.fee_known` (Gate 1).
   - A wallet (Apple Pay, Google Pay, PayPal, Venmo, a donor-advised fund) is recorded as `card`, with the wallet in `payments.method_detail` (`payment_method_of()`, `payment_method_detail()`; decided Oct 17).
+  - A dispute (chargeback), from the sync or from a report that has a dispute column, flags the payment and raises a `disputed` staff review; nothing is cancelled, since the dispute may still go AAFE's way. Blank, "none" or "false" is no dispute (Gate 1).
+  - The sync reads Give Lively's older field names (`page_name`, `donation_amount`) and the event export's column names too, so a feed in any of those shapes isn't stored as unmapped (`_shared/givelively.ts`, Gate 1).
+  - Linking a tier the sync held (`staff_set_tier_mapping`) makes the next poll look back over all purchases once, as adding a page does, so the held purchase comes in; re-reading imports nothing twice. A purchase held from an upload comes back with the next upload (Gate 1).
 - **Flagged for review** (`payments.reconciliation_status = 'needs_review'`, reason in `orders.internal_notes`):
   - (an unknown package no longer defaults to Community Ticket: nothing is created, and it goes to `import_review` as `unknown_tier`)
   - the payment method wasn't recognized (a wallet is recognized: see above)

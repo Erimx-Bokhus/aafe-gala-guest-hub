@@ -214,8 +214,9 @@ create table if not exists import_review (
 create index if not exists import_review_open on import_review (event_id, status, reason);
 -- zero_amount (Oct 12 audit): a $0 or blank-amount purchase, left for staff instead of dropped (gl_import).
 alter table import_review drop constraint if exists import_review_reason_check;
+-- disputed (Gate 1): a chargeback on a Give Lively payment; staff decide, nothing is cancelled (gl_import).
 alter table import_review add constraint import_review_reason_check check (reason in ('unknown_tier','guest_text_changed',
-  'email_name_conflict','double_booked','possible_duplicate','refund','missing_from_source','zero_amount'));
+  'email_name_conflict','double_booked','possible_duplicate','refund','missing_from_source','zero_amount','disputed'));
 
 -- Give Lively tier name -> tier, once per gala ("Ticket" -> Supporter).
 create table if not exists tier_mappings (
@@ -1432,7 +1433,7 @@ declare
   r jsonb; p payments; o orders; t sponsorship_tiers; e gala_events; v_sp text; v_order text; v_pay text;
   v_method text; v_detail text; v_qty int; v_seats int; v_commit numeric; v_review text[]; v_name text; v_org text; v_key text;
   v_at timestamptz; v_original numeric; v_gross numeric; v_fee numeric; v_refunded numeric; v_text text;
-  v_cancel boolean; v_changed boolean; v_named int; v_conflict text[]; f jsonb; v_page text;
+  v_cancel boolean; v_changed boolean; v_named int; v_conflict text[]; f jsonb; v_page text; v_disputed boolean;
   v_created int := 0; v_updated int := 0; v_skipped int := 0; v_flagged int := 0; v_unknown int := 0;
   v_prefilled int := 0; v_reviews int := 0; v_zero int := 0; v_applied numeric;
 begin
@@ -1463,6 +1464,8 @@ begin
       v_zero := v_zero + 1; continue;
     end if;
     v_text := nullif(btrim(r ->> 'guest_text'), '');
+    -- A dispute (chargeback) status from the sync or a report that has the column; blank, "none" or "false": no dispute.
+    v_disputed := coalesce(btrim(r ->> 'dispute'), '') !~* '^(false|no|none|0|null|n/?a|not disputed)?$';
     v_cancel := coalesce((r ->> 'cancelled')::boolean, false) or coalesce((r ->> 'cancel_only')::boolean, false)
              -- The failure words match the sync's classify() and the import engine's CANCELLED_STATUS (test-audit-fixes checks all three).
              -- A partial refund keeps the order (spec case 19).
@@ -1512,6 +1515,14 @@ begin
         perform write_audit('system', p_actor, 'order', o.id, o.id, 'order.cancelled', o.status, 'cancelled', false,
           'Refunded or failed in Give Lively; seats cancelled.');
         if add_import_review(p_run_id, v_key, o.id, 'refund', jsonb_build_object('status', r ->> 'status', 'refunded', v_refunded)) then v_reviews := v_reviews + 1; end if;
+        v_changed := true;
+      end if;
+      -- Disputed (a chargeback): a staff review, never a cancellation, since the dispute may still go AAFE's way (Gate 1).
+      if v_disputed and add_import_review(p_run_id, v_key, o.id, 'disputed', jsonb_build_object('status', btrim(r ->> 'dispute'))) then
+        v_reviews := v_reviews + 1;
+        update payments set reconciliation_status = 'needs_review' where id = p.id;
+        perform write_audit('system', p_actor, 'payment', p.id, o.id, 'payment.disputed', null, btrim(r ->> 'dispute'), false,
+          format('Disputed in Give Lively (%s); nothing cancelled.', btrim(r ->> 'dispute')));
         v_changed := true;
       end if;
       -- Guest list text changed in Give Lively: fill only if nobody has named a seat yet; otherwise ask staff.
@@ -1625,6 +1636,10 @@ begin
     values (v_pay, v_order, v_method, v_detail, 'stripe', nullif(r ->> 'txn', ''), v_key, v_original, coalesce(nullif(r ->> 'covered', '')::numeric, 0), v_gross,
             v_fee, v_refunded, coalesce(nullif(r ->> 'net', '')::numeric, v_gross - v_fee - v_refunded),
             v_at, 'givelively_sync', case when cardinality(v_review) > 0 then 'needs_review' else 'matched' end);
+    if v_disputed and add_import_review(p_run_id, v_key, v_order, 'disputed', jsonb_build_object('status', btrim(r ->> 'dispute'))) then
+      v_reviews := v_reviews + 1;
+      update payments set reconciliation_status = 'needs_review' where id = v_pay;
+    end if;
     perform create_seats(v_order, v_seats);
     perform write_audit('system', p_actor, 'order', v_order, v_order, 'order.created', null, 'paid', true,
       format('%s recorded for %s (givelively).', t.name || case when v_qty > 1 then ' × ' || v_qty else '' end, v_org));
@@ -1702,7 +1717,7 @@ drop function if exists public.staff_set_tier_mapping(text, text);
 drop function if exists private.staff_set_tier_mapping(text, text);
 create or replace function staff_set_tier_mapping(p_givelively_name text, p_tier_id text, p_page text default null) returns void
 language plpgsql security definer set search_path = public as $$
-declare me staff_users := require_staff(array['gala_admin']); e gala_events; v_old text; v_page text := '';
+declare me staff_users := require_staff(array['gala_admin']); e gala_events; v_old text; v_page text := ''; v_lookback boolean;
 begin
   if name_key(p_givelively_name) = '' then raise exception 'invalid_input: tier name is required'; end if;
   if not exists (select 1 from sponsorship_tiers where id = p_tier_id and event_id = current_event_id()) then raise exception 'not_found: tier'; end if;
@@ -1715,12 +1730,19 @@ begin
   insert into tier_mappings (id, event_id, givelively_name, name_key, page_key, tier_id, created_by)
   values (new_id('tm'), e.id, btrim(p_givelively_name), name_key(p_givelively_name), v_page, p_tier_id, me.name)
   on conflict (event_id, page_key, name_key) do update set tier_id = excluded.tier_id, created_by = excluded.created_by, created_at = now();
+  -- A purchase the sync held for this tier (its review has no upload run) would never come back: the sync only reads what's
+  -- new since its last poll. So the next poll looks back over all purchases once, as adding a page does; re-reading
+  -- imports nothing twice (Gate 1). A purchase held from an upload comes back with the next upload.
+  select exists (select 1 from import_review where status = 'open' and reason = 'unknown_tier' and run_id is null
+                   and name_key(details ->> 'tier_purchased') = name_key(p_givelively_name) and name_key(details ->> 'page') = v_page) into v_lookback;
+  if v_lookback then update givelively_sync_state set cursor_ms = null where id = 1; end if;
   update import_review set status = 'resolved', resolution = 'mapped to ' || p_tier_id, resolved_by = me.name, resolved_at = now()
    where status = 'open' and reason = 'unknown_tier' and name_key(details ->> 'tier_purchased') = name_key(p_givelively_name)
      and name_key(details ->> 'page') = v_page;
   perform write_audit('staff', me.name, 'tier_mapping', name_key(p_givelively_name), null, 'tier_mapping.set', v_old, p_tier_id, false,
-    format('Give Lively tier "%s"%s mapped to %s.', btrim(p_givelively_name),
-           case when v_page <> '' then format(' on "%s"', btrim(p_page)) else '' end, p_tier_id));
+    format('Give Lively tier "%s"%s mapped to %s.%s', btrim(p_givelively_name),
+           case when v_page <> '' then format(' on "%s"', btrim(p_page)) else '' end, p_tier_id,
+           case when v_lookback then ' The next sync looks back over all purchases for the ones it held.' else '' end));
 end $$;
 
 -- The Give Lively pages of the gala being run now, for the sync (service role only): its main page and any others.
