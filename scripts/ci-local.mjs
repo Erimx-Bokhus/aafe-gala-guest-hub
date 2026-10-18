@@ -8,9 +8,19 @@
 //                                              lint, frontend, backend, edge-functions)
 //   node scripts/ci-local.mjs --full-scan      scan the whole git history for secrets, not just your new commits
 //   node scripts/ci-local.mjs --install-hook   run --quick before every git push (skip once with git push --no-verify)
+//   node scripts/ci-local.mjs --push           all seven checks on your last commit, then, only if they all pass,
+//                                              push it and mark it for GitHub's fast lane (use it instead of git push)
 //
 // Needs Node 22+ and Python. Docker (for the secret scan) and Deno (for the server-function check) are optional:
 // a check whose tool is missing is skipped with a note, not failed.
+//
+// The fast lane: when a full run (all seven checks, no --quick) passes on a commit with nothing left uncommitted, it
+// marks that commit "local-ci" on GitHub (with the GitHub CLI you're signed in with). GitHub's two long checks,
+// backend and frontend, then pass in seconds for a pull request on that exact commit, if it already includes the
+// latest base branch; otherwise they run in full. The secret scan and real-data guard always run on GitHub.
+// Use --push instead of git push: GitHub starts its checks the moment a commit arrives, so the mark has to follow the
+// push at once (the checks wait a few seconds for it). Without --push, the commit must already be on GitHub.
+// The mark is trust-based: anyone with write access can set it (docs/CODING-STANDARD.md).
 
 import { spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
@@ -121,4 +131,39 @@ console.log('\n━━━━━━━━ Summary ━━━━━━━━')
 for (const r of results) console.log(`${r.status === 'passed' ? '✓' : r.status === 'skipped' ? '–' : '✗'} ${r.name.padEnd(15)} ${r.status.padEnd(8)} ${String(r.secs).padStart(4)}s${r.note ? `   ${r.note}` : ''}`)
 const failed = results.filter((r) => r.status === 'FAILED')
 console.log(failed.length ? `\n${failed.length} check(s) failed. Fix before pushing; CI runs the same steps.` : '\nAll checks that ran passed.')
+if (!failed.length) {
+  const why = (flag('--push') && pushHead()) || markLocalPass()
+  console.log(why ? `Not marked for GitHub's fast lane: ${why}.` : 'Marked this commit "local-ci" on GitHub: its backend and frontend checks will pass in seconds.')
+  if (why && flag('--push')) process.exit(1)
+} else if (flag('--push')) console.log('Not pushed: a check failed.')
 process.exit(failed.length ? 1 : 0)
+
+/** --push: pushes the commit that just passed (its checks already ran in full, so no pre-push hook). */
+function pushHead() {
+  if (named.length || flag('--quick')) return 'only a full run is pushed (all seven checks, no --quick)'
+  if (results.some((r) => r.status !== 'passed')) return `${results.filter((r) => r.status !== 'passed').map((r) => r.name).join(', ')} didn't run, so nothing was pushed`
+  if (changed) return 'files differ from your last commit, so nothing was pushed; commit them and run again'
+  const branch = quiet('git branch --show-current').stdout.trim()
+  if (!branch) return 'not on a branch, so nothing was pushed'
+  if (branch === 'main') return 'this is main, which only changes through pull requests (CLAUDE.md), so nothing was pushed'
+  // A branch made from origin/main tracks main; push it to its own name (git's default refuses a different name).
+  const upstream = quiet('git rev-parse --abbrev-ref --symbolic-full-name @{u}').stdout.trim()
+  console.log(`\nPushing ${branch}...`)
+  return sh(upstream === `origin/${branch}` ? 'git push --no-verify' : `git push --no-verify -u origin ${branch}`) ? null : 'the push failed'
+}
+
+/** Marks HEAD "local-ci" on GitHub when this was a full pass on committed, pushed code; else says why not. */
+function markLocalPass() {
+  if (named.length || flag('--quick')) return 'only a full run counts (all seven checks, no --quick)'
+  const skipped = results.filter((r) => r.status !== 'passed').map((r) => r.name)
+  if (skipped.length) return `${skipped.join(', ')} didn't run`
+  if (changed) return 'files differ from your last commit; commit them, push, and run again'
+  const sha = quiet('git rev-parse HEAD').stdout.trim()
+  if (!quiet(`git branch -r --contains ${sha}`).stdout.trim()) return 'this commit isn\'t on GitHub yet; push it, then run again'
+  if (!has('gh auth status')) return 'the GitHub CLI isn\'t signed in (gh auth login)'
+  const repo = quiet('gh repo view --json nameWithOwner -q .nameWithOwner').stdout.trim()
+  const who = quiet('gh api user -q .login').stdout.trim()
+  const os = { win32: 'Windows', darwin: 'macOS' }[process.platform] ?? 'Linux'
+  const r = quiet(`gh api repos/${repo}/statuses/${sha} -f state=success -f context=local-ci -f "description=All 7 checks passed locally (${os}) by ${who}"`)
+  return r.status === 0 ? null : `GitHub refused the mark (${(r.stderr || r.stdout).trim().split('\n').pop()})`
+}
