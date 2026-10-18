@@ -240,4 +240,24 @@ describe("payments from an upload: Natalie's 2027 export and the wallets (Gate 1
       .toEqual(['Apple Pay', 'Donor-advised fund', 'Google Pay', 'PayPal', 'Venmo'])
     expect(sql.filter((p: { flagged: boolean }) => p.flagged)).toHaveLength(1)   // only the method nobody recognizes
   }, 120_000)
+
+  it('a disputed payment in an upload: the same "disputed" review in the demo and the database, flagged, nothing cancelled', async () => {
+    const MAIN = "AAFE's 53rd Annual Gala"
+    const csv = ['First Name,Last Name,Email,Tier Purchased,Amount Spent,Date/Time of Purchase,Page Name,Payment Method,Dispute Status',
+      `Dana,Dispute,dana.dispute@example.org,Supporter Sponsor,"$1,000.00",2027-04-10 10:00:00 AM EDT,${MAIN},Stripe Card,needs_response`,
+      `Nora,Calm,nora.calm@example.org,Supporter Sponsor,"$1,000.00",2027-04-11 10:00:00 AM EDT,${MAIN},Stripe Card,none`].join('\n')
+    const { db: pg, as } = await openTestDb()
+    await as('authenticated', ADMIN_EMAIL, 'select staff_set_gala_page($1)', [MAIN])
+    const before = setGalaPage(loadDB(), ADMIN, MAIN)
+    const { rows, run } = await prepareImport(csv, 'disputes.csv', before)
+    const server = (await as('authenticated', ADMIN_EMAIL, 'select staff_import_givelively($1, $2) r', [JSON.stringify(rows), JSON.stringify(run)]))[0].r
+    const { db: after, result } = demoImport(before, ADMIN, rows, run)
+    expect(summary(result)).toEqual(summary(server))
+    const sqlReviews = (await pg.query(`select reason, details from import_review where reason = 'disputed'`)).rows
+    expect(sqlReviews).toEqual([{ reason: 'disputed', details: { status: 'needs_response' } }])
+    expect(after.import_review!.filter((v) => v.reason === 'disputed').map((v) => ({ reason: v.reason, details: v.details }))).toEqual(sqlReviews)
+    const flagged = (await pg.query(`select sp.primary_contact_email e, o.status from payments p join orders o on o.id = p.order_id join sponsors sp on sp.id = o.sponsor_id
+      where p.reconciliation_status = 'needs_review' and sp.primary_contact_email in ('dana.dispute@example.org', 'nora.calm@example.org')`)).rows
+    expect(flagged).toEqual([{ e: 'dana.dispute@example.org', status: 'paid' }])
+  }, 120_000)
 })

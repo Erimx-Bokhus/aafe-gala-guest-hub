@@ -3,35 +3,39 @@
 // Give Lively documents the Zapier JSON endpoints but not the field names in
 // each donation object, so fields are found by name, ignoring case, spaces,
 // underscores and nesting ("Transaction ID", "transaction_id", donor.email all match).
-// The names follow the "Line Items (All)" CSV report. Before launch, run one
-// poll against AAFE's account and check givelively_raw: rows marked 'unmapped'
-// mean a name below needs adding.
+// The names follow the "Line Items (All)" CSV report, then Give Lively's older names (page_name, donation_amount: the
+// Oct 14 research, Gate 1) and the event export's own column names, so a feed in any of those shapes is read rather
+// than stored as unmapped. Before launch, run one poll against AAFE's account and check givelively_raw: rows marked
+// 'unmapped' mean a name below needs adding.
 // Docs: https://www.givelively.org/resources/understand-zapiers-json-endpoints
 
 export interface GLRow {
   txn: string; date: string | null; first: string; last: string; email: string; company: string; campaign: string
   ticket_level: string; method: string; status: string; quantity: number | null
   original: number | null; covered: number | null; gross: number | null; fee: number | null; net: number | null; refunded: number | null
+  /** A dispute (chargeback) status, '' when there is none: gl_import raises a staff review and cancels nothing (Gate 1). */
+  dispute: string
 }
 
 const FIELDS: Record<keyof GLRow, string[]> = {
   txn: ['transactionid', 'donationid', 'id'],
-  date: ['donationdate', 'createdat', 'date', 'donatedat'],
+  date: ['donationdate', 'createdat', 'date', 'donatedat', 'datetimeofpurchase', 'purchasedat', 'purchasedate'],
   first: ['firstname', 'donorfirstname'],
   last: ['lastname', 'donorlastname'],
   email: ['email', 'donoremail', 'emailaddress'],
-  company: ['companyname', 'company', 'organizationname', 'organization'],
-  campaign: ['campaignname', 'campaign', 'campaigntitle', 'eventname'],
-  ticket_level: ['ticketlevel', 'ticketname', 'tickettype', 'itemname'],
+  company: ['companyname', 'company', 'organizationname', 'organization', 'companyorganizationname'],
+  campaign: ['campaignname', 'campaign', 'campaigntitle', 'eventname', 'pagename'],
+  ticket_level: ['ticketlevel', 'ticketname', 'tickettype', 'itemname', 'tierpurchased', 'tiername'],
   method: ['paymentmethod', 'paymenttype', 'paymentmethodtype'],
   status: ['donationstatus', 'status', 'paymentstatus'],
-  quantity: ['quantity', 'ticketquantity'],
+  quantity: ['quantity', 'ticketquantity', 'ticketspurchased'],
   original: ['originalamount'],
-  covered: ['coveredtransactionfeeamount', 'coveredfeeamount', 'coveredfee'],
-  gross: ['grossamount', 'amount', 'totalamount'],
+  covered: ['coveredtransactionfeeamount', 'coveredfeeamount', 'coveredfee', 'transactionfeecovered'],
+  gross: ['grossamount', 'amount', 'totalamount', 'donationamount', 'amountspent'],
   fee: ['transactionfeeamount', 'transactionfee', 'processingfee', 'fee'],
   net: ['netamount'],
-  refunded: ['totalrefundedamount', 'refundedamount'],
+  refunded: ['totalrefundedamount', 'refundedamount', 'amountrefunded'],
+  dispute: ['disputestatus', 'dispute', 'disputed', 'chargebackstatus', 'chargeback'],
 }
 const MONEY = new Set<keyof GLRow>(['original', 'covered', 'gross', 'fee', 'net', 'refunded'])
 
@@ -60,7 +64,8 @@ function find(f: Map<string, unknown>, field: keyof GLRow): unknown {
   return null
 }
 
-const money = (v: unknown) => (v == null || v === '' ? null : Number(String(v).replace(/[$,]/g, '')))
+// A value that isn't a number ("TRUE" in a covered-fee field that only says whether the donor covered it) is unknown, not NaN.
+const money = (v: unknown) => { const n = v == null || v === '' ? NaN : Number(String(v).replace(/[$,]/g, '')); return Number.isFinite(n) ? n : null }
 const text = (v: unknown) => (v == null ? '' : String(v).trim())
 
 export function normalize(raw: unknown): GLRow {
@@ -76,6 +81,7 @@ export function normalize(raw: unknown): GLRow {
     quantity: money(get('quantity')),
     original: money(get('original')), covered: money(get('covered')), gross: money(get('gross')),
     fee: money(get('fee')), net: money(get('net')), refunded: money(get('refunded')),
+    dispute: text(get('dispute')),
   }
 }
 
