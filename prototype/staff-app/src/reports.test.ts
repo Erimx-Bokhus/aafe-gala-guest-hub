@@ -72,7 +72,7 @@ describe('reports', () => {
     const payments = db.payments.filter((p) => db.orders.some((o) => o.event_id === cur && o.id === p.order_id))
     expect(rows.reduce((sum, r) => sum + r.amount, 0)).toBeCloseTo(payments.reduce((sum, p) => sum + p.original_amount, 0), 2)
     expect(rows.reduce((sum, r) => sum + r.refunded, 0)).toBeCloseTo(payments.reduce((sum, p) => sum + p.refunded_amount, 0), 2)
-    expect(rows.reduce((sum, r) => sum + r.net, 0)).toBeCloseTo(payments.reduce((sum, p) => sum + p.net_amount, 0), 2)
+    expect(rows.reduce((sum, r) => sum + (r.net ?? 0), 0)).toBeCloseTo(payments.reduce((sum, p) => sum + (p.net_amount ?? 0), 0), 2)
   })
 
   it('times read as New York time, 24-hour, so they sort, like the database', () => {
