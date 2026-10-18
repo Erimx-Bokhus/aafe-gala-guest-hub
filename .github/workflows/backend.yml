@@ -1,12 +1,14 @@
 name: Backend tests
 
 on:
-  push:
-    branches: [main]
-    paths: ['prototype/**', 'import-engine/**', '.github/workflows/backend.yml']
-  # Runs on every pull request (no path filter) so it can be a required check on main;
-  # a path filter would leave PRs that don't touch these folders waiting forever.
+  # Every pull request (no path filter) so it can be a required check on main; a path filter would leave PRs that
+  # don't touch these folders waiting forever. No run after each merge into main: the pull request already tested
+  # the merged code. A weekly full run on main (Monday 10:00 UTC, early morning in New York) catches anything a laptop missed, and
+  # "Run workflow" on the Actions tab runs it by hand.
   pull_request:
+  schedule:
+    - cron: '0 10 * * 1'
+  workflow_dispatch:
 
 # A newer push to the same pull request cancels the older run still in progress (saves Actions minutes).
 concurrency:
@@ -15,6 +17,7 @@ concurrency:
 
 permissions:
   contents: read
+  statuses: read   # the local-ci mark
 
 jobs:
   backend-tests:
@@ -23,8 +26,35 @@ jobs:
       run:
         working-directory: prototype
     steps:
+      # The fast lane (docs/CODING-STANDARD.md): scripts/ci-local.mjs marks a commit "local-ci" after all seven checks
+      # pass on it, committed and pushed. If this pull request's commit has that mark and already includes the latest
+      # base branch, the code merged is exactly the code that passed, so the steps below are skipped. The mark is
+      # trust-based (anyone with write access can set it); the secret scan and real-data guard always run here.
+      - name: Did local CI already pass this exact code?
+        id: local
+        if: github.event_name == 'pull_request'
+        working-directory: .
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        # Any lookup that fails means a full run, never a failed check.
+        run: |
+          # The base branch as it is now (a re-run reuses the original event, whose base may be out of date).
+          BASE_SHA=$(gh api "repos/$REPO/branches/$BASE_REF" --jq .commit.sha || echo unknown)
+          passed=$(gh api "repos/$REPO/commits/$HEAD_SHA/status" --jq '[.statuses[] | select(.context == "local-ci" and .state == "success")] | length' || echo 0)
+          behind=$(gh api "repos/$REPO/compare/$BASE_SHA...$HEAD_SHA" --jq .behind_by || echo unknown)
+          if [ "$passed" -gt 0 ] && [ "$behind" = "0" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::local-ci passed on $HEAD_SHA, which includes the latest base ($BASE_SHA): not run again."
+          else
+            echo "No local-ci mark on this exact code (mark: $passed, commits behind the base: $behind): running in full."
+          fi
       - uses: actions/checkout@v4
+        if: steps.local.outputs.skip != 'true'
       - uses: actions/setup-node@v4
+        if: steps.local.outputs.skip != 'true'
         with:
           node-version: 22
           cache: npm
@@ -32,9 +62,12 @@ jobs:
             prototype/package-lock.json
             import-engine/package-lock.json
       - run: npm ci
+        if: steps.local.outputs.skip != 'true'
       # The backend tests run real CSVs through the import engine before gl_import().
       - run: npm ci
+        if: steps.local.outputs.skip != 'true'
         working-directory: import-engine
       # Runs schema.sql + seed.sql + backend.sql in an in-memory Postgres (PGlite), then the
       # portal, staff, QR, import, and email-queue checks; plus the Give Lively field-mapping checks.
       - run: npm run test:backend
+        if: steps.local.outputs.skip != 'true'
