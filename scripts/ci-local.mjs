@@ -105,7 +105,9 @@ const checks = {
     if (!has('deno --version')) return [SKIP, 'Deno is not installed (winget install DenoLand.Deno, or https://deno.com)']
     const dir = join(proto, 'supabase', 'functions')
     const files = readdirSync(dir).filter((d) => existsSync(join(dir, d, 'index.ts'))).map((d) => `supabase/functions/${d}/index.ts`)
-    return sh(`deno check --no-lock --node-modules-dir=auto ${files.join(' ')}`, proto)   // --no-lock: no deno.lock left behind
+    // --no-lock: no deno.lock left behind. --node-modules-dir=none: Deno's own cache, so prototype/node_modules keeps
+    // package-lock.json's versions ("auto" reinstalled it by range, and the next run's demo files no longer matched).
+    return sh(`deno check --no-lock --node-modules-dir=none ${files.join(' ')}`, proto)
   },
 }
 
