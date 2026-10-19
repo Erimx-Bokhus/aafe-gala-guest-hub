@@ -126,11 +126,11 @@ Fixed:
   (Resend, and Salesforce's guest push), Give Lively's records.
 
 Open:
-- **Retention is half built.** Food and access answers: Natalie decided on Oct 18 that they're deleted after the gala
-  and only that gala's totals kept (`decisions.md`); #194 builds it (`staff_clear_needs`: the totals saved, every guest's
-  answers and their old values in the change log deleted, once, after the gala). Still open: deleting guests' contact
-  details within 60 days of the gala, copies included (the change log's old values, Give Lively's records, the email log,
-  review items), built once AAFE confirms the window. Gate 2 stays open until it is.
+- **Retention is built (Oct 18).** Food and access answers are deleted after the gala, only the totals kept (#194). Guests'
+  contact details are deleted 60 days after the gala by a daily job (`retention_sweep`), or earlier by a gala admin,
+  copies included: the change log's old values, the email log's addresses, review items, Give Lively's guest lists and raw
+  records. Names and sponsors' own details stay. The 60 days are the proposed default, built ahead of AAFE's answer on
+  Oct 19 (`decisions.md`); another answer changes `retention_days()`.
 - **Guest email: optional or required?** The sponsor portal requires it; the promise says optional. A team decision, not
   AAFE's (off the Oct 19 list, Oct 17); it goes in `decisions.md` when written.
 - Low: a guest keeps "last updated by"; where a guest first came from is in the change log, not on the guest.

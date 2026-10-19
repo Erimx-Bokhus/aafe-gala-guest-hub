@@ -27,6 +27,8 @@ select cron.schedule('send-emails',     '* * * * *',    $$ select call_edge_func
 select cron.schedule('cron-history-cleanup', '30 8 * * *', $$ delete from cron.job_run_details where end_time < now() - interval '7 days' $$);
 -- The staff app's sync keeps a week of deleted-row markers (backend.sql, sync_prune).
 select cron.schedule('sync-prune', '45 8 * * *', $$ select sync_prune() $$);
+-- Guests' contact details deleted retention_days() after their gala, if staff haven't already (backend.sql, retention_sweep).
+select cron.schedule('retention-sweep', '15 9 * * *', $$ select retention_sweep() $$);
 
 -- Check: select * from cron.job_run_details order by start_time desc limit 10;
 -- Stop:  select cron.unschedule('givelively-sync');
