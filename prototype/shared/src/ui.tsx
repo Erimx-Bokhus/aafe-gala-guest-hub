@@ -27,6 +27,8 @@ if (typeof document !== 'undefined') {
   window.addEventListener('hashchange', () => { const p = readHash(); if (p !== currentPath) emitRoute(p) })
   window.addEventListener('popstate', () => { const p = readHash(); if (p !== currentPath) emitRoute(p) })
 }
+/** The page the address shows right now, for code that runs outside a render (e.g. after a sign-in check). */
+export const routeNow = () => currentPath
 export function useRoute() {
   const [path, setPath] = useState(currentPath)
   useEffect(() => { routeListeners.add(setPath); setPath(currentPath); return () => { routeListeners.delete(setPath) } }, [])
