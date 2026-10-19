@@ -29,6 +29,12 @@ await save({ display_name: 'Maria de la Cruz' })
 const mc = await guest(id)
 ok(mc.display_name === 'Maria de la Cruz' && mc.first_name === 'Maria de la' && mc.last_name === 'Cruz', 'portal: a full name sent alone falls back to last word = last name')
 ok((await err('anon', null, `select portal_save_guest($1, $2, $3)`, [TOKEN, slot, { first_name: ' ', last_name: '' }])) === 'invalid_input: a name is required', 'portal: no name at all is refused')
+// Oct 19 click-through: the portal's form sends back the display name it showed with the new names; a rename kept the
+// old name on the sponsor's card.
+await save({ first_name: 'Mariana de la', last_name: 'Cruz', display_name: 'Maria de la Cruz' })
+ok((await guest(id)).display_name === 'Mariana de la Cruz', 'portal: a rename follows the new name when the old one was just "First Last"')
+await save({ first_name: 'Maria de la', last_name: 'Cruz', display_name: 'Mariana de la Cruz' })
+ok((await guest(id)).display_name === 'Maria de la Cruz', 'portal: and a rename back')
 
 // Staff: edit the display name; first and last carry a plain "First Last" display name along, never a corrected one.
 await as('authenticated', ADMIN, `select staff_update_guest($1, $2)`, [id, { display_name: 'Dr. Maria de la Cruz', first_name: 'Maria', last_name: 'de la Cruz' }])
@@ -36,6 +42,10 @@ await as('authenticated', ADMIN, `select staff_update_guest($1, $2)`, [id, { fir
 ok((await guest(id)).display_name === 'Dr. Maria de la Cruz', 'staff: a corrected display name stays when first or last changes')
 await save({ first_name: 'María', last_name: 'de la Cruz' })
 ok((await guest(id)).display_name === 'Dr. Maria de la Cruz', 'portal: first and last sent unchanged keep the corrected display name')
+await save({ first_name: 'Marisa', last_name: 'de la Cruz', display_name: 'Dr. Maria de la Cruz' })   // renamed, the corrected name echoed
+const kept = await guest(id)
+ok(kept.display_name === 'Dr. Maria de la Cruz' && kept.first_name === 'Marisa', 'portal: a display name staff corrected stays through a rename, as with staff edits')
+await save({ first_name: 'María', last_name: 'de la Cruz', display_name: 'Dr. Maria de la Cruz' })
 await as('authenticated', RM, `select staff_update_guest($1, $2)`, [id, { display_name: '' }])
 ok((await guest(id)).display_name === 'María de la Cruz', 'staff: clearing the display name goes back to "First Last"')
 await as('authenticated', RM, `select staff_update_guest($1, $2)`, [id, { last_name: 'Cruz' }])
