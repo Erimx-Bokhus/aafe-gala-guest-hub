@@ -79,6 +79,17 @@ describe('live mode', () => {
     await expect(d.verifySignInCode('a@example.org', '123456')).rejects.toThrow('not_configured')
   })
 
+  it('words a sending failure: "wait a minute" only for too many requests, the same words otherwise', async () => {
+    const s = await load(true)
+    const wait = 'Too many sign-in emails for now. Wait a minute, then ask for a new code.'
+    expect(s.sendFailure(Object.assign(new Error('For security purposes, you can only request this after 41 seconds.'), { status: 429 }))).toBe(wait)
+    expect(s.sendFailure({ message: 'Email rate limit exceeded', status: 429 })).toBe(wait)
+    const same = 'We couldn’t send a sign-in email. Check the internet connection and the email address; if both are right, ask the gala admin to invite you.'
+    expect(s.sendFailure(new Error('Signups not allowed for otp'))).toBe(same)   // a stranger and a typo read the same
+    expect(s.sendFailure(new TypeError('Failed to fetch'))).toBe(same)
+    expect(s.sendFailure('weird')).toBe(same)
+  })
+
   it('passes a sending error up to the login page', async () => {
     const s = await load(true)
     m.auth.signInWithOtp.mockResolvedValue({ error: new Error('Signups not allowed for otp') })

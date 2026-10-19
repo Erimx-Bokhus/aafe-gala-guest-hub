@@ -11,7 +11,8 @@ const verify = vi.fn()
 
 async function renderLogin(live: boolean, props: { notice?: string; onLogin?: (u: StaffUser) => void } = {}) {
   vi.resetModules()
-  vi.doMock('@shared/supabase', () => ({ supabase: live ? {} : null, sendSignInLink: send, verifySignInCode: verify }))
+  const { sendFailure } = await vi.importActual<typeof import('@shared/supabase')>('@shared/supabase')   // the real wording
+  vi.doMock('@shared/supabase', () => ({ supabase: live ? {} : null, sendSignInLink: send, verifySignInCode: verify, sendFailure }))
   const { default: Login } = await import('./Login')
   const db = loadDB()
   function Page() { return <Login db={db} prefs={useDisplayPrefs()} notice={props.notice} onLogin={props.onLogin ?? (() => {})} /> }
