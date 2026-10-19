@@ -124,7 +124,7 @@ const STAFF_FUNCTIONS = {
   staff_export_salesforce: ['gala_admin'], staff_set_order_deadline: ['gala_admin'],
   staff_save_level: ['gala_admin'], staff_copy_levels: ['gala_admin'], staff_retire_level: ['gala_admin'], staff_start_gala: ['gala_admin'],
   staff_report_attendance: ['gala_admin'], staff_report_sponsors: MANAGERS, staff_report_needs: MANAGERS, staff_report_payments: MANAGERS, staff_report_guests: ['gala_admin'],
-  staff_clear_needs: ['gala_admin'],
+  staff_clear_needs: ['gala_admin'], staff_delete_guest_contacts: ['gala_admin'],
   staff_sync: MANAGERS,
 }
 // Return who you are (or nothing), so they need no role check.
