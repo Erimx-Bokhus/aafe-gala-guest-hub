@@ -197,6 +197,8 @@ alter table gala_events add column if not exists givelively_page_name text; -- e
 -- The gala's other Give Lively pages (Oct 15, Community Tickets): e.g. "AAFE's 52nd Annual Gala (Community Tickets)", a private
 -- page selling discounted tickets to partners. Their purchases import like the main page's.
 alter table gala_events add column if not exists givelively_other_pages text[] not null default '{}';
+-- When this gala's guests' contact details were deleted (retention_sweep or staff_delete_guest_contacts); null: not yet.
+alter table gala_events add column if not exists contacts_deleted_at timestamptz;
 alter table orders      add column if not exists givelively_page text;  -- the Give Lively page it was bought on (null: imported before Oct 15)
 alter table sponsorship_tiers add column if not exists guaranteed_seating boolean not null default false;
 do $$ begin
@@ -2812,9 +2814,20 @@ $$;
 -- their old values in the change log. Once per gala, and only once its date has passed. Gala admins only.
 -- The totals count the guests of the gala's orders that weren't cancelled, per option, as the Food and access report
 -- does; 'Any need', 'None' and 'Not answered' count guests, not choices.
+-- The change log keeps that a field of one of this gala's guests changed, not what it was: the one exception to
+-- audit_log being append-only, since keeping the old values there would undo a deletion.
+create or replace function audit_redact(p_event_id text, p_fields text[], p_label text) returns void
+language sql security definer set search_path = public as $$
+  update audit_log a set changes = (a.changes - p_fields)
+       || (select coalesce(jsonb_object_agg(f, p_label), '{}') from unnest(p_fields) f where a.changes ? f)
+   where a.changes ?| p_fields
+     and (a.order_id in (select id from orders where event_id = p_event_id)
+          or a.entity_id in (select g.id from guests g join orders o on o.id = g.order_id where o.event_id = p_event_id))
+$$;
+
 create or replace function staff_clear_needs(p_event_id text) returns jsonb
 language plpgsql security definer set search_path = public as $$
-declare me staff_users := require_staff(array['gala_admin']); e gala_events; v_cleared int; v jsonb;
+declare me staff_users := require_staff(array['gala_admin']); e gala_events;
 begin
   select * into e from gala_events where id = p_event_id;
   if not found then raise exception 'not_found: gala'; end if;
@@ -2824,7 +2837,14 @@ begin
   if exists (select 1 from gala_need_totals where event_id = e.id) then
     raise exception 'invalid_input: food and access answers for % were already cleared, and its totals saved', e.name;
   end if;
+  return needs_clear(e, 'staff', me.name);
+end $$;
 
+-- The step itself, shared with the deletion of contact details (contacts_delete), which runs it when staff haven't.
+create or replace function needs_clear(e gala_events, p_actor_type text, p_actor text) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare v_cleared int; v jsonb;
+begin
   insert into gala_need_totals (event_id, kind, choice, guests)
   select e.id, k.kind, k.choice, count(n.status) filter (where case k.choice
            when 'Any need' then n.status = 'some'
@@ -2846,18 +2866,97 @@ begin
   update guests g set dietary_needs = null, accessibility_needs = null, updated_at = now()
     from orders o where o.id = g.order_id and o.event_id = e.id and (g.dietary_needs is not null or g.accessibility_needs is not null);
   get diagnostics v_cleared = row_count;
-  -- The change log keeps that a guest's answer changed, not what it was. The one exception to audit_log being
-  -- append-only: these answers can be health information, and keeping them here would undo the deletion.
-  update audit_log a set changes = (a.changes - 'dietary_needs' - 'accessibility_needs')
-       || (select coalesce(jsonb_object_agg(f, 'cleared after the gala'::text), '{}') from unnest(array['dietary_needs','accessibility_needs']) f where a.changes ? f)
-   where a.changes ?| array['dietary_needs','accessibility_needs']
-     and (a.order_id in (select id from orders where event_id = e.id)
-          or a.entity_id in (select g.id from guests g join orders o on o.id = g.order_id where o.event_id = e.id));
+  -- These answers can be health information.
+  perform audit_redact(e.id, array['dietary_needs','accessibility_needs'], 'cleared after the gala');
 
   select jsonb_object_agg(kind, totals) into v from (
     select kind, jsonb_object_agg(choice, guests) totals from gala_need_totals where event_id = e.id group by kind) t;
-  perform write_audit('staff', me.name, 'gala', e.id, null, 'gala.needs_cleared', null, null, false,
+  perform write_audit(p_actor_type, p_actor, 'gala', e.id, null, 'gala.needs_cleared', null, null, false,
     format('Food and access answers cleared for %s guest(s) of %s; only the totals are kept.', v_cleared, e.name));
+  return v;
+end $$;
+
+-- Guests' contact details are deleted this many days after their gala (data-handling.md, "Retention"). The proposed
+-- default; AAFE's answer (Oct 19) can change it here, the one place it's written (decisions.md, Oct 18).
+create or replace function retention_days() returns int
+language sql immutable set search_path = public as $$ select 60 $$;
+
+-- After the gala: delete the guests' contact details, and every copy of them. Names stay (attendance history and
+-- Salesforce), and so do sponsors' own contact details, AAFE's ongoing relationship records. Food and access answers
+-- go too, their totals saved first, if staff haven't cleared them already.
+--   * guests' emails, and their old values in the change log;
+--   * the address on every email sent to one of the gala's guests (a QR invitation still waiting is cancelled, as on
+--     any email change, by guests_void_qr);
+--   * email addresses inside the gala's import review items and Give Lively's free-text guest lists;
+--   * Give Lively's raw records of the gala's purchases (the orders and payments keep what the app needs).
+create or replace function contacts_delete(e gala_events, p_actor_type text, p_actor text) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare
+  email_re constant text := '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}';
+  v_needs jsonb; v_guests int; v_emails int; v_reviews int; v_texts int; v_raw int;
+begin
+  if not exists (select 1 from gala_need_totals where event_id = e.id) then v_needs := needs_clear(e, p_actor_type, p_actor); end if;
+
+  update guests g set email = null, updated_at = now()
+    from orders o where o.id = g.order_id and o.event_id = e.id and g.email is not null;
+  get diagnostics v_guests = row_count;
+  perform audit_redact(e.id, array['email'], 'deleted after the gala');
+
+  -- (A QR invitation still waiting was cancelled by guests_void_qr when the email changed: it can't go now.)
+  update email_log set to_email = ''
+   where to_email <> '' and guest_id in (select g.id from guests g join orders o on o.id = g.order_id where o.event_id = e.id);
+  get diagnostics v_emails = row_count;
+  update import_review set details = regexp_replace(details::text, email_re, 'deleted after the gala', 'g')::jsonb
+   where event_id = e.id and details::text ~ email_re;
+  get diagnostics v_reviews = row_count;
+  update orders set imported_guest_text = regexp_replace(imported_guest_text, email_re, 'deleted after the gala', 'g'), updated_at = now()
+   where event_id = e.id and imported_guest_text ~ email_re;
+  get diagnostics v_texts = row_count;
+  delete from givelively_raw where transaction_id in (select p.givelively_transaction_id from payments p join orders o on o.id = p.order_id
+                                                       where o.event_id = e.id and p.givelively_transaction_id is not null);
+  get diagnostics v_raw = row_count;
+
+  update gala_events set contacts_deleted_at = now() where id = e.id;
+  perform write_audit(p_actor_type, p_actor, 'gala', e.id, null, 'gala.contacts_deleted', null, null, false,
+    format('Guests'' contact details of %s deleted: %s guest email(s), %s sent email(s), %s review item(s), %s Give Lively guest list(s), %s Give Lively record(s).',
+           e.name, v_guests, v_emails, v_reviews, v_texts, v_raw));
+  return jsonb_build_object('guests', v_guests, 'emails', v_emails, 'review_items', v_reviews, 'guest_lists', v_texts,
+                            'givelively_records', v_raw, 'needs_cleared', v_needs is not null);
+end $$;
+
+-- A gala admin can do it any time after the gala, e.g. once the Salesforce attendee file is downloaded. Once per gala.
+create or replace function staff_delete_guest_contacts(p_event_id text) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare me staff_users := require_staff(array['gala_admin']); e gala_events;
+begin
+  select * into e from gala_events where id = p_event_id;
+  if not found then raise exception 'not_found: gala'; end if;
+  if e.event_date >= (now() at time zone 'America/New_York')::date then
+    raise exception 'invalid_input: % hasn''t happened yet: guests'' contact details are deleted after the gala', e.name;
+  end if;
+  if e.contacts_deleted_at is not null then
+    raise exception 'invalid_input: guests'' contact details for % were already deleted (%)', e.name, report_ny(e.contacts_deleted_at);
+  end if;
+  return contacts_delete(e, 'staff', me.name);
+end $$;
+
+-- Daily (database/cron.sql), so the promise holds even if nobody remembers: every gala retention_days() or more in
+-- the past with something left to delete, including anything added after an earlier deletion (a late edit). Run by
+-- the system, and logged like a staff run.
+create or replace function retention_sweep() returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare e gala_events; v jsonb := '[]';
+begin
+  for e in select * from gala_events g
+            where g.event_date <= (now() at time zone 'America/New_York')::date - retention_days()
+              and (exists (select 1 from guests x join orders o on o.id = x.order_id where o.event_id = g.id
+                            and (x.email is not null or x.dietary_needs is not null or x.accessibility_needs is not null))
+                   or exists (select 1 from payments p join orders o on o.id = p.order_id
+                               join givelively_raw r on r.transaction_id = p.givelively_transaction_id where o.event_id = g.id))
+            order by g.event_date loop
+    v := v || jsonb_build_array(jsonb_build_object('gala', e.id)
+                                || contacts_delete(e, 'system', format('Retention, %s days after the gala', retention_days())));
+  end loop;
   return v;
 end $$;
 
@@ -2995,7 +3094,8 @@ begin
               'staff_update_gala_event','staff_set_material_status','staff_set_order_deadline','salesforce_outbox','salesforce_mark_synced',
               'comp_level','staff_save_level','staff_copy_levels','staff_retire_level','staff_start_gala',
               'report_ny','report_paid','staff_report_attendance','staff_report_sponsors','staff_report_needs','staff_report_payments','staff_report_guests',
-              'need_status','need_choices','staff_clear_needs',
+              'need_status','need_choices','staff_clear_needs','audit_redact','needs_clear','retention_days','contacts_delete',
+              'staff_delete_guest_contacts','retention_sweep',
               'staff_sync','sync_touch','sync_tombstone','sync_prune','door_entries','door_unnamed_seats','door_exceptions','door_sync',
               'upgrade_step')
   loop
@@ -3022,7 +3122,7 @@ grant execute on function
   staff_set_sponsor_arrivals(boolean, text), staff_update_gala_event(jsonb), staff_set_material_status(text, text, text), staff_set_order_deadline(text, date),
   staff_save_level(jsonb), staff_copy_levels(text, text), staff_retire_level(text, boolean), staff_start_gala(jsonb),
   staff_report_attendance(), staff_report_sponsors(), staff_report_needs(), staff_report_payments(), staff_report_guests(),
-  staff_clear_needs(text),
+  staff_clear_needs(text), staff_delete_guest_contacts(text),
   staff_import_givelively(jsonb, jsonb), staff_set_tier_mapping(text, text, text), staff_set_gala_page(text),
   staff_add_gala_page(text), staff_remove_gala_page(text),
   staff_resolve_import_review(text, text),
