@@ -10,13 +10,20 @@
 //   never overwritten. Only guests Salesforce doesn't know become Contacts, one per email;
 // - a guest already in the Campaign keeps that membership; only its status changes;
 // - a comp is guests only: no Account, no Opportunity.
+// - a sponsor whose name is already on one Account is that Account: linked, never overwritten (Oct 20, review of
+//   #190); two or more with that name and nothing is made until staff say which;
+// - a guest with no email is skipped: it could only be matched by name, so it would risk a duplicate Contact.
+// Settings (optionsFrom): SALESFORCE_SEND_PAYMENTS=false stops payment records, for when NPSP makes its own;
+// SALESFORCE_SEND_GUESTS=attended|none limits which guests go (AAFE and Graybox decide; default: all, as before).
+// Sign-in (salesforceAccess): a connected app's client id and secret get a fresh token each run; a fixed
+// SALESFORCE_TOKEN is only for the demo's stand-in, since a real token expires.
 // Our own records are upserted on our ids in a custom external-ID field, so sending again updates instead of
 // duplicating. Before a real connection AAFE's org would need that field (Text, External ID, Unique) on Campaign,
 // Account, Opportunity, npe01__OppPayment__c and Contact, and Registered, Attended and No Show as member statuses
 // on the gala's Campaign.
 
 export const EXTERNAL_ID = 'AAFE_Gala_Id__c'
-/** What staff see when salesforce-push can't run (SALESFORCE_BASE_URL or SALESFORCE_TOKEN not set). */
+/** What staff see when salesforce-push can't run (no SALESFORCE_BASE_URL, or no way to sign in). */
 export const NOT_CONNECTED = "Salesforce isn't connected: its keys aren't set in Supabase. Ask your technical partner."
 /** Salesforce takes at most 200 records per sObject Collections call. */
 export const BATCH = 200
@@ -24,6 +31,44 @@ export const BATCH = 200
 export const LOOKUP = 50
 /** Where NPSP keeps a Contact's emails. Give Lively matches on all four (its Salesforce integration's documented logic). */
 export const EMAIL_FIELDS = ['Email', 'npe01__HomeEmail__c', 'npe01__WorkEmail__c', 'npe01__AlternateEmail__c']
+
+/** Why a guest with no email isn't sent: by name alone it could only be matched wrongly or duplicated. */
+export const NO_EMAIL = 'Skipped: no email, so Salesforce could only get a duplicate. Match this guest to their Contact by hand.'
+
+/** What to send, set by AAFE and Graybox (optionsFrom). The defaults send everything, as before. */
+export interface PushOptions {
+  /** False when NPSP creates its own payment records for a new Opportunity, so payments don't appear twice. */
+  payments: boolean
+  /** Which guests become Contacts and Campaign members: every named guest, only those who came, or none. */
+  guests: 'all' | 'attended' | 'none'
+}
+export const DEFAULT_OPTIONS: PushOptions = { payments: true, guests: 'all' }
+/** The options from the function's settings: SALESFORCE_SEND_PAYMENTS (true|false), SALESFORCE_SEND_GUESTS (all|attended|none). */
+export function optionsFrom(get: (key: string) => string): PushOptions {
+  const pay = get('SALESFORCE_SEND_PAYMENTS').trim().toLowerCase(), guests = get('SALESFORCE_SEND_GUESTS').trim().toLowerCase()
+  return { payments: pay !== 'false', guests: guests === 'attended' || guests === 'none' ? guests : 'all' }
+}
+
+/** Where to send and the token to send with. Null when Salesforce isn't connected. */
+export interface SfAccess { base: string; token: string }
+/** Signs in to Salesforce. With a connected app (SALESFORCE_CLIENT_ID and SALESFORCE_CLIENT_SECRET) it asks for a
+ *  fresh token each run (OAuth client credentials flow, on the org's My Domain URL), since access tokens expire.
+ *  Without one, a fixed SALESFORCE_TOKEN: only for the demo's stand-in org. Never logs a secret. */
+export async function salesforceAccess(get: (key: string) => string, fetcher: typeof fetch): Promise<SfAccess | null> {
+  const base = get('SALESFORCE_BASE_URL').trim().replace(/\/$/, '')
+  if (!base) return null
+  const id = get('SALESFORCE_CLIENT_ID').trim(), secret = get('SALESFORCE_CLIENT_SECRET').trim()
+  if (id && secret) {
+    const res = await fetcher(`${base}/services/oauth2/token`, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ grant_type: 'client_credentials', client_id: id, client_secret: secret }).toString() })
+    if (!res.ok) throw new Error(`Salesforce sign-in failed (HTTP ${res.status}): check the connected app's client id and secret`)
+    const t = await res.json() as { access_token?: string; instance_url?: string }
+    if (!t.access_token) throw new Error('Salesforce sign-in gave no access token')
+    return { base: (t.instance_url || base).replace(/\/$/, ''), token: t.access_token }
+  }
+  const token = get('SALESFORCE_TOKEN').trim()
+  return token ? { base, token } : null
+}
 
 export interface Outbox {
   campaign: { id: string; name: string; date: string; givelively_name: string | null } | null
@@ -69,17 +114,42 @@ function report(results: SyncResult[], guests: Guest[], sf_object: string, outco
 const STAGE: Record<string, string> = { paid: 'Closed Won', cancelled: 'Closed Lost', pledged: 'Pledged', partially_paid: 'Pledged', invoice_sent: 'Pledged' }
 const METHOD: Record<string, string> = { check: 'Check', ach_direct: 'ACH', wire: 'Wire' }
 
-/** Accounts, Opportunities (in the gala's Campaign once it has a Salesforce id) and payments, parents first. */
-export function toBatches(o: Outbox, campaignId: string | null): { sobject: string; entity: string; ids: string[]; records: SfRecord[] }[] {
+/** Opportunities (in the gala's Campaign once it has a Salesforce id) and their payments, parents first. A sponsor
+ *  linked to an Account AAFE already has points at it by Id; the rest by our id. Accounts go first (pushAccounts). */
+export function toBatches(o: Outbox, campaignId: string | null, linked: Map<string, string> = new Map(), opts: PushOptions = DEFAULT_OPTIONS):
+  { sobject: string; entity: string; ids: string[]; records: SfRecord[] }[] {
   const batch = <T extends { id: string }>(sobject: string, entity: string, rows: T[], make: (r: T) => SfRecord) =>
     ({ sobject, entity, ids: rows.map((r) => r.id), records: rows.map(make) })
+  const account = (id: string) => (linked.has(id) ? { AccountId: linked.get(id) } : { Account: ref(id) })
   return [
-    batch('Account', 'sponsor', o.accounts, (a) => rec('Account', a.id, { Name: a.name })),
     batch('Opportunity', 'order', o.opportunities, (p) => rec('Opportunity', p.id, {
-      Name: p.name, Amount: p.amount, CloseDate: p.close_date, StageName: STAGE[p.status] ?? 'Pledged', Account: ref(p.account_id), ...(campaignId ? { CampaignId: campaignId } : {}) })),
-    batch('npe01__OppPayment__c', 'payment', o.payments, (p) => rec('npe01__OppPayment__c', p.id, {
-      npe01__Opportunity__r: ref(p.order_id), npe01__Payment_Amount__c: p.amount, npe01__Payment_Date__c: p.date, npe01__Payment_Method__c: METHOD[p.method] ?? p.method, npe01__Paid__c: true })),
+      Name: p.name, Amount: p.amount, CloseDate: p.close_date, StageName: STAGE[p.status] ?? 'Pledged', ...account(p.account_id), ...(campaignId ? { CampaignId: campaignId } : {}) })),
+    ...(opts.payments ? [batch('npe01__OppPayment__c', 'payment', o.payments, (p) => rec('npe01__OppPayment__c', p.id, {
+      npe01__Opportunity__r: ref(p.order_id), npe01__Payment_Amount__c: p.amount, npe01__Payment_Date__c: p.date, npe01__Payment_Method__c: METHOD[p.method] ?? p.method, npe01__Paid__c: true }))] : []),
   ]
+}
+
+/** Each sponsor's Account: ours if we made it; else the one Account AAFE already has with that name, linked and never
+ *  overwritten; else a new one of ours. Two or more with that name and none of ours: nothing is made, and the result
+ *  says what to do. If Salesforce can't be asked, nothing is made (it may exist). Returns sponsor -> linked Account id. */
+async function pushAccounts(accounts: Outbox['accounts'], ports: PushPorts, results: SyncResult[]): Promise<Map<string, string>> {
+  const linked = new Map<string, string>()
+  if (!accounts.length) return linked
+  const done = (id: string, sf_id: string | null, error: string | null) => results.push({ entity: 'sponsor', entity_id: id, sf_object: 'Account', sf_id, error })
+  let rows: Record<string, unknown>[]
+  try { rows = await find(ports, 'Account', ['Id', 'Name', EXTERNAL_ID], (list) => `Name IN ${list}`, [...new Set(accounts.map((a) => a.name))]) }
+  catch (e) { for (const a of accounts) done(a.id, null, message(e)); return linked }
+  const fresh: Outbox['accounts'] = []
+  for (const a of accounts) {
+    const same = rows.filter((r) => String(r.Name ?? '').trim().toLowerCase() === a.name.trim().toLowerCase())
+    const theirs = same.filter((r) => !r[EXTERNAL_ID])
+    if (same.some((r) => r[EXTERNAL_ID] === a.id) || !theirs.length) fresh.push(a)
+    else if (theirs.length === 1) { linked.set(a.id, String(theirs[0].Id)); done(a.id, String(theirs[0].Id), null) }
+    else done(a.id, null, `${theirs.length} Accounts in Salesforce are named "${a.name}": put ${a.id} in the ${EXTERNAL_ID} field of this sponsor's one`)
+  }
+  const answers = await write(fresh.map((a) => rec('Account', a.id, { Name: a.name })), (r) => ports.upsert('Account', r))
+  fresh.forEach((a, k) => done(a.id, ...outcomeOf(answers[k])))
+  return linked
 }
 
 /** Writes records 200 a call; a call that fails outright fails each of its records with the reason. */
@@ -138,12 +208,13 @@ async function pushContacts(guests: Guest[], ports: PushPorts, results: SyncResu
   try { known = await contactsByEmail([...new Set(guests.map((g) => emailKey(g.email)).filter(Boolean))], ports) } catch (e) { lookupFailed = message(e) }
 
   // ponytail: a linked Contact is AAFE's record and keeps its fields; a name staff fix later is fixed in Salesforce too.
-  const groups = new Map<string, Guest[]>()   // a new Contact (by email, or by guest when there's none) -> its guests
+  const groups = new Map<string, Guest[]>()   // a new Contact (by email) -> its guests
   for (const g of guests) {
     const e = emailKey(g.email)
-    if (e && lookupFailed) outcome.set(g.id, [null, lookupFailed])   // never create one that may already exist
+    if (!e) outcome.set(g.id, [null, NO_EMAIL])   // by name alone it could only be a duplicate
+    else if (lookupFailed) outcome.set(g.id, [null, lookupFailed])   // never create one that may already exist
     else if (e && known.has(e)) outcome.set(g.id, [known.get(e) ?? null, null])
-    else groups.set(e || `guest:${g.id}`, [...(groups.get(e || `guest:${g.id}`) ?? []), g])
+    else groups.set(e, [...(groups.get(e) ?? []), g])
   }
   const leads = [...groups.values()].map((gs) => gs[0])
   const answers = await write(leads.map((g) => rec('Contact', g.id, { FirstName: g.first, LastName: g.last, Email: g.email })), (r) => ports.upsert('Contact', r))
@@ -159,7 +230,8 @@ async function pushMembers(campaignId: string | null, guests: Guest[], contactOf
   const byContact = new Map<string, Guest[]>()
   for (const g of guests) {
     const contact = contactOf.get(g.id)
-    if (!campaignId) outcome.set(g.id, [null, "The gala's Campaign isn't in Salesforce yet"])
+    if (!emailKey(g.email)) outcome.set(g.id, [null, NO_EMAIL])
+    else if (!campaignId) outcome.set(g.id, [null, "The gala's Campaign isn't in Salesforce yet"])
     else if (!contact) outcome.set(g.id, [null, "This guest's Contact isn't in Salesforce yet"])
     else byContact.set(contact, [...(byContact.get(contact) ?? []), g])
   }
@@ -187,16 +259,18 @@ async function pushMembers(campaignId: string | null, guests: Guest[], contactOf
 
 /** Sends the gala, then sponsors, orders and payments, then guests and their memberships, and returns each record's
  *  outcome (a failed call fails its records, not the run). */
-export async function pushAll(o: Outbox, ports: PushPorts): Promise<SyncResult[]> {
+export async function pushAll(o: Outbox, ports: PushPorts, opts: PushOptions = DEFAULT_OPTIONS): Promise<SyncResult[]> {
   const results: SyncResult[] = []
   const campaignId = o.campaign ? await pushCampaign(o.campaign, ports, results) : null
-  for (const b of toBatches(o, campaignId)) {
+  const linked = await pushAccounts(o.accounts, ports, results)
+  for (const b of toBatches(o, campaignId, linked, opts)) {
     const answers = await write(b.records, (r) => ports.upsert(b.sobject, r))
     b.ids.forEach((id, k) => { const [sf_id, error] = outcomeOf(answers[k]); results.push({ entity: b.entity, entity_id: id, sf_object: b.sobject, sf_id, error }) })
   }
-  const contactOf = await pushContacts(o.contacts, ports, results)
+  const guests = opts.guests === 'none' ? [] : opts.guests === 'attended' ? o.contacts.filter((g) => g.status === 'Attended') : o.contacts
+  const contactOf = await pushContacts(guests, ports, results)
   // Campaign members carry their campaign's id, so there are none without a gala.
-  if (o.campaign) await pushMembers(campaignId, o.contacts, contactOf, ports, results)
+  if (o.campaign) await pushMembers(campaignId, guests, contactOf, ports, results)
   return results
 }
 
@@ -204,6 +278,7 @@ export async function pushAll(o: Outbox, ports: PushPorts): Promise<SyncResult[]
 export function summarize(results: SyncResult[]) {
   const by: Record<string, number> = {}
   for (const r of results) if (!r.error) by[r.sf_object] = (by[r.sf_object] ?? 0) + 1
-  const failed = results.filter((r) => r.error)
-  return { sent: results.length - failed.length, failed: failed.length, by_object: by, first_error: failed[0]?.error ?? null }
+  const skipped = results.filter((r) => r.error === NO_EMAIL).length
+  const failed = results.filter((r) => r.error && r.error !== NO_EMAIL)
+  return { sent: results.length - failed.length - skipped, failed: failed.length, skipped, by_object: by, first_error: failed[0]?.error ?? null }
 }
