@@ -187,10 +187,12 @@ In the demo it goes to `salesforce-mock`, a stand-in org that answers the calls 
    ```
 3. **Sync now** on Integrations, or `curl -X POST $F/salesforce-push -H "$H"` (as above). Then `select sobject, count(*) from demo_salesforce_records group by 1;` shows what "Salesforce" holds.
 
-**For real AAFE use:** don't run `demo_salesforce.sql` or deploy `salesforce-mock`. AAFE's org needs:
+**Since the review of #190 (Oct 20):** a guest with no email is skipped, not made a Contact (by name alone it could only be a duplicate); staff see how many in the Sync message. A sponsor whose name is already on one Account in AAFE's org is linked to it, never overwritten; two or more with that name and nothing is made until staff put our id in the right one. Two settings, for AAFE and Graybox to decide: `SALESFORCE_SEND_PAYMENTS=false` (when NPSP makes its own payment records) and `SALESFORCE_SEND_GUESTS=attended` or `none` (default: every named guest, as before). Setup for AAFE's partner: [`docs/salesforce-graybox.md`](../../docs/salesforce-graybox.md).
+
+**For real AAFE use:** don't run `demo_salesforce.sql` or deploy `salesforce-mock`. Sign in with a connected app: `SALESFORCE_CLIENT_ID` and `SALESFORCE_CLIENT_SECRET` (client credentials flow) get a fresh token each run, since an access token expires; `SALESFORCE_TOKEN` is only for the stand-in. AAFE's org needs:
 - the `AAFE_Gala_Id__c` field (Text, External ID, Unique) on Campaign, Account, Opportunity, `npe01__OppPayment__c` and Contact;
 - Registered, Attended and No Show as member statuses on the gala's Campaign;
-- a connected app for the access token.
+- a connected app with the client credentials flow and a run-as user, for the client id and secret.
 
 Then `SALESFORCE_BASE_URL` is the org's instance URL. Run the first sync after Give Lively's first sale, so its Campaign already exists. Not matched yet: a sponsor organization AAFE already has as an Account (Give Lively makes none, so this isn't a duplicate of its records).
 
