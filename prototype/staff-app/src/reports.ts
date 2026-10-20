@@ -5,6 +5,7 @@
 import { GUEST_TYPE_LABEL, displayName } from '@shared/data'
 import { ACCESSIBILITY_OPTIONS, DIETARY_OPTIONS, needStatus, parseAccessibilityNeeds, parseDietaryNeeds } from '@shared/guestNeeds'
 import type { DB, GuestType } from '@shared/types'
+import { NOTICE } from './exports'
 
 type Category = GuestType | 'walk_in'
 export interface AttendanceRow {
@@ -123,7 +124,6 @@ export function demoGuests(db: DB): GuestRow[] {
 
 // ---- CSV layouts: plain labels, money as numbers, yes as "Yes" ----
 
-const NOTICE = ['Capstone prototype — synthetic demonstration data only']
 const yes = (b: boolean) => (b ? 'Yes' : 'No')
 const CATEGORY = (c: Category) => (c === 'walk_in' ? 'Walk-in' : GUEST_TYPE_LABEL[c])
 const SOURCE: Record<string, string> = { givelively: 'Give Lively', check: 'Check', ach_direct: 'ACH to AAFE', wire: 'Wire', comp: 'Complimentary', staff_entry: 'Staff entry' }
