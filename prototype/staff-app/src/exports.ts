@@ -23,7 +23,15 @@ export interface SalesforceRow {
   checked_in_at: string; check_in_method: string
 }
 
-const NOTICE = ['Capstone prototype — synthetic demonstration data only']
+/**
+ * Demo files say so, on their first line and in their name; a real gala's don't. A project holds demo galas or real ones,
+ * never both (gala_events_no_mixing in backend.sql), so the current gala decides for every download. Before this, six
+ * downloads said "synthetic" on AAFE's real galas too, and Salesforce's import wizard would read the notice line as the
+ * column names (docs/salesforce-file.md, gap 1).
+ */
+export const NOTICE = ['Capstone prototype — synthetic demonstration data only']
+export const isDemo = (db: DB) => db.gala_events.find((e) => e.id === db.meta.current_event_id)?.is_synthetic ?? true
+export const csvName = (db: DB, name: string) => `${name}${isDemo(db) ? '-DEMO' : ''}.csv`
 const byText = (a: string | null | undefined, b: string | null | undefined) => (a == null ? (b == null ? 0 : 1) : b == null ? -1 : a.localeCompare(b))
 const byNum = (a: number | null, b: number | null) => (a == null ? (b == null ? 0 : 1) : b == null ? -1 : a - b)
 
@@ -87,14 +95,14 @@ export function demoSalesforceRows(db: DB): SalesforceRow[] {
 // ---- CSV layout (same columns as the downloads before the server exports, so nothing changes for staff) ----
 
 /** The badge printer's file. Affiliation is what the badge's bottom line says. */
-export const badgeCsv = (rows: BadgeRow[]) => [NOTICE, ['Name on badge', 'First', 'Last', 'Title', 'Organization', 'Table', 'Seat', 'Affiliation'],
+export const badgeCsv = (rows: BadgeRow[], synthetic = true) => [...(synthetic ? [NOTICE] : []), ['Name on badge', 'First', 'Last', 'Title', 'Organization', 'Table', 'Seat', 'Affiliation'],
   ...rows.map((r) => [r.display_name, r.first_name, r.last_name, r.title, r.organization, r.table_number, r.seat_number, r.sponsor ?? GUEST_TYPE_LABEL[r.guest_type]])]
 
-export const checkinCsv = (rows: CheckinRow[]) => [NOTICE, ['Last', 'First', 'Name', 'Organization', 'Sponsor', 'Table', 'Seat', 'Guest type', 'Access needs', 'Arrived'],
+export const checkinCsv = (rows: CheckinRow[], synthetic = true) => [...(synthetic ? [NOTICE] : []), ['Last', 'First', 'Name', 'Organization', 'Sponsor', 'Table', 'Seat', 'Guest type', 'Access needs', 'Arrived'],
   ...rows.map((r) => [r.last_name, r.first_name, r.display_name, r.organization, r.sponsor, r.table_number, r.seat_number,
     r.guest_type === 'unnamed_seat' ? 'Unnamed sponsor seat' : GUEST_TYPE_LABEL[r.guest_type], r.access_needs ? 'Yes, ask a staff lead' : '', r.arrived ? 'Yes' : ''])]
 
-export const salesforceCsv = (rows: SalesforceRow[]) => [NOTICE, ['First Name', 'Last Name', 'Email', 'Title', 'Account Name', 'Sponsor',
+export const salesforceCsv = (rows: SalesforceRow[], synthetic = true) => [...(synthetic ? [NOTICE] : []), ['First Name', 'Last Name', 'Email', 'Title', 'Account Name', 'Sponsor',
   'Account ID', 'Opportunity ID', 'Guest Type', 'Checked In At', 'Check-in Method'],
   ...rows.map((r) => [r.first_name, r.last_name, r.email, r.title, r.organization, r.sponsor, r.salesforce_account_id, r.salesforce_opportunity_id,
     r.guest_type === 'walk_in' ? 'Walk-in' : GUEST_TYPE_LABEL[r.guest_type], r.checked_in_at, r.check_in_method])]

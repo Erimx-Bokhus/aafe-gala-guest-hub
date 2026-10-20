@@ -7,6 +7,7 @@ import { Kpi, PageHead } from '../App'
 import { RecordPaymentModal } from '../components'
 import { useStaff } from '../store'
 import { nyDate } from '../date'
+import { NOTICE, csvName, isDemo } from '../exports'
 
 // Per-ticket fee ledger. Columns mirror Give Lively's "Line Items (All)" report.
 export default function Payments() {
@@ -20,8 +21,8 @@ export default function Payments() {
   const gl = pays.filter((p) => p.processor === 'stripe')
   const feeKnown = pays.filter((p) => p.transaction_fee_amount != null), unknown = gl.filter((p) => p.transaction_fee_amount == null).length
   const byMethod = (Object.keys(METHOD_LABEL) as PayMethod[]).map((m) => ({ m, list: pays.filter((p) => p.method === m) })).filter((x) => x.list.length)
-  const exportCsv = () => downloadCsv(`aafe-payments-fees-${year}-SYNTHETIC.csv`, [
-    ['Capstone prototype — synthetic demonstration data only'],
+  const exportCsv = () => downloadCsv(csvName(db, `aafe-payments-fees-${year}`), [
+    ...(isDemo(db) ? [NOTICE] : []),
     ['Date', 'Sponsor', 'Package', 'Method', 'Give Lively txn', 'Check #', 'Original', 'Donor-covered fee', 'Gross', 'Processor fee', 'Net', 'Reconciliation'],
     ...pays.map((p) => { const o = db.orders.find((x) => x.id === p.order_id)!; return [nyDate(p.received_at), sponsorOf(db, o.sponsor_id).organization_name, tierOf(db, o.tier_id).name, methodLabel(p), p.givelively_transaction_id, p.check_number, p.original_amount, p.covered_fee_amount, p.gross_amount, p.transaction_fee_amount, p.net_amount, p.reconciliation_status] }),
     ['TOTAL', '', '', '', '', '', sum('original_amount'), sum('covered_fee_amount'), sum('gross_amount'), sum('transaction_fee_amount'), sum('net_amount'), ''],
