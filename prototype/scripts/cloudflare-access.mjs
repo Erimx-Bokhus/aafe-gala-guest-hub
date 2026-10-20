@@ -17,6 +17,12 @@ const TOKEN = env.CLOUDFLARE_API_TOKEN, ACCT = env.CLOUDFLARE_ACCOUNT_ID
 if (!TOKEN || !ACCT) { console.error('Fill in CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID in prototype/.env.admin.local first.'); process.exit(1) }
 const list = (v) => (v ?? '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean)
 const DOMAINS = list(env.CLOUDFLARE_ACCESS_DOMAINS), EMAILS = list(env.CLOUDFLARE_ACCESS_EMAILS)
+// A typo or a pasted placeholder ("<her two addresses>") would become a rule that matches nobody while --apply removes the
+// real one, so anything that isn't a plain domain or address stops the script before it reads or changes anything.
+const DOMAIN = /^[a-z0-9-]+(\.[a-z0-9-]+)+$/
+const bad = [...DOMAINS.filter((d) => !DOMAIN.test(d)).map((d) => `domain "${d}"`),
+  ...EMAILS.filter((e) => !(e.split('@').length === 2 && /^[^\s<>()[\],;:"@]+$/.test(e.split('@')[0]) && DOMAIN.test(e.split('@')[1]))).map((e) => `address "${e}"`)]
+if (bad.length) { console.error(`Stopped: not a plain domain or email address in .env.admin.local: ${bad.join(', ')}. Nothing was read or changed.`); process.exit(1) }
 
 const POLICY = 'Team and AAFE reviewers'
 const APPS = [['AAFE Gala staff app', 'aafe-gala-staff.pages.dev'], ['AAFE Gala sponsor portal', 'aafe-gala-portal.pages.dev'],
