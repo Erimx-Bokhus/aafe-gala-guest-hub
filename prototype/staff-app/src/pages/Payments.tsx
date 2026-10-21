@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Download, Plus } from 'lucide-react'
-import { METHOD_LABEL, methodLabel, sponsorOf, tierOf } from '@shared/data'
+import { METHOD_LABEL, methodLabel, netToAafe, sponsorOf, tierOf } from '@shared/data'
 import { Pill, downloadCsv, fmtDate, money } from '@shared/ui'
 import type { PayMethod } from '@shared/types'
 import { Kpi, PageHead } from '../App'
@@ -19,12 +19,15 @@ export default function Payments() {
   const sum = (k: 'original_amount' | 'covered_fee_amount' | 'gross_amount' | 'transaction_fee_amount' | 'net_amount', list = pays) => list.reduce((s, p) => s + (p[k] ?? 0), 0)
   const gl = pays.filter((p) => p.processor === 'stripe')
   const feeKnown = pays.filter((p) => p.transaction_fee_amount != null), unknown = gl.filter((p) => p.transaction_fee_amount == null).length
+  // Net counts a payment whose fee is unknown before that fee, and says so (#187); never as $0.
+  const { net, feesUnknown } = netToAafe(pays)
+  const beforeFees = feesUnknown ? `before Give Lively fees on ${feesUnknown} payment${feesUnknown === 1 ? '' : 's'}` : ''
   const byMethod = (Object.keys(METHOD_LABEL) as PayMethod[]).map((m) => ({ m, list: pays.filter((p) => p.method === m) })).filter((x) => x.list.length)
   const exportCsv = () => downloadCsv(`aafe-payments-fees-${year}-SYNTHETIC.csv`, [
     ['Capstone prototype — synthetic demonstration data only'],
     ['Date', 'Sponsor', 'Package', 'Method', 'Give Lively txn', 'Check #', 'Original', 'Donor-covered fee', 'Gross', 'Processor fee', 'Net', 'Reconciliation'],
     ...pays.map((p) => { const o = db.orders.find((x) => x.id === p.order_id)!; return [nyDate(p.received_at), sponsorOf(db, o.sponsor_id).organization_name, tierOf(db, o.tier_id).name, methodLabel(p), p.givelively_transaction_id, p.check_number, p.original_amount, p.covered_fee_amount, p.gross_amount, p.transaction_fee_amount, p.net_amount, p.reconciliation_status] }),
-    ['TOTAL', '', '', '', '', '', sum('original_amount'), sum('covered_fee_amount'), sum('gross_amount'), sum('transaction_fee_amount'), sum('net_amount'), ''],
+    ['TOTAL', '', '', '', '', '', sum('original_amount'), sum('covered_fee_amount'), sum('gross_amount'), sum('transaction_fee_amount'), net, beforeFees && `Net ${beforeFees}`],
   ])
   const c = (n: number) => money(n, true)
   return (
@@ -38,7 +41,7 @@ export default function Payments() {
         <Kpi label="Total Give Lively fees" value={c(sum('transaction_fee_amount'))} sub={unknown ? `known for ${gl.length - unknown} of ${gl.length} Give Lively payments` : `across ${gl.length} Give Lively payments`} tone="brand" />
         <Kpi label="Donor-covered fees" value={c(sum('covered_fee_amount'))} sub="donors opted to cover" tone="green" />
         <Kpi label="Fees AAFE absorbed" value={c(Math.max(0, sum('transaction_fee_amount') - sum('covered_fee_amount', feeKnown)))} sub="fees minus donor-covered" tone="amber" />
-        <Kpi label="Net to AAFE" value={c(sum('net_amount'))} sub={unknown ? `${unknown} payment${unknown === 1 ? '' : 's'} without a fee yet` : undefined} />
+        <Kpi label="Net to AAFE" value={c(net)} sub={beforeFees || undefined} />
       </div>
       <div className="mt-6 grid gap-6 2xl:grid-cols-[1fr_320px]">
         <div className="card overflow-x-auto">
@@ -63,7 +66,7 @@ export default function Payments() {
                 )
               })}
             </tbody>
-            <tfoot className="border-t-2 border-navy-100 bg-cream-100 font-semibold"><tr><td className="td" colSpan={4}>Totals</td><td className="td text-right tabular-nums">{c(sum('original_amount'))}</td><td className="td text-right tabular-nums">{c(sum('covered_fee_amount'))}</td><td className="td text-right tabular-nums">{c(sum('gross_amount'))}</td><td className="td text-right tabular-nums text-brand-600" data-testid="fee-total">{c(sum('transaction_fee_amount'))}</td><td className="td text-right tabular-nums">{c(sum('net_amount'))}</td><td /></tr></tfoot>
+            <tfoot className="border-t-2 border-navy-100 bg-cream-100 font-semibold"><tr><td className="td" colSpan={4}>Totals</td><td className="td text-right tabular-nums">{c(sum('original_amount'))}</td><td className="td text-right tabular-nums">{c(sum('covered_fee_amount'))}</td><td className="td text-right tabular-nums">{c(sum('gross_amount'))}</td><td className="td text-right tabular-nums text-brand-600" data-testid="fee-total">{c(sum('transaction_fee_amount'))}</td><td className="td text-right tabular-nums" data-testid="net-total">{c(net)}{beforeFees && <div className="text-xs font-normal text-navy-500">{beforeFees}</div>}</td><td /></tr></tfoot>
           </table>
         </div>
         <aside className="space-y-4">

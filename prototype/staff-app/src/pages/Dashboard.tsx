@@ -1,5 +1,5 @@
 import { ArrowRight, RefreshCw } from 'lucide-react'
-import { orderMoney, seatStats, sponsorOf, tierOf } from '@shared/data'
+import { netToAafe, orderMoney, seatStats, sponsorOf, tierOf } from '@shared/data'
 import { Link, Pill, ago, fmtDate, money } from '@shared/ui'
 import type { DB } from '@shared/types'
 import { Kpi, PageHead } from '../App'
@@ -13,9 +13,10 @@ export default function Dashboard() {
   const orders = curOrders(db)
   const pays = curPayments(db)
   const gross = pays.reduce((s, p) => s + p.gross_amount, 0)
-  // Fees AAFE's ticket export didn't carry are unknown (null), not $0: count the known ones, and net from those (Gate 1).
+  // Fees AAFE's ticket export didn't carry are unknown (null), not $0: count the known ones (Gate 1); net counts those
+  // payments before their fee and says so (netToAafe, #187).
   const fees = pays.reduce((s, p) => s + (p.transaction_fee_amount ?? 0), 0)
-  const net = pays.reduce((s, p) => s + (p.net_amount ?? 0), 0), feeUnknown = pays.filter((p) => p.transaction_fee_amount == null).length
+  const { net, feesUnknown } = netToAafe(pays)
   const committed = orders.reduce((s, o) => s + o.commitment_amount, 0)
   const outstanding = orders.reduce((s, o) => s + orderMoney(db, o.id).balance, 0)
   const ids = new Set(orders.map((o) => o.id))
@@ -37,7 +38,7 @@ export default function Dashboard() {
         <Kpi label="Committed" value={money(committed)} sub={`${orders.length} orders`} />
         <Kpi label="Received (gross)" value={money(gross)} sub={`${money(outstanding)} outstanding`} tone="green" />
         <Kpi label="Give Lively processor fees" value={money(fees, true)} sub={<Link to="/payments" className="text-brand-600 underline">See per-ticket fees</Link>} tone="brand" />
-        <Kpi label="Net to AAFE" value={money(net, true)} sub={feeUnknown ? `${feeUnknown} payment${feeUnknown === 1 ? '' : 's'} without a fee yet` : undefined} />
+        <Kpi label="Net to AAFE" value={money(net, true)} sub={feesUnknown ? `before Give Lively fees on ${feesUnknown} payment${feesUnknown === 1 ? '' : 's'}` : undefined} />
         <Kpi label="Seats named" value={`${named} / ${seats.length}`} sub={`${seats.length - named} still unnamed`} />
         <Kpi label="Needs staff review" value={review} sub="Submitted from guest portal" tone="amber" />
         <Kpi label="No table yet" value={unseated} sub={<Link to="/guests" className="text-brand-600 underline">Pick tables in the guest list</Link>} />
