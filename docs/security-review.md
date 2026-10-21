@@ -63,8 +63,9 @@ project holds demo galas or real ones, never both (`gala_events_no_mixing`).
 
 Supabase's built-in email sender sends only a few emails an hour, and only to the project team's addresses: on gala
 night, staff and volunteers couldn't get their codes. The guide now says what to set (`prototype/docs/BACKEND.md`, Setup
-step 2, "Sign-in on gala night"): custom SMTP through Resend, an hourly email limit above the number of people signing
-in, codes that expire within an hour, and iPads signed in before doors open.
+step 2, "Sign-in on gala night"): custom SMTP (Resend with AAFE's own domain for AAFE's project; without a verified
+domain Resend delivers only to its account owner, which is why stable uses a team Gmail account), an hourly email limit
+above the number of people signing in, codes that expire within an hour, and iPads signed in before doors open.
 
 Stable's settings, read from the Supabase dashboard on Oct 16:
 
@@ -76,7 +77,8 @@ Stable's settings, read from the Supabase dashboard on Oct 16:
 | Time between emails to one person | 60 seconds | Yes: a second "send me a code" waits a minute |
 | Code expiry | 3600 seconds (an hour), 6 digits | Yes |
 
-Nightly's sign-in settings are still to be set (sign-ups off, the code in the email, the sender, its addresses).
+Nightly's sign-in settings are still to be set: on Oct 19 Supabase still reported sign-ups on (`disable_signup: false`).
+Nobody off the staff list gets past the app's own check, but step 2 should be finished there too.
 
 ## 4. Dependencies
 
