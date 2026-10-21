@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // The demo data switch: the chosen set loads; an unknown or blocked choice falls back to the small set.
 import { afterEach, expect, test, vi } from 'vitest'
-import { demoSet, loadDB, orderMoney } from './data'
+import { demoSet, loadDB, netToAafe, orderMoney } from './data'
 
 afterEach(() => { vi.restoreAllMocks(); localStorage.clear() })
 
@@ -68,4 +68,13 @@ test('comp orders have no balance', () => {
 test('paid is clamped to zero when refunds exceed the original payment', () => {
   const { db, orderId } = dbWithPayment({ commitment: 500, original: 500, refunded: 800 })
   expect(orderMoney(db, orderId).paid).toBe(0)
+})
+
+// #187: a fee AAFE's ticket export didn't carry is unknown; Net counts that payment before its fee, never as $0.
+test('net to AAFE counts a payment with an unknown fee before the fee, and says how many', () => {
+  const [p] = loadDB().payments
+  const known = { ...p, gross_amount: 103, transaction_fee_amount: 3, refunded_amount: 0, net_amount: 100 }
+  const unknown = { ...p, gross_amount: 500, transaction_fee_amount: null, refunded_amount: 50, net_amount: null }
+  expect(netToAafe([known, unknown])).toEqual({ net: 550, feesUnknown: 1 })
+  expect(netToAafe([known])).toEqual({ net: 100, feesUnknown: 0 })
 })

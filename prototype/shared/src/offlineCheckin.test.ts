@@ -109,6 +109,39 @@ describe('syncing', () => {
     expect(d.banner(true)).toBeNull()
   })
 
+  // Oct 19 click-through: a synced check-in dropped off the list until the next refresh (up to 15 s), so the counter
+  // dipped and Undo found nothing to send.
+  it('a check-in the server took stays on the list until the next refresh, with the handle Undo needs', async () => {
+    const d = desk()
+    d.checkIn('g-2'); d.checkInException({ name: 'Pat Walker', order_id: null, type: 'Walk-in pending confirmation' })
+    await d.sync(answer('checked_in'))
+    expect(d.pending()).toEqual([])
+    expect(d.guests().find((g) => g.id === 'g-2')).toMatchObject({ arrived: true, checked_in_at: '2027-05-20T23:06:00.000Z', checked_in_by: 'Riley', device: 'Door 1', checkin_client_id: 'door-1-id1' })
+    expect(d.checkIn('g-2')).toMatchObject({ kind: 'already', message: 'Already checked in at 7:06 PM by Door 1' })   // a second scan is caught
+    expect(d.snapshot?.exceptions).toEqual([{ id: 'door-1-id2', client_id: 'door-1-id2', name: 'Pat Walker', type: 'Walk-in pending confirmation',
+      order_id: null, checked_in_at: '2027-05-20T23:06:00.000Z', checked_in_by: 'Riley', device: 'Door 1' }])
+    expect(d.guests().find((g) => g.id === 'g-3')).toMatchObject({ checked_in_by: 'Kenji', device: 'Door 2' })   // others untouched
+  })
+
+  it('an item synced before (its answer lost) also stays on the list', async () => {
+    const d = desk()
+    d.checkIn('g-1')
+    await d.sync(answer('already_synced'))
+    expect(d.guests().find((g) => g.id === 'g-1')).toMatchObject({ arrived: true, checkin_client_id: 'door-1-id1' })
+  })
+
+  it('once the server undoes a synced check-in, the list drops it at once and the guest can come in again', async () => {
+    const d = desk()
+    d.checkIn('g-2'); d.checkInException({ name: 'Pat Walker', type: 'Walk-in pending confirmation' })
+    await d.sync(answer('checked_in'))
+    d.forgetCheckIn('door-1-id1'); d.forgetCheckIn('door-1-id2')
+    expect(d.guests().find((g) => g.id === 'g-2')).toMatchObject({ arrived: false, checked_in_at: null, checked_in_by: null, checkin_client_id: null })
+    expect(d.snapshot?.exceptions).toEqual([])
+    expect(d.checkIn('g-2').kind).toBe('checked_in')
+    d.forgetCheckIn('no-such-handle')   // nothing to forget: nothing changes
+    expect(d.guests().find((g) => g.id === 'g-3')).toMatchObject({ arrived: true })
+  })
+
   it('tells a network failure from a refusal, and keeps the check-ins either way (Gate 3)', async () => {
     const d = desk()
     d.saveSnapshot(SNAP)

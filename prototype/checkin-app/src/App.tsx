@@ -11,7 +11,7 @@ import { AlertTriangle, ArrowLeft, Camera, CheckCircle2, CloudOff, Lock, LogOut,
 import { AafeLogo } from '@shared/Logo'
 import { DisplayControls, Modal, PrototypeBanner, Toast, useDisplayPrefs } from '@shared/ui'
 import { EXCEPTION_TYPES } from '@shared/checkinSync'
-import { currentStaff, sendSignInLink, signInFromLink, signOut, supabase, verifySignInCode } from '@shared/supabase'
+import { currentStaff, sendFailure, sendSignInLink, signInFromLink, signOut, supabase, verifySignInCode } from '@shared/supabase'
 import type { StaffUser } from '@shared/types'
 import { LIVE, type Arrival, type Door, type DoorGuest, type DoorStatus, type Gala } from './door'
 import { frameReader, onceEvery } from './qrScan'
@@ -189,6 +189,9 @@ function LiveApp({ prefs }: { prefs: Prefs }) {
 function LiveSignIn({ prefs, notice }: { prefs: Prefs; notice: string }) {
   const [email, setEmail] = useState('')
   const [err, setErr] = useState(notice)
+  // A reason that arrives while this screen is already up (a code or link signed in someone not on the staff list)
+  // replaces what it says; an empty one leaves the last reason on screen.
+  useEffect(() => { if (notice) setErr(notice) }, [notice])
   const [sent, setSent] = useState(false)
   const [code, setCode] = useState('')
   const [busy, setBusy] = useState(false)
@@ -205,7 +208,7 @@ function LiveSignIn({ prefs, notice }: { prefs: Prefs; notice: string }) {
     }
     try { await sendSignInLink(email); setSent(true) }
     // Same message whether or not the email is invited, so the form doesn't reveal who is on the staff list.
-    catch { setErr('We couldn’t send a sign-in email. Check the internet connection and the email address; if both are right, ask the gala admin to invite you.') }
+    catch (e) { setErr(sendFailure(e)) }
     finally { setBusy(false) }
   }
   return (
