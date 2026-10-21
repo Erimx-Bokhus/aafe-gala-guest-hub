@@ -78,7 +78,8 @@ export default function Integrations() {
   const pullNow = () => once('pull', () => api.pullGiveLively().then((c) => { setLastPull(new Date().toISOString()); toast(pullSummary(c)) }))
 
   // Salesforce's own reason for a record it refused stays in the sync log; staff get what to do.
-  const syncNow = () => once('sync', () => api.syncSalesforce().then((r) => toast(r.failed ? `Salesforce: ${r.sent} sent, ${r.failed} not sent. Try Sync now later.` : `Salesforce: ${r.sent} record${r.sent === 1 ? '' : 's'} sent`)))
+  const syncNow = () => once('sync', () => api.syncSalesforce().then((r) => toast((r.failed ? `Salesforce: ${r.sent} sent, ${r.failed} not sent. Try Sync now later.` : `Salesforce: ${r.sent} record${r.sent === 1 ? '' : 's'} sent`)
+    + (r.skipped ? ` ${r.skipped} guest record${r.skipped === 1 ? '' : 's'} without an email skipped: match them in Salesforce by hand.` : ''))))
 
   return (
     <div>
