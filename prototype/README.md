@@ -24,10 +24,10 @@ Rebuild the OPEN files after changes: `npm run build`, then `python3 scripts/mak
 ## Run
 Needs **Node 22.18** or newer (`node --version`). The backend tests load TypeScript files directly, which Node does from 22.18; older versions fail with `ERR_UNKNOWN_FILE_EXTENSION`. With nvm, `nvm install` in this folder picks the version from `.nvmrc`.
 ```bash
-npm install            # once, at this folder (npm workspaces)
+npm ci                 # once, at this folder (npm workspaces; installs the locked versions)
 npm run dev:guest      # http://localhost:5173  -> open #/s/ac-6w9k3p5d
 npm run dev:staff      # http://localhost:5174  -> pick a demo account
-npm run build          # builds both into */dist
+npm run build          # builds all three apps into */dist
 npm run seed           # regenerate synthetic data
 npm run translations   # rebuild the translation review sheet (docs/translations/) after changing guest-portal/src/i18n.ts
 ```
