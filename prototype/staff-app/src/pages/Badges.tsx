@@ -7,7 +7,7 @@ import { PageHead } from '../App'
 import { QR } from '../qr'
 import { useStaff } from '../store'
 import { curOrders } from './Dashboard'
-import { badgeCsv } from '../exports'
+import { badgeCsv, csvName, isDemo } from '../exports'
 
 // Badge template. Never prints: payment info, relationship owner/notes, email, dietary/accessibility.
 interface Tpl { title: boolean; org: boolean; sponsor: boolean; tableSeat: boolean; qr: boolean }
@@ -51,7 +51,7 @@ export default function Badges() {
     <div>
       <PageHead title="Badges" sub="Badges fill in from the guest list, table number included. Changing a printed badge’s name, title, organization or table flags it for reprint."
         actions={<>
-          <button className="btn-ghost" data-testid="export-badges" onClick={() => void act(api.exportBadges(filter === 'all').then((rows) => downloadCsv('aafe-badges-SYNTHETIC.csv', badgeCsv(filter === 'all' ? rows : rows.filter((r) => r.badge_status === filter)))), 'Badge file downloaded')}><Download size={15} /> CSV for printer</button>
+          <button className="btn-ghost" data-testid="export-badges" onClick={() => void act(api.exportBadges(filter === 'all').then((rows) => downloadCsv(csvName(db, 'aafe-badges'), badgeCsv(filter === 'all' ? rows : rows.filter((r) => r.badge_status === filter), isDemo(db)))), 'Badge file downloaded')}><Download size={15} /> CSV for printer</button>
           <button className="btn-ghost" onClick={() => window.print()}><Printer size={15} /> Print sheet</button>
           <button className="btn-primary" disabled={!list.length || filter === 'all'} onClick={() => void act(api.markPrinted(list.map((g) => g.id)), `${list.length} badges marked printed`)}>Mark {list.length} printed</button>
         </>} />
