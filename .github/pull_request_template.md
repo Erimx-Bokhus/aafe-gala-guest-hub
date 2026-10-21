@@ -1,9 +1,9 @@
 ## What changed
 
 ## Visual
-<!-- Every pull request has one (docs/pr-visuals.md).
-     On screen: an annotated before (main) and after (this PR), with the same data and steps; a GIF if it moves.
-     Nothing on screen: the rendered doc, the script's real output, or the server's real response. -->
+<!-- docs/pr-visuals.md.
+     On screen: required. An annotated before (main) and after (this PR), with the same data and steps; a GIF if it moves.
+     Docs, backend or scripts: not required. Delete this section; "What changed" and "Tests" are enough. -->
 
 **Before (`main`):**
 

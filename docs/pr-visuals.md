@@ -1,15 +1,14 @@
 # Pull request visuals
 
-Decided Oct 20, 2026 by Aisling (`docs/decisions.md`). Every pull request, and every comment on one, carries a visual. That way a reviewer, or AAFE, can see what changed without running the branch.
+Decided Oct 20, 2026 (`docs/decisions.md`): proposed by Aisling, scoped by Natalie as product lead, with Cornell's review notes. The aim is that a reviewer can see what changed without running the branch. AAFE isn't on this repo; AAFE sees changes in the demo apps and on the project hub.
 
 ## The rule
-- **On-screen change:** an annotated **before** (`main`) and **after** (this PR), with the same data and the same steps on both sides.
+- **On-screen change: required.** An annotated **before** (`main`) and **after** (this PR), with the same data and the same steps on both sides.
   - When the change moves (a sync, a reload, a message that appears and goes), make it a GIF.
-- **Nothing on screen** (backend, docs, scripts): show the evidence instead, before and after where there is one. That can be:
-  - the doc as GitHub renders it;
-  - the script's real output;
-  - the server's real response.
-- **Every visual answers four things:**
+- **Docs, backend or scripts: not required.** A short note on what changed, and the test results, is enough. Real test or terminal output counts as the visual if you want one.
+- **Where:** the pull request's description, and fix or follow-up comments. Review comments don't need a picture.
+- **PR comments:** a picture only when it helps explain something.
+- **When a PR has a visual, it answers four things:**
   - what happened;
   - when it was found or planned, with the date and where (issue, gate, click-through, review);
   - how the fix was chosen;
