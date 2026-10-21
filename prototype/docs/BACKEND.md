@@ -192,7 +192,7 @@ In the demo it goes to `salesforce-mock`, a stand-in org that answers the calls 
 **For real AAFE use:** don't run `demo_salesforce.sql` or deploy `salesforce-mock`. Sign in with a connected app: `SALESFORCE_CLIENT_ID` and `SALESFORCE_CLIENT_SECRET` (client credentials flow) get a fresh token each run, since an access token expires; `SALESFORCE_TOKEN` is only for the stand-in. AAFE's org needs:
 - the `AAFE_Gala_Id__c` field (Text, External ID, Unique) on Campaign, Account, Opportunity, `npe01__OppPayment__c` and Contact;
 - Registered, Attended and No Show as member statuses on the gala's Campaign;
-- a connected app with the client credentials flow and a run-as user, for the client id and secret.
+- an External Client App (new connected apps are restricted since Spring '26) with the client credentials flow and a run-as user, for the client id and secret.
 
 Then `SALESFORCE_BASE_URL` is the org's instance URL. Run the first sync after Give Lively's first sale, so its Campaign already exists. Not matched yet: a sponsor organization AAFE already has as an Account (Give Lively makes none, so this isn't a duplicate of its records).
 
