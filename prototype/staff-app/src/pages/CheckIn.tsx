@@ -6,7 +6,7 @@ import { Field, Modal, downloadCsv, fmtDate } from '@shared/ui'
 import { useStaff } from '../store'
 import { curOrders } from './Dashboard'
 import { canDo, checkInErrorText } from '../api'
-import { checkinCsv } from '../exports'
+import { checkinCsv, csvName, isDemo } from '../exports'
 
 // iPad check-in. Volunteers see ONLY name, title, organization, sponsor, table/seat and status.
 const EXCEPTIONS = ['Arrived with sponsor', 'Sponsor seat was not previously named', 'Comp guest', 'Approved by relationship manager', 'Walk-in pending confirmation']
@@ -72,7 +72,7 @@ export default function CheckIn() {
         <div><h1 className="text-2xl font-semibold text-navy-900">Event-day check-in</h1><p className="text-sm text-navy-600">Search a name or scan a guest’s QR code.</p></div>
         <div className="flex flex-wrap items-end gap-4">
           {/* The fallback if the iPad or the venue's internet fails: print it before doors open. */}
-          <button className="btn-ghost" data-testid="export-checkin" onClick={() => void act(api.exportCheckin().then((rows) => downloadCsv('aafe-checkin-list-SYNTHETIC.csv', checkinCsv(rows))), 'Check-in list downloaded')}><Download size={15} /> Printed check-in list</button>
+          <button className="btn-ghost" data-testid="export-checkin" onClick={() => void act(api.exportCheckin().then((rows) => downloadCsv(csvName(db, 'aafe-checkin-list'), checkinCsv(rows, isDemo(db)))), 'Check-in list downloaded')}><Download size={15} /> Printed check-in list</button>
           {/* The end-of-night report: who came, with their sponsor and what was paid (Reports page, Oct 14). */}
           {/* It has guests' emails, so it opens the Reports page rather than saving a file on a shared door iPad (review of #135). */}
           {canDo(user.role, 'reportAttendance') && <a className="btn-primary" data-testid="download-who-came" href="#/reports"><Download size={15} /> Who came (Reports)</a>}
