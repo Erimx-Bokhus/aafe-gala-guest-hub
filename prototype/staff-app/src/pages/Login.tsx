@@ -3,7 +3,7 @@ import { Lock, Mail } from 'lucide-react'
 import { DisplayControls, type Prefs } from '@shared/ui'
 import { AafeLogo } from '@shared/Logo'
 import type { DB, StaffUser } from '@shared/types'
-import { sendSignInLink, supabase, verifySignInCode } from '@shared/supabase'
+import { sendFailure, sendSignInLink, supabase, verifySignInCode } from '@shared/supabase'
 
 // LIVE (Supabase configured): staff get one email with a sign-in link and a 6-digit code (either works); the role
 // comes from staff_users via staff_me() and is enforced by RLS. DEMO (no Supabase): picks a synthetic staff user.
@@ -29,7 +29,7 @@ export default function Login({ db, prefs, notice, onLogin }: { db: DB; prefs: P
       }
       try { await sendSignInLink(email); setSent(true) }
       // Same message whether or not the email is invited, so the form doesn't reveal who is on the staff list.
-      catch { setErr('We couldn’t send a sign-in email. Check the internet connection and the email address; if both are right, ask the gala admin to invite you.') }
+      catch (e) { setErr(sendFailure(e)) }
       finally { setBusy(false) }
       return
     }
