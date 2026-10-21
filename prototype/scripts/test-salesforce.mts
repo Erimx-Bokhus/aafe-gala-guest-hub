@@ -3,7 +3,7 @@
 // (salesforce_mark_synced), all in PGlite. The stand-in starts with what Give Lively's own connector would have made,
 // so the push shows it adds nothing twice (Gate 1, box 5). Runs with npm run test:backend. Invented data only.
 import { readFileSync } from 'node:fs'
-import { BATCH, EXTERNAL_ID, LOOKUP, NO_EMAIL, optionsFrom, pushAll, salesforceAccess, soqlText, summarize, toBatches, type Outbox, type PushPorts } from '../supabase/functions/_shared/salesforce.ts'
+import { BATCH, EXTERNAL_ID, LOOKUP, NO_EMAIL, optionsFrom, WAITS_FOR_ACCOUNT, pushAll, salesforceAccess, soqlText, summarize, toBatches, type Outbox, type PushPorts } from '../supabase/functions/_shared/salesforce.ts'
 import { parseSoql } from '../supabase/functions/salesforce-mock/soql.ts'
 import { isOwnStandIn, standInPorts, type Rpc } from '../supabase/functions/salesforce-mock/standin.ts'
 // @ts-expect-error plain JavaScript helper
@@ -217,10 +217,17 @@ ok(rk.find((x) => x.sf_object === 'Account')?.sf_id === '001AAFEKNOWN0001' && !(
   && knownOpp?.fields.AccountId === '001AAFEKNOWN0001', "a sponsor AAFE already has as an Account (same name, any case) is linked to it: no second Account, and its order points there")
 ok((await q(`select fields from demo_salesforce_records where sf_id = '001AAFEKNOWN0001'`))[0].fields.Name === 'Lotus Bakery Example', 'and that Account is never overwritten')
 await seedAccount('001AAFETWIN00001', 'Twin Name Example'); await seedAccount('001AAFETWIN00002', 'Twin Name Example')
-const rt = await pushAll({ campaign: null, accounts: [{ id: 'sp-twin', name: 'Twin Name Example' }], opportunities: [opp('ord-twin', 'sp-twin')], payments: [], contacts: [] }, ports)
-ok(/2 Accounts in Salesforce are named "Twin Name Example": put sp-twin in the AAFE_Gala_Id__c field/.test(rt.find((x) => x.sf_object === 'Account')?.error ?? '')
+const rt = await pushAll({ campaign: null, accounts: [{ id: 'sp-twin', name: 'Twin Name Example' }], opportunities: [opp('ord-twin', 'sp-twin')],
+  payments: [{ id: 'pay-twin', order_id: 'ord-twin', amount: 500, date: '2027-01-21', method: 'check' }], contacts: [] }, ports)
+const twinWhy = rt.find((x) => x.sf_object === 'Account')?.error ?? ''
+ok(/2 Accounts in Salesforce are named "Twin Name Example": put sp-twin in the AAFE_Gala_Id__c field/.test(twinWhy)
   && !(await sf('Account')).some((x) => x.external_id === 'sp-twin') && Boolean(rt.find((x) => x.sf_object === 'Opportunity')?.error),
   "two Accounts with the sponsor's name: nothing is made, the sponsor says what to do, and its order waits")
+// Cornell's review of #213: the order and its payment aren't sent to fail with Salesforce's raw error; they wait, saying why.
+const twinOrder = rt.find((x) => x.entity_id === 'ord-twin'), twinPay = rt.find((x) => x.entity_id === 'pay-twin')
+ok([twinOrder, twinPay].every((x) => x?.error === `${WAITS_FOR_ACCOUNT} ${twinWhy}` && !x.sf_id)
+  && !(await sf('Opportunity')).some((x) => x.external_id === 'ord-twin') && !(await sf('npe01__OppPayment__c')).some((x) => x.external_id === 'pay-twin'),
+  "and its order and payment aren't sent: each says to settle the sponsor's Account first, with the sponsor's reason")
 const noAccountLookup: PushPorts = { ...ports, query: (soql) => (parseSoql(soql).sobject === 'Account' ? Promise.reject(new Error('HTTP 503')) : ports.query(soql)) }
 const accountsBefore = (await sf('Account')).length
 ok((await pushAll({ campaign: null, accounts: [{ id: 'sp-new-x', name: 'Brand New Example' }], opportunities: [], payments: [], contacts: [] }, noAccountLookup))[0].error === 'HTTP 503'
