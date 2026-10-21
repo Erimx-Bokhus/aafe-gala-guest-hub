@@ -8,7 +8,7 @@ import type { StaffUser } from '@shared/types'
 
 const server = vi.hoisted(() => ({
   snapshot: null as Snapshot | null, syncError: null as string | null, lists: 0, undoError: null as { message: string } | null,
-  sent: [] as SnapshotGuest[], cursors: [] as (string | null)[],
+  sent: [] as SnapshotGuest[], cursors: [] as (string | null)[], undone: [] as string[],
 }))
 /** door_sync() for one iPad: everything without a cursor, else the lines changed or gone since its last answer. */
 function doorSync(cursor: string | null) {
@@ -26,8 +26,9 @@ function doorSync(cursor: string | null) {
 }
 vi.mock('@shared/supabase', () => ({
   supabase: {
-    rpc: async (fn: string, args: { p_items?: { client_id: string }[]; p_cursor?: string | null }) => {
+    rpc: async (fn: string, args: { p_items?: { client_id: string }[]; p_cursor?: string | null; p_id?: string }) => {
       if (fn === 'staff_undo_check_in' && server.undoError) return { data: null, error: server.undoError }
+      if (fn === 'staff_undo_check_in') { server.undone.push(args.p_id ?? ''); return { data: { ok: true }, error: null } }
       if (fn === 'door_sync') { server.lists++; return { data: doorSync(args.p_cursor ?? null), error: null } }
       if (server.syncError) return { data: null, error: { message: server.syncError } }
       return { data: (args.p_items ?? []).map((i) => ({ client_id: i.client_id, status: 'checked_in' })), error: null }
@@ -47,7 +48,7 @@ const list = (guests: SnapshotGuest[], at: string): Snapshot => ({
 })
 const KENJI: StaffUser = { id: 'st-test-door', name: 'Door Tester', email: 'door@example.org', role: 'check_in_volunteer' }
 
-beforeEach(() => { localStorage.clear(); server.syncError = null; server.lists = 0; server.undoError = null; server.sent = []; server.cursors = [] })
+beforeEach(() => { localStorage.clear(); server.syncError = null; server.lists = 0; server.undoError = null; server.sent = []; server.cursors = []; server.undone = [] })
 afterEach(() => vi.useRealTimers())
 /** The list is refreshed every 15 seconds: move the clock past that before a refresh is expected. */
 const aMinuteLater = () => { vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(Date.now() + 61_000) }
@@ -115,6 +116,20 @@ describe('live door list', () => {
     await vi.advanceTimersByTimeAsync(0)
     expect(server.lists).toBe(3)
     door.stop()
+  })
+
+  // Oct 19 click-through: right after a check-in synced, the counter dropped it and the toast's Undo said "Undone"
+  // without asking the server, so the guest stayed checked in.
+  it('a synced check-in still counts before the next list refresh, and Undo then reaches the server', async () => {
+    server.snapshot = list([guest('g-1', 'Ana', 'Diaz'), guest('g-2', 'Ben', 'Ortiz')], '2027-05-20T22:00:00Z')
+    const door = (await loadDoor(KENJI))!
+    const [handle] = door.checkIn(['g-1'], 'search')
+    await vi.waitFor(() => expect(door.status.pending).toBe(0))   // sent at once; the list isn't due for 15 seconds
+    expect(server.lists).toBe(1)
+    expect(door.arrivals().get('g-1')).toMatchObject({ handle, queued: false })
+    expect(await door.undo([handle!])).toBeNull()
+    expect(server.undone).toEqual([handle])
+    expect(door.arrivals().has('g-1')).toBe(false)
   })
 
   it('after the first list, asks only for what changed, also after the iPad restarts', async () => {
