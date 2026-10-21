@@ -1,5 +1,7 @@
 # Salesforce: setup and decisions for AAFE and Graybox
 
+Written by Natalie Walker, product lead (Oct 20, 2026), from her review of #190 and the fixes in #213.
+
 For the technical meeting with Graybox, the firm building AAFE's Salesforce (requested by AAFE's gala lead at the Oct 19
 midpoint check-in). It lists what the gala tool can send to Salesforce, what Graybox would set up, and the decisions
 that are AAFE's and Graybox's to make. Code: `prototype/supabase/functions/_shared/salesforce.ts`; technical detail:
@@ -104,4 +106,4 @@ reason.
 - [Salesforce: fundraising data model](https://developer.salesforce.com/docs/platform/data-models/guide/fundraising.html)
 - [Salesforce Help: client credentials flow for External Client Apps](https://help.salesforce.com/s/articleView?language=en_US&id=xcloud.configure_client_credentials_flow_for_external_client_apps.htm&type=5)
 
-Sources found by Aisling (#213); confirm with Graybox. Prototype with invented data only (CLAUDE.md, hard rule 1).
+Sources found by Aisling Leiva-Davila in her review of #213; confirm with Graybox. Prototype with invented data only (CLAUDE.md, hard rule 1).
