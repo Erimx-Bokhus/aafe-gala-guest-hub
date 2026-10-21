@@ -1028,10 +1028,17 @@ begin
   -- "duplicate key" error and lost the guest), and on a gala with no comp order yet both created one. The lock waits
   -- for the other add to finish and is released when this one commits.
   perform pg_advisory_xact_lock(hashtext('staff_add_comp_guest'), hashtext(current_event_id()));
-  select id into v_order from orders
-   where event_id = current_event_id() and status <> 'cancelled'
-     and tier_id in (select id from sponsorship_tiers where event_id = current_event_id() and tier_category = 'complimentary')
-   order by created_at limit 1;
+  -- The comp order that holds relationship guests, or the one this function made for them (its note). A gala has other
+  -- comp orders too (staff, volunteers, event staff, government and VIP guests), and "the earliest" picked among them
+  -- by chance when they share a creation time, as all five in the demo sets do. Found checking AAFE's Oct 20
+  -- walk-through: with the same rows stored in another order, a relationship guest was filed under the staff order.
+  select o.id into v_order from orders o
+   where o.event_id = current_event_id() and o.status <> 'cancelled'
+     and o.tier_id in (select id from sponsorship_tiers where event_id = current_event_id() and tier_category = 'complimentary')
+     and (exists (select 1 from guests x where x.order_id = o.id and x.guest_type = 'comp_relationship')
+          or o.internal_notes like 'Complimentary relationship guests%')
+   order by exists (select 1 from guests x where x.order_id = o.id and x.guest_type = 'comp_relationship') desc, o.created_at, o.id
+   limit 1;
   if v_order is null then
     v_sp := new_id('sp'); v_order := new_id('ord');
     insert into sponsors (id, organization_name, primary_contact_name, primary_contact_email, phone, relationship_owner_id)
