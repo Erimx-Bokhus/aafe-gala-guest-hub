@@ -8,6 +8,7 @@ import { canDo } from '../api'
 import { SeatPill } from '../components'
 import { useStaff } from '../store'
 import { curOrders } from './Dashboard'
+import { NOTICE, csvName, isDemo } from '../exports'
 
 // Spreadsheet-style grid: edit any cell, changes save on blur and are written to the activity log.
 const EDITABLE: { k: keyof Guest; label: string; w: string }[] = [
@@ -63,8 +64,8 @@ export default function GuestList() {
   }).filter((r) => (status === 'all' || r.seat.status === status) && `${r.g.first_name} ${r.g.last_name} ${r.g.organization} ${r.sponsor}`.toLowerCase().includes(q.toLowerCase()))
     .sort((a, b) => a.sponsor.localeCompare(b.sponsor) || a.seat.slot_number - b.seat.slot_number), [db, q, status]) // eslint-disable-line
 
-  const exportCsv = () => downloadCsv('aafe-gala-guest-list-SYNTHETIC.csv', [
-    ['Capstone prototype — synthetic demonstration data only'],
+  const exportCsv = () => downloadCsv(csvName(db, 'aafe-gala-guest-list'), [
+    ...(isDemo(db) ? [NOTICE] : []),
     ['First', 'Last', 'Title', 'Organization', 'Email', 'Sponsor', 'Guest type', 'Dietary', 'Accessibility', 'Table', 'Seat', 'Seat status', 'Badge', 'Last updated by', 'Updated at'],
     ...rows.map(({ g, sponsor, seat, table }) => [g.first_name, g.last_name, g.title, g.organization, g.email, sponsor, g.guest_type, g.dietary_needs, g.accessibility_needs, table?.number, g.seat_number, seat.status, g.badge_status, g.last_updated_by, g.updated_at]),
   ])

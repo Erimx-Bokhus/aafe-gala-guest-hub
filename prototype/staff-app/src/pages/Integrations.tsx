@@ -4,7 +4,7 @@ import { Pill, ago, downloadCsv, fmtDate } from '@shared/ui'
 import { PageHead } from '../App'
 import { SAMPLE_HEAD, importGiveLively, sampleRows, useStaff, type GLRow } from '../store'
 import { canDo, type PullCounts, type QueuedEmail } from '../api'
-import { salesforceCsv } from '../exports'
+import { csvName, isDemo, salesforceCsv } from '../exports'
 
 // Column names follow Give Lively's "Line Items (All)" report. Confirm against a real AAFE export before launch.
 const COLS: Record<keyof GLRow, string[]> = {
@@ -123,7 +123,7 @@ export default function Integrations() {
           <div className="mt-4 flex flex-wrap gap-2">
             {canDo(user.role, 'syncSalesforce') && <button className="btn-ghost" data-testid="sf-sync" onClick={syncNow} disabled={running === 'sync'} aria-busy={running === 'sync'}><RefreshCw size={15} /> {running === 'sync' ? 'Syncing…' : demo ? 'Sync now (simulated)' : 'Sync now'}</button>}
             {/* Who actually came, for a Contact + Campaign Member import. Carries email, so gala admins only. */}
-            {canDo(user.role, 'exportSalesforce') && <button className="btn-ghost" data-testid="export-salesforce" onClick={() => void act(api.exportSalesforce().then((rows) => downloadCsv('aafe-salesforce-attendees-SYNTHETIC.csv', salesforceCsv(rows))), 'Salesforce file downloaded')}><Download size={15} /> Download Salesforce file</button>}
+            {canDo(user.role, 'exportSalesforce') && <button className="btn-ghost" data-testid="export-salesforce" onClick={() => void act(api.exportSalesforce().then((rows) => downloadCsv(csvName(db, 'aafe-salesforce-attendees'), salesforceCsv(rows, isDemo(db)))), 'Salesforce file downloaded')}><Download size={15} /> Download Salesforce file</button>}
           </div>
           <p className="mt-2 text-xs text-navy-500">Give Lively’s own Salesforce connector sends its online donations. Sync now sends what Give Lively doesn’t know: checks, direct ACH and wires, guests (comps included) and who came, without making a second copy of anything Give Lively sent, and never phones or dietary and accessibility notes. Live, it goes to a stand-in org, not AAFE’s Salesforce.</p>
         </section>
