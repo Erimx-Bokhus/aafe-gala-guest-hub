@@ -84,7 +84,7 @@ reason.
 | --- | --- | --- |
 | **Which Salesforce product** AAFE's org is (above) | None: it decides whether the sync is used at all, and how | The code assumes NPSP |
 | Does NPSP create payment records itself when a pledge is added? If yes, the tool shouldn't, or each check appears twice | `SALESFORCE_SEND_PAYMENTS=false` | The tool sends payments |
-| Which guests belong in Salesforce: every named guest, only those who came, or none (donors and sponsors only)? Guests' contact details are deleted from the tool 60 days after the gala, but stay in Salesforce | `SALESFORCE_SEND_GUESTS=all`, `attended` or `none` | Every named guest |
+| Which guests belong in Salesforce: every named guest, only those who came, or none (donors and sponsors only)? Guests' contact details are deleted from the tool 60 days after the gala, but stay in Salesforce. Decide before the first sync: switching from `all` to `attended` later doesn't remove the guests already sent | `SALESFORCE_SEND_GUESTS=all`, `attended` or `none` | Every named guest |
 | Should attendance (Attended, No Show) count in Salesforce? | Part of the above | Sent |
 | **Fair market value** on acknowledgments: a ticket or sponsorship over $75 needs it. Give Lively handles that online; the tool has no fair market value per level for checks, ACH and wires | None yet | Not tracked |
 
