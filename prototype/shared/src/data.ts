@@ -83,14 +83,23 @@ export function nameParts(display: string | null | undefined, first: string | nu
 }
 export const staffName = (db: DB, id: string) => db.staff_users.find((s) => s.id === id)?.name ?? id
 
+/**
+ * Net to AAFE over some payments. A fee AAFE's ticket export didn't carry is unknown (null), not $0, and so is that
+ * payment's net. Counting it as $0 made Net read about $0 after a ticket upload (#187), so such a payment counts what
+ * AAFE received before Give Lively's fee: gross less refunds. `feesUnknown` says how many, for the "before fees" label.
+ */
+export function netToAafe(pays: Payment[]) {
+  const net = pays.reduce((s, p) => s + (p.net_amount ?? p.gross_amount - p.refunded_amount), 0)
+  return { net, feesUnknown: pays.filter((p) => p.net_amount == null).length }
+}
+
 export function orderMoney(db: DB, orderId: string) {
   const o = db.orders.find((x) => x.id === orderId)!
   const pays = db.payments.filter((p) => p.order_id === orderId).sort((a, b) => a.received_at.localeCompare(b.received_at))
   const paid = pays.reduce((s, p) => s + Math.max(p.original_amount - p.refunded_amount, 0), 0)
-  // A fee AAFE's ticket export didn't carry is unknown (null), not $0: totals count the known ones and say how many aren't.
+  // Fees count the known ones; netToAafe says how many aren't known.
   const fees = pays.reduce((s, p) => s + (p.transaction_fee_amount ?? 0), 0)
-  const net = pays.reduce((s, p) => s + (p.net_amount ?? 0), 0)
-  const feesUnknown = pays.filter((p) => p.transaction_fee_amount == null).length
+  const { net, feesUnknown } = netToAafe(pays)
   const balance = o.status === 'cancelled' || o.status === 'comp' ? 0 : Math.max(0, o.commitment_amount - paid)
   return { pays, paid, fees, net, feesUnknown, balance, commitment: o.commitment_amount }
 }
