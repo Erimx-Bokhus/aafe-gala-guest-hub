@@ -178,6 +178,28 @@ ok(await sponsorsOf(ANA) === 2 && await conflicts(ANA) === 1, 'a different famil
   const slots = (await q(`select s.order_id, s.slot_number from seats s where s.guest_id = any($1) order by s.slot_number`, [ids]))
   ok(new Set(slots.map((x) => x.order_id)).size === 1 && new Set(slots.map((x) => x.slot_number)).size === 3 && await compOrders() === Math.max(before, 1),
     `three comp guests in a row: one comp order, three different slots (${JSON.stringify(slots.map((x) => x.slot_number))})`)
+
+  // ---- A relationship guest goes to the comp order that holds relationship guests, never to the staff or volunteer
+  // one (found checking AAFE's Oct 20 walk-through). The demo sets have five comp orders created at the same moment,
+  // and "the earliest" picked among them by how the rows were stored. Here a staff comp order is the earliest outright.
+  const relOrder = slots[0].order_id
+  const orderOf = async (id) => (await one(`select order_id from guests where id = $1`, [id])).order_id
+  await db.query(`insert into orders (id, event_id, sponsor_id, tier_id, source, commitment_amount, status, internal_notes, created_at)
+    select 'ord-test-staff-early', current_event_id(), (select id from sponsors order by id limit 1),
+           (select id from sponsorship_tiers where event_id = current_event_id() and tier_category = 'complimentary' order by id limit 1),
+           'comp', 0, 'comp', 'AAFE staff attending the gala.', (select min(created_at) from orders) - interval '1 day'`)
+  const four = (await as('authenticated', RM, `select staff_add_comp_guest($1) id`, [{ first_name: 'Comp', last_name: 'Four' }]))[0].id
+  ok(await orderOf(four) === relOrder, `with an older staff comp order there, a relationship guest still joins the others (${await orderOf(four)})`)
+  // With no order holding relationship guests (here: theirs cancelled), it gets its own order, not the staff one.
+  const was = (await one(`select status from orders where id = $1`, [relOrder])).status
+  await db.query(`update orders set status = 'cancelled' where id = $1`, [relOrder])
+  const five = (await as('authenticated', RM, `select staff_add_comp_guest($1) id`, [{ first_name: 'Comp', last_name: 'Five' }]))[0].id
+  const own = await one(`select o.id, o.internal_notes from orders o where o.id = $1`, [await orderOf(five)])
+  ok(own.id !== 'ord-test-staff-early' && own.id !== relOrder && own.internal_notes.startsWith('Complimentary relationship guests'),
+    `with none, a new relationship-guest order is made (${own.id}), not the staff one`)
+  const six = (await as('authenticated', RM, `select staff_add_comp_guest($1) id`, [{ first_name: 'Comp', last_name: 'Six' }]))[0].id
+  ok(await orderOf(six) === own.id, 'and the next relationship guest joins that order')
+  await db.query(`update orders set status = $2 where id = $1`, [relOrder, was])
 }
 
 console.log(`audit fixes: ${count.pass} passed, ${count.fail} failed`)
