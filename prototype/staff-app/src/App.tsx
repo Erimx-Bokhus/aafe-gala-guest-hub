@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { Activity, BadgeCheck, CalendarDays, ClipboardList, CreditCard, FileUp, Heart, LayoutDashboard, LogOut, Menu, Plug, ScanLine, Table2, TrendingUp, X, Layers, FileSpreadsheet } from 'lucide-react'
 import { loadDB } from '@shared/data'
 import { AafeLogo } from '@shared/Logo'
-import { DisplayControls, go, Link, PrototypeBanner, Toast, useDisplayPrefs, useRoute } from '@shared/ui'
+import { DisplayControls, go, Link, PrototypeBanner, routeNow, Toast, useDisplayPrefs, useRoute } from '@shared/ui'
 import type { DB, Role, StaffUser } from '@shared/types'
 import { StaffCtx } from './store'
 import { demoApi, demoSnapshot, errorText, liveApi, liveLoader, volunteerDb } from './api'
@@ -43,6 +43,9 @@ const NAV: { to: string; label: string; icon: typeof LayoutDashboard; roles: Rol
   { to: '/activity', label: 'Activity log', icon: Activity, roles: ['gala_admin', 'relationship_manager'] },
 ]
 const ROLE_LABEL: Record<Role, string> = { gala_admin: 'Gala admin', relationship_manager: 'Relationship manager', check_in_volunteer: 'Check-in volunteer' }
+const navFor = (role: Role) => NAV.filter((n) => n.roles.includes(role))
+/** The pages a role can open: one of its menu entries, or a page under one (a sponsor under Sponsors). */
+const canOpen = (role: Role, p: string) => navFor(role).some((n) => p === n.to || (n.to !== '/' && p.startsWith(n.to + '/')))
 
 export default function App() {
   const path = useRoute()
@@ -99,8 +102,10 @@ export default function App() {
           await signOut()
           setNotice('That email isn’t on the AAFE staff list. Ask the gala admin to add you.')
         }
+        // Someone just signed in, or a reload restored their session: stay on the page in the address if their role can
+        // open it (a reload used to land on the dashboard, Oct 19 click-through); otherwise their first page.
         setUser((prev) => {
-          if (me && !prev) go(me.role === 'check_in_volunteer' ? '/checkin' : '/')
+          if (me && !prev && !canOpen(me.role, routeNow())) go(me.role === 'check_in_volunteer' ? '/checkin' : '/')
           return me
         })
       } catch {
@@ -125,9 +130,8 @@ export default function App() {
   if (!user) return <><PrototypeBanner dataSwitch /><Login db={db} prefs={prefs} notice={notice} onLogin={(u) => { setUser(u); go(u.role === 'check_in_volunteer' ? '/checkin' : '/') }} /></>
   if (!viewDb || !api) return <><PrototypeBanner dataSwitch /><p className="p-8 text-sm text-navy-600" role={loadError ? 'alert' : 'status'}>{loadError || 'Loading the gala…'}</p></>
 
-  const nav = NAV.filter((n) => n.roles.includes(user.role))
-  const allowed = (p: string) => nav.some((n) => p === n.to || (n.to !== '/' && p.startsWith(n.to + '/')))
-  const p = allowed(path) ? path : nav[0].to
+  const nav = navFor(user.role)
+  const p = canOpen(user.role, path) ? path : nav[0].to
   let page: ReactNode
   if (p === '/') page = <Dashboard />
   else if (p === '/gala') page = <GalaInfo />
@@ -177,11 +181,12 @@ export default function App() {
       <PrototypeBanner dataSwitch />
       <div className="flex min-h-[calc(100vh-28px)]">
         <aside className="no-print sticky top-0 hidden h-[calc(100vh-28px)] w-60 shrink-0 lg:block">{Side}</aside>
-        {menu && <div className="no-print fixed inset-0 z-40 lg:hidden" onClick={() => setMenu(false)}><div className="h-full w-64" onClick={(e) => e.stopPropagation()}>{Side}</div><div className="absolute inset-0 -z-10 bg-black/50" /></div>}
+        {/* The open menu covers the header, so it carries its own Close button (Oct 19 click-through). */}
+        {menu && <div className="no-print fixed inset-0 z-40 lg:hidden" onClick={() => setMenu(false)}><div className="relative h-full w-64" onClick={(e) => e.stopPropagation()}>{Side}<button className="icon-btn absolute right-3 top-4" aria-label="Close menu" onClick={() => setMenu(false)}><X size={18} /></button></div><div className="absolute inset-0 -z-10 bg-black/50" /></div>}
         <div className="min-w-0 flex-1">
           <header className="no-print sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-navy-100 bg-surface/95 px-4 py-2.5 backdrop-blur sm:px-6">
             <div className="flex items-center gap-2">
-              <button className="icon-btn lg:hidden" aria-label={menu ? 'Close menu' : 'Open menu'} onClick={() => setMenu((m) => !m)}>{menu ? <X size={18} /> : <Menu size={18} />}</button>
+              <button className="icon-btn lg:hidden" aria-label="Open menu" aria-expanded={menu} onClick={() => setMenu(true)}><Menu size={18} /></button>
               <div className="text-sm font-semibold text-navy-900">{viewDb.gala_events.find((e) => e.id === viewDb.meta.current_event_id)?.name}</div>
             </div>
             <DisplayControls prefs={prefs} />
