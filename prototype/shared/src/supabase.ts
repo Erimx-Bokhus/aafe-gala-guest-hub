@@ -25,6 +25,19 @@ export async function sendSignInLink(email: string): Promise<void> {
   if (error) throw error
 }
 
+/**
+ * What the sign-in screens say when the email can't be sent. The same words whether or not the address is invited,
+ * so the form doesn't reveal who is on the staff list. Only Supabase's "too many requests" (429) gets its own words:
+ * the fix is to wait a minute, not to check the connection or the address (Oct 19 click-through).
+ */
+export function sendFailure(e: unknown): string {
+  const field = (k: string) => (typeof e === 'object' && e !== null && k in e ? String((e as Record<string, unknown>)[k]) : '')
+  if (field('status') === '429' || /rate limit|only request this after/i.test(field('message') || String(e))) {
+    return 'Too many sign-in emails for now. Wait a minute, then ask for a new code.'
+  }
+  return 'We couldn’t send a sign-in email. Check the internet connection and the email address; if both are right, ask the gala admin to invite you.'
+}
+
 // The same email also shows a 6-digit code (the Magic Link template's {{ .Token }}, BACKEND.md Setup step 2).
 // Typing it signs in on this page even when the link would open somewhere else: the iPad's Home Screen app keeps
 // its own storage apart from Safari, and a PKCE link only works in the browser that asked for it.
