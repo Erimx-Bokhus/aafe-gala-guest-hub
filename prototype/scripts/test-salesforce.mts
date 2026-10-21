@@ -105,12 +105,12 @@ const r1 = await pushAll(o1, traced)
 const s1 = summarize(r1)
 const withEmail = o1.contacts.filter((c) => c.email), noEmail = o1.contacts.filter((c) => !c.email)
 ok(noEmail.length > 0, `the demo gala has guests with no email (${noEmail.length})`)
-ok(s1.failed === 0 && s1.skipped === 2 * noEmail.length && s1.sent === 1 + o1.accounts.length + o1.opportunities.length + o1.payments.length + 2 * withEmail.length,
-  `everything lands, guests without an email skipped: ${JSON.stringify(s1.by_object)}`)
+ok(s1.failed === 0 && s1.skipped === noEmail.length && s1.sent === 1 + o1.accounts.length + o1.opportunities.length + o1.payments.length + 2 * withEmail.length,
+  `everything lands, guests without an email skipped, counted once each (${s1.skipped}): ${JSON.stringify(s1.by_object)}`)
 ok([...new Set(steps)].join() === 'query Campaign,query Account,upsert Account,upsert Opportunity,upsert npe01__OppPayment__c,query Contact,upsert Contact,query CampaignMember,update CampaignMember,create CampaignMember',
   'the gala first, then sponsors (looked up by name first), orders and payments, then guests (looked up before any is made) and their memberships')
 const m1 = await mark(r1)
-ok(m1.synced + m1.failed === r1.length && m1.failed === s1.skipped, 'every answer is recorded, the skipped guests with their reason')
+ok(m1.synced + m1.failed === r1.length && m1.failed === 2 * s1.skipped, 'every answer is recorded, each skipped guest (as a Contact and a member) with the reason')
 const acct = (await q(`select salesforce_account_id from sponsors where id = $1`, [o1.accounts[0].id]))[0].salesforce_account_id
 ok(/^001MOCK/.test(acct), 'the sponsor keeps its Salesforce Account id')
 ok(/^006MOCK/.test((await q(`select salesforce_opportunity_id from orders where id = $1`, [o1.opportunities[0].id]))[0].salesforce_opportunity_id), 'the order keeps its Opportunity id')

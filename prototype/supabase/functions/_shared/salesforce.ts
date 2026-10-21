@@ -278,7 +278,10 @@ export async function pushAll(o: Outbox, ports: PushPorts, opts: PushOptions = D
 export function summarize(results: SyncResult[]) {
   const by: Record<string, number> = {}
   for (const r of results) if (!r.error) by[r.sf_object] = (by[r.sf_object] ?? 0) + 1
-  const skipped = results.filter((r) => r.error === NO_EMAIL).length
+  // A guest with no email is skipped twice, as a Contact and as a Campaign Member: count guests, not records, so the
+  // message asks staff to match as many people as there are (Cornell's review of #213).
+  const skippedRows = results.filter((r) => r.error === NO_EMAIL)
+  const skipped = new Set(skippedRows.map((r) => r.entity_id)).size
   const failed = results.filter((r) => r.error && r.error !== NO_EMAIL)
-  return { sent: results.length - failed.length - skipped, failed: failed.length, skipped, by_object: by, first_error: failed[0]?.error ?? null }
+  return { sent: results.length - failed.length - skippedRows.length, failed: failed.length, skipped, by_object: by, first_error: failed[0]?.error ?? null }
 }
