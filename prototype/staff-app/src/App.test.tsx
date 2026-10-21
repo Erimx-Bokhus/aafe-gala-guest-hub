@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // Session handling in the staff app: who gets in after the emailed link, and who is signed straight back out.
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import type { StaffUser } from '@shared/types'
 import { loadDB } from '@shared/data'
 
@@ -68,6 +68,32 @@ describe('staff app session (live mode)', () => {
     expect(await screen.findByText('Kenji Abe')).toBeTruthy()
     expect(rpc).toHaveBeenCalledWith('door_sync', { p_cursor: null, p_event: null })
     expect(tableRead).not.toHaveBeenCalled()
+  })
+
+  // Oct 19 click-through: reloading any page sent staff back to the dashboard.
+  it('a reload keeps the page in the address when the role can open it', async () => {
+    history.replaceState(null, '', '/#/guests')
+    await renderApp({ session: true, staff: { id: 'st-1', name: 'Mei Lin Ortiz', email: 'mei.ortiz@aafe-demo.example.org', role: 'gala_admin' } as StaffUser })
+    await waitFor(() => expect(screen.queryByText('Loading the gala…') ?? screen.queryByRole('alert')).toBeTruthy())   // signed in, loading
+    await new Promise((r) => setTimeout(r, 20))
+    expect(window.location.hash).toBe('#/guests')
+  })
+
+  it("a volunteer whose address is a managers' page still lands on check-in", async () => {
+    history.replaceState(null, '', '/#/reports')
+    await renderApp({ session: true, staff: { id: 'st-9', name: 'Kenji Abe', email: 'kenji.abe@aafe-demo.example.org', role: 'check_in_volunteer' } as StaffUser })
+    await waitFor(() => expect(window.location.hash).toBe('#/checkin'))
+  })
+
+  // Oct 19 click-through: on a phone the open menu covered the header's Close button.
+  it('on a phone the open menu has its own Close button', async () => {
+    await renderApp({ session: true, staff: { id: 'st-9', name: 'Kenji Abe', email: 'kenji.abe@aafe-demo.example.org', role: 'check_in_volunteer' } as StaffUser })
+    expect(await screen.findByText('Kenji Abe')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Open menu' }))
+    const navs = screen.getAllByRole('navigation', { name: 'Staff navigation' })
+    expect(navs).toHaveLength(2)                                       // the side menu (hidden on phones by CSS) and the drawer
+    fireEvent.click(within(navs[1].parentElement!).getByRole('button', { name: 'Close menu' }))
+    expect(screen.getAllByRole('navigation', { name: 'Staff navigation' })).toHaveLength(1)
   })
 
   it("doesn't reload the gala when Supabase says \"signed in\" again for the same person (e.g. the tab regains focus)", async () => {

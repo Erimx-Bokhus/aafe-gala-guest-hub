@@ -158,7 +158,7 @@ function doorActions(desk: CheckInDesk, kick: () => void): Pick<Door, 'checkIn' 
       const problems: string[] = []
       for (const h of handles) {
         if (desk.cancel(h)) continue
-        try { await rpc('staff_undo_check_in', { p_id: h }) } catch (e) { problems.push(undoProblem(reason(e))) }
+        try { await rpc('staff_undo_check_in', { p_id: h }); desk.forgetCheckIn(h) } catch (e) { problems.push(undoProblem(reason(e))) }
       }
       kick()
       return problems[0] ?? null

@@ -5,6 +5,7 @@ import { downloadCsv } from '@shared/ui'
 import type { DB } from '@shared/types'
 import { PageHead } from '../App'
 import { canDo, type StaffApi } from '../api'
+import { isDemo } from '../exports'
 import { attendanceCsv, guestsCsv, needsCsv, paymentsCsv, sponsorsCsv } from '../reports'
 import { useStaff } from '../store'
 
@@ -19,7 +20,7 @@ export function reportFile(db: DB, slug: string) {
 
 /** Downloads one report: rows from the server (or demo data), then the CSV. Shared with the iPad check-in page's button. */
 export function downloadReport(db: DB, api: StaffApi, action: Action) {
-  const synthetic = db.gala_events.find((e) => e.id === db.meta.current_event_id)?.is_synthetic ?? true
+  const synthetic = isDemo(db)
   const r = REPORTS.find((x) => x.action === action)!
   return r.rows(api).then((rows) => downloadCsv(reportFile(db, r.slug), r.csv(rows as never, synthetic)))
 }

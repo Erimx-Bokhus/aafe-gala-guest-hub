@@ -297,14 +297,18 @@ export class CheckInDesk {
     const byId = new Map(results.map((r) => [r.client_id, r]))
     const answered = new Set<string>()
     const notices: Notice[] = []
+    const taken: QueuedCheckIn[] = []
     for (const item of batch) {
       const r = byId.get(item.client_id)
       if (!r) continue
       answered.add(item.client_id)
       const notice = this.noticeFor(item, r)
       if (notice) notices.push(notice)
+      if (r.status === 'checked_in' || r.status === 'already_synced') taken.push(item)
       totals[r.status === 'conflict' ? 'conflicts' : r.status === 'error' ? 'errors' : 'synced']++
     }
+    // The list first, then the queue: at no moment is a check-in the server took in neither.
+    if (taken.length) this.keepTaken(taken)
     this.write(KEYS.queue, this.pending().filter((q) => !answered.has(q.client_id)))
     if (notices.length) this.write(KEYS.notices, [...this.notices(), ...notices])
     return answered.size
@@ -322,6 +326,23 @@ export class CheckInDesk {
       message: `${name}: ${alreadyMessage(r.first_at, r.first_by, r.first_device)}. This iPad's check-in at ${clock(item.at)} was not counted.` }
   }
 
+  /**
+   * After the server undid a synced check-in (staff_undo_check_in, by its id or the iPad's client_id): the saved list
+   * stops showing it now, not at the next refresh, so the guest can be checked in again straight away.
+   */
+  forgetCheckIn(handle: string) {
+    const s = this.snapshot
+    if (!s) return
+    const named = (id?: string | null, clientId?: string | null) => id === handle || clientId === handle
+    this.saveSnapshot({
+      ...s,
+      guests: s.guests.map((g) => (named(g.checkin_id, g.checkin_client_id)
+        ? { ...g, arrived: false, checked_in_at: null, checked_in_by: null, device: null, checkin_id: null, checkin_client_id: null }
+        : g)),
+      exceptions: (s.exceptions ?? []).filter((e) => !named(e.id, e.client_id)),
+    })
+  }
+
   /** After gala night: remove the saved list, the queue and notices from the iPad. */
   clear() {
     for (const k of Object.values(KEYS)) this.store.removeItem(this.prefix + k)
@@ -334,6 +355,34 @@ export class CheckInDesk {
   }
 
   // ---- Internals
+
+  /**
+   * Check-ins the server took leave the queue, so the saved list shows them instead until the next refresh brings the
+   * server's own copy (door_sync replaces a changed guest and the whole walk-in list). Without this, a synced guest
+   * dropped back to "not checked in" for up to 15 seconds: the counter dipped, a second scan of the same ticket wasn't
+   * caught, and Undo found nothing to send (Oct 19 click-through). The guest keeps the iPad's client_id, which
+   * staff_undo_check_in accepts.
+   */
+  private keepTaken(items: QueuedCheckIn[]) {
+    const s = this.snapshot
+    if (!s) return
+    const byGuest = new Map(items.flatMap((q) => (q.kind === 'guest' ? [[q.guest_id, q] as const] : [])))
+    const known = new Set((s.exceptions ?? []).flatMap((e) => [e.id, e.client_id]))
+    const walkIns: SnapshotException[] = items.flatMap((q) => (q.kind === 'exception' && !known.has(q.client_id)
+      ? [{ id: q.client_id, client_id: q.client_id, name: q.name, type: q.type, order_id: q.order_id,
+          checked_in_at: q.at, checked_in_by: this.staffName, device: q.device }]
+      : []))
+    this.saveSnapshot({
+      ...s,
+      guests: s.guests.map((g) => {
+        const q = byGuest.get(g.id)
+        return q && !g.arrived   // a guest the list already shows as arrived keeps the server's details
+          ? { ...g, arrived: true, checked_in_at: q.at, checked_in_by: this.staffName, device: q.device, checkin_client_id: q.client_id }
+          : g
+      }),
+      exceptions: [...(s.exceptions ?? []), ...walkIns],
+    })
+  }
 
   private markFirst(guestId: string, r: SyncResult) {
     const s = this.snapshot
