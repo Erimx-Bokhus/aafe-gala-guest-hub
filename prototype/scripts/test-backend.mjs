@@ -26,6 +26,9 @@ const v = (await as('anon', null, `select portal_get_view('ac-6w9k3p5d') v`))[0]
 ok(v.organization && v.seats.length > 0, 'portal view loads with seed token')
 ok(!JSON.stringify(v).match(/transaction_fee|internal_notes|method|relationship_note|check_number/), 'portal view hides staff-only fields')
 ok(await err('anon', null, `select portal_get_view('wrong-token')`) === 'invalid_link', 'bad token rejected')
+// Oct 19 click-through: the refusal came back as HTTP 500. PostgREST answers a PT404 with 404.
+ok(await db.query(`do $$ begin perform portal_get_view('wrong-token'); exception when sqlstate 'PT404' then null; end $$`).then(() => true, () => false),
+  'a refused link is HTTP 404 (errcode PT404), not a server error')
 ok((await err('anon', null, `select * from orders`))?.includes('permission') || (await as('anon', null, `select * from orders`)).length === 0, 'anon cannot read tables')
 const slot = v.seats.find((s) => s.status === 'unnamed').slot
 const v2 = (await as('anon', null, `select portal_save_guest('ac-6w9k3p5d', $1, $2) v`, [slot, { first_name: 'Test', last_name: 'Person', dietary_needs: 'vegan' }]))[0].v

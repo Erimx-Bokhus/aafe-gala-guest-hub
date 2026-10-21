@@ -646,7 +646,8 @@ begin
    where portal_token = hash_token(coalesce(p_token, ''))
      and status <> 'cancelled'
      and portal_token_expires_at > now();   -- a link with no expiry doesn't work (Gate 2): never "forever"
-  if o.id is null then raise exception 'invalid_link' using errcode = 'P0002'; end if;
+  -- PT404: PostgREST answers HTTP 404, a refused link, not 500, which read as a server error in the logs (Oct 19 click-through).
+  if o.id is null then raise exception 'invalid_link' using errcode = 'PT404'; end if;
   return o;
 end $$;
 
@@ -745,6 +746,14 @@ begin
   -- First and last sent without a display name, unchanged: keep the display name staff may have corrected.
   if v_display = '' and g_old.id is not null and g_old.first_name = v_first and g_old.last_name = v_last then
     v_display := coalesce(g_old.display_name, '');
+  end if;
+  -- The portal's form sends back the display name it was shown, with the names: an echo, not a choice. When the given
+  -- or family name changed and that display name was just "First Last", follow the new names, as staff edits do
+  -- (staff_update_guest); a display name staff corrected stays. A rename used to keep the old name (Oct 19 click-through).
+  if g_old.id is not null and v_display = coalesce(g_old.display_name, '')
+     and (g_old.first_name is distinct from v_first or g_old.last_name is distinct from v_last)
+     and coalesce(g_old.display_name, '') in ('', btrim(concat_ws(' ', nullif(g_old.first_name, ''), nullif(g_old.last_name, '')))) then
+    v_display := '';
   end if;
   select n.display, n.first, n.last into v_display, v_first, v_last from name_parts(v_display, v_first, v_last) n;
   if v_display = '' then raise exception 'invalid_input: a name is required'; end if;
