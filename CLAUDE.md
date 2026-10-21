@@ -42,6 +42,7 @@ Natalie built clickable concepts of the sponsor portal and staff app (shared in 
 - Merge `main` into your branch often; send work back as small pull requests.
 - Follow `docs/CODING-STANDARD.md` (Oct 15, Gate 4): `npm run lint` at the repo root passes with zero warnings, and an impossible state fails with its reason (`must()` in the import engine, an explicit check elsewhere), never a silent `!`.
 - Commit messages say what changed and why. Credit co-authors with `Co-authored-by:` trailers.
+- A pull request that changes anything on screen carries an annotated before (`main`) and after, as a GIF when it moves (Oct 20). Docs, backend and script PRs need only a short note on what changed and the test results. The highlight legend, the `pr-media` image branch and the template's sections are in `docs/pr-visuals.md`.
 
 ## Team
 | Person | GitHub | Pair | Role |
