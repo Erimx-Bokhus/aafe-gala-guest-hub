@@ -67,6 +67,15 @@ ok(!(await sync(RM, before.cursor)).rows.guests.some((g) => g.id === 'g-sync-pas
 ok((await err('authenticated', VOL, `select staff_sync(null, null)`)) === 'forbidden', 'a check-in volunteer gets nothing (the door has its own list)')
 ok((await err('anon', null, `select staff_sync(null, null)`))?.includes('permission denied'), 'and neither does the sponsor portal')
 
+// A brand-new guest comes too, with its seat, not only edits: a comp guest added on Relationship guests. AAFE looked
+// for one on the guest list on Oct 20; it was there, far down the list, and this pins that inserts reach the next sync.
+const beforeNew = await sync(ADMIN)
+const newcomer = (await as('authenticated', ADMIN, `select staff_add_comp_guest($1) id`, [{ first_name: 'Sync', last_name: 'Newcomer', email: 'sync.newcomer@example.org' }]))[0].id
+const arrivedNew = await sync(ADMIN, beforeNew.cursor)
+ok(arrivedNew.full === false && arrivedNew.rows.guests.some((g) => g.id === newcomer) && arrivedNew.rows.seats.some((s) => s.guest_id === newcomer),
+  'a guest added since the last sync comes in the next one, with its seat')
+ok((await sync(RM, beforeNew.cursor)).rows.guests.some((g) => g.id === newcomer), "a relationship manager's next sync has it too")
+
 // Everything again when the gala being run changed, or when the tombstones the cursor needs were pruned.
 ok((await sync(ADMIN, undone.cursor, 'ev-some-other-gala')).full === true, 'a different gala: everything')
 await db.exec(`insert into sync_deleted (table_name, row_id, deleted_at) values ('guests', 'g-long-gone', now() - interval '8 days')`)
