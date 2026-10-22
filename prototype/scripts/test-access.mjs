@@ -31,15 +31,18 @@ const blocked = (e) => /row-level security|permission denied/.test(e ?? '')
 // ---- Tables: who reads, who writes directly
 // Policy (Gate 2, decided Oct 15): admins and relationship managers read the tables, managers without Give Lively's raw
 // records (and, tested below, only this gala's guests, emails and review items); nobody else reads any. Nobody writes
-// directly, gala admins included: every change goes through an audited function.
+// directly, gala admins included: every change goes through an audited function. The list of domains whose people may
+// join the staff list (Oct 21) is read by no API role: only the sign-in functions read it.
 const READERS = ['relationship_manager', 'gala_admin']
 const ADMIN_ONLY = ['givelively_raw']
+const NO_READERS = ['staff_join_domains']
 
 // One invented row in each table that starts empty, so every table is really probed.
 await db.exec(`
 insert into givelively_raw (transaction_id, payload, import_status) values ('gl-test-1', '{"note": "synthetic"}', 'skipped');
 insert into sync_deleted (table_name, row_id) values ('guests', 'g-test-deleted');
 insert into gala_need_totals (event_id, kind, choice, guests) values ('ev-2026', 'dietary', 'Vegan', 3);
+insert into staff_join_domains (domain, role, until) values ('join-test.example', 'check_in_volunteer', now() + interval '1 day');
 insert into import_runs (id, event_id, source, started_by) values ('run-test-1', current_event_id(), 'csv', 'test');
 insert into import_review (id, run_id, event_id, reason) values ('rev-test-1', 'run-test-1', current_event_id(), 'refund');
 insert into tier_mappings (id, event_id, givelively_name, name_key, tier_id, created_by)
@@ -59,7 +62,7 @@ for (const t of tables) {
 
   for (const c of callers) {
     const read = await attempt(c, `select count(*)::int n from ${t}`)
-    if (READERS.includes(c.kind) && !(c.kind === 'relationship_manager' && ADMIN_ONLY.includes(t))) ok(read === total, `${c.name} reads all of ${t} (${read}/${total})`)
+    if (READERS.includes(c.kind) && !NO_READERS.includes(t) && !(c.kind === 'relationship_manager' && ADMIN_ONLY.includes(t))) ok(read === total, `${c.name} reads all of ${t} (${read}/${total})`)
     else ok(read === 0 || blocked(read), `${c.name} reads nothing in ${t} (${read})`)
 
     const ins = await attempt(c, `with x as (insert into ${t} select * from jsonb_populate_record(null::${t}, $1) returning 1) select count(*)::int n from x`, [sample])
