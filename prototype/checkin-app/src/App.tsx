@@ -288,10 +288,13 @@ function DoorScreen({ api, who, prefs, exitLabel, onExit }: { api: Door; who: st
     const fresh = ids.filter((id) => !byGuest.has(id))
     const made = api.checkIn(fresh, method)
     setSel(new Set()); if (!keepSearch) setQ('')
-    if (made.length) {
-      const first = ALL.find((x) => x.id === fresh[0]), now = new Date().toISOString()
-      setUndo({ handles: made, guestIds: fresh, label: made.length === 1 && first ? `${first.first_name} ${first.last_name} · ${first.table ? `Table ${first.table}` : 'no assigned table'} · ${time(now)}` : `${made.length} guests · ${time(now)}`, until: Date.now() + 10000 })
-    }
+    if (made.length) announce(made, fresh)
+  }
+  // "Checked in" with Undo for 10 seconds: one guest by name and table, so the volunteer can match the name to the
+  // person in front of them; several as a count.
+  const announce = (handles: string[], guestIds: string[]) => {
+    const first = ALL.find((x) => x.id === guestIds[0]), now = new Date().toISOString()
+    setUndo({ handles, guestIds, label: handles.length === 1 && first ? `${first.first_name} ${first.last_name} · ${first.table ? `Table ${first.table}` : 'no assigned table'} · ${time(now)}` : `${handles.length} guests · ${time(now)}`, until: Date.now() + 10000 })
   }
   const doUndo = async () => {
     if (!undo) return
@@ -302,10 +305,14 @@ function DoorScreen({ api, who, prefs, exitLabel, onExit }: { api: Door; who: st
     const err = mine.length ? await api.undo(mine) : null
     setMsg(err ?? (others.length ? `Not undone: already checked in by ${others[0].by} at ${time(others[0].at)}` : 'Undone — back to not checked in'))
   }
+  // A good ticket closes the scanner and names its guest, like a tap does (Oct 22 story run: the scanner closed
+  // without saying who came in, so a ticket held by the wrong person went unnoticed, and there was no Undo).
   const byCode = async (code: string): Promise<string | null> => {
-    const m = await api.scan(code)
-    if (!m) setScan(false)
-    return m
+    const r = await api.scan(code)
+    if ('message' in r) return r.message
+    setScan(false)
+    announce([r.handle], [r.guestId])
+    return null
   }
   const catCount = (c: string) => ALL.filter((g) => g.category === c)
   // All / Not checked in / Checked in. Landscape: in the toolbar row after search. Portrait: its own full row under

@@ -117,10 +117,9 @@ function exceptionsOf(desk: CheckInDesk): ExceptionRow[] {
   return [...waiting, ...synced].sort((a, b) => b.at.localeCompare(a.at))
 }
 
-/** What the door says after a QR scan; null when the guest is checked in. Every outcome is named (R7). */
-function scanMessage(out: Awaited<ReturnType<CheckInDesk['scan']>>, code: string): string | null {
+/** What the door says when a QR scan checks no one in. Every outcome is named (R7). */
+function scanMessage(out: Exclude<Awaited<ReturnType<CheckInDesk['scan']>>, { kind: 'checked_in' }>, code: string): string {
   switch (out.kind) {
-    case 'checked_in': return null
     case 'already': return `${out.guest.first_name} ${out.guest.last_name}: ${out.message}. Don't admit this ticket twice.`
     case 'expired_code': return `This ticket's code for ${out.guest.first_name} ${out.guest.last_name} has expired. Check the guest in by name.`
     case 'unknown_code':
@@ -146,8 +145,11 @@ function doorActions(desk: CheckInDesk, kick: () => void): Pick<Door, 'checkIn' 
     },
     async scan(code) {
       const out = await desk.scan(code)
-      if (out.kind === 'checked_in') kick()
-      return scanMessage(out, code)
+      if (out.kind !== 'checked_in') return { message: scanMessage(out, code) }
+      const q = queuedFor(desk, out.guest.id)
+      if (!q) throw new Error(`QR check-in for guest ${out.guest.id} is not in this iPad's queue`)
+      kick()
+      return { guestId: out.guest.id, handle: q.client_id }
     },
     addException(p) {
       const item = desk.checkInException({ name: p.name, order_id: p.orderId || null, type: p.type, note: p.note })
