@@ -249,6 +249,7 @@ Guest edits (`staff_update_guest`, and a sponsor editing a named guest through `
 | `assignSeat` | `staff_assign_seat(p_guest_id, p_table_id, p_seat)`; null table = unseat; `seat_taken` if occupied | admin, RM |
 | `seatOrderAtTable` | `staff_seat_order_at_table(p_order_id, p_table_id)` | admin, RM |
 | `recordOfflinePayment` | `staff_record_payment(p_order_id, p_method, p_amount, p_received, p_check_number)` | admin, RM |
+| `voidPayment` | `staff_void_payment(p_payment_id, p_reason)`: undoes a check, ACH or wire entered by mistake; the order's status follows what's left, an unsent receipt is cancelled, the log keeps the reason and the whole payment. Give Lively payments can't be voided (#223) | admin |
 | `addPledge` | `staff_add_pledge(p_org, p_contact, p_email, p_tier_id, p_source)` | admin, RM |
 | `addCompGuest` | `staff_add_comp_guest(p_guest)` | admin, RM |
 | `sendQrInvite` | `staff_send_qr_invite(p_guest_id)`; approved by the sender, and logged as `email.approved` in their name. The guest needs a seat and an email; the code is minted when it sends | admin, RM |

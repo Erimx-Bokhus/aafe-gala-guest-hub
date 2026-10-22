@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { loadDB, orderMoney } from '@shared/data'
 import type { DB, StaffUser } from '@shared/types'
 import { demoPayments, demoSponsors } from './reports'
-import { recordOfflinePayment } from './store'
+import { recordOfflinePayment, voidPayment } from './store'
 
 const CENT = 0.005
 const SETS = ['small', 'full-fixed', 'full-as-sent'] as const
@@ -84,5 +84,46 @@ describe('recording a check in demo mode follows staff_record_payment', () => {
     const after = pay(withRefund, pledge.id, c / 2)   // the other half: 70% counts, still owed
     expect(status(after, pledge.id)).toBe('partially_paid')
     expect(orderMoney(after, pledge.id).balance).toBeCloseTo(c * 0.3)
+  })
+})
+
+describe('voiding a payment in demo mode follows staff_void_payment (#223)', () => {
+  const ADMIN: StaffUser = { id: 'st-test-admin', name: 'Test Admin', email: 'admin@aafe-demo.example.org', role: 'gala_admin' }
+  const pay = (db: DB, orderId: string, amount: number) => recordOfflinePayment(db, ADMIN, orderId, { method: 'check', amount, received: '2027-04-01', check_number: '555' })
+  const lastPay = (db: DB, orderId: string) => db.payments.filter((p) => p.order_id === orderId).at(-1)?.id ?? ''
+
+  it('the only payment voided: back to pledged, nothing paid, and the log keeps the reason', () => {
+    const db = load('full-fixed')
+    const o = db.orders.find((x) => x.status === 'pledged' && !db.payments.some((p) => p.order_id === x.id))
+    expect(o).toBeTruthy()
+    if (!o) return
+    const paid = pay(db, o.id, o.commitment_amount)
+    expect(paid.orders.find((x) => x.id === o.id)?.status).toBe('paid')
+    const voided = voidPayment(paid, ADMIN, lastPay(paid, o.id), 'Entered on the wrong order')
+    expect(voided.orders.find((x) => x.id === o.id)?.status).toBe('pledged')
+    expect(orderMoney(voided, o.id).paid).toBe(0)
+    const log = voided.audit_log.filter((a) => a.order_id === o.id && a.action.startsWith('payment.'))
+    expect(log.some((a) => a.action === 'payment.voided' && !a.guest_visible && a.summary.includes('Entered on the wrong order'))).toBe(true)
+    expect(log.some((a) => a.action === 'payment.corrected' && a.guest_visible && !a.summary.includes('wrong order'))).toBe(true)
+  })
+
+  it('the same check entered twice: voiding the copy keeps the order paid once', () => {
+    const db = load('full-fixed')
+    const o = db.orders.find((x) => x.status === 'pledged' && !db.payments.some((p) => p.order_id === x.id))
+    if (!o) throw new Error('no pledged order without payments in the full-fixed set')
+    const twice = pay(pay(db, o.id, o.commitment_amount), o.id, o.commitment_amount)
+    expect(orderMoney(twice, o.id).paid).toBe(2 * o.commitment_amount)
+    const once = voidPayment(twice, ADMIN, lastPay(twice, o.id), 'Same check entered twice')
+    expect(orderMoney(once, o.id).paid).toBe(o.commitment_amount)
+    expect(once.orders.find((x) => x.id === o.id)?.status).toBe('paid')
+  })
+
+  it('refuses a Give Lively payment and a missing reason', () => {
+    const db = load('full-fixed')
+    const gl = db.payments.find((p) => p.processor === 'stripe')
+    if (!gl) throw new Error('no Give Lively payment in the full-fixed set')
+    expect(() => voidPayment(db, ADMIN, gl.id, 'x')).toThrow(/Give Lively/)
+    const staffPay = db.payments.find((p) => p.processor === 'none')
+    if (staffPay) expect(() => voidPayment(db, ADMIN, staffPay.id, '  ')).toThrow(/invalid_input/)
   })
 })
