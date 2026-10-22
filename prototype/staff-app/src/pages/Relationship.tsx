@@ -73,7 +73,7 @@ export default function Relationship() {
               <div className="mt-3 flex justify-center">{preview.qr_token ? <QR value={preview.qr_token} size={140} /> : <p className="text-sm text-navy-600">(A new personal QR code is created when this sends.)</p>}</div>
               <p className="mt-3 text-sm text-navy-800">With gratitude,<br />The AAFE Gala Team</p>
             </div>
-            <div className="mt-4 flex justify-end gap-2"><button className="btn-ghost" onClick={() => setPreview(null)}>Close</button><button className="btn-primary" data-testid="send-qr" onClick={() => { void act(api.sendQrInvite(preview.id), api.live ? `QR invitation sent to ${preview.email}` : `QR invitation sent to ${preview.email} (simulated)`); setPreview(null) }}><Mail size={15} /> Send (simulated)</button></div>
+            <div className="mt-4 flex justify-end gap-2"><button className="btn-ghost" onClick={() => setPreview(null)}>Close</button><button className="btn-primary" data-testid="send-qr" onClick={() => { void act(api.sendQrInvite(preview.id), api.live ? `QR invitation sent to ${preview.email}` : `QR invitation sent to ${preview.email} (simulated)`); setPreview(null) }}><Mail size={15} /> {api.live ? 'Send' : 'Send (simulated)'}</button></div>
           </div>
         )}
       </Modal>

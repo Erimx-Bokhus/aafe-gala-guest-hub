@@ -1,8 +1,12 @@
 -- =====================================================================
 -- AAFE Gala — schedules (run LAST, after deploying the edge functions)
---   givelively-sync  every 15 minutes
---   send-emails      every minute
--- Replace the two <...> values before running. Keep CRON_SECRET out of git.
+--   givelively-sync       every 15 minutes
+--   send-emails           every minute
+--   cron-history-cleanup  daily 08:30 UTC
+--   sync-prune            daily 08:45 UTC
+--   retention-sweep       daily 09:15 UTC
+-- Run it with `node scripts/setup-cron.mjs <PROJECT-REF>` from prototype/: it fills in the two <...> values with a new
+-- CRON_SECRET nobody sees. Keep CRON_SECRET out of git.
 -- =====================================================================
 create extension if not exists pg_cron;
 create extension if not exists pg_net;
