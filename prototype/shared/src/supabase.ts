@@ -14,13 +14,14 @@ export const supabase = url && key
   ? createClient(url, key, { auth: { flowType: 'pkce', persistSession: true, detectSessionInUrl: true } })
   : null
 
-// Emails a one-time sign-in link. shouldCreateUser: false, so only staff an admin invited in Supabase can sign in;
-// with sign-up also turned off in the dashboard (prototype/docs/BACKEND.md, Setup step 2) nobody can add themselves.
+// Emails a one-time sign-in link. shouldCreateUser: true lets someone at a domain in staff_join_domains get their first
+// code; the database's sign-up hook (hook_staff_signup, backend.sql) refuses a login for anyone else, and a project
+// with sign-ups turned off in the dashboard makes none at all (prototype/docs/BACKEND.md, Setup step 2).
 export async function sendSignInLink(email: string): Promise<void> {
   if (!supabase) throw new Error('not_configured')
   const { error } = await supabase.auth.signInWithOtp({
     email: email.trim(),
-    options: { shouldCreateUser: false, emailRedirectTo: window.location.origin + window.location.pathname },
+    options: { shouldCreateUser: true, emailRedirectTo: window.location.origin + window.location.pathname },
   })
   if (error) throw error
 }

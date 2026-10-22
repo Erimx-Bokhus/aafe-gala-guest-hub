@@ -29,7 +29,7 @@ To run the actual workflow files instead, in Docker, `act` works too (`act pull_
 
 ## Coding standard
 
-How we write code, adapted from NASA/JPL's "Power of Ten" for TypeScript and SQL, and the checks that enforce it: [`docs/CODING-STANDARD.md`](docs/CODING-STANDARD.md). `npm install` at the repo root, then `npm run lint` (zero warnings allowed); it also runs in `ci-local` and on every pull request.
+How we write code, adapted from NASA/JPL's "Power of Ten" for TypeScript and SQL, and the checks that enforce it: [`docs/CODING-STANDARD.md`](docs/CODING-STANDARD.md). `npm ci` at the repo root, then `npm run lint` (zero warnings allowed); it also runs in `ci-local` and on every pull request.
 
 ## Running it
 
