@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react'
 import { Download, Search } from 'lucide-react'
-import { sponsorOf } from '@shared/data'
+import { GUEST_TYPE_LABEL, sponsorOf } from '@shared/data'
 import { Pill, ago, downloadCsv } from '@shared/ui'
-import type { EventTable, Guest } from '@shared/types'
+import type { EventTable, Guest, GuestType } from '@shared/types'
 import { PageHead } from '../App'
 import { canDo } from '../api'
 import { SeatPill } from '../components'
@@ -56,13 +56,18 @@ export default function GuestList() {
   const { db, api, act } = useStaff()
   const [q, setQ] = useState('')
   const [status, setStatus] = useState('all')
+  // AAFE's Oct 20 walk-through: a comp just added sat at row 163 of 554, under its comp order's sponsor, with no way to
+  // pick out comps or see the newest. A guest-type filter and a newest-first order find it.
+  const [type, setType] = useState<GuestType | 'all'>('all')
+  const [order, setOrder] = useState<'sponsor' | 'newest'>('sponsor')
   const orderIds = new Set(curOrders(db).map((o) => o.id))
   const tables = db.event_tables.filter((t) => t.event_id === db.meta.current_event_id).sort((a, b) => a.number - b.number)
   const rows = useMemo(() => db.guests.filter((g) => orderIds.has(g.order_id)).map((g) => {
     const o = db.orders.find((x) => x.id === g.order_id)!
     return { g, o, sponsor: sponsorOf(db, o.sponsor_id).organization_name, seat: db.seats.find((s) => s.guest_id === g.id)!, table: db.event_tables.find((t) => t.id === g.table_id) }
-  }).filter((r) => (status === 'all' || r.seat.status === status) && `${r.g.first_name} ${r.g.last_name} ${r.g.organization} ${r.sponsor}`.toLowerCase().includes(q.toLowerCase()))
-    .sort((a, b) => a.sponsor.localeCompare(b.sponsor) || a.seat.slot_number - b.seat.slot_number), [db, q, status]) // eslint-disable-line
+  }).filter((r) => (status === 'all' || r.seat.status === status) && (type === 'all' || r.g.guest_type === type)
+      && `${r.g.first_name} ${r.g.last_name} ${r.g.organization} ${r.sponsor}`.toLowerCase().includes(q.toLowerCase()))
+    .sort((a, b) => (order === 'newest' ? b.g.created_at.localeCompare(a.g.created_at) : 0) || a.sponsor.localeCompare(b.sponsor) || a.seat.slot_number - b.seat.slot_number), [db, q, status, type, order]) // eslint-disable-line
 
   const exportCsv = () => downloadCsv(csvName(db, 'aafe-gala-guest-list'), [
     ...(isDemo(db) ? [NOTICE] : []),
@@ -77,6 +82,13 @@ export default function GuestList() {
         <div className="relative w-full max-w-xs"><Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-navy-300" /><input className="input pl-9" placeholder="Search guests or sponsors" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search guests" /></div>
         <select className="input w-48" value={status} onChange={(e) => setStatus(e.target.value)} aria-label="Filter by status">
           <option value="all">All statuses</option><option value="submitted">Needs review</option><option value="reviewed">Reviewed</option><option value="badge_ready">Badge ready</option><option value="checked_in">Checked in</option>
+        </select>
+        <select className="input w-56" value={type} onChange={(e) => setType(e.target.value as GuestType | 'all')} aria-label="Filter by guest type">
+          <option value="all">All guest types</option>
+          {(Object.keys(GUEST_TYPE_LABEL) as GuestType[]).map((t) => <option key={t} value={t}>{t === 'comp_relationship' ? 'Relationship guests (comps)' : GUEST_TYPE_LABEL[t]}</option>)}
+        </select>
+        <select className="input w-44" value={order} onChange={(e) => setOrder(e.target.value as 'sponsor' | 'newest')} aria-label="Order">
+          <option value="sponsor">Sponsor, A to Z</option><option value="newest">Newest first</option>
         </select>
         <span className="self-center text-sm text-navy-500">{rows.length} guests</span>
       </div>

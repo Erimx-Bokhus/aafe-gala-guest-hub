@@ -67,7 +67,10 @@ export function SponsorDetail({ id }: { id: string }) {
   const history = db.orders.filter((x) => x.sponsor_id === sp.id).sort((a, b) => b.event_id.localeCompare(a.event_id))
   const emails = db.email_log.filter((e) => e.order_id === o.id)
   const log = (api.live && ownLog ? ownLog : db.audit_log.filter((a) => a.order_id === o.id)).slice().reverse()
-  const link = o.portal_token ? `${GUEST_PORTAL_URL}#/s/${o.portal_token}` : null
+  // Live, the order keeps only the link's fingerprint (hard rule 6), so a URL built from it never opens: the plain link is
+  // shown in the demo only, where it is the real one. Live, staff send a fresh one with Resend portal link.
+  const hasLink = Boolean(o.portal_token)
+  const link = hasLink && !api.live ? `${GUEST_PORTAL_URL}#/s/${o.portal_token}` : null
   const setMat = (k: 'logo_status' | 'program_ad_status', v: Material) => void act(api.setMaterialStatus(o.id, k === 'logo_status' ? 'logo' : 'program_ad', v))
 
   return (
@@ -76,8 +79,8 @@ export function SponsorDetail({ id }: { id: string }) {
       <PageHead title={sp.organization_name} sub={`${tier.name} · ${sp.primary_contact_name} · ${sp.primary_contact_email} · Owner: ${staffName(db, sp.relationship_owner_id)}`}
         actions={<>
           {m.balance > 0 && o.source !== 'givelively' && <button className="btn-primary" onClick={() => setPay(true)}>Record payment</button>}
-          {link && <button className="btn-ghost" onClick={() => void act(api.resendPortalLink(o.id), 'Guest-list link re-sent')}><Mail size={15} /> Resend portal link</button>}
-          {link && !api.live && <button className="btn-ghost" onClick={() => { navigator.clipboard?.writeText(link).catch(() => {}); toast('Portal link copied') }}><Copy size={15} /> Copy link</button>}
+          {hasLink && <button className="btn-ghost" onClick={() => void act(api.resendPortalLink(o.id), 'Guest-list link re-sent')}><Mail size={15} /> Resend portal link</button>}
+          {link && <button className="btn-ghost" onClick={() => { navigator.clipboard?.writeText(link).catch(() => {}); toast('Portal link copied') }}><Copy size={15} /> Copy link</button>}
         </>} />
       <div className="grid gap-6 2xl:grid-cols-[1.5fr_1fr] [&>*]:min-w-0">
         <div className="space-y-6">
@@ -141,6 +144,7 @@ export function SponsorDetail({ id }: { id: string }) {
             <h2 className="font-semibold text-navy-900">Emails</h2>
             <ul className="mt-2 space-y-1.5 text-sm">{emails.map((e) => <li key={e.id} className="flex justify-between gap-2"><span>{e.template.replace(/_/g, ' ')} <span className="text-xs text-navy-500">({e.trigger.replace(/_/g, ' ')})</span></span>{e.status === 'queued' ? <button className="btn-primary btn-sm" onClick={() => void act(api.approveEmail(e.id), api.live ? `Approved: sending to ${e.to_name}` : `Approved and sent to ${e.to_name} (simulated)`)}>Approve and send</button> : <Pill tone={e.status === 'cancelled' ? 'gray' : 'green'}>{e.status}</Pill>}</li>)}{!emails.length && <li className="text-navy-500">None.</li>}</ul>
             {link && <p className="mt-3 break-all rounded bg-cream-100 p-2 font-sans tabular-nums text-xs text-navy-600">{link}</p>}
+            {hasLink && !link && <p className="mt-3 text-xs text-navy-600" data-testid="private-link-note">The sponsor's link is private: only their email has it. Resend portal link sends a fresh one, and the old one stops working.</p>}
           </section>
           {o.internal_notes && <section className="card p-4"><h2 className="font-semibold text-navy-900">Internal notes</h2><p className="mt-1 text-sm text-navy-700">{o.internal_notes}</p></section>}
         </div>

@@ -27,8 +27,9 @@ jobs:
         working-directory: prototype
     steps:
       # The fast lane (docs/CODING-STANDARD.md): scripts/ci-local.mjs marks a commit "local-ci" after all seven checks
-      # pass on it, committed and pushed. If this pull request's commit has that mark and already includes the latest
-      # base branch, the code merged is exactly the code that passed, so the steps below are skipped. The mark is
+      # pass on it, committed and pushed. If this pull request's commit has that mark (or is a merge commit with the
+      # same files as a parent that has it) and the base adds no files it lacks, the code merged is exactly the code
+      # that passed, so the steps below are skipped. The mark is
       # trust-based (anyone with write access can set it); the secret scan and real-data guard always run here.
       - name: Did local CI already pass this exact code?
         id: local
@@ -43,22 +44,35 @@ jobs:
         run: |
           # The base branch as it is now (a re-run reuses the original event, whose base may be out of date).
           BASE_SHA=$(gh api "repos/$REPO/branches/$BASE_REF" --jq .commit.sha || echo unknown)
-          behind=$(gh api "repos/$REPO/compare/$BASE_SHA...$HEAD_SHA" --jq .behind_by || echo unknown)
+          # Files the base changed since this commit's last common commit with it. None means the merged code is this
+          # commit's code, even when the base has merge commits of its own (nightly's "Merge pull request ... from main").
+          base_files=$(gh api "repos/$REPO/compare/$HEAD_SHA...$BASE_SHA" --jq '.files | length' || echo unknown)
+          marked() { gh api "repos/$REPO/commits/$1/status" --jq '[.statuses[] | select(.context == "local-ci" and .state == "success")] | length' || echo 0; }
           # ci-local.mjs --push marks the commit right after pushing it; give the mark a few seconds to arrive (free:
           # every job is billed at least a minute anyway).
-          passed=0
+          passed=0; via=$HEAD_SHA
           for wait in 0 6 6 6 6; do
             sleep "$wait"
-            passed=$(gh api "repos/$REPO/commits/$HEAD_SHA/status" --jq '[.statuses[] | select(.context == "local-ci" and .state == "success")] | length' || echo 0)
+            passed=$(marked "$HEAD_SHA")
             [ "$passed" -gt 0 ] 2>/dev/null && break
           done
-          if [ "$passed" -gt 0 ] 2>/dev/null && [ "$behind" = "0" ]; then
+          # A merge commit whose files are exactly one parent's: main's "Merge pull request" commit of a branch that
+          # already included main. The branch's mark covers it (a Nightly PR's head is such a commit).
+          if ! [ "$passed" -gt 0 ] 2>/dev/null; then
+            tree=$(gh api "repos/$REPO/git/commits/$HEAD_SHA" --jq .tree.sha || echo none)
+            for p in $(gh api "repos/$REPO/git/commits/$HEAD_SHA" --jq '.parents[].sha' || true); do
+              if [ "$(gh api "repos/$REPO/git/commits/$p" --jq .tree.sha || echo other)" = "$tree" ] && [ "$(marked "$p")" -gt 0 ] 2>/dev/null; then
+                passed=1; via=$p; break
+              fi
+            done
+          fi
+          if [ "$passed" -gt 0 ] 2>/dev/null && [ "$base_files" = "0" ]; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
-            echo "::notice::local-ci passed on $HEAD_SHA, which includes the latest base ($BASE_SHA): not run again."
+            echo "::notice::local-ci passed on $via, the same files as $HEAD_SHA, and the base ($BASE_SHA) adds no files: not run again."
           elif [ "$passed" -gt 0 ] 2>/dev/null; then
-            echo "Running in full: local-ci passed on this commit, but the base has moved on (commits behind: $behind)."
+            echo "Running in full: local-ci passed on $via, but the base has changed files since (files: $base_files)."
           else
-            echo "Running in full: no local-ci mark on this commit."
+            echo "Running in full: no local-ci mark on this commit or on a parent with the same files."
           fi
       - uses: actions/checkout@v4
         if: steps.local.outputs.skip != 'true'
