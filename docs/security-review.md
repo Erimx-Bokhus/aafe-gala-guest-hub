@@ -77,8 +77,11 @@ Stable's settings, read from the Supabase dashboard on Oct 16:
 | Time between emails to one person | 60 seconds | Yes: a second "send me a code" waits a minute |
 | Code expiry | 3600 seconds (an hour), 6 digits | Yes |
 
-Nightly's sign-in settings are still to be set: on Oct 19 Supabase still reported sign-ups on (`disable_signup: false`).
-Nobody off the staff list gets past the app's own check, but step 2 should be finished there too.
+Nightly's sign-in emails were set up on Oct 21 to match stable: the same Gmail sender with its own app password, the
+same templates and rate limits. Since Oct 21 both projects have sign-ups on, for sign-in by email domain
+(`BACKEND.md`, Setup step 2): Supabase's Before User Created hook (`hook_staff_signup`) makes a new login only for an
+email on the staff list or at a domain in `staff_join_domains`, so nobody else can have sign-in emails sent, and a
+joined row stops working at its date.
 
 ## 4. Dependencies
 
