@@ -6,6 +6,7 @@ import { PageHead } from '../App'
 import { QR } from '../qr'
 import { useStaff } from '../store'
 import { useSave } from '../components'
+import { curOrders } from './Dashboard'
 
 export default function Relationship() {
   const { db, api, act } = useStaff()
@@ -14,7 +15,10 @@ export default function Relationship() {
   const [preview, setPreview] = useState<Guest | null>(null)
   const [f, setF] = useState({ first_name: '', last_name: '', title: '', organization: '', email: '', relationship_note: '' })
   const ev = db.gala_events.find((e) => e.id === db.meta.current_event_id)!
-  const list = db.guests.filter((g) => g.guest_type === 'comp_relationship')
+  // This gala's relationship guests only, by the guest list's own rule (curOrders), so the two pages always agree. It
+  // listed every gala's (AAFE's Oct 20 walk-through, triage B5), which would mix 2027's into 2028's once it runs.
+  const orders = new Set(curOrders(db).map((o) => o.id))
+  const list = db.guests.filter((g) => g.guest_type === 'comp_relationship' && orders.has(g.order_id))
   const lastEmail = (g: Guest) => db.email_log.filter((e) => e.guest_id === g.id && e.template === 'qr_invitation').at(-1)
   const ok = f.first_name.trim() && f.last_name.trim() && /\S+@\S+\.\S+/.test(f.email)
   return (
