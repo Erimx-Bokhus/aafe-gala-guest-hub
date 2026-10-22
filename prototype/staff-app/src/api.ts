@@ -139,6 +139,11 @@ export const ROLES: Record<Exclude<keyof StaffApi, 'live'>, Role[]> = {
   reportAttendance: ADMIN, reportSponsors: MANAGERS, reportNeeds: MANAGERS, reportPayments: MANAGERS, reportGuests: ADMIN,
 }
 export const canDo = (role: Role, action: keyof typeof ROLES) => ROLES[action].includes(role)
+/** The change log a relationship manager reads (Oct 22): what sponsors changed in their portal and what Give Lively
+ *  recorded, the dashboard's feed. Gala admins read all of it. The database applies the same rule (audit_log's
+ *  staff_read policy); this keeps the demo, which has no database, the same. */
+export const isFeedEntry = (a: Pick<AuditEntry, 'actor_type' | 'actor'>) => a.actor_type === 'guest_portal' || (a.actor_type === 'system' && a.actor.startsWith('Give Lively'))
+export const logFor = (role: Role, log: AuditEntry[]) => (role === 'gala_admin' ? log : log.filter(isFeedEntry))
 
 const messageOf = (e: unknown) =>
   (e instanceof Error ? e.message : typeof e === 'object' && e && 'message' in e ? String((e as { message: unknown }).message) : String(e)) || ''
@@ -321,7 +326,7 @@ export function demoApi(user: StaffUser, update: (fn: (d: DB) => DB) => void, fu
       return addAudit({ ...d, sponsorship_tiers: d.sponsorship_tiers.map((x) => (x.id === id ? { ...x, retired } : x)) },
         { actor_type: 'staff', actor: user.name, entity: 'sponsorship_level', entity_id: id, order_id: null, action: retired ? 'level.retired' : 'level.restored', from_state: String(!!t.retired), to_state: String(retired), guest_visible: false, summary: `Sponsorship level "${t.name}" ${retired ? 'no longer offered' : 'offered again'}.` })
     }),
-    history: async (o) => (may('history') ? full().audit_log.filter((a) => a.order_id === o) : forbidden()),
+    history: async (o) => (may('history') ? logFor(user.role, full().audit_log.filter((a) => a.order_id === o)) : forbidden()),
     exportBadges: (inc) => exported('exportBadges', 'badges', demoBadgeRows(full(), inc), (n) => `Badge file exported: ${n} badge(s)${inc ? ', including printed' : ''}.`),
     exportCheckin: () => exported('exportCheckin', 'checkin', demoCheckinRows(full()), (n) => `Check-in list exported: ${n} row(s).`),
     exportSalesforce: () => exported('exportSalesforce', 'salesforce', demoSalesforceRows(full()), (n) => `Salesforce attendee file exported: ${n} attendee(s).`),
