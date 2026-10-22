@@ -981,6 +981,59 @@ begin
   return v_id;
 end $$;
 
+-- voidPayment (#223): undo a check, ACH or wire that staff entered by mistake (entered twice, wrong amount, wrong
+-- order). Gala admins only, with a reason. The payment row is removed, so every total that adds up payments (the
+-- order's status and balance, reports, the portal, the pipeline, the Salesforce file) is right without a "voided"
+-- filter in each of them; the change log keeps who, when, why and the whole payment as it was. Give Lively payments
+-- come from the import and are refunded in Give Lively, so they can't be voided here.
+create or replace function staff_void_payment(p_payment_id text, p_reason text) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare
+  me staff_users := require_staff(array['gala_admin']);
+  p payments; o orders; v_reason text := left(trim(coalesce(p_reason, '')), 500);
+  v_applied numeric; v_status text; v_cancelled int; v_in_sf boolean;
+begin
+  if v_reason = '' then raise exception 'invalid_input: say why the payment is being voided'; end if;
+  select * into p from payments where id = p_payment_id;
+  if p.id is null then raise exception 'not_found: no such payment'; end if;
+  if p.processor <> 'none' then
+    raise exception 'invalid_input: Give Lively payments come from the import; refund them in Give Lively';
+  end if;
+  select * into o from orders where id = p.order_id for update;   -- same lock as staff_record_payment
+  -- Read it again under the lock: two admins voiding the same payment at once, the second finds it gone.
+  select * into p from payments where id = p.id for update;
+  if p.id is null then raise exception 'not_found: no such payment'; end if;
+
+  -- Its receipt: an unsent one is cancelled; a sent one stays in the email log, no longer pointing at the payment.
+  with c as (update email_log set status = 'cancelled' where payment_id = p.id and status = 'queued' returning 1)
+  select count(*) into v_cancelled from c;
+  update email_log set payment_id = null where payment_id = p.id;
+  v_in_sf := exists (select 1 from salesforce_sync where entity = 'payment' and entity_id = p.id and sf_id is not null);
+  delete from payments where id = p.id;
+
+  -- The order's status, by staff_record_payment's rule over what's left. With no money left it goes back to what it was
+  -- the last time money came in to an order with none (pledged, or invoice sent).
+  select coalesce(sum(greatest(original_amount - refunded_amount, 0)), 0) into v_applied from payments where order_id = o.id;
+  v_status := case
+    when o.status in ('comp', 'cancelled') then o.status
+    when v_applied > 0 and v_applied + 0.005 >= o.commitment_amount then 'paid'
+    when v_applied > 0 then 'partially_paid'
+    else coalesce((select a.from_state from audit_log a where a.order_id = o.id and a.action = 'payment.recorded'
+                    and a.from_state in ('pledged', 'invoice_sent') order by a.at desc, a.id desc limit 1), 'pledged') end;
+  update orders set status = v_status, updated_at = now() where id = o.id;
+
+  perform write_audit('staff', me.name, 'payment', p.id, o.id, 'payment.voided', o.status, v_status, false,
+    format('Payment voided: %s (%s%s, received %s). Reason: %s', money_fmt(p.original_amount), replace(p.method, '_', ' '),
+           coalesce(' #' || p.check_number, ''), to_char(p.received_at at time zone 'America/New_York', 'Mon FMDD, YYYY'), v_reason)
+      || case when v_cancelled > 0 then ' Its unsent receipt was cancelled.' else '' end
+      || case when v_in_sf then ' It was already sent to Salesforce: remove it there too.' else '' end,
+    to_jsonb(p));
+  -- What the sponsor's activity shows: the correction, without staff's reason.
+  perform write_audit('staff', me.name, 'payment', p.id, o.id, 'payment.corrected', null, null, true,
+    format('Payment of %s corrected by AAFE.', money_fmt(p.original_amount)));
+  return jsonb_build_object('order_id', o.id, 'order_status', v_status, 'receipt_cancelled', v_cancelled > 0, 'in_salesforce', v_in_sf);
+end $$;
+
 -- addPledge: sponsor will pay by check / direct ACH / wire. Link is emailed right away.
 create or replace function staff_add_pledge(p_org text, p_contact text, p_email text, p_tier_id text, p_source text)
 returns text language plpgsql security definer set search_path = public as $$
@@ -2041,6 +2094,8 @@ begin
     -- counted its ask in the forecast at 100%).
     when o.status = 'cancelled' and p.stage in ('closed_won', 'payment_received') then 'lost'
     when o.status in ('paid', 'partially_paid') then 'payment_received'
+    -- Its only payment was voided (#223): no money in, so back to closed won.
+    when o.status in ('pledged', 'invoice_sent') and p.stage = 'payment_received' and p.order_id = o.id then 'closed_won'
     when o.status in ('pledged', 'invoice_sent') and p.stage in ('not_started', 'reached_out', 'in_conversation', 'lost') then 'closed_won'
     else p.stage end;
   update sponsor_prospects set order_id = o.id, stage = v_to, updated_at = now(),
@@ -2051,7 +2106,7 @@ begin
     perform write_audit(p_actor_type, p_actor, 'prospect', p.id, o.id, 'prospect.stage', p.stage, v_to, false,
       format('%s: %s → %s (%s).', v_org, pipeline_stage_label(p.stage), pipeline_stage_label(v_to),
              case when v_to = 'payment_received' then 'payment recorded' when v_to = 'lost' then 'refunded or cancelled'
-                  else 'pledge or purchase recorded' end));
+                  when p.stage = 'payment_received' then 'payment voided' else 'pledge or purchase recorded' end));
   end if;
 end $$;
 
@@ -3089,7 +3144,7 @@ begin
               'hash_token','new_id','new_qr_token','qr_expiry','current_event_id','current_staff','staff_role','require_staff',
               'write_audit','audit_changes','enqueue_email','create_seats','money_fmt','portal_order','portal_get_view','portal_save_guest',
               'portal_release_seat','staff_me','staff_current_event','staff_update_guest','staff_set_seat_status','staff_mark_printed',
-              'staff_assign_seat','staff_seat_order_at_table','staff_record_payment','staff_add_pledge','staff_add_comp_guest',
+              'staff_assign_seat','staff_seat_order_at_table','staff_record_payment','staff_void_payment','staff_add_pledge','staff_add_comp_guest',
               'staff_send_qr_invite','staff_resend_portal_link','staff_approve_email','staff_cancel_email','checkin_list','staff_check_in','staff_check_in_qr',
               'staff_check_in_exception','gl_import','staff_import_givelively','email_mark_sent','email_mark_failed','email_claim',
               'purchase_key','payment_method_of','payment_method_detail','name_key','has_need','add_import_review','import_fill_guests','staff_set_tier_mapping','staff_set_gala_page','sync_gala_pages','staff_add_gala_page','staff_remove_gala_page',
@@ -3121,7 +3176,7 @@ grant execute on function portal_get_view(text), portal_save_guest(text, int, js
 grant execute on function
   staff_me(), staff_current_event(), staff_update_guest(text, jsonb), staff_set_seat_status(text, text), staff_mark_printed(text[]),
   staff_assign_seat(text, text, int), staff_seat_order_at_table(text, text),
-  staff_record_payment(text, text, numeric, date, text), staff_add_pledge(text, text, text, text, text),
+  staff_record_payment(text, text, numeric, date, text), staff_void_payment(text, text), staff_add_pledge(text, text, text, text, text),
   staff_add_comp_guest(jsonb), staff_send_qr_invite(text), staff_resend_portal_link(text), staff_approve_email(text), staff_cancel_email(text),
   checkin_list(), staff_check_in(text, text), staff_check_in_qr(text), staff_check_in_exception(text, text, text, text),
   staff_checkin_snapshot(), staff_sync_check_ins(jsonb), staff_undo_check_in(text),
