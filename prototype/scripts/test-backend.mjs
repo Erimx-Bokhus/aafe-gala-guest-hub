@@ -400,6 +400,45 @@ ok('email' in sf[0] && sf.every(r => r.checked_in_at), 'Salesforce file carries 
 const logged = (await db.query(`select action, count(*)::int n from audit_log where action like 'export.%' group by action`)).rows
 ok(['export.badges', 'export.checkin', 'export.salesforce'].every(a => logged.some(l => l.action === a)), 'every export is written to the activity log')
 
+// ---- Sign-in by email domain (Oct 21): anyone at a listed domain joins on first sign-in, until the domain's date;
+// Supabase Auth's sign-up hook turns away a new login for anyone else.
+const hook = async (email) => (await as('supabase_auth_admin', null, `select hook_staff_signup($1) r`, [{ user: { email } }]))[0].r
+const NEW = 'new.person@team.example.org'
+ok((await as('authenticated', NEW, `select staff_me() m`))[0].m === null, 'with no domain listed, an unknown email is not staff')
+ok((await hook(NEW)).error?.http_code === 403, 'and the sign-up hook refuses its login')
+ok(Object.keys(await hook(ADMIN)).length === 0, 'the sign-up hook lets in an email on the staff list')
+await db.query(`insert into staff_join_domains values ('team.example.org', 'relationship_manager', now() + interval '30 days'),
+  ('client.example.org', 'relationship_manager', now() + interval '30 days')`)
+ok(Object.keys(await hook('Someone@Team.Example.org')).length === 0, 'the sign-up hook lets in a listed domain, whatever the case')
+for (const e of ['a@evil.team.example.org', 'a@team.example.org.evil.example', 'a@other.example.org', 'team.example.org', ''])
+  ok((await hook(e)).error?.http_code === 403, `the sign-up hook refuses "${e}"`)
+const joined = (await as('authenticated', NEW, `select staff_me() m`))[0].m
+ok(joined?.role === 'relationship_manager' && joined.id.startsWith('st-join-') && joined.name === 'New Person' && joined.access_until,
+  'a listed domain joins on first sign-in, with its role and date: ' + JSON.stringify(joined))
+await as('authenticated', NEW, `select staff_me() m`)
+ok((await db.query(`select count(*)::int n from audit_log where action = 'staff.joined' and entity_id = $1`, [joined.id])).rows[0].n === 1,
+  'the join is in the activity log once, however often staff_me runs')
+ok((await as('authenticated', NEW, `select count(*)::int n from guests`))[0].n > 0, 'a joined relationship manager reads guests')
+ok((await as('authenticated', ADMIN, `select staff_me() m`))[0].m.role === 'gala_admin', 'named staff keep their row and role')
+await db.query(`insert into staff_users (id, name, email, role) values ('st-boss', 'Boss', 'boss@client.example.org', 'gala_admin')`)
+ok((await as('authenticated', 'boss@client.example.org', `select staff_me() m`))[0].m.role === 'gala_admin', 'a named admin at a listed domain stays admin')
+ok((await err('authenticated', ADMIN, `select hook_staff_signup('{}')`)) !== null && (await err('anon', null, `select hook_staff_signup('{}')`)) !== null,
+  'only Supabase Auth can call the sign-up hook')
+ok((await db.query(`select n.nspname from pg_proc p join pg_namespace n on n.oid = p.pronamespace where p.proname = 'hook_staff_signup'`)).rows
+  .map((r) => r.nspname).join() === 'public', 'the sign-up hook stays in public, where Auth Hooks finds it')
+ok((await as('authenticated', ADMIN, `select count(*)::int n from staff_join_domains`).catch(() => [{ n: 0 }]))[0].n === 0, 'no API role reads the domain list')
+// After the date: the joined row stops working at once; a later date lets them back in with the role staff last set.
+await db.query(`update staff_join_domains set until = now() - interval '1 minute'`)
+await db.query(`update staff_users set access_until = now() - interval '1 minute' where id = $1`, [joined.id])
+ok((await as('authenticated', NEW, `select staff_me() m`))[0].m === null, 'after the date, a joined person is no longer staff')
+ok((await as('authenticated', NEW, `select count(*)::int n from guests`))[0].n === 0, 'and reads nothing')
+ok((await hook('another@team.example.org')).error?.http_code === 403, 'and nobody new from the domain gets a login')
+await db.query(`update staff_users set role = 'check_in_volunteer' where id = $1`, [joined.id])
+await db.query(`update staff_join_domains set until = now() + interval '7 days'`)
+const back = (await as('authenticated', NEW, `select staff_me() m`))[0].m
+ok(back?.role === 'check_in_volunteer' && new Date(back.access_until) > new Date(), 'a later date lets them back in, with the role staff last set')
+await db.exec(`delete from staff_join_domains; delete from staff_users where id = 'st-boss'`)
+
 console.log(`${pass} passed, ${fail} failed`)
 
 if (fail) process.exitCode = 1

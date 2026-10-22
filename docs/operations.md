@@ -47,8 +47,10 @@ Two locks, one after the other:
 1. **Cloudflare Access**, in front of all three addresses: an email PIN, then the browser stays signed in for about a
    month (720 hours on the policy, 730 on each app). Since Oct 19 it lets in anyone with an **@aafe.org or @pursuit.org** address, plus Natalie's two
    personal addresses (`decisions.md`). Nobody else reaches the apps at all.
-2. **The app's own sign-in**: a 6-digit code by email, only for people on the staff list (`BACKEND.md`, "Add a staff
-   member"). This is the lock that decides roles; it stays signed in until the person signs out.
+2. **The app's own sign-in**: a 6-digit code by email, for people on the staff list (`BACKEND.md`, "Add a staff
+   member") and, since Oct 21, anyone at @aafe.org or @pursuit.org, who joins the list as a relationship manager on
+   their first sign-in until Nov 21 (`BACKEND.md`, "Sign-in by email domain"). This is the lock that decides roles;
+   it stays signed in until the person signs out, or until a joined person's date.
 
 So a new person's first day takes two emails (Cloudflare's PIN, then the app's code); after that it is one PIN a month.
 
