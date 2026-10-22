@@ -32,6 +32,8 @@ export const LOOKUP = 50
 /** Where NPSP keeps a Contact's emails. Give Lively matches on all four (its Salesforce integration's documented logic). */
 export const EMAIL_FIELDS = ['Email', 'npe01__HomeEmail__c', 'npe01__WorkEmail__c', 'npe01__AlternateEmail__c']
 
+/** Why an order or payment isn't sent: its sponsor has no Account in Salesforce yet. The sponsor's own reason follows. */
+export const WAITS_FOR_ACCOUNT = "Not sent: this sponsor's Account isn't settled in Salesforce yet. Once it is, sync again."
 /** Why a guest with no email isn't sent: by name alone it could only be matched wrongly or duplicated. */
 export const NO_EMAIL = 'Skipped: no email, so Salesforce could only get a duplicate. Match this guest to their Contact by hand.'
 
@@ -131,8 +133,9 @@ export function toBatches(o: Outbox, campaignId: string | null, linked: Map<stri
 
 /** Each sponsor's Account: ours if we made it; else the one Account AAFE already has with that name, linked and never
  *  overwritten; else a new one of ours. Two or more with that name and none of ours: nothing is made, and the result
- *  says what to do. If Salesforce can't be asked, nothing is made (it may exist). Returns sponsor -> linked Account id. */
-async function pushAccounts(accounts: Outbox['accounts'], ports: PushPorts, results: SyncResult[]): Promise<Map<string, string>> {
+ *  says what to do; `unsettled` gets that sponsor and why, since its orders then have no Account to point at. If
+ *  Salesforce can't be asked, nothing is made (it may exist). Returns sponsor -> linked Account id. */
+async function pushAccounts(accounts: Outbox['accounts'], ports: PushPorts, results: SyncResult[], unsettled: Map<string, string>): Promise<Map<string, string>> {
   const linked = new Map<string, string>()
   if (!accounts.length) return linked
   const done = (id: string, sf_id: string | null, error: string | null) => results.push({ entity: 'sponsor', entity_id: id, sf_object: 'Account', sf_id, error })
@@ -145,7 +148,10 @@ async function pushAccounts(accounts: Outbox['accounts'], ports: PushPorts, resu
     const theirs = same.filter((r) => !r[EXTERNAL_ID])
     if (same.some((r) => r[EXTERNAL_ID] === a.id) || !theirs.length) fresh.push(a)
     else if (theirs.length === 1) { linked.set(a.id, String(theirs[0].Id)); done(a.id, String(theirs[0].Id), null) }
-    else done(a.id, null, `${theirs.length} Accounts in Salesforce are named "${a.name}": put ${a.id} in the ${EXTERNAL_ID} field of this sponsor's one`)
+    else {
+      const reason = `${theirs.length} Accounts in Salesforce are named "${a.name}": put ${a.id} in the ${EXTERNAL_ID} field of this sponsor's one`
+      unsettled.set(a.id, reason); done(a.id, null, reason)
+    }
   }
   const answers = await write(fresh.map((a) => rec('Account', a.id, { Name: a.name })), (r) => ports.upsert('Account', r))
   fresh.forEach((a, k) => done(a.id, ...outcomeOf(answers[k])))
@@ -262,8 +268,18 @@ async function pushMembers(campaignId: string | null, guests: Guest[], contactOf
 export async function pushAll(o: Outbox, ports: PushPorts, opts: PushOptions = DEFAULT_OPTIONS): Promise<SyncResult[]> {
   const results: SyncResult[] = []
   const campaignId = o.campaign ? await pushCampaign(o.campaign, ports, results) : null
-  const linked = await pushAccounts(o.accounts, ports, results)
-  for (const b of toBatches(o, campaignId, linked, opts)) {
+  const unsettled = new Map<string, string>()
+  const linked = await pushAccounts(o.accounts, ports, results, unsettled)
+  // An order whose sponsor has no Account at all (two of AAFE's share its name, none ours) isn't sent: it would only come
+  // back with Salesforce's raw error. It waits, with the sponsor's reason (Cornell's review of #213). A sponsor whose
+  // Account write failed this time isn't held back: its Account usually exists from an earlier sync.
+  const waiting = new Map(o.opportunities.filter((p) => unsettled.has(p.account_id)).map((p) => [p.id, unsettled.get(p.account_id)]))   // order -> the sponsor's reason
+  const wait = (entity: string, id: string, sf_object: string, reason: string | undefined) =>
+    results.push({ entity, entity_id: id, sf_object, sf_id: null, error: `${WAITS_FOR_ACCOUNT} ${reason ?? ''}`.trim() })
+  for (const [id, reason] of waiting) wait('order', id, 'Opportunity', reason)
+  if (opts.payments) for (const p of o.payments) if (waiting.has(p.order_id)) wait('payment', p.id, 'npe01__OppPayment__c', waiting.get(p.order_id))
+  const ready = { ...o, opportunities: o.opportunities.filter((p) => !waiting.has(p.id)), payments: o.payments.filter((p) => !waiting.has(p.order_id)) }
+  for (const b of toBatches(ready, campaignId, linked, opts)) {
     const answers = await write(b.records, (r) => ports.upsert(b.sobject, r))
     b.ids.forEach((id, k) => { const [sf_id, error] = outcomeOf(answers[k]); results.push({ entity: b.entity, entity_id: id, sf_object: b.sobject, sf_id, error }) })
   }
