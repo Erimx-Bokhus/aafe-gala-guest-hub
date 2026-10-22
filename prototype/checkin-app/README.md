@@ -47,7 +47,7 @@ cd prototype/checkin-app
 npm run sync-server    # demo sync server, this computer only (127.0.0.1:8787)
 npm run dev:ipad       # the app on http://localhost:5175 and on your Wi-Fi address
 ```
-(Run `npm install` in `prototype/` first.) On an iPad on the same Wi-Fi, open the "Network" address Vite prints
+(Run `npm ci` in `prototype/` first.) On an iPad on the same Wi-Fi, open the "Network" address Vite prints
 (e.g. `http://192.168.x.x:5175`) in Safari, then Share → **Add to Home Screen**. The app reaches the sync
 server through Vite's `/api` proxy, so several iPads share check-ins. Or double-click
 `prototype/OPEN-CheckIn-App.html` to try it alone on one computer.

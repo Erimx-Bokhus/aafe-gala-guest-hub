@@ -368,6 +368,18 @@ create index if not exists tier_mappings_tier_id_idx            on tier_mappings
 -- The sponsor portal reads its order's activity list every time a sponsor opens their link (portal_get_view).
 create index if not exists audit_log_order_id_idx               on audit_log (order_id, id) where order_id is not null;
 
+-- Sign-in by email domain (decided Oct 21, Aisling): anyone whose email is at a listed domain joins the staff list on
+-- their first sign-in, with that domain's role, until its date; staff_me() adds them, hook_staff_signup() turns away
+-- every other new login. Empty by default, so a project lets in only its named staff until a row is added
+-- (BACKEND.md, Setup step 2). A joined row carries the date in access_until and stops working after it
+-- (current_staff()); a named row has none.
+create table if not exists staff_join_domains (
+  domain text primary key check (domain ~ '^[a-z0-9-]+(\.[a-z0-9-]+)+$'),
+  role   text not null check (role in ('gala_admin','relationship_manager','check_in_volunteer')),
+  until  timestamptz not null
+);
+alter table staff_users add column if not exists access_until timestamptz;
+
 -- ---------------------------------------------------------------------
 -- 2. Helpers
 -- ---------------------------------------------------------------------
@@ -506,10 +518,12 @@ begin
   end if;
 end $$;
 
--- Logged-in staff member, matched by the verified email on the Supabase Auth JWT.
+-- Logged-in staff member, matched by the verified email on the Supabase Auth JWT. A row that joined by email domain
+-- counts until its access_until.
 create or replace function current_staff() returns staff_users
 language sql stable security definer set search_path = public as $$
   select * from staff_users where lower(email) = lower(coalesce(auth.jwt() ->> 'email', ''))
+    and (access_until is null or access_until > now())
 $$;
 
 create or replace function staff_role() returns text
@@ -582,7 +596,7 @@ begin
   foreach t in array array['gala_events','staff_users','sponsorship_tiers','sponsors','orders','payments',
     'event_tables','guests','seats','check_ins','email_log','audit_log','salesforce_sync',
     'givelively_sync_state','givelively_raw','import_runs','import_review','tier_mappings','sponsor_prospects',
-    'sync_deleted','sync_state','schema_upgrades','gala_need_totals']
+    'sync_deleted','sync_state','schema_upgrades','gala_need_totals','staff_join_domains']
   loop
     execute format('alter table %I enable row level security', t);
     execute format('drop policy if exists staff_read on %I', t);
@@ -646,7 +660,8 @@ begin
    where portal_token = hash_token(coalesce(p_token, ''))
      and status <> 'cancelled'
      and portal_token_expires_at > now();   -- a link with no expiry doesn't work (Gate 2): never "forever"
-  if o.id is null then raise exception 'invalid_link' using errcode = 'P0002'; end if;
+  -- PT404: PostgREST answers HTTP 404, a refused link, not 500, which read as a server error in the logs (Oct 19 click-through).
+  if o.id is null then raise exception 'invalid_link' using errcode = 'PT404'; end if;
   return o;
 end $$;
 
@@ -746,6 +761,14 @@ begin
   if v_display = '' and g_old.id is not null and g_old.first_name = v_first and g_old.last_name = v_last then
     v_display := coalesce(g_old.display_name, '');
   end if;
+  -- The portal's form sends back the display name it was shown, with the names: an echo, not a choice. When the given
+  -- or family name changed and that display name was just "First Last", follow the new names, as staff edits do
+  -- (staff_update_guest); a display name staff corrected stays. A rename used to keep the old name (Oct 19 click-through).
+  if g_old.id is not null and v_display = coalesce(g_old.display_name, '')
+     and (g_old.first_name is distinct from v_first or g_old.last_name is distinct from v_last)
+     and coalesce(g_old.display_name, '') in ('', btrim(concat_ws(' ', nullif(g_old.first_name, ''), nullif(g_old.last_name, '')))) then
+    v_display := '';
+  end if;
   select n.display, n.first, n.last into v_display, v_first, v_last from name_parts(v_display, v_first, v_last) n;
   if v_display = '' then raise exception 'invalid_input: a name is required'; end if;
   select primary_contact_name into v_contact from sponsors where id = o.sponsor_id;
@@ -812,10 +835,48 @@ end $$;
 --    Names match staff-app/src/store.ts.
 -- ---------------------------------------------------------------------
 
+-- The signed-in staff member, or null. Someone at a domain in staff_join_domains who isn't on the staff list joins it
+-- here, with the domain's role until its date, and the join is logged. An expired joined row gets the domain's new
+-- date if it has been extended; its role is left as staff last set it.
 create or replace function staff_me() returns jsonb
-language sql stable security definer set search_path = public as $$
-  select to_jsonb(s) from (select (current_staff()).*) s where s.id is not null
-$$;
+language plpgsql security definer set search_path = public as $$
+declare
+  v_email text := lower(coalesce(auth.jwt() ->> 'email', ''));
+  d staff_join_domains; v_id text;
+begin
+  if (current_staff()).id is null and v_email like '%_@_%' then
+    select * into d from staff_join_domains where domain = split_part(v_email, '@', 2) and until > now();
+    if d.domain is not null then
+      insert into staff_users (id, name, email, role, access_until)
+      values ('st-join-' || left(md5(v_email), 12), initcap(regexp_replace(split_part(v_email, '@', 1), '[._+-]+', ' ', 'g')),
+              v_email, d.role, d.until)
+      on conflict (email) do update set access_until = excluded.access_until
+        where staff_users.access_until is not null and staff_users.access_until < excluded.access_until
+      returning id into v_id;
+      if v_id is not null then
+        perform write_audit('system', 'Domain sign-in', 'staff', v_id, null, 'staff.joined', null, d.role, false,
+          format('%s signed in from @%s: %s until %s (New York time).', v_email, d.domain, replace(d.role, '_', ' '),
+                 to_char(d.until at time zone 'America/New_York', 'Mon FMDD, YYYY HH12:MI AM')));
+      end if;
+    end if;
+  end if;
+  return (select to_jsonb(s) from (select (current_staff()).*) s where s.id is not null);
+end $$;
+
+-- Supabase Auth's "Before User Created" hook (Authentication > Auth Hooks): a new login is made only for an email on
+-- the staff list or at a domain in staff_join_domains, so nobody else can get sign-in emails sent (the apps' sign-in
+-- request may create a login, shared/src/supabase.ts). Only Supabase Auth calls it (section 9).
+create or replace function hook_staff_signup(event jsonb) returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+declare v_email text := lower(coalesce(event #>> '{user,email}', ''));
+begin
+  if exists (select 1 from staff_users where lower(email) = v_email)
+     or exists (select 1 from staff_join_domains where domain = split_part(v_email, '@', 2) and until > now()) then
+    return '{}'::jsonb;
+  end if;
+  return jsonb_build_object('error', jsonb_build_object('http_code', 403,
+    'message', 'Sign-in is for the AAFE gala team. Ask the gala admin to add your email.'));
+end $$;
 
 -- The gala the server treats as this year's (current_event_id), so the staff app shows the gala its saves go to.
 -- A planning gala for next year (Start next year's gala) must not take over the pages (review of #133/#134, Oct 14).
@@ -3104,7 +3165,7 @@ begin
               'need_status','need_choices','staff_clear_needs','audit_redact','needs_clear','retention_days','contacts_delete',
               'staff_delete_guest_contacts','retention_sweep',
               'staff_sync','sync_touch','sync_tombstone','sync_prune','door_entries','door_unnamed_seats','door_exceptions','door_sync',
-              'upgrade_step')
+              'upgrade_step','hook_staff_signup')
   loop
     execute format('revoke all on function %s from public, anon, authenticated', f);
   end loop;
@@ -3136,6 +3197,13 @@ grant execute on function
   staff_export_badges(boolean), staff_export_checkin(), staff_export_salesforce(),
   staff_queue_guest_list_reminders(int), staff_email_queue(), staff_sync(xid8, text), door_sync(xid8, text)
   to authenticated;
+
+-- Supabase Auth's sign-up hook (Authentication > Auth Hooks). Its role exists only in Supabase, not in the tests' stand-in.
+do $$ begin
+  if exists (select 1 from pg_roles where rolname = 'supabase_auth_admin') then
+    grant execute on function hook_staff_signup(jsonb) to supabase_auth_admin;
+  end if;
+end $$;
 
 -- Edge functions (service role)
 grant execute on function gl_import(jsonb, text, text), email_mark_sent(text, text), email_mark_failed(text, text), email_claim(int), hash_token(text),
