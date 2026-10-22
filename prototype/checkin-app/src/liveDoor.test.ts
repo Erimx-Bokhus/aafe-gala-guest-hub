@@ -3,7 +3,7 @@
 // added after the door opened (a sponsor naming a guest, a comp added in the staff app) appears on the next refresh,
 // and a refresh that only changes who arrived keeps the same list, so the screen doesn't re-sort every few seconds.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { Snapshot, SnapshotGuest } from '@shared/offlineCheckin'
+import { hashCode, type Snapshot, type SnapshotGuest } from '@shared/offlineCheckin'
 import type { StaffUser } from '@shared/types'
 
 const server = vi.hoisted(() => ({
@@ -180,8 +180,19 @@ describe('what the door says when something fails', () => {
   it('an unknown QR code says the ticket may have been replaced and what to do instead', async () => {
     server.snapshot = list([guest('g-1', 'Ana', 'Diaz')], '2027-05-20T22:00:00Z')
     const door = (await loadDoor(KENJI))!
-    expect(await door.scan(' AAFE-NOT-A-TICKET ')).toBe(
-      'No guest found for code “AAFE-NOT-A-TICKET”. The ticket may have been replaced. Search the guest by name, or add an approved exception.')
+    expect(await door.scan(' AAFE-NOT-A-TICKET ')).toEqual({ message:
+      'No guest found for code “AAFE-NOT-A-TICKET”. The ticket may have been replaced. Search the guest by name, or add an approved exception.' })
+  })
+
+  // Oct 22 story run: a good ticket closed the scanner without saying whose it was. The door now hands the screen
+  // the guest and the handle Undo needs; a second scan of the same ticket names who it belongs to.
+  it('a good QR code says which guest it checked in, with the handle Undo uses', async () => {
+    server.snapshot = list([guest('g-1', 'Ana', 'Diaz', { qr_hash: await hashCode('AAFE-TEST-0001') })], '2027-05-20T22:00:00Z')
+    const door = (await loadDoor(KENJI))!
+    const r = await door.scan('AAFE-TEST-0001')
+    expect(r).toEqual({ guestId: 'g-1', handle: door.arrivals().get('g-1')?.handle })
+    expect(await door.scan('AAFE-TEST-0001')).toEqual({ message: expect.stringMatching(/^Ana Diaz: .+ Don't admit this ticket twice\.$/) })
+    door.stop()
   })
 
   it('an undo that fails says why, in words, and what to do', async () => {
