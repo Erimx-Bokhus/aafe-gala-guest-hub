@@ -16,8 +16,9 @@
 //
 // The fast lane: when a full run (all seven checks, no --quick) passes on a commit with nothing left uncommitted, it
 // marks that commit "local-ci" on GitHub (with the GitHub CLI you're signed in with). GitHub's two long checks,
-// backend and frontend, then pass in seconds for a pull request on that exact commit, if it already includes the
-// latest base branch; otherwise they run in full. The secret scan and real-data guard always run on GitHub.
+// backend and frontend, then pass in seconds for a pull request on that exact commit (or on a merge commit with the
+// same files, such as main's merge of it, which a Nightly PR brings over), if the base adds no files it lacks;
+// otherwise they run in full. The secret scan and real-data guard always run on GitHub.
 // Use --push instead of git push: GitHub starts its checks the moment a commit arrives, so the mark has to follow the
 // push at once (the checks wait a few seconds for it). Without --push, the commit must already be on GitHub.
 // The mark is trust-based: anyone with write access can set it (docs/CODING-STANDARD.md).

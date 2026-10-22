@@ -40,13 +40,13 @@ describe('live mode', () => {
       { auth: { flowType: 'pkce', persistSession: true, detectSessionInUrl: true } })
   })
 
-  it('emails a one-time link to invited staff only, back to this page', async () => {
+  it('emails a one-time link back to this page, and may make a first login (the database decides who)', async () => {
     const s = await load(true)
     m.auth.signInWithOtp.mockResolvedValue({ error: null })
     await s.sendSignInLink('  mei.ortiz@aafe-demo.example.org ')
     expect(m.auth.signInWithOtp).toHaveBeenCalledWith({
       email: 'mei.ortiz@aafe-demo.example.org',
-      options: { shouldCreateUser: false, emailRedirectTo: window.location.origin + window.location.pathname },
+      options: { shouldCreateUser: true, emailRedirectTo: window.location.origin + window.location.pathname },
     })
   })
 
