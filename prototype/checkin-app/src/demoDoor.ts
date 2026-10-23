@@ -47,11 +47,11 @@ export function demoDoor(staffName: string): Door {
     },
     async scan(code) {
       const g = GUESTS.find((x) => x.qr_token && x.qr_token.toLowerCase() === code.trim().toLowerCase())
-      if (!g) return unknownCodeMessage(code)
+      if (!g) return { message: unknownCodeMessage(code) }
       const a = arrivals().get(g.id)
-      if (a) return `Already checked in: ${g.first_name} ${g.last_name} at ${time(a.at)} by ${a.by}. Don't admit this ticket twice.`
-      api.checkIn([g.id], 'qr')
-      return null
+      if (a) return { message: `Already checked in: ${g.first_name} ${g.last_name} at ${time(a.at)} by ${a.by}. Don't admit this ticket twice.` }
+      const [handle] = api.checkIn([g.id], 'qr')
+      return { guestId: g.id, handle }
     },
     addException: (p) => add({ guest_id: null, order_id: p.orderId || null, arrival_name: p.name, method: 'exception', type: p.type, note: p.note }),
     async undo(handles) { handles.forEach((h) => sync.remove(h)); return null },
