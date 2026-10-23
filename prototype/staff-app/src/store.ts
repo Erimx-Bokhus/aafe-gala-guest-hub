@@ -141,6 +141,32 @@ export function recordOfflinePayment(db: DB, user: StaffUser, orderId: string, p
   return d
 }
 
+/** staff_void_payment (#223), over the demo data: a staff-entered payment is removed, the order's status follows what's
+ *  left (with nothing left, back to its status the last time money came in to it with none), and the change log keeps why. */
+export function voidPayment(db: DB, user: StaffUser, paymentId: string, reason: string): DB {
+  const why = reason.trim().slice(0, 500)
+  if (!why) throw new Error('invalid_input: say why the payment is being voided')
+  const p = db.payments.find((x) => x.id === paymentId)
+  if (!p) throw new Error('not_found: no such payment')
+  if (p.processor !== 'none') throw new Error('invalid_input: Give Lively payments come from the import; refund them in Give Lively')
+  const o = db.orders.find((x) => x.id === p.order_id)
+  if (!o) throw new Error(`not_found: payment ${p.id} has no order`)
+  const left = db.payments.filter((x) => x.order_id === o.id && x.id !== p.id)
+  const applied = left.reduce((s, x) => s + Math.max(x.original_amount - x.refunded_amount, 0), 0)
+  const before = db.audit_log.filter((a) => a.order_id === o.id && a.action === 'payment.recorded' && (a.from_state === 'pledged' || a.from_state === 'invoice_sent'))
+    .sort((a, b) => b.at.localeCompare(a.at) || b.id - a.id)[0]?.from_state as Order['status'] | undefined
+  const status: Order['status'] = o.status === 'comp' || o.status === 'cancelled' ? o.status
+    : applied > 0 && applied + 0.005 >= o.commitment_amount ? 'paid' : applied > 0 ? 'partially_paid' : before ?? 'pledged'
+  const inSf = db.salesforce_sync.some((s) => s.entity === 'payment' && s.entity_id === p.id && s.sf_id)
+  const usd = (n: number) => n.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
+  let d: DB = { ...db, payments: db.payments.filter((x) => x.id !== p.id),
+    orders: db.orders.map((x) => (x.id === o.id ? { ...x, status, updated_at: nowIso() } : x)) }
+  d = addAudit(d, { actor_type: 'staff', actor: user.name, entity: 'payment', entity_id: p.id, order_id: o.id, action: 'payment.voided', from_state: o.status, to_state: status, guest_visible: false,
+    summary: `Payment voided: ${usd(p.original_amount)} (${p.method.replace('_', ' ')}${p.check_number ? ` #${p.check_number}` : ''}). Reason: ${why}${inSf ? ' It was already sent to Salesforce: remove it there too.' : ''}` })
+  return addAudit(d, { actor_type: 'staff', actor: user.name, entity: 'payment', entity_id: p.id, order_id: o.id, action: 'payment.corrected', from_state: null, to_state: null, guest_visible: true,
+    summary: `Payment of ${usd(p.original_amount)} corrected by AAFE.` })
+}
+
 function createSeats(db: DB, orderId: string, n: number): DB {
   const seats = Array.from({ length: n }, (_, i) => ({ id: `seat-${orderId}-${i + 1}`, order_id: orderId, slot_number: i + 1, guest_id: null, status: 'unnamed' as const, updated_at: nowIso() }))
   return { ...db, seats: [...db.seats, ...seats] }
@@ -454,12 +480,14 @@ function applyOrder(db: DB, p: Prospect, o: Order, actorType: 'staff' | 'system'
   // As pipeline_apply_order: a refunded, failed or cancelled order loses the prospect (Oct 12 audit).
   const to: PipelineStage = o.status === 'cancelled' ? (['closed_won', 'payment_received'].includes(p.stage) ? 'lost' : p.stage)
     : o.status === 'paid' || o.status === 'partially_paid' ? 'payment_received'
+    // Its only payment was voided (#223): no money in, so back to closed won.
+    : (o.status === 'pledged' || o.status === 'invoice_sent') && p.stage === 'payment_received' && p.order_id === o.id ? 'closed_won'
     : (o.status === 'pledged' || o.status === 'invoice_sent') && ['not_started', 'reached_out', 'in_conversation', 'lost'].includes(p.stage) ? 'closed_won' : p.stage
   const next: Prospect = { ...p, order_id: o.id, stage: to, seen_status: o.status, updated_at: at, stage_changed_at: to !== p.stage ? at : p.stage_changed_at }
   const d = { ...db, sponsor_prospects: (db.sponsor_prospects ?? []).map((x) => (x.id === p.id ? next : x)) }
   if (to === p.stage) return d
   return addAudit(d, { actor_type: actorType, actor, entity: 'prospect', entity_id: p.id, order_id: o.id, action: 'prospect.stage', from_state: p.stage, to_state: to, guest_visible: false,
-    summary: `${sponsorOf(db, p.sponsor_id)?.organization_name}: ${stageLabel(p.stage)} → ${stageLabel(to)} (${to === 'payment_received' ? 'payment recorded' : to === 'lost' ? 'refunded or cancelled' : 'pledge or purchase recorded'}).` })
+    summary: `${sponsorOf(db, p.sponsor_id)?.organization_name}: ${stageLabel(p.stage)} → ${stageLabel(to)} (${to === 'payment_received' ? 'payment recorded' : to === 'lost' ? 'refunded or cancelled' : p.stage === 'payment_received' ? 'payment voided' : 'pledge or purchase recorded'}).` })
 }
 
 /**

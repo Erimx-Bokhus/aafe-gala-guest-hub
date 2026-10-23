@@ -29,6 +29,7 @@ const ACTIONS = [
   ['staff_seat_order_at_table', RM, `select staff_seat_order_at_table('ord-acme', '${freeTable}')`, 'seat.assigned'],
   ['staff_mark_printed', RM, `select staff_mark_printed(array['g-019'])`, 'badge.printed'],
   ['staff_record_payment', RM, `select staff_record_payment('ord-acme', 'check', 500, '2026-10-02', '101')`, 'payment.recorded'],
+  ['staff_void_payment', ADMIN, `select staff_void_payment((select id from payments where order_id = 'ord-acme' and check_number = '101' order by created_at desc limit 1), 'Audit test: entered twice')`, 'payment.voided'],
   ['staff_add_pledge', RM, `select staff_add_pledge('Audit Test Org', 'Lee Park', 'lee@audit.example.org', 'bronze', 'check')`, 'order.created'],
   ['staff_add_comp_guest', RM, `select staff_add_comp_guest('{"first_name":"Comp","last_name":"Guest","relationship_note":"Board invite"}')`, 'comp_guest.added'],
   ['staff_send_qr_invite', RM, `select staff_send_qr_invite('g-019')`, 'email.approved'],
