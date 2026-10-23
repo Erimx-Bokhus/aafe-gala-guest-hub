@@ -738,6 +738,13 @@ language sql immutable set search_path = public as $$
 $$;
 revoke all on function name_parts(text, text, text) from public, anon, authenticated;
 
+-- An email address in the shape the guest portal's form checks (EMAIL_RE in guest-portal/src/Portal.tsx): text, @, text,
+-- a dot, text, no spaces. The server checks it too, so a staff edit or a call that skips the form can't store "nope"
+-- (#224); before, a QR invitation to it failed only when it was sent.
+create or replace function valid_email(p text) returns boolean
+language sql immutable set search_path = public as $$ select p ~ '^[^\s@]+@[^\s@]+\.[^\s@]+$' $$;
+revoke all on function valid_email(text) from public, anon, authenticated;
+
 create or replace function portal_save_guest(p_token text, p_slot int, p_guest jsonb) returns jsonb
 language plpgsql security definer set search_path = public as $$
 declare
@@ -771,6 +778,10 @@ begin
   end if;
   select n.display, n.first, n.last into v_display, v_first, v_last from name_parts(v_display, v_first, v_last) n;
   if v_display = '' then raise exception 'invalid_input: a name is required'; end if;
+  -- Only a new or changed email is checked: one an import stored earlier doesn't stop the guest's other answers.
+  if f_email is distinct from g_old.email and f_email is not null and not valid_email(f_email) then
+    raise exception 'invalid_input: "%" isn''t an email address', f_email;
+  end if;
   select primary_contact_name into v_contact from sponsors where id = o.sponsor_id;
   v_from := st.status;
 
@@ -892,11 +903,17 @@ language plpgsql security definer set search_path = public as $$
 declare
   me staff_users := require_staff(array['gala_admin','relationship_manager']);
   allowed text[] := array['first_name','last_name','display_name','title','organization','email','dietary_needs','accessibility_needs','relationship_note'];
+  -- The guest portal's length caps (portal_save_guest), so a staff edit can't overflow a badge either (#224); trimmed
+  -- first, as the portal does, so "name@example.org " with a space typed after it is still an email.
+  caps jsonb := '{"first_name": 100, "last_name": 100, "display_name": 200, "title": 200, "organization": 200, "email": 254,
+                  "dietary_needs": 500, "accessibility_needs": 500}';
   g guests; n guests; v_patch jsonb; v_changed text[];
 begin
   select * into g from guests where id = p_guest_id for update;
   if g.id is null then raise exception 'not_found'; end if;
-  select coalesce(jsonb_object_agg(key, case when jsonb_typeof(value) = 'string' and trim(value #>> '{}') = '' then 'null'::jsonb else value end), '{}')
+  select coalesce(jsonb_object_agg(key, case when jsonb_typeof(value) = 'string' and trim(value #>> '{}') = '' then 'null'::jsonb
+                                             when jsonb_typeof(value) = 'string' and caps ? key then to_jsonb(left(trim(value #>> '{}'), (caps ->> key)::int))
+                                             else value end), '{}')
     into v_patch from jsonb_each(coalesce(p_patch, '{}')) where key = any (allowed);
   n := jsonb_populate_record(g, v_patch);
   if not (v_patch ? 'display_name') and (n.first_name is distinct from g.first_name or n.last_name is distinct from g.last_name)
@@ -905,6 +922,10 @@ begin
   end if;
   select p.display, p.first, p.last into n.display_name, n.first_name, n.last_name from name_parts(n.display_name, n.first_name, n.last_name) p;
   if n.display_name = '' then raise exception 'invalid_input: a name is required'; end if;
+  -- Only a changed email is checked, so one an import stored earlier doesn't block other edits to the guest.
+  if n.email is distinct from g.email and n.email is not null and not valid_email(n.email) then
+    raise exception 'invalid_input: "%" isn''t an email address', n.email;
+  end if;
   select coalesce(array_agg(k), '{}') into v_changed from unnest(allowed) k where to_jsonb(n) -> k is distinct from to_jsonb(g) -> k;
   if cardinality(v_changed) = 0 then return; end if;
 
@@ -1013,6 +1034,12 @@ declare
 begin
   if p_method not in ('check','ach_direct','wire') then raise exception 'invalid_input: method must be check, ach_direct or wire'; end if;
   if p_amount is null or p_amount <= 0 then raise exception 'invalid_input: amount must be positive'; end if;
+  -- The day it arrived (#224): a cleared date failed with the database's own words, and a year typed wrong (2031) was
+  -- taken. A few days ahead is fine: a check recorded on Friday and deposited on Monday.
+  if p_received is null then raise exception 'invalid_input: enter the day the payment arrived'; end if;
+  if p_received > (now() at time zone 'America/New_York')::date + 3 then
+    raise exception 'invalid_input: % is more than 3 days ahead; enter the day the payment arrived', to_char(p_received, 'FMMonth FMDD, YYYY');
+  end if;
   select * into o from orders where id = p_order_id for update;
   if o.id is null then raise exception 'not_found'; end if;
 
@@ -1053,6 +1080,7 @@ begin
   if coalesce(trim(p_org), '') = '' or coalesce(trim(p_contact), '') = '' or coalesce(trim(p_email), '') = '' then
     raise exception 'invalid_input: organization, contact and email are required';
   end if;
+  if not valid_email(trim(p_email)) then raise exception 'invalid_input: "%" isn''t an email address', trim(p_email); end if;
   select * into t from sponsorship_tiers where id = p_tier_id and event_id = current_event_id() and not retired;
   select * into e from gala_events where id = current_event_id();
   if t.id is null or e.id is null then raise exception 'not_found: no such level on this gala'; end if;
@@ -1081,10 +1109,15 @@ declare
   v_order text; v_sp text; v_guest text := new_id('g'); v_slot int;
   v_first text; v_last text; v_display text;
   v_note text := nullif(trim(coalesce(p_guest ->> 'relationship_note', '')), '');
+  -- The guest portal's length caps (#224), as on a staff edit.
+  v_title text := nullif(left(trim(coalesce(p_guest ->> 'title', '')), 200), '');
+  v_org   text := nullif(left(trim(coalesce(p_guest ->> 'organization', '')), 200), '');
+  v_email text := nullif(left(trim(coalesce(p_guest ->> 'email', '')), 254), '');
 begin
   select n.display, n.first, n.last into v_display, v_first, v_last
-    from name_parts(p_guest ->> 'display_name', p_guest ->> 'first_name', p_guest ->> 'last_name') n;
+    from name_parts(left(p_guest ->> 'display_name', 200), left(p_guest ->> 'first_name', 100), left(p_guest ->> 'last_name', 100)) n;
   if v_display = '' then raise exception 'invalid_input: a name is required'; end if;
+  if v_email is not null and not valid_email(v_email) then raise exception 'invalid_input: "%" isn''t an email address', v_email; end if;
   -- One comp guest at a time per gala (Oct 12 audit): two staff adding at once both read the same last slot (one got a
   -- "duplicate key" error and lost the guest), and on a gala with no comp order yet both created one. The lock waits
   -- for the other add to finish and is released when this one commits.
@@ -1110,9 +1143,7 @@ begin
   select coalesce(max(slot_number), 0) + 1 into v_slot from seats where order_id = v_order;
 
   insert into guests (id, order_id, first_name, last_name, display_name, title, organization, email, guest_type, relationship_note, qr_token, last_updated_by)
-  values (v_guest, v_order, v_first, v_last, v_display, nullif(trim(coalesce(p_guest ->> 'title', '')), ''),
-          nullif(trim(coalesce(p_guest ->> 'organization', '')), ''), nullif(trim(coalesce(p_guest ->> 'email', '')), ''),
-          'comp_relationship', v_note, null, 'staff');
+  values (v_guest, v_order, v_first, v_last, v_display, v_title, v_org, v_email, 'comp_relationship', v_note, null, 'staff');
   insert into seats (id, order_id, slot_number, guest_id, status) values ('seat-' || v_order || '-' || v_slot, v_order, v_slot, v_guest, 'reviewed');
   perform write_audit('staff', me.name, 'guest', v_guest, v_order, 'comp_guest.added', null, 'reviewed', false,
     format('%s added as relationship guest (%s).', v_display, coalesce(v_note, 'no note')));
