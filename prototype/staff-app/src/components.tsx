@@ -1,10 +1,10 @@
 import { useRef, useState } from 'react'
 import { levelsOf, orderMoney, sponsorOf } from '@shared/data'
-import { Field, Modal, Pill, money, type Tone } from '@shared/ui'
+import { Field, Modal, Pill, fmtDate, money, type Tone } from '@shared/ui'
 import type { SeatStatus } from '@shared/types'
 import { useStaff } from './store'
 import { curOrders } from './pages/Dashboard'
-import { nyDate } from './date'
+import { nyDate, paymentDateError } from './date'
 
 /**
  * Saves a form once: the button disables until the server answers, so a double-click can't record a payment twice.
@@ -30,6 +30,9 @@ export const SEAT_PILL: Record<SeatStatus, [Tone, string]> = {
 }
 export const SeatPill = ({ s }: { s: SeatStatus }) => <Pill tone={SEAT_PILL[s][0]}>{SEAT_PILL[s][1]}</Pill>
 
+/** A check number as staff might type it again: "#555", "0555" and "555 " are the same check. */
+const checkKey = (n?: string | null) => (n ?? '').toLowerCase().replace(/[^0-9a-z]/g, '').replace(/^0+(?=.)/, '')
+
 /** Check in the mail, or ACH/wire seen on AAFE's bank statement — staff records it here. */
 export function RecordPaymentModal({ open, onClose, orderId }: { open: boolean; onClose: () => void; orderId?: string }) {
   const { db, api } = useStaff()
@@ -44,7 +47,17 @@ export function RecordPaymentModal({ open, onClose, orderId }: { open: boolean; 
   const [date, setDate] = useState(() => nyDate(new Date()))
   const [checkNo, setCheckNo] = useState('')
   const amt = Number(amount || bal)
-  const valid = oid && amt > 0 && (method !== 'check' || checkNo.trim())
+  const dateError = paymentDateError(date)
+  const valid = oid && amt > 0 && (method !== 'check' || checkNo.trim()) && !dateError
+  // Cornell's review (#222): the same check entered twice, or an extra zero, went through without a word and could mark
+  // an order paid. Both are warnings, not refusals (a sponsor can pay more than the balance): the button says so.
+  const sameCheck = method === 'check' && checkKey(checkNo)
+    ? db.payments.find((p) => p.order_id === oid && p.method === 'check' && checkKey(p.check_number) === checkKey(checkNo)) : undefined
+  const usd = (n: number) => money(n, !Number.isInteger(n))
+  const warnings = [
+    sameCheck && `Check #${sameCheck.check_number} is already recorded on this order: ${usd(sameCheck.original_amount)} on ${fmtDate(sameCheck.received_at)}.`,
+    amt > 0 && amt > bal + 0.005 && `This is ${usd(amt - bal)} more than the balance due (${usd(bal)}).`,
+  ].filter((w): w is string => !!w)
   return (
     <Modal open={open} onClose={onClose} title="Record check, ACH or wire">
       <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); if (!valid) return; void save(() => api.recordPayment(oid, { method, amount: amt, received: date, check_number: checkNo }), 'Payment recorded — guest portal updated').then((done) => { if (done) onClose() }) }}>
@@ -65,11 +78,17 @@ export function RecordPaymentModal({ open, onClose, orderId }: { open: boolean; 
         </fieldset>
         <div className="grid grid-cols-2 gap-3">
           <Field id="ra" label="Amount" hint={`Balance due ${money(bal)}`}><input id="ra" className="input" inputMode="decimal" placeholder={String(bal)} value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ''))} /></Field>
-          <Field id="rd" label={method === 'check' ? 'Deposit date' : 'Date on statement'}><input id="rd" type="date" className="input" value={date} onChange={(e) => setDate(e.target.value)} /></Field>
+          <Field id="rd" label={method === 'check' ? 'Deposit date' : 'Date on statement'} error={dateError ?? undefined}><input id="rd" type="date" className="input" value={date} onChange={(e) => setDate(e.target.value)} /></Field>
         </div>
         {method === 'check' && <Field id="rc" label="Check number" error={!checkNo.trim() && amount ? 'Required for checks' : undefined}><input id="rc" className="input" value={checkNo} onChange={(e) => setCheckNo(e.target.value)} /></Field>}
+        {warnings.length > 0 && (
+          <div role="status" data-testid="payment-warning" className="space-y-1 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+            {warnings.map((w) => <p key={w}>{w}</p>)}
+            <p className="font-semibold">If that’s right, choose Record anyway.</p>
+          </div>
+        )}
         <p className="rounded-md bg-cream-100 p-3 text-xs text-navy-600">No processor fee on offline payments. If this is the first payment and no portal link was sent, a guest-list email is drafted for staff approval. The payment is queued for Salesforce.</p>
-        <div className="flex justify-end gap-2"><button type="button" className="btn-ghost" onClick={onClose}>Cancel</button><button className="btn-primary" disabled={!valid || saving} data-testid="save-payment">{saving ? 'Saving…' : 'Record payment'}</button></div>
+        <div className="flex justify-end gap-2"><button type="button" className="btn-ghost" onClick={onClose}>Cancel</button><button className="btn-primary" disabled={!valid || saving} data-testid="save-payment">{saving ? 'Saving…' : warnings.length ? 'Record anyway' : 'Record payment'}</button></div>
       </form>
     </Modal>
   )
