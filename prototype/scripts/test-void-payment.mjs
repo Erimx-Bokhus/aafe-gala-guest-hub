@@ -46,7 +46,8 @@ ok((await one(`select status, payment_id from email_log where id = $1`, [receipt
 ok((await one(`select stage from sponsor_prospects where id = $1`, [prospect.id])).stage === 'closed_won', 'the pipeline card goes back to closed won')
 const view = await (async () => { await db.exec(`update orders set portal_token = hash_token('void-test-link'), portal_token_expires_at = now() + interval '30 days' where id = '${o.id}'`)
   return (await one(`select portal_get_view('void-test-link') v`)).v })()
-ok(Number(view.paid ?? view.amount_paid ?? 0) === 0, `the sponsor portal shows nothing paid (${JSON.stringify({ paid: view.paid, balance: view.balance })})`)
+// portal_get_view puts the money under `money`: read it there, so a missing field fails instead of reading as 0.
+ok(view.money && Number(view.money.paid) === 0 && Number(view.money.balance) === c, `the sponsor portal shows nothing paid and the whole commitment due (${JSON.stringify(view.money)})`)
 const logs = (await db.query(`select action, guest_visible, summary, changes from audit_log where entity_id = $1 and action in ('payment.voided', 'payment.corrected') order by id`, [p1])).rows
 ok(logs.length === 2 && logs[0].action === 'payment.voided' && !logs[0].guest_visible && logs[0].summary.includes('Entered on the wrong order')
   && logs[0].changes?.id === p1 && Number(logs[0].changes?.original_amount) === c, 'staff log: the reason and the whole payment as it was')
