@@ -47,8 +47,8 @@ export interface Door {
   dismiss(clientId: string): void
   /** Returns the handles of the check-ins made (already checked-in guests are skipped). */
   checkIn(guestIds: string[], method: 'search' | 'qr'): string[]
-  /** A scanned or typed code: null when the guest was checked in, otherwise what to tell the volunteer. */
-  scan(code: string): Promise<string | null>
+  /** A scanned or typed code: the guest it checked in (with the handle Undo needs), otherwise what to tell the volunteer. */
+  scan(code: string): Promise<{ guestId: string; handle: string } | { message: string }>
   addException(p: { name: string; type: string; orderId: string; note: string }): string
   /** Null when undone, otherwise why not ("Only Kenji Abe or a gala admin can undo this check-in"). */
   undo(handles: string[]): Promise<string | null>
