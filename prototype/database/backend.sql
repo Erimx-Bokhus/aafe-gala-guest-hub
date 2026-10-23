@@ -610,7 +610,7 @@ begin
 
   -- Staff read the gala's records directly: the staff app loads them.
   foreach t in array array['gala_events','staff_users','sponsorship_tiers','sponsors','orders','payments','event_tables','seats',
-    'check_ins','audit_log','salesforce_sync','givelively_sync_state','import_runs','tier_mappings','sponsor_prospects',
+    'check_ins','salesforce_sync','givelively_sync_state','import_runs','tier_mappings','sponsor_prospects',
     'sync_deleted','sync_state','schema_upgrades','gala_need_totals']
   loop
     execute format($p$create policy staff_read on %I for select to authenticated
@@ -628,6 +628,12 @@ begin
   create policy staff_read on import_review for select to authenticated
     using (staff_role() = 'gala_admin' or (staff_role() = 'relationship_manager' and event_id = current_event_id()));
   create policy staff_read on givelively_raw for select to authenticated using (staff_role() = 'gala_admin');
+  -- The change log (who did what, and when) is gala admins' (Aisling, Oct 20 and Oct 22). Relationship managers read only
+  -- what sponsors changed in their portal and what Give Lively recorded: the dashboard's feed, which they follow up on.
+  -- staff_sync runs as its caller, so this decides what each one's app is sent too.
+  create policy staff_read on audit_log for select to authenticated
+    using (staff_role() = 'gala_admin' or (staff_role() = 'relationship_manager'
+           and (actor_type = 'guest_portal' or (actor_type = 'system' and actor like 'Give Lively%'))));
 end $$;
 
 -- audit_log is append-only, even for the table owner's API roles.

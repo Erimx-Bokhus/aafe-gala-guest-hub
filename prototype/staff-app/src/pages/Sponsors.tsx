@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
-import { ArrowLeft, Check, Copy, Mail, Plus, Search } from 'lucide-react'
+import { ArrowLeft, Check, Copy, History, Mail, Plus, Search } from 'lucide-react'
 import { methodLabel, orderMoney, seatStats, sponsorOf, staffName, tierOf } from '@shared/data'
-import { Link, Pill, fmtDate, money } from '@shared/ui'
+import { Link, Modal, Pill, fmtDate, money } from '@shared/ui'
 import type { AuditEntry, Material } from '@shared/types'
 import { PageHead } from '../App'
+import { logFor } from '../api'
 import { AddPledgeModal, GUEST_PORTAL_URL, RecordPaymentModal, SeatPill } from '../components'
 import { useStaff } from '../store'
 import { curOrders } from './Dashboard'
@@ -49,8 +50,9 @@ export default function Sponsors() {
 
 const MAT: Material[] = ['pending', 'received', 'approved']
 export function SponsorDetail({ id }: { id: string }) {
-  const { db, api, toast, act } = useStaff()
+  const { db, api, user, toast, act } = useStaff()
   const [pay, setPay] = useState(false)
+  const [showLog, setShowLog] = useState(false)
   // Live, the app holds only the newest 1,000 change-log entries, so this order's whole history comes from the server
   // (again after each change, when `db` reloads). Demo data holds everything.
   const [ownLog, setOwnLog] = useState<AuditEntry[] | null>(null)
@@ -66,7 +68,8 @@ export function SponsorDetail({ id }: { id: string }) {
   const seats = db.seats.filter((s) => s.order_id === o.id).sort((a, b) => a.slot_number - b.slot_number)
   const history = db.orders.filter((x) => x.sponsor_id === sp.id).sort((a, b) => b.event_id.localeCompare(a.event_id))
   const emails = db.email_log.filter((e) => e.order_id === o.id)
-  const log = (api.live && ownLog ? ownLog : db.audit_log.filter((a) => a.order_id === o.id)).slice().reverse()
+  // Live, the server sends a relationship manager only the portal's and Give Lively's entries; logFor keeps the demo the same.
+  const log = logFor(user.role, api.live && ownLog ? ownLog : db.audit_log.filter((a) => a.order_id === o.id)).slice().reverse()
   // Live, the order keeps only the link's fingerprint (hard rule 6), so a URL built from it never opens: the plain link is
   // shown in the demo only, where it is the real one. Live, staff send a fresh one with Resend portal link.
   const hasLink = Boolean(o.portal_token)
@@ -81,7 +84,18 @@ export function SponsorDetail({ id }: { id: string }) {
           {m.balance > 0 && o.source !== 'givelively' && <button className="btn-primary" onClick={() => setPay(true)}>Record payment</button>}
           {hasLink && <button className="btn-ghost" onClick={() => void act(api.resendPortalLink(o.id), 'Guest-list link re-sent')}><Mail size={15} /> Resend portal link</button>}
           {link && <button className="btn-ghost" onClick={() => { navigator.clipboard?.writeText(link).catch(() => {}); toast('Portal link copied') }}><Copy size={15} /> Copy link</button>}
+          <button className="btn-ghost" onClick={() => setShowLog(true)} aria-haspopup="dialog" data-testid="open-activity"><History size={15} /> Activity ({log.length})</button>
         </>} />
+      {/* The order's activity opens over the page, in its own scrolling window, instead of a long list under the seats
+          (Aisling's review of the story video, Oct 22). */}
+      <Modal open={showLog} onClose={() => setShowLog(false)} title="Activity for this order" wide>
+        {user.role !== 'gala_admin' && <p className="mb-3 text-sm text-navy-600" data-testid="activity-scope">Changes made in the sponsor portal and by Give Lively. Staff changes are in the change log, which gala admins see.</p>}
+        {log.length ? (
+          <ol className="max-h-[60vh] space-y-2 overflow-y-auto pr-1 text-sm" data-testid="activity-list">
+            {log.map((a) => <li key={a.id} className="flex gap-3"><time className="w-36 shrink-0 text-xs text-navy-500">{fmtDate(a.at, 'en-US', true)}</time><span className="text-navy-800">{a.summary} <span className="text-xs text-navy-500">— {a.actor}</span></span></li>)}
+          </ol>
+        ) : <p className="text-sm text-navy-600">No activity yet.</p>}
+      </Modal>
       <div className="grid gap-6 2xl:grid-cols-[1.5fr_1fr] [&>*]:min-w-0">
         <div className="space-y-6">
           <section className="card overflow-x-auto">
@@ -109,12 +123,6 @@ export function SponsorDetail({ id }: { id: string }) {
                 </tbody>
               </table>
             ) : <p className="p-4 text-sm text-navy-500">Advertising-only order — no attendee seats.</p>}
-          </section>
-          <section className="card p-4">
-            <h2 className="font-semibold text-navy-900">Activity for this order</h2>
-            <ol className="mt-3 max-h-72 space-y-2 overflow-y-auto text-sm">
-              {log.map((a) => <li key={a.id} className="flex gap-3"><time className="w-36 shrink-0 text-xs text-navy-500">{fmtDate(a.at, 'en-US', true)}</time><span className="text-navy-800">{a.summary} <span className="text-xs text-navy-500">— {a.actor}</span></span></li>)}
-            </ol>
           </section>
         </div>
         <div className="space-y-6">
