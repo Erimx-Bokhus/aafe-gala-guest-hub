@@ -150,4 +150,15 @@ describe('live mode', () => {
     await s.signOut()
     expect(m.auth.signOut).toHaveBeenCalledOnce()
   })
+
+  it('signs out once when two checks ask at the same moment, and again later', async () => {
+    const s = await load(true)
+    let end = () => {}
+    m.auth.signOut.mockImplementationOnce(() => new Promise<void>((r) => { end = r }))
+    const both = Promise.all([s.signOut(), s.signOut()])
+    expect(m.auth.signOut).toHaveBeenCalledOnce()   // the second call waits on the first: no second logout to answer 403
+    end(); await both
+    await s.signOut()
+    expect(m.auth.signOut).toHaveBeenCalledTimes(2)
+  })
 })
