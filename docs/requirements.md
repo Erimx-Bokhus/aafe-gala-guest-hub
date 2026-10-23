@@ -22,7 +22,7 @@ Until the final PRDs (Natalie's and Pursuit's) arrive, this file plus the hub's 
 - **Logo / program materials status** per sponsor. [intake, call]
 - **Staff-approved follow-up emails** (draft, approve, send). [call]
 
-- **Activity log** visible to staff, and to each sponsor for their own seats. [prototype]
+- **Activity log:** gala admins see the whole change log; relationship managers see what sponsors changed in their portal and what Give Lively recorded; each sponsor sees their own seats' activity in the portal (decided Oct 22). [prototype]
 
 ## Should have
 - **QR-code e-tickets** emailed per guest; scan to check in on an iPad. [call: Sarah]
@@ -46,3 +46,4 @@ The full list, with what each unlocks, is on the hub's Discovery page ("Required
 - ~~**Seats per tier.**~~ Answered Oct 5 by AAFE's 2026 sponsorship flyer (`docs/decisions.md`). Only Champion and above guarantee a seat; Friend and Supporter tickets admit guests without a guaranteed table.
 - **Goals per category** for the dashboard (sponsorship dollars, tickets, attendance).
 - **Edits after the deadline.** Should sponsors be able to change names for a few days after the deadline? Until AAFE answers, links stop at the deadline and staff handle late swaps.
+- **Staff changes for relationship managers.** Should a relationship manager see staff changes on their own sponsors (a payment another staff member recorded, an email sent)? Until AAFE answers, only gala admins read the change log (Oct 22). To ask at the next review (Natalie's review of #234).
