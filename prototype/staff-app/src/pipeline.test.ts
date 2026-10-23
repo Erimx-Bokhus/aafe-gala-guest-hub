@@ -7,6 +7,7 @@ import { loadDB } from '@shared/data'
 import type { DB, StaffUser } from '@shared/types'
 import { demoApi, errorText, liveApi, type PipelineBoard } from './api'
 import { parseAmount } from './store'
+import { nyDate } from './date'
 // @ts-expect-error plain JavaScript helper shared with the backend tests
 import { openTestDb } from '../../scripts/test-db.mjs'
 
@@ -63,8 +64,10 @@ describe('the demo pipeline matches the database', () => {
     // Then pays part of it: payment received.
     const sOrder = (await as('authenticated', MEI.email, `select order_id from sponsor_prospects where id = $1`, [sNew]))[0].order_id
     const dOrder = (await api.pipeline()).prospects.find((p) => p.id === dNew)!.order_id!
-    await sql(`select staff_record_payment($1, 'check', 1000, '2027-03-01', '4411') r`, [sOrder])
-    await api.recordPayment(dOrder, { method: 'check', amount: 1000, received: '2027-03-01', check_number: '4411' })
+    // Dated today: the server refuses a payment dated more than 3 days ahead (#224).
+    const today = nyDate(new Date())
+    await sql(`select staff_record_payment($1, 'check', 1000, $2::date, '4411') r`, [sOrder, today])
+    await api.recordPayment(dOrder, { method: 'check', amount: 1000, received: today, check_number: '4411' })
     ;[server, mine] = await board()
     expect(mine).toEqual(server)
     expect(mine.goal).toBe(250000)
