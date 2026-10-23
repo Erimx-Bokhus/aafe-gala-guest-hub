@@ -258,7 +258,7 @@ const mixRow = csv({ date: '2027-02-07T17:00:00Z', email: 'mia.fold@example.org'
 await upload([mixRow])
 const mixOrder = (await db.query(`select order_id from payments where purchase_key = (select purchase_key('mia.fold@example.org', '2027-02-07T17:00:00Z'))`)).rows[0].order_id
 await db.query(`update orders set commitment_amount = 1000 where id = $1`, [mixOrder])
-await as('authenticated', RM, `select staff_record_payment($1, 'check', 100, '2027-02-08', '5001')`, [mixOrder])
+await as('authenticated', RM, `select staff_record_payment($1, 'check', 100, current_date, '5001')`, [mixOrder])
 await upload([{ ...mixRow, refunded: 100 }])
 ok((await db.query(`select status from orders where id = $1`, [mixOrder])).rows[0].status === 'paid', 'a partial Give Lively refund still counts the check staff recorded')
 
@@ -438,6 +438,42 @@ await db.query(`update staff_join_domains set until = now() + interval '7 days'`
 const back = (await as('authenticated', NEW, `select staff_me() m`))[0].m
 ok(back?.role === 'check_in_volunteer' && new Date(back.access_until) > new Date(), 'a later date lets them back in, with the role staff last set')
 await db.exec(`delete from staff_join_domains; delete from staff_users where id = 'st-boss'`)
+
+// ---- Input checks (#224, Cornell's review of Oct 21): emails, the portal's length caps on staff edits, payment dates.
+const nyPlus = async (n) => (await db.query(`select ((now() at time zone 'America/New_York')::date + $1::int)::text d`, [n])).rows[0].d
+const NOT_EMAIL = (v) => `invalid_input: "${v}" isn't an email address`
+// A payment needs the day it arrived; a few days ahead is fine, a year typed wrong isn't.
+ok(await err('authenticated', RM, `select staff_record_payment('ord-acme', 'check', 10, null, '7001')`) === 'invalid_input: enter the day the payment arrived',
+  'a payment with no date is refused in plain words, not the database\'s')
+ok((await err('authenticated', RM, `select staff_record_payment('ord-acme', 'check', 10, $1::date, '7002')`, [await nyPlus(4)]))?.endsWith('is more than 3 days ahead; enter the day the payment arrived'),
+  'a payment dated 4 days ahead is refused')
+ok(await err('authenticated', RM, `select staff_record_payment('ord-acme', 'check', 10, '2031-01-01', '7003')`) === 'invalid_input: January 1, 2031 is more than 3 days ahead; enter the day the payment arrived',
+  'a year typed wrong is refused, with the date in words')
+ok(await err('authenticated', RM, `select staff_record_payment('ord-acme', 'check', 10, $1::date, '7004')`, [await nyPlus(3)]) === null,
+  'a payment dated 3 days ahead is recorded (a check deposited after the weekend)')
+// Emails: checked when one is given or changed, wherever staff or the portal store one.
+const gst = (await db.query(`select g.id from guests g join orders o on o.id = g.order_id where o.event_id = current_event_id() and o.status <> 'cancelled'
+  and g.guest_type = 'sponsor_guest' order by g.id limit 1`)).rows[0].id
+ok(await err('authenticated', RM, `select staff_update_guest($1, $2)`, [gst, { email: 'nope' }]) === NOT_EMAIL('nope'), 'a staff edit refuses an email that isn\'t one')
+ok(await err('authenticated', RM, `select staff_update_guest($1, $2)`, [gst, { email: 'fixed.guest@example.org ' }]) === null
+  && (await db.query(`select email from guests where id = $1`, [gst])).rows[0].email === 'fixed.guest@example.org', 'and takes a real one, with a space typed after it trimmed')
+await db.query(`update guests set email = 'imported badly' where id = $1`, [gst])
+ok(await err('authenticated', RM, `select staff_update_guest($1, $2)`, [gst, { title: 'Director' }]) === null, 'an email an import stored earlier doesn\'t block other edits')
+const long = 'x'.repeat(5000)
+await as('authenticated', RM, `select staff_update_guest($1, $2)`, [gst, { last_name: long, title: long, organization: long }])
+const capped = (await db.query(`select length(last_name) l, length(title) t, length(organization) o from guests where id = $1`, [gst])).rows[0]
+ok(capped.l === 100 && capped.t === 200 && capped.o === 200, `a staff edit keeps the portal's length caps (5,000 characters in): ${JSON.stringify(capped)}`)
+ok(await err('authenticated', RM, `select staff_add_comp_guest($1)`, [{ first_name: 'Dana', last_name: 'Example', email: 'nope' }]) === NOT_EMAIL('nope'),
+  'a comp guest\'s email is checked')
+const comp224 = (await as('authenticated', RM, `select staff_add_comp_guest($1) id`, [{ first_name: 'Dana', last_name: long, title: long, email: 'dana.example@example.org' }]))[0].id
+const cc = (await db.query(`select length(last_name) l, length(title) t from guests where id = $1`, [comp224])).rows[0]
+ok(cc.l === 100 && cc.t === 200, `a comp guest keeps the portal's length caps: ${JSON.stringify(cc)}`)
+const lvl = (await db.query(`select id from sponsorship_tiers where event_id = current_event_id() and not retired and tier_category = 'sponsorship' order by id limit 1`)).rows[0].id
+ok(await err('authenticated', RM, `select staff_add_pledge('Example Pledge Co', 'Sam Lee', 'sam at example', $1, 'check')`, [lvl]) === NOT_EMAIL('sam at example'),
+  'a pledge\'s contact email is checked')
+const free = (await as('anon', null, `select portal_get_view('ac-6w9k3p5d') v`))[0].v.seats.find((x) => x.status === 'unnamed')
+ok(free && await err('anon', null, `select portal_save_guest('ac-6w9k3p5d', $1, $2)`, [free.slot, { first_name: 'Pat', last_name: 'Example', email: 'nope' }]) === NOT_EMAIL('nope'),
+  'the portal\'s save checks the email too, not only its form')
 
 console.log(`${pass} passed, ${fail} failed`)
 
