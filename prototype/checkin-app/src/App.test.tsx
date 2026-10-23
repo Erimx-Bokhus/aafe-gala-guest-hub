@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { StaffUser } from '@shared/types'
 import App from './App'
+import type { Arrival, Door, DoorGuest } from './door'
 
 const m = vi.hoisted(() => ({
   currentStaff: vi.fn(), sendSignInLink: vi.fn(), verifySignInCode: vi.fn(), loadDoor: vi.fn(), signInFromLink: vi.fn(async () => false),
@@ -81,6 +82,32 @@ describe('the iPad says what happened and what to do', () => {
     online(false)
     fireEvent.click(screen.getByTestId('verify-code'))
     expect((await screen.findByRole('alert')).textContent).toBe('No internet connection. Connect to Wi-Fi, then type the code again.')
+  })
+
+  // Oct 22 story run: Sam's QR ticket checked him in, and the scanner closed without a word, so the volunteer never
+  // saw whose ticket it was and had no Undo.
+  it('a QR check-in names the guest, with Undo, like a tap does', async () => {
+    const sam: DoorGuest = { id: 'g-sam', order_id: 'ord-1', first_name: 'Sam', last_name: 'Ortega', title: null, organization: null,
+      sponsor: 'AAFE', category: 'comp_relationship', seat_label: 'Complimentary guest of AAFE', table: null, access: false }
+    const arrivals = new Map<string, Arrival>()
+    const door: Door = {
+      gala: { id: 'ev-2027', name: 'AAFE Gala (demo)', event_date: '2027-05-20', doors_time: null, venue_name: null },
+      guests: [sam], sponsors: [], status: { online: true, pending: 0 },
+      arrivals: () => arrivals, exceptions: () => [], notices: () => [], dismiss: () => {}, checkIn: () => [], addException: () => '',
+      scan: vi.fn(async () => { arrivals.set('g-sam', { handle: 'c-sam', at: new Date().toISOString(), by: 'Door Tester', queued: true }); return { guestId: 'g-sam', handle: 'c-sam' } }),
+      undo: vi.fn(async () => null), subscribe: () => () => {}, start: () => {}, stop: () => {},
+    }
+    m.session = { user: { email: KENJI.email } }
+    m.currentStaff.mockResolvedValue(KENJI)
+    m.loadDoor.mockResolvedValue(door)
+    render(<App />)
+    fireEvent.click(await screen.findByTestId('open-scan'))
+    fireEvent.change(screen.getByTestId('qr-input'), { target: { value: 'AAFE-TEST-0001' } })
+    fireEvent.click(screen.getByTestId('qr-submit'))
+    expect((await screen.findByTestId('undo-toast')).textContent).toMatch(/Checked in\s*Sam Ortega · no assigned table · /)
+    expect(screen.queryByTestId('qr-input')).toBeNull()   // the scanner closed
+    fireEvent.click(screen.getByTestId('undo'))
+    await waitFor(() => expect(door.undo).toHaveBeenCalledWith(['c-sam']))
   })
 
   it('an iPad that is offline and signed out says to connect to sign in', async () => {

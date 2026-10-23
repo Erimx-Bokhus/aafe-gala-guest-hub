@@ -27,6 +27,11 @@ Fixed:
   the current gala's; gala admins read every year. Give Lively's raw records: gala admins only. The change log's old and
   new values: no API role (the app shows summaries). Tests: `test-access.mjs`, "a past gala's guests", "the change log's
   details".
+- **Relationship managers read the whole change log** (found Oct 22, in Aisling's review of the story video): every
+  staff member's app was sent who did what, though the log is gala admins' (Oct 20). Relationship managers now read only
+  the sponsor portal's and Give Lively's entries, in the database's read rule, which also decides what `staff_sync` sends.
+  Tests: `test-access.mjs`, "a relationship manager reads only the portal's and Give Lively's entries" (and "is sent by
+  staff_sync"); `ActivityTab.test.tsx`.
 - **Gala admins could edit the gala, tables and staff list directly**, with no line in the change log (a role change, a
   gala date that link expiries follow). Direct edits are gone for everyone; the staff app already saved through logged
   functions (decision of Oct 15 in `docs/decisions.md`). Test: `test-access.mjs`, "gala admin cannot update staff_users".
