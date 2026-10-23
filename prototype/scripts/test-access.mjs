@@ -35,6 +35,8 @@ const blocked = (e) => /row-level security|permission denied/.test(e ?? '')
 // join the staff list (Oct 21) is read by no API role: only the sign-in functions read it.
 const READERS = ['relationship_manager', 'gala_admin']
 const ADMIN_ONLY = ['givelively_raw']
+// Read whole by gala admins, in part by relationship managers (the change log: Oct 22, tested below).
+const MANAGERS_PART = ['audit_log']
 const NO_READERS = ['staff_join_domains']
 
 // One invented row in each table that starts empty, so every table is really probed.
@@ -62,7 +64,8 @@ for (const t of tables) {
 
   for (const c of callers) {
     const read = await attempt(c, `select count(*)::int n from ${t}`)
-    if (READERS.includes(c.kind) && !NO_READERS.includes(t) && !(c.kind === 'relationship_manager' && ADMIN_ONLY.includes(t))) ok(read === total, `${c.name} reads all of ${t} (${read}/${total})`)
+    if (c.kind === 'relationship_manager' && MANAGERS_PART.includes(t)) ok(read > 0 && read < total, `${c.name} reads part of ${t} (${read}/${total})`)
+    else if (READERS.includes(c.kind) && !NO_READERS.includes(t) && !(c.kind === 'relationship_manager' && ADMIN_ONLY.includes(t))) ok(read === total, `${c.name} reads all of ${t} (${read}/${total})`)
     else ok(read === 0 || blocked(read), `${c.name} reads nothing in ${t} (${read})`)
 
     const ins = await attempt(c, `with x as (insert into ${t} select * from jsonb_populate_record(null::${t}, $1) returning 1) select count(*)::int n from x`, [sample])
@@ -93,6 +96,24 @@ for (const k of READERS) {
   ok(blocked(await attempt(byKind(k), `select count(changes)::int n from audit_log`)), `${k} cannot read the change log's details`)
   ok(typeof (await attempt(byKind(k), `select count(summary)::int n from audit_log`)) === 'number', `${k} reads the change log's summaries`)
 }
+// The change log is gala admins' (Oct 20 and Oct 22): a relationship manager reads only what sponsors changed in their
+// portal and what Give Lively recorded (the dashboard's feed), never a staff member's change or another system's, and the
+// app's sync sends them no more than that.
+await db.exec(`insert into audit_log (at, actor_type, actor, entity, entity_id, order_id, action, guest_visible, summary) values
+  (now(), 'staff', 'Mei Lin Ortiz', 'order', 'ord-acme', 'ord-acme', 'payment.recorded', false, 'test: a staff change'),
+  (now(), 'guest_portal', 'Jordan Lee', 'guest', 'g-test', 'ord-acme', 'guest.added', true, 'test: a portal change'),
+  (now(), 'system', 'Give Lively sync (manual)', 'order', 'ord-acme', 'ord-acme', 'order.created', true, 'test: a Give Lively change'),
+  (now(), 'system', 'Email service', 'email', 'em-test', 'ord-acme', 'email.sent', false, 'test: another system change')`)
+const seen = async (k, sql) => attempt(byKind(k), `select count(*)::int n from (${sql}) x where summary like 'test: %'`)
+const direct = `select summary from audit_log`
+const synced = `select e->>'summary' summary from jsonb_array_elements(staff_sync()->'rows'->'audit_log') e`
+for (const [how, sql] of [['reads', direct], ['is sent by staff_sync', synced]]) {
+  ok(await seen('gala_admin', sql) === 4, `a gala admin ${how} every change-log entry`)
+  ok(await seen('relationship_manager', sql) === 2, `a relationship manager ${how} only the portal's and Give Lively's entries`)
+}
+ok(await attempt(byKind('relationship_manager'), `select count(*)::int n from audit_log where summary in ('test: a staff change', 'test: another system change')`) === 0,
+  'a relationship manager reads no staff change and no other system change')
+
 // The change log is append-only even for admins.
 for (const sql of [`update audit_log set summary = 'x'`, `delete from audit_log`, `truncate audit_log`])
   ok(blocked(await attempt(byKind('gala_admin'), sql)), `gala admin cannot run: ${sql}`)

@@ -3,6 +3,7 @@ import { netToAafe, orderMoney, seatStats, sponsorOf, tierOf } from '@shared/dat
 import { Link, Pill, ago, fmtDate, money } from '@shared/ui'
 import type { DB } from '@shared/types'
 import { Kpi, PageHead } from '../App'
+import { isFeedEntry } from '../api'
 import { useStaff } from '../store'
 
 export const curOrders = (db: DB) => db.orders.filter((o) => o.event_id === db.meta.current_event_id && o.status !== 'cancelled')
@@ -26,7 +27,7 @@ export default function Dashboard() {
   const guests = db.guests.filter((g) => ids.has(g.order_id))
   const unseated = guests.filter((g) => !g.table_id).length
   const arrived = db.check_ins.filter((c) => c.event_id === db.meta.current_event_id).length
-  const feed = db.audit_log.filter((a) => a.actor_type === 'guest_portal' || a.actor === 'Give Lively sync').slice(-8).reverse()
+  const feed = db.audit_log.filter(isFeedEntry).slice(-8).reverse()
   const attention = orders.map((o) => ({ o, st: seatStats(db, o.id), m: orderMoney(db, o.id) }))
     .filter(({ o, st, m }) => st.unnamed > 0 || st.needsReview > 0 || m.balance > 0 || o.logo_status === 'pending' || o.program_ad_status === 'pending')
     .sort((a, b) => b.o.commitment_amount - a.o.commitment_amount).slice(0, 7)
