@@ -40,7 +40,7 @@ const NAV: { to: string; label: string; icon: typeof LayoutDashboard; roles: Rol
   { to: '/import', label: 'Give Lively import', icon: FileUp, roles: ['gala_admin', 'relationship_manager'] },
   { to: '/integrations', label: 'Integrations & email', icon: Plug, roles: ['gala_admin'] },
   { to: '/reports', label: 'Reports', icon: FileSpreadsheet, roles: ['gala_admin', 'relationship_manager'] },
-  { to: '/activity', label: 'Activity log', icon: Activity, roles: ['gala_admin', 'relationship_manager'] },
+  { to: '/activity', label: 'Activity log', icon: Activity, roles: ['gala_admin'] },   // the change log is gala admins' (Oct 22)
 ]
 const ROLE_LABEL: Record<Role, string> = { gala_admin: 'Gala admin', relationship_manager: 'Relationship manager', check_in_volunteer: 'Check-in volunteer' }
 const navFor = (role: Role) => NAV.filter((n) => n.roles.includes(role))

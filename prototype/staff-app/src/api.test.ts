@@ -381,9 +381,12 @@ describe("a sponsor's whole change history", () => {
     expect(ord).toHaveBeenCalledWith('id')
     expect(log).toHaveLength(1)
   })
-  it('demo, returns every entry for the order; a volunteer may not read it', async () => {
+  it("demo, returns every entry to a gala admin, the portal's and Give Lively's to a relationship manager (Oct 22); a volunteer may not read it", async () => {
     const all = loadDB().audit_log.filter((a) => a.order_id === 'ord-acme')
-    expect(await demo(RM).api.history('ord-acme')).toHaveLength(all.length)
+    const feed = all.filter((a) => a.actor_type === 'guest_portal' || (a.actor_type === 'system' && a.actor.startsWith('Give Lively')))
+    expect(feed.length).toBeLessThan(all.length)   // the demo order has staff changes too, so this tells the two apart
+    expect(await demo(ADMIN).api.history('ord-acme')).toHaveLength(all.length)
+    expect((await demo(RM).api.history('ord-acme')).map((a) => a.id)).toEqual(feed.map((a) => a.id))
     await expect(demo(VOL).api.history('ord-acme')).rejects.toThrow('forbidden')
   })
 })
