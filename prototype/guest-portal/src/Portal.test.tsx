@@ -105,6 +105,34 @@ describe('guest-facing slot wording', () => {
   })
 })
 
+describe('sponsor review privacy', () => {
+  it('shows neither review status on reviewed or pending guest cards, and omits review activity', () => {
+    const db = loadDB()
+    const order = db.orders.find((item) => item.portal_token === TOKEN)!
+    const guestSeats = db.seats.filter((seat) => seat.order_id === order.id && seat.guest_id)
+    const reviewed = guestSeats[0]!
+    const pending = guestSeats[1]!
+    reviewed.status = 'reviewed'
+    pending.status = 'submitted'
+    const reviewedGuest = db.guests.find((guest) => guest.id === reviewed.guest_id)!
+    db.audit_log.push({
+      id: Math.max(...db.audit_log.map((entry) => entry.id)) + 1,
+      at: '2026-10-20T16:00:00Z', actor_type: 'staff', actor: 'Staff', entity: 'seat', entity_id: reviewed.id,
+      order_id: order.id, action: 'seat.reviewed', from_state: 'submitted', to_state: 'reviewed', guest_visible: true,
+      summary: `${reviewedGuest.first_name} ${reviewedGuest.last_name} confirmed by AAFE.`,
+    })
+    render(<PortalHarness initialDb={db} onDbChange={() => undefined} />)
+
+    for (const seat of [reviewed, pending]) {
+      const card = screen.getByTestId(`seat-${seat.slot_number}`)
+      expect(card.textContent).toContain('Last updated:')
+      expect(card.textContent).not.toContain('Received — AAFE is confirming')
+      expect(card.textContent).not.toContain('Confirmed by AAFE')
+    }
+    expect(screen.queryByText(/confirmed by AAFE/i)).toBeNull()
+  })
+})
+
 // Gate 3: when the live portal can't load or save, the sponsor reads what happened and what to do, never why a seat
 // is locked (a checked-in guest stays private: scripts/test-arrivals.mjs).
 describe('live portal failures', () => {
