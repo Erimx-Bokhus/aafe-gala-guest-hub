@@ -229,7 +229,7 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
   const removingSeat = !closed && removing != null ? view.seats.find((s) => s.slot === removing) : undefined
   const openSeats = view.stats.total - view.stats.named
   const namesLeftMessage = namesLeftText(openSeats, t.namesLeft)
-  // Review status is staff-only; do not expose review events in the sponsor activity feed.
+  // Sponsors don't see review status (Oct 20 feedback); hide review events in the sponsor activity feed.
   const sponsorActivity = view.activity.filter((a) => a.action !== 'seat.reviewed')
   const firstOpen = view.seats.find((s) => !s.guest)
   // Short place, like an invitation: the venue name (before any comma) and the city/state, no street or ZIP
