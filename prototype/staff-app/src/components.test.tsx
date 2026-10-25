@@ -99,7 +99,9 @@ describe('page failures say what happened and what to do (Gate 3)', () => {
     expect(note.getAttribute('title')).toBe('550 mailbox unavailable')   // the raw reason, for whoever fixes it
     expect(screen.queryByTestId('email-queue-failed')).toBeNull()
     fireEvent.click(screen.getByTestId('sf-sync'))
-    await waitFor(() => expect(toast).toHaveBeenLastCalledWith('Salesforce: 3 sent, 1 not sent. Try Sync now later.'))
+    // Salesforce's own reason, and since a missing field is a setup problem, not "try later" (Oct 24).
+    await waitFor(() => expect(toast).toHaveBeenLastCalledWith('Salesforce: 3 sent, 1 not sent. INVALID_FIELD: npe01__Opportunity__r. '
+      + 'This needs a change in Salesforce: show it to your technical partner, with the Salesforce setup list.'))
   })
 
   it("pipeline: a board that didn't load says why in words", async () => {

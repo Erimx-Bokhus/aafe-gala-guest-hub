@@ -3,7 +3,7 @@
 // (salesforce_mark_synced), all in PGlite. The stand-in starts with what Give Lively's own connector would have made,
 // so the push shows it adds nothing twice (Gate 1, box 5). Runs with npm run test:backend. Invented data only.
 import { readFileSync } from 'node:fs'
-import { BATCH, EXTERNAL_ID, LOOKUP, NO_EMAIL, optionsFrom, WAITS_FOR_ACCOUNT, pushAll, salesforceAccess, soqlText, summarize, toBatches, type Outbox, type PushPorts } from '../supabase/functions/_shared/salesforce.ts'
+import { BATCH, EXTERNAL_ID, LOOKUP, NO_EMAIL, optionsFrom, refusalText, WAITS_FOR_ACCOUNT, pushAll, salesforceAccess, soqlText, summarize, toBatches, type Outbox, type PushPorts } from '../supabase/functions/_shared/salesforce.ts'
 import { parseSoql } from '../supabase/functions/salesforce-mock/soql.ts'
 import { isOwnStandIn, standInPorts, type Rpc } from '../supabase/functions/salesforce-mock/standin.ts'
 // @ts-expect-error plain JavaScript helper
@@ -251,9 +251,29 @@ ok(real?.token === 'fresh-token' && asked[0].url === 'https://aafe-demo.my.sales
 let refused = ''
 try { await salesforceAccess(env({ SALESFORCE_BASE_URL: 'https://x.my.salesforce.com', SALESFORCE_CLIENT_ID: 'a', SALESFORCE_CLIENT_SECRET: 'b' }), fakeFetch(400, { error: 'invalid_client' })) }
 catch (e) { refused = (e as Error).message }
-ok(/sign-in failed \(HTTP 400\)/.test(refused) && !/secret|\bb\b/.test(refused.replace("client id and secret", '')), "a refused sign-in says so, without the secret")
+ok(/sign-in failed \(HTTP 400\)/.test(refused) && /Salesforce said: invalid_client$/.test(refused) && !/secret|\bb\b/.test(refused.replace("client id and secret", '')),
+  "a refused sign-in says so, with Salesforce's own reason, without the secret")
 ok((await salesforceAccess(env({ SALESFORCE_BASE_URL: 'https://p.supabase.co/functions/v1/salesforce-mock', SALESFORCE_TOKEN: 'demo' }), fakeFetch(500, {})))?.token === 'demo'
   && (await salesforceAccess(env({ SALESFORCE_TOKEN: 'demo' }), fakeFetch(500, {}))) === null, "the demo's stand-in keeps its fixed token; no address means not connected")
+
+// ---- Salesforce's own reason reaches staff, not "HTTP 400" (Oct 24, the review against Idlewild and NPSP)
+const noColumn = JSON.stringify([{ errorCode: 'INVALID_FIELD', message: "No such column 'npe01__HomeEmail__c' on entity 'Contact'." }])
+ok(refusalText(400, noColumn) === "Salesforce refused (HTTP 400): INVALID_FIELD: No such column 'npe01__HomeEmail__c' on entity 'Contact'.",
+  "a refused call keeps Salesforce's errorCode and message, as its REST API sends them")
+ok(refusalText(401, JSON.stringify({ error: 'invalid_grant', error_description: 'expired access/refresh token' })) === 'Salesforce refused (HTTP 401): invalid_grant: expired access/refresh token'
+  && refusalText(502, '<html>Bad gateway</html>') === 'Salesforce refused (HTTP 502)'
+  && refusalText(400, JSON.stringify([{ errorCode: 'X', message: 'y'.repeat(1000) }])).length === 300, 'a sign-in error reads the same way; a page that isn\'t JSON gives only the status; a long answer is cut to 300 characters')
+let malformed = ''
+try { parseSoql('SELECT Id FROM Contact') } catch (e) { malformed = (e as Error).message }
+const standInBody = JSON.stringify([{ errorCode: 'MALFORMED_QUERY', message: malformed }])   // what salesforce-mock answers over HTTP
+const hiddenField: PushPorts = { ...ports, query: (soql) => (parseSoql(soql).sobject === 'Contact' ? Promise.reject(new Error(refusalText(400, noColumn))) : ports.query(soql)) }
+const rh = await pushAll(await outbox(), hiddenField)
+const contactWhy = rh.find((x) => x.sf_object === 'Contact' && x.error !== NO_EMAIL)?.error ?? ''
+await mark(rh)
+const logged = (await q(`select error_message from salesforce_sync where entity = 'guest' and sf_object = 'Contact' and status = 'error' and error_message <> $1 limit 1`, [NO_EMAIL]))[0]?.error_message
+ok(/INVALID_FIELD: No such column 'npe01__HomeEmail__c'/.test(contactWhy) && logged === contactWhy && summarize(rh).first_error === contactWhy,
+  "an NPSP field the sync user can't see: the reason reaches each record, the sync log and the staff app's summary")
+ok(refusalText(400, standInBody) === `Salesforce refused (HTTP 400): MALFORMED_QUERY: ${malformed}`, "and the stand-in's HTTP errors read the same way")
 
 console.log(`salesforce: ${count.pass} passed, ${count.fail} failed`)
 if (count.fail) process.exitCode = 1

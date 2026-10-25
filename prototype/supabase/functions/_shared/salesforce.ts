@@ -51,6 +51,22 @@ export function optionsFrom(get: (key: string) => string): PushOptions {
   return { payments: pay !== 'false', guests: guests === 'attended' || guests === 'none' ? guests : 'all' }
 }
 
+/** Salesforce's own reason for refusing a call, from its answer's body: each errorCode and message (REST errors
+ *  are a list of {errorCode, message}; sign-in errors one {error, error_description}). Never the request or the
+ *  token; at most 300 characters, so a long answer can't flood the sync log. Not JSON (a proxy's error page): only
+ *  the HTTP status. Before Oct 24 every refusal read "HTTP 400", so a setup problem looked like "try later". */
+export function refusalText(status: number, body: string): string {
+  let said = ''
+  try {
+    const answer: unknown = JSON.parse(body)
+    said = (Array.isArray(answer) ? answer : [answer]).map((x) => {
+      const r = (x ?? {}) as Record<string, unknown>
+      return [r.errorCode ?? r.error, r.message ?? r.error_description].filter((v) => typeof v === 'string' && v).join(': ')
+    }).filter(Boolean).join('; ')
+  } catch { /* not JSON: the status is all Salesforce said */ }
+  return `Salesforce refused (HTTP ${status})${said ? `: ${said}` : ''}`.slice(0, 300)
+}
+
 /** Where to send and the token to send with. Null when Salesforce isn't connected. */
 export interface SfAccess { base: string; token: string }
 /** Signs in to Salesforce. With a connected app (SALESFORCE_CLIENT_ID and SALESFORCE_CLIENT_SECRET) it asks for a
@@ -63,7 +79,10 @@ export async function salesforceAccess(get: (key: string) => string, fetcher: ty
   if (id && secret) {
     const res = await fetcher(`${base}/services/oauth2/token`, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({ grant_type: 'client_credentials', client_id: id, client_secret: secret }).toString() })
-    if (!res.ok) throw new Error(`Salesforce sign-in failed (HTTP ${res.status}): check the connected app's client id and secret`)
+    if (!res.ok) {
+      const said = refusalText(res.status, await res.text()).replace(/^Salesforce refused \(HTTP \d+\):? ?/, '')
+      throw new Error(`Salesforce sign-in failed (HTTP ${res.status}): check the connected app's client id and secret${said ? `. Salesforce said: ${said}` : ''}`)
+    }
     const t = await res.json() as { access_token?: string; instance_url?: string }
     if (!t.access_token) throw new Error('Salesforce sign-in gave no access token')
     return { base: (t.instance_url || base).replace(/\/$/, ''), token: t.access_token }
