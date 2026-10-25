@@ -8,7 +8,7 @@
 import { admin, cors, env, json } from '../_shared/supabase.ts'
 import { parseSoql } from './soql.ts'
 
-const SOBJECTS = new Set(['Campaign', 'Account', 'Opportunity', 'npe01__OppPayment__c', 'Contact', 'CampaignMember'])
+const SOBJECTS = new Set(['Campaign', 'Account', 'Opportunity', 'npe01__OppPayment__c', 'Contact', 'CampaignMember', 'CampaignMemberStatus'])
 const notFound = () => json([{ errorCode: 'NOT_FOUND', message: 'The requested resource does not exist' }], 404)
 const answer = ({ data, error }: { data: unknown; error: { message: string } | null }, wrap = (d: unknown) => d) =>
   error ? json([{ errorCode: 'UNKNOWN_EXCEPTION', message: error.message }], 500) : json(wrap(data))

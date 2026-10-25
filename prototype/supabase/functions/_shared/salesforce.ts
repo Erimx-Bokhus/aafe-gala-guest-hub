@@ -5,7 +5,10 @@
 // orders with their sponsors and payments, and every named guest, comps included, as a member of the gala's Campaign.
 //
 // Nothing lands twice next to Give Lively's records (Gate 1, box 5):
-// - the gala's Campaign is Give Lively's own when it has made one (same name), else ours;
+// - the gala's Campaign is Give Lively's own when it has made one (its page's name, or its "Event - " child), else
+//   ours. Give Lively's is linked and given only our id, never renamed (Oct 24, the review against Idlewild and NPSP);
+// - NPSP makes a payment of its own for each new Opportunity; ours say not to, since we send each real payment;
+// - the gala's Campaign gets the member statuses we send (Registered, Attended, No Show) before any member;
 // - a guest whose email is already on a Contact is that Contact, picked the way Give Lively picks it; it is linked,
 //   never overwritten. Only guests Salesforce doesn't know become Contacts, one per email;
 // - a guest already in the Campaign keeps that membership; only its status changes;
@@ -13,14 +16,13 @@
 // - a sponsor whose name is already on one Account is that Account: linked, never overwritten (Oct 20, review of
 //   #190); two or more with that name and nothing is made until staff say which;
 // - a guest with no email is skipped: it could only be matched by name, so it would risk a duplicate Contact.
-// Settings (optionsFrom): SALESFORCE_SEND_PAYMENTS=false stops payment records, for when NPSP makes its own;
-// SALESFORCE_SEND_GUESTS=attended|none limits which guests go (AAFE and Graybox decide; default: all, as before).
+// Settings (optionsFrom): SALESFORCE_SEND_PAYMENTS=false stops payment records, leaving NPSP's own;
+// SALESFORCE_SEND_GUESTS=attended|none limits which guests go (AAFE and Idlewild decide; default: all, as before).
 // Sign-in (salesforceAccess): a connected app's client id and secret get a fresh token each run; a fixed
 // SALESFORCE_TOKEN is only for the demo's stand-in, since a real token expires.
 // Our own records are upserted on our ids in a custom external-ID field, so sending again updates instead of
 // duplicating. Before a real connection AAFE's org would need that field (Text, External ID, Unique) on Campaign,
-// Account, Opportunity, npe01__OppPayment__c and Contact, and Registered, Attended and No Show as member statuses
-// on the gala's Campaign.
+// Account, Opportunity, npe01__OppPayment__c and Contact.
 
 export const EXTERNAL_ID = 'AAFE_Gala_Id__c'
 /** What staff see when salesforce-push can't run (no SALESFORCE_BASE_URL, or no way to sign in). */
@@ -37,9 +39,15 @@ export const WAITS_FOR_ACCOUNT = "Not sent: this sponsor's Account isn't settled
 /** Why a guest with no email isn't sent: by name alone it could only be matched wrongly or duplicated. */
 export const NO_EMAIL = 'Skipped: no email, so Salesforce could only get a duplicate. Match this guest to their Contact by hand.'
 
-/** What to send, set by AAFE and Graybox (optionsFrom). The defaults send everything, as before. */
+/** NPSP's checkbox on an Opportunity that stops it making a payment of its own (it makes one by default). */
+export const NO_AUTO_PAYMENT = 'npe01__Do_Not_Automatically_Create_Payment__c'
+/** The member statuses we send, which the gala's Campaign must have before a member can carry one. */
+export const MEMBER_STATUSES = ['Registered', 'Attended', 'No Show']
+
+/** What to send, set by AAFE and Idlewild (optionsFrom). The defaults send everything, as before. */
 export interface PushOptions {
-  /** False when NPSP creates its own payment records for a new Opportunity, so payments don't appear twice. */
+  /** True: each real payment, with NPSP told not to make its own (NO_AUTO_PAYMENT), so none counts twice. False:
+   *  no payments, and NPSP's own (one per Opportunity, for its full amount) is the only record. */
   payments: boolean
   /** Which guests become Contacts and Campaign members: every named guest, only those who came, or none. */
   guests: 'all' | 'attended' | 'none'
@@ -150,8 +158,10 @@ export function toBatches(o: Outbox, campaignId: string | null, linked: Map<stri
     ({ sobject, entity, ids: rows.map((r) => r.id), records: rows.map(make) })
   const account = (id: string) => (linked.has(id) ? { AccountId: linked.get(id) } : { Account: ref(id) })
   return [
+    // With our payments going, NPSP mustn't add one of its own: a $10,000 pledge paid by two checks would read $20,000.
     batch('Opportunity', 'order', o.opportunities, (p) => rec('Opportunity', p.id, {
-      Name: p.name, Amount: p.amount, CloseDate: p.close_date, StageName: STAGE[p.status] ?? 'Pledged', ...account(p.account_id), ...(campaignId ? { CampaignId: campaignId } : {}) })),
+      Name: p.name, Amount: p.amount, CloseDate: p.close_date, StageName: STAGE[p.status] ?? 'Pledged', ...account(p.account_id), ...(campaignId ? { CampaignId: campaignId } : {}),
+      ...(opts.payments ? { [NO_AUTO_PAYMENT]: true } : {}) })),
     ...(opts.payments ? [batch('npe01__OppPayment__c', 'payment', o.payments, (p) => rec('npe01__OppPayment__c', p.id, {
       npe01__Opportunity__r: ref(p.order_id), npe01__Payment_Amount__c: p.amount, npe01__Payment_Date__c: p.date, npe01__Payment_Method__c: METHOD[p.method] ?? p.method, npe01__Paid__c: true }))] : []),
   ]
@@ -203,21 +213,46 @@ async function find(ports: PushPorts, sobject: string, fields: string[], where: 
   return rows
 }
 
-/** The gala's Campaign id: ours if we made it, else Give Lively's (Give Lively names it after its page, cut to 80
- *  characters), else a new one of ours. Null, with the reason in the results, when it can't be told or sent. */
+/** The gala's Campaign id, found in this order: the one carrying our id; else Give Lively's, named after its page
+ *  (cut to 80 characters), or its "Event - " child when campaign hierarchy is on (preferred: that's the event);
+ *  else a new one of ours. A found Campaign is never rewritten (it's Give Lively's or AAFE's to name): one of
+ *  Give Lively's only gets our id, so the next sync finds it by id. Null, with the reason in the results, when it
+ *  can't be told or sent. */
 async function pushCampaign(c: NonNullable<Outbox['campaign']>, ports: PushPorts, results: SyncResult[]): Promise<string | null> {
   const done = (sf_id: string | null, error: string | null) => { results.push({ entity: 'gala', entity_id: c.id, sf_object: 'Campaign', sf_id, error }); return error ? null : sf_id }
-  const name = (c.givelively_name || c.name).slice(0, 80)
+  const name = (c.givelively_name || c.name).slice(0, 80), child = `Event - ${name}`.slice(0, 80)
   let rows: Record<string, unknown>[]
-  try { rows = await ports.query(`SELECT Id, ${EXTERNAL_ID} FROM Campaign WHERE ${EXTERNAL_ID} = ${soqlText(c.id)} OR Name = ${soqlText(name)}`) } catch (e) { return done(null, message(e)) }
+  try { rows = await ports.query(`SELECT Id, Name, ${EXTERNAL_ID} FROM Campaign WHERE ${EXTERNAL_ID} = ${soqlText(c.id)} OR Name IN (${soqlText(name)}, ${soqlText(child)})`) }
+  catch (e) { return done(null, message(e)) }
+  const ours = rows.find((r) => r[EXTERNAL_ID] === c.id)
+  if (ours) return done(String(ours.Id), null)
   // A same-named Campaign that carries another gala's id is that gala's, not Give Lively's.
-  const theirs = rows.filter((r) => !r[EXTERNAL_ID])
-  if (!rows.some((r) => r[EXTERNAL_ID] === c.id) && theirs.length === 1) return done(String(theirs[0].Id), null)
-  if (!rows.some((r) => r[EXTERNAL_ID] === c.id) && theirs.length > 1) {
-    return done(null, `${theirs.length} Campaigns in Salesforce are named "${name}": put ${c.id} in the ${EXTERNAL_ID} field of the gala's one`)
+  const named = (n: string) => rows.filter((r) => !r[EXTERNAL_ID] && String(r.Name ?? '').toLowerCase() === n.toLowerCase())
+  const [theirs, called] = named(child).length ? [named(child), child] : [named(name), name]
+  if (theirs.length > 1) return done(null, `${theirs.length} Campaigns in Salesforce are named "${called}": put ${c.id} in the ${EXTERNAL_ID} field of the gala's one`)
+  if (theirs.length === 1) {
+    const id = String(theirs[0].Id)
+    // ponytail: claiming is a convenience; if our id can't be written, this sync still uses the Campaign and the next finds it by name again.
+    await write([{ attributes: { type: 'Campaign' }, Id: id, [EXTERNAL_ID]: c.id }], (r) => ports.save('update', r))
+    return done(id, null)
   }
   const [a] = await write([rec('Campaign', c.id, { Name: c.name, StartDate: c.date, Type: 'Event', IsActive: true })], (r) => ports.upsert('Campaign', r))
   return done(...outcomeOf(a))
+}
+
+/** Adds the member statuses we send (MEMBER_STATUSES) that the gala's Campaign doesn't have yet. A new Campaign has
+ *  only Salesforce's own (Sent, Responded), and a member whose status its Campaign lacks is refused. If this fails,
+ *  the members still go, and each one Salesforce refuses says why. */
+async function pushStatuses(campaignId: string, ports: PushPorts) {
+  let rows: Record<string, unknown>[]
+  try { rows = await ports.query(`SELECT Id, Label, SortOrder FROM CampaignMemberStatus WHERE CampaignId = ${soqlText(campaignId)}`) } catch { return }
+  const have = new Set(rows.map((r) => String(r.Label ?? '').toLowerCase()))
+  let order = Math.max(0, ...rows.map((r) => Number(r.SortOrder ?? 0)))   // Salesforce wants each SortOrder once per Campaign
+  const missing = MEMBER_STATUSES.filter((s) => !have.has(s.toLowerCase()))
+  if (missing.length) {
+    await write(missing.map((s) => ({ attributes: { type: 'CampaignMemberStatus' }, CampaignId: campaignId, Label: s, HasResponded: s === 'Attended', SortOrder: ++order })),
+      (r) => ports.save('create', r))
+  }
 }
 
 /** Salesforce's Contacts with these emails: each email -> the Contact Give Lively would pick (most gifts, then one
@@ -268,6 +303,7 @@ async function pushMembers(campaignId: string | null, guests: Guest[], contactOf
     else byContact.set(contact, [...(byContact.get(contact) ?? []), g])
   }
   if (campaignId && byContact.size) {
+    await pushStatuses(campaignId, ports)
     let member = new Map<string, string>()   // Contact id -> its CampaignMember id
     let lookupFailed: string | null = null
     try {
