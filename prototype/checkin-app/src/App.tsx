@@ -169,7 +169,8 @@ function LiveApp({ prefs }: { prefs: Prefs }) {
       <div className="mt-10 rounded-2xl border-2 border-navy-100 bg-surface p-6" role="alert">
         <h1 className="text-2xl font-semibold text-navy-900">{door === 'closed' ? 'Tonight’s gala is closed' : 'The guest list didn’t load'}</h1>
         <p className="mt-2 text-lg text-navy-700">{door === 'closed'
-          ? 'The guest list has been cleared from this iPad. If guests are still arriving, ask a gala admin to reopen the gala in the staff app, then tap Try again.'
+          // No staff app screen reopens a gala: a gala admin does it in the SQL editor (docs/operations.md, "Gala night").
+          ? 'The guest list has been cleared from this iPad. If guests are still arriving, ask a gala admin to reopen the gala, then tap Try again.'
           : 'Check the internet connection, then try again. Nothing was lost.'}</p>
         <div className="mt-6 flex flex-wrap gap-3">
           {/* Loads the door again: a reopened gala's list comes back, as does one that failed to load. */}
