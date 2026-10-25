@@ -25,7 +25,8 @@ Until v1.0.0, every fix merged into `main` is also merged into `nightly` with a 
 - `v1.0.0`: Stable V1, tagged with a GitHub release and its notes.
 - `v1.0.1`, …: fixes to Stable V1, on `release/v1`.
 
-The release notes live on the GitHub release for each tag; there is no separate changelog file.
+The release notes live on the GitHub release for each tag, on the repository's Releases page; there is no separate
+changelog file. The releases stay with the repository if it's transferred, but a clone doesn't carry them.
 
 ## Before any tag
 
@@ -73,11 +74,13 @@ Tagged when all of these are true:
 3. **No open high or medium bug** on the stable line.
 4. **Stable runs the commit being tagged**, every layer ("Before any tag", step 3).
 5. **The last candidate's changes were clicked through:** each screen a pull request changed since the last full
-   click-through (`D:\aafe-gala-clickthrough` kit, local Supabase) works as its pull request says.
+   click-through ([click-through.md](click-through.md), on a local Supabase) works as its pull request says.
 
 ## After v1.0.0
 
-1. **Cut `release/v1`** from the tag: `git push origin v1.0.0:refs/heads/release/v1`.
+1. **Cut `release/v1`** from the tag: `git push origin 'v1.0.0^{commit}:refs/heads/release/v1'`. The `^{commit}`
+   is needed: `v1.0.0` is an annotated tag, and a branch can only point at a commit, so pushing the tag itself as a
+   branch is rejected (Cornell, review of #254).
 2. **Protect it like `main`** (repository settings, by the repo admin): a pull request with one approval and the same six
    checks, no force pushes, no deletion.
 3. **A fix for Stable V1:** a pull request into `release/v1`; once merged, deploy stable from a checkout of `release/v1`
