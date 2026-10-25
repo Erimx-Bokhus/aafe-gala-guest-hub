@@ -11,6 +11,9 @@ import { DICT, LANGS, type Lang } from './i18n'
 import Portal from './Portal'
 import Landing from './Landing'
 
+// English only for v1. AAFE can turn this on after a native speaker reviews the draft translations (Natalie's review of #240, Oct 24).
+const SHOW_LANGUAGES = false
+
 export default function App() {
   const path = useRoute()
   const [db, setDb] = useState<DB>(loadDB)
@@ -34,7 +37,7 @@ export default function App() {
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-2.5 sm:px-5">
           <a href="#/" aria-label="Asian Americans for Equality — home"><AafeLogo /></a>
           <div className="flex items-center gap-1.5 sm:gap-2">
-            <LanguageSelect value={lang} onChange={setLang} options={LANGS} label={t.langLabel} />
+            {SHOW_LANGUAGES && <LanguageSelect value={lang} onChange={setLang} options={LANGS} label={t.langLabel} />}
             <DisplayControls prefs={prefs} labels={{ smaller: t.smaller, larger: t.larger, theme: prefs.dark ? t.toLight : t.toDark }} />
           </div>
         </div>
