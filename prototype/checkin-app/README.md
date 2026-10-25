@@ -7,7 +7,8 @@ staff working the door see check-in and nothing else: no sponsors, payments, or 
 
 ## What it does
 - Opens straight to tonight's gala, the **53rd** (past galas are over, so there's no gala picker).
-  **Live** (Supabase keys set): staff sign in with an emailed link to their AAFE staff account (PR #27); the
+  **Live** (Supabase keys set): staff sign in with a 6-digit code (or link) emailed to them, if they're on the staff
+  list or, until Nov 21, 2026, at @aafe.org or @pursuit.org (PR #27, #229); the
   `check_in_volunteer` role sees check-in only. **Demo** (no keys): choose who is checking guests in, no password.
 - The full guest list A–Z by last name, with counts for AAFE's seven guest categories (sponsor guests,
   ticket holders, comped, AAFE staff, event volunteers, event staff, government or VIP). The demo list
@@ -28,7 +29,8 @@ staff working the door see check-in and nothing else: no sponsors, payments, or 
 The app must be hosted at a permanent **https** address (Cloudflare Pages or Vercel). Then, on each iPad:
 1. Open the address in **Safari** (it must be Safari).
 2. Tap **Share** (the square with the arrow) → **Add to Home Screen** → **Add**. The "AAFE Check-in" icon appears.
-3. Open it from the icon and sign in once. It stays signed in until someone taps **Sign out**.
+3. Open it from the icon and sign in once by **typing the 6-digit code** from the email (the email's link opens Safari,
+   not this app). It stays signed in until someone taps **Sign out**.
 4. Before doors open, open it once while online, so the iPad has the newest app and tonight's guest list.
 
 After that the app opens from the icon even if the venue's Wi-Fi is down; check-ins wait on the iPad and send
