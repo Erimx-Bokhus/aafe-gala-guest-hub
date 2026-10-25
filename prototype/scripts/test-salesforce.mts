@@ -3,7 +3,7 @@
 // (salesforce_mark_synced), all in PGlite. The stand-in starts with what Give Lively's own connector would have made,
 // so the push shows it adds nothing twice (Gate 1, box 5). Runs with npm run test:backend. Invented data only.
 import { readFileSync } from 'node:fs'
-import { BATCH, EXTERNAL_ID, LOOKUP, MEMBER_STATUSES, NO_AUTO_PAYMENT, NO_EMAIL, optionsFrom, WAITS_FOR_ACCOUNT, pushAll, salesforceAccess, soqlText, summarize, toBatches, type Outbox, type PushPorts } from '../supabase/functions/_shared/salesforce.ts'
+import { BATCH, EXTERNAL_ID, LOOKUP, MEMBER_STATUSES, NO_AUTO_PAYMENT, NO_EMAIL, optionsFrom, refusalText, WAITS_FOR_ACCOUNT, pushAll, salesforceAccess, soqlText, summarize, toBatches, type Outbox, type PushPorts } from '../supabase/functions/_shared/salesforce.ts'
 import { parseSoql } from '../supabase/functions/salesforce-mock/soql.ts'
 import { isOwnStandIn, standInPorts, type Rpc } from '../supabase/functions/salesforce-mock/standin.ts'
 // @ts-expect-error plain JavaScript helper
@@ -267,7 +267,8 @@ ok(real?.token === 'fresh-token' && asked[0].url === 'https://aafe-demo.my.sales
 let refused = ''
 try { await salesforceAccess(env({ SALESFORCE_BASE_URL: 'https://x.my.salesforce.com', SALESFORCE_CLIENT_ID: 'a', SALESFORCE_CLIENT_SECRET: 'b' }), fakeFetch(400, { error: 'invalid_client' })) }
 catch (e) { refused = (e as Error).message }
-ok(/sign-in failed \(HTTP 400\)/.test(refused) && !/secret|\bb\b/.test(refused.replace("client id and secret", '')), "a refused sign-in says so, without the secret")
+ok(/sign-in failed \(HTTP 400\)/.test(refused) && /Salesforce said: invalid_client$/.test(refused) && !/secret|\bb\b/.test(refused.replace("client id and secret", '')),
+  "a refused sign-in says so, with Salesforce's own reason, without the secret")
 ok((await salesforceAccess(env({ SALESFORCE_BASE_URL: 'https://p.supabase.co/functions/v1/salesforce-mock', SALESFORCE_TOKEN: 'demo' }), fakeFetch(500, {})))?.token === 'demo'
   && (await salesforceAccess(env({ SALESFORCE_TOKEN: 'demo' }), fakeFetch(500, {}))) === null, "the demo's stand-in keeps its fixed token; no address means not connected")
 
@@ -314,6 +315,44 @@ const off = await paymentsOn('ord-npsp-off')
 ok(off.length === 1 && Number(off[0].fields.npe01__Payment_Amount__c) === 3000 && off[0].fields.npe01__Paid__c === false,
   "SALESFORCE_SEND_PAYMENTS=false: NPSP's own payment, unpaid for a pledge, is the only one (the stand-in makes it as NPSP does)")
 await q(`reset demo_salesforce.npsp_auto_payments`)
+
+// ---- Salesforce's own reason reaches staff, not "HTTP 400" (Oct 24, the review against Idlewild and NPSP)
+const noColumn = JSON.stringify([{ errorCode: 'INVALID_FIELD', message: "No such column 'npe01__HomeEmail__c' on entity 'Contact'." }])
+ok(refusalText(400, noColumn) === "Salesforce refused (HTTP 400): INVALID_FIELD: No such column 'npe01__HomeEmail__c' on entity 'Contact'.",
+  "a refused call keeps Salesforce's errorCode and message, as its REST API sends them")
+ok(refusalText(401, JSON.stringify({ error: 'invalid_grant', error_description: 'expired access/refresh token' })) === 'Salesforce refused (HTTP 401): invalid_grant: expired access/refresh token'
+  && refusalText(502, '<html>Bad gateway</html>') === 'Salesforce refused (HTTP 502)'
+  && refusalText(400, JSON.stringify([{ errorCode: 'X', message: 'y'.repeat(1000) }])).length === 300, 'a sign-in error reads the same way; a page that isn\'t JSON gives only the status; a long answer is cut to 300 characters')
+let malformed = ''
+try { parseSoql('SELECT Id FROM Contact') } catch (e) { malformed = (e as Error).message }
+const standInBody = JSON.stringify([{ errorCode: 'MALFORMED_QUERY', message: malformed }])   // what salesforce-mock answers over HTTP
+const hiddenField: PushPorts = { ...ports, query: (soql) => (parseSoql(soql).sobject === 'Contact' ? Promise.reject(new Error(refusalText(400, noColumn))) : ports.query(soql)) }
+const rh = await pushAll(await outbox(), hiddenField)
+const contactWhy = rh.find((x) => x.sf_object === 'Contact' && x.error !== NO_EMAIL)?.error ?? ''
+await mark(rh)
+const logged = (await q(`select error_message from salesforce_sync where entity = 'guest' and sf_object = 'Contact' and status = 'error' and error_message <> $1 limit 1`, [NO_EMAIL]))[0]?.error_message
+ok(/INVALID_FIELD: No such column 'npe01__HomeEmail__c'/.test(contactWhy) && logged === contactWhy && summarize(rh).first_error === contactWhy,
+  "an NPSP field the sync user can't see: the reason reaches each record, the sync log and the staff app's summary")
+ok(refusalText(400, standInBody) === `Salesforce refused (HTTP 400): MALFORMED_QUERY: ${malformed}`, "and the stand-in's HTTP errors read the same way")
+
+// ---- No email in the sync log (Cornell's review of #252): Salesforce quotes the value it refused, and contacts_delete
+// doesn't clean salesforce_sync 60 days after the gala.
+const quoted = (e: string) => `Email: invalid email address: ${e}`
+const lead = 'Salesforce refused (HTTP 400): X: ', cutAt = 300 - (gB.email.indexOf('@') + 4)   // the cut lands just past the @
+ok(refusalText(400, JSON.stringify([{ errorCode: 'INVALID_EMAIL_ADDRESS', message: quoted(gB.email) }])) === `Salesforce refused (HTTP 400): INVALID_EMAIL_ADDRESS: ${quoted('(email hidden)')}`
+  && !refusalText(400, JSON.stringify([{ errorCode: 'X', message: `${'y'.repeat(cutAt - lead.length - 1)} ${gB.email}` }])).includes('@'),
+  'a refused call names no email, not even one cut off at 300 characters')
+const fresh = 'refused.on.sync@guest.example.org'   // invented; new to the stand-in, so the push sends it
+await q(`update guests set email = $1 where id = $2`, [fresh, gB.id])
+const badEmail: PushPorts = { ...ports, upsert: (sobject, records) => (sobject === 'Contact'
+  ? Promise.resolve(records.map((r) => ({ success: false, errors: [{ statusCode: 'INVALID_EMAIL_ADDRESS', message: quoted(String(r.Email)) }] })))
+  : ports.upsert(sobject, records)) }
+const re = await pushAll(await outbox(), badEmail)
+await mark(re)
+const kept = (await q(`select count(*)::int n from salesforce_sync where error_message ~ '@'`))[0].n
+ok(re.find((x) => x.entity_id === gB.id && x.sf_object === 'Contact')?.error === `INVALID_EMAIL_ADDRESS: ${quoted('(email hidden)')}`
+  && re.every((x) => !x.error?.includes('@')) && kept === 0,
+  'a record refused for its email: the reason reaches the sync log, the email does not')
 
 console.log(`salesforce: ${count.pass} passed, ${count.fail} failed`)
 if (count.fail) process.exitCode = 1
