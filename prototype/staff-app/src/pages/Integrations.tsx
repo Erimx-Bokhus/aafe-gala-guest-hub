@@ -5,6 +5,16 @@ import { PageHead } from '../App'
 import { SAMPLE_HEAD, importGiveLively, sampleRows, useStaff, type GLRow } from '../store'
 import { canDo, type PullCounts, type QueuedEmail } from '../api'
 import { csvName, isDemo, salesforceCsv } from '../exports'
+import { NO_EMAIL } from '../../../supabase/functions/_shared/salesforce.ts'
+
+/** A record Salesforce refused, said for staff: its own reason, then what to do. A dropped connection or a busy org
+ *  passes, so trying again helps; anything else (a missing field, no access, a value Salesforce doesn't take) needs a
+ *  change in Salesforce first. Until Oct 24 every refusal said "Try Sync now later", setup problems included. */
+function sfReason(reason: string | null): string {
+  if (!reason) return 'Try Sync now later.'
+  const passing = /HTTP 5\d\d|timed? ?out|network|failed to fetch|UNABLE_TO_LOCK_ROW|REQUEST_LIMIT_EXCEEDED|SERVER_UNAVAILABLE|No answer from Salesforce/i.test(reason)
+  return `${reason.replace(/[.\s]+$/, '')}. ${passing ? 'Try Sync now later.' : 'This needs a change in Salesforce: show it to your technical partner, with the Salesforce setup list.'}`
+}
 
 // Column names follow Give Lively's "Line Items (All)" report. Confirm against a real AAFE export before launch.
 const COLS: Record<keyof GLRow, string[]> = {
@@ -53,6 +63,9 @@ export default function Integrations() {
   const [err, setErr] = useState('')
   const pending = db.salesforce_sync.filter((s) => s.status === 'pending').length
   const synced = db.salesforce_sync.filter((s) => s.status === 'synced').length
+  // Records Salesforce refused, newest first; a guest skipped for having no email is counted in its own message.
+  const notSent = db.salesforce_sync.filter((s) => s.status === 'error' && s.error_message !== NO_EMAIL)
+    .sort((a, b) => String(b.last_synced_at ?? '').localeCompare(String(a.last_synced_at ?? '')))
   const lastSync = db.salesforce_sync.map((s) => s.last_synced_at).filter(Boolean).sort().at(-1)
   // Unsent emails from staff_email_queue(): drafts to approve, approved ones waiting for the sender, and failed ones.
   const [queue, setQueue] = useState<QueuedEmail[]>([])
@@ -77,8 +90,8 @@ export default function Integrations() {
   }
   const pullNow = () => once('pull', () => api.pullGiveLively().then((c) => { setLastPull(new Date().toISOString()); toast(pullSummary(c)) }))
 
-  // Salesforce's own reason for a record it refused stays in the sync log; staff get what to do.
-  const syncNow = () => once('sync', () => api.syncSalesforce().then((r) => toast((r.failed ? `Salesforce: ${r.sent} sent, ${r.failed} not sent. Try Sync now later.` : `Salesforce: ${r.sent} record${r.sent === 1 ? '' : 's'} sent`)
+  // Salesforce's own reason for a record it refused, and what to do about it (sfAdvice).
+  const syncNow = () => once('sync', () => api.syncSalesforce().then((r) => toast((r.failed ? `Salesforce: ${r.sent} sent, ${r.failed} not sent. ${sfReason(r.first_error)}` : `Salesforce: ${r.sent} record${r.sent === 1 ? '' : 's'} sent`)
     + (r.skipped ? ` ${r.skipped} guest record${r.skipped === 1 ? '' : 's'} without an email skipped: match them in Salesforce by hand.` : ''))))
 
   return (
@@ -116,11 +129,14 @@ export default function Integrations() {
             <tbody className="divide-y divide-navy-100">
               {[['Gala', 'Campaign: Give Lively’s own, once it has made one'], ['Sponsor with a check, ACH or wire order', 'Account'], ['That order', 'Opportunity, in the gala’s Campaign'], ['Check, ACH or wire payment', 'npe01__OppPayment__c (Payment)'], ['Guest, comps included', 'Contact (the one Salesforce already has for that email, if any) + Campaign Member: Registered, Attended or No Show']].map(([a, b]) => <tr key={a}><td className="py-2 pr-3 font-medium text-navy-800">{a}</td><td className="py-2 text-navy-600">{b}</td></tr>)}
             </tbody></table></div>
-          <div className="mt-4 grid grid-cols-3 gap-2 text-center text-sm">
+          <div className="mt-4 grid grid-cols-2 gap-2 text-center text-sm sm:grid-cols-4">
             <div className="rounded-lg bg-cream-100 p-2"><div className="text-xl font-semibold tabular-nums">{synced}</div><div className="text-xs text-navy-500">synced</div></div>
             <div className="rounded-lg bg-cream-100 p-2"><div className="text-xl font-semibold tabular-nums text-amber-700" data-testid="sf-pending">{pending}</div><div className="text-xs text-navy-500">pending</div></div>
+            <div className="rounded-lg bg-cream-100 p-2"><div className={`text-xl font-semibold tabular-nums ${notSent.length ? 'text-red-700' : ''}`} data-testid="sf-failed">{notSent.length}</div><div className="text-xs text-navy-500">not sent</div></div>
             <div className="rounded-lg bg-cream-100 p-2"><div className="text-sm font-semibold">{lastSync ? fmtDate(lastSync, 'en-US', true) : '—'}</div><div className="text-xs text-navy-500">last sync</div></div>
           </div>
+          {notSent.length > 0 && <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-800" role="status" data-testid="sf-first-error">
+            <b>Latest not sent:</b> {sfReason(notSent[0].error_message)}</p>}
           <div className="mt-4 flex flex-wrap gap-2">
             {canDo(user.role, 'syncSalesforce') && <button className="btn-ghost" data-testid="sf-sync" onClick={syncNow} disabled={running === 'sync'} aria-busy={running === 'sync'}><RefreshCw size={15} /> {running === 'sync' ? 'Syncing…' : demo ? 'Sync now (simulated)' : 'Sync now'}</button>}
             {/* Who actually came, for a Contact + Campaign Member import. Carries email, so gala admins only. */}
