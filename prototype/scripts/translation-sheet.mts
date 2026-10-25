@@ -26,7 +26,6 @@ export const SAMPLES: Record<string, unknown[]> = {
   actAdded: ['Ana Díaz', '4'],
   actUpdated: ['Ana Díaz', '4'],
   actRemoved: ['Ana Díaz', '4'],
-  actConfirmed: ['Ana Díaz'],
   actPayment: ['$5,000.00'],
   activityCount: [7],
   addToSeat: [6],
