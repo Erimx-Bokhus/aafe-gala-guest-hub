@@ -17,7 +17,7 @@
 //   #190); two or more with that name and nothing is made until staff say which;
 // - a guest with no email is skipped: it could only be matched by name, so it would risk a duplicate Contact.
 // Settings (optionsFrom): SALESFORCE_SEND_PAYMENTS=false stops payment records, leaving NPSP's own;
-// SALESFORCE_SEND_GUESTS=attended|none limits which guests go (AAFE and Graybox decide; default: all, as before).
+// SALESFORCE_SEND_GUESTS=attended|none limits which guests go (AAFE and Idlewild decide; default: all, as before).
 // Sign-in (salesforceAccess): a connected app's client id and secret get a fresh token each run; a fixed
 // SALESFORCE_TOKEN is only for the demo's stand-in, since a real token expires.
 // Our own records are upserted on our ids in a custom external-ID field, so sending again updates instead of
@@ -44,7 +44,7 @@ export const NO_AUTO_PAYMENT = 'npe01__Do_Not_Automatically_Create_Payment__c'
 /** The member statuses we send, which the gala's Campaign must have before a member can carry one. */
 export const MEMBER_STATUSES = ['Registered', 'Attended', 'No Show']
 
-/** What to send, set by AAFE and Graybox (optionsFrom). The defaults send everything, as before. */
+/** What to send, set by AAFE and Idlewild (optionsFrom). The defaults send everything, as before. */
 export interface PushOptions {
   /** True: each real payment, with NPSP told not to make its own (NO_AUTO_PAYMENT), so none counts twice. False:
    *  no payments, and NPSP's own (one per Opportunity, for its full amount) is the only record. */
