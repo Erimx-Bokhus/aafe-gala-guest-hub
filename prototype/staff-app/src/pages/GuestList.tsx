@@ -92,7 +92,7 @@ export default function GuestList() {
         <select className="input w-44" value={order} onChange={(e) => setOrder(e.target.value as 'sponsor' | 'newest')} aria-label="Order">
           <option value="sponsor">Sponsor, A to Z</option><option value="newest">Newest first</option>
         </select>
-        <span className="self-center text-sm text-navy-500">{rows.length} guests</span>
+        <span className="self-center text-sm text-navy-500" data-testid="guest-count">{rows.length} guest{rows.length === 1 ? '' : 's'}</span>
       </div>
       <div className="card overflow-auto" style={{ maxHeight: '70vh' }}>
         <table className="w-max min-w-full border-separate border-spacing-0" data-testid="guest-grid">

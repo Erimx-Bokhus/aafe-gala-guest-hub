@@ -91,6 +91,11 @@ export function asStaffUser(data: unknown): StaffUser | null {
   return { id: r.id, name: r.name, email: r.email, role: r.role }
 }
 
-export async function signOut(): Promise<void> {
-  await supabase?.auth.signOut()
+// One sign-out at a time. A sign-in from an emailed link runs the staff check twice at once (the link's own check and
+// Supabase's SIGNED_IN event), so a login that isn't on the staff list was signed out twice: the second call found the
+// session already ended and Auth answered 403 in the logs (Oct 23 click-through). Callers at the same moment share one.
+let signingOut: Promise<void> | null = null
+export function signOut(): Promise<void> {
+  signingOut ??= (async () => { try { await supabase?.auth.signOut() } finally { signingOut = null } })()
+  return signingOut
 }
