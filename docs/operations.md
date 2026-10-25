@@ -21,7 +21,14 @@ the app's emails and, as custom SMTP, the sign-in codes; AAFE's own function sec
 (`GIVELIVELY_BASE_URL`, `EMAIL_REDIRECT_TO`, the stand-ins' address in `SALESFORCE_BASE_URL`) and without deploying
 the stand-ins (`BACKEND.md`, Setup steps 2 and 3); `start-levels-2026.sql` instead of the demo data; the sponsor portal
 out from behind Access (the Access row below); and every key rotated (`keys-and-secrets.md`, "Before real data or
-handoff").
+handoff"). Then shut the prototype's open doors:
+- **End the email-domain sign-in** (Oct 21): `update staff_join_domains set until = now(); update staff_users set
+  access_until = now() where access_until is not null;` (`BACKEND.md`, "Sign-in by email domain").
+- **Trim Cloudflare Access** to AAFE: take @pursuit.org and the team's personal addresses out of
+  `prototype/.env.admin.local`, then `node prototype/scripts/cloudflare-access.mjs --apply`.
+- **End the team's, advisors' and reviewers' staff rows:** `update staff_users set access_until = now() where id in
+  (…);` keeps the change log's names, where deleting the rows wouldn't.
+- **Salesforce:** AAFE's own client id and secret (`docs/salesforce-setup.md`, setup list).
 
 ## Risks
 
@@ -35,7 +42,7 @@ handoff").
 | **Sign-in codes through Gmail** | More than 500 emails a day blocks sending for up to a day ([8]); the app password stops working when the Google password changes ([9]) | Volume is fine. A password change silently stops every sign-in code | Don't change that Google password near an event; test a sign-in code the day before and the morning of | Make a new app password and put it in Supabase → Authentication → Emails → SMTP |
 | **Resend's free plan** | 100 emails a day, 3,000 a month; `resend.dev` only sends to your own address ([10], [11]) | Today (stable and nightly) only the app's emails go through it, all to the account owner. On AAFE's project the sign-in codes would too, so codes, guest-list links, reminders and QR invitations share 100 a day: QR e-tickets for 550 guests take six days | Verify AAFE's domain; Resend Pro ($20 a month) for the gala months, or spread the sends over days | Wait for the next day (midnight UTC: 8 p.m. New York, 7 p.m. from Nov 1) or upgrade |
 | **Cloudflare Access: 50 people** | A person takes a seat at their first sign-in and keeps it until removed; when 50 are taken, new people are refused. A code expires in 10 minutes ([12], [13], [14]) | The team, AAFE's reviewers, Pursuit's advisors and the volunteers share 50 seats. Since Oct 19 anyone at @aafe.org or @pursuit.org can sign in, and each one who does takes a seat. **The sponsor portal is behind Access too** (`prototype/scripts/cloudflare-access.mjs`), fine for the prototype, but for AAFE's real gala every sponsor would need a seat | Remove people who no longer need access. For the real gala, take the portal out from behind Access: its private link is the sponsor's credential | Zero Trust → Users → remove; the person asks for a new code |
-| **Other Supabase quotas** | 500,000 Edge Function calls and 50,000 monthly sign-ins a month; logs kept one day ([1], [15]) | The email sender (every minute) and the Give Lively poll (every 15) use about 92,000 calls a month across both projects; the daily jobs run in the database and call nothing | Look into a gala-night problem that same night: the logs are gone the next day. The change log (`audit_log`) keeps our own history | — |
+| **Other Supabase quotas** | 500,000 Edge Function calls and 50,000 monthly sign-ins a month; logs kept one day ([1], [15]) | The email sender (every minute) and the Give Lively poll (every 15) use about 92,000 calls a month across both projects; the daily jobs run in the database and call nothing | Look into a gala-night problem that same night: the logs are gone the next day. The change log (`audit_log`) keeps our own history; gala admins read it (Activity log) | — |
 
 Cloudflare Pages is no risk: 500 builds a month, 20,000 files of up to 25 MB, unlimited requests ([16]); our builds
 are 21 files, the largest 3.2 MB.
@@ -117,23 +124,59 @@ realtime service that a local copy refuses. The backup files were deleted after 
 - **A week before:** confirm the project is running (not paused); take a backup; check the Usage page; remove people
   from Cloudflare Access who no longer need it; test a sign-in code. Send the QR e-ticket invitations days ahead, not
   the day of: on Resend's free plan about 100 go out a day (the Resend row above).
+  - **The release, then a freeze:** `npx wrangler@4 pages deployment list --project-name aafe-gala-checkin` (and
+    `aafe-gala-staff`, `aafe-gala-portal`) shows the release tag's commit on `main` for each app, and `backend.sql` was
+    run from the same commit. After that, no `db:backend` and no uploads until after the gala. Doors use the plain
+    addresses, never `nightly.`.
+  - **Door accounts:** each volunteer has their own `check_in_volunteer` row and a confirmed sign-in (`BACKEND.md`,
+    "Add a staff member"). Don't rely on the email-domain sign-in for doors: it makes relationship managers, who see
+    guests' emails and food and access answers, and it ends on its date.
+  - **Badges:** Badges → the badge file for the printer (or Print sheet), print, then **Mark printed**. Leave
+    sponsor-facing arrivals off (Gala information) unless AAFE's privacy review approved them.
 - **The day before and that morning:** test a sign-in code again; don't change the Gmail account's password. Check the
   schedules ran recently: `select jobname, status, end_time from cron.job_run_details order by end_time desc limit 10;`.
   Check the email queue (Integrations & email) holds no failed or forgotten drafts. Write down who to call when
-  something breaks (a gala admin who can reach the Supabase project) and give it to every door.
-- **Before doors:** take a backup; print the check-in list (iPad check-in → printed list, `staff_export_checkin`) as the
-  fallback if every iPad fails; sign every iPad in (they share the venue's internet address, and sign-ins are limited
-  to 30 per 5 minutes per address; a second code to the same person needs a minute's wait); leave each iPad on the
-  door screen.
+  something breaks (a gala admin who can reach the Supabase project) and give it to every door. It has to be a gala
+  admin: only they read the change log (Activity log, Oct 22).
+- **Before doors:** take a backup; download the check-in list (the staff app's iPad check-in page, `staff_export_checkin`)
+  and print it as the fallback if every iPad fails. Sign every iPad in (`prototype/checkin-app/README.md`):
+  1. In **Safari itself**, open the check-in address and pass Cloudflare's PIN (it expires in 10 minutes; each new
+     person takes an Access seat).
+  2. Share → **Add to Home Screen**, then open the "AAFE Check-in" icon. It keeps its own sign-in, separate from Safari.
+  3. Sign in by **typing the 6-digit code**: the email's link opens Safari, not the Home Screen app.
+  4. Leave it online on the door screen until it shows tonight's list, then leave it there.
+
+  The iPads share the venue's internet address: sign-ins are limited to 30 per 5 minutes per address, and a second code
+  to the same person needs a minute's wait.
 - **During:** an iPad's pill says "Offline" when the internet is down (keep checking in: it saves on the iPad and
   syncs when back) and "Not syncing: ask a gala admin" when its sign-in needs attention (don't sign it out).
+  - **Check-in:** a tap or a QR scan shows the guest's name, table and time with **Undo for 10 seconds**: check the
+    name against the person in front of you. Later, tap the guest's row and Undo check-in; once it has synced, only
+    the same sign-in or a gala admin can undo it.
+  - **Scans:** a second scan of the same ticket says the guest is already checked in: don't admit it twice. An expired
+    code: check the guest in by name. Walk-ins and unnamed sponsor seats go to **Exceptions**.
+  - **Two doors, one guest:** the first arrival counts and the iPad says so; the change log records it for gala admins.
+  - **"Not syncing" (for the gala admin):** check that sign-in's row in `staff_users` (its role, and `access_until`:
+    email-domain rows stop at their date) and fix it in the SQL editor. The iPad keeps its check-ins meanwhile.
 - **After check-in closes:** take a backup before anything else. Then make sure every iPad says it has nothing left to
-  sync before anyone signs it out.
+  sync, then sign each one out: it keeps the door list until it does (`data-handling.md`). Collect the printed lists.
 - **The weeks after:** download the Salesforce attendee file (Integrations & email) or run **Sync now**; then the
   retention steps (`BACKEND.md`, "After the gala"): food and access totals, then guests' contact details, by hand or
   by the daily sweep 60 days on. When the follow-up is done, close the gala in the SQL editor:
   `update gala_events set status = 'closed' where id = '<the gala id>';` (no app screen does this yet; `BACKEND.md`,
-  "The current gala").
+  "The current gala"). A closed gala clears every iPad's saved list. Closed too early (the iPad says the list was
+  cleared): `update gala_events set status = 'live' where id = '<the gala id>';`. These two SQL edits write no line in
+  the change log.
+  - **A payment entered by mistake** (a check, ACH or wire; Give Lively payments are refunded in Give Lively): a gala
+    admin voids it in the SQL editor until the staff app has a Void button (#223):
+    ```sql
+    begin;
+    select set_config('request.jwt.claims', '{"email": "<your staff email>"}', true);
+    select staff_void_payment('<the payment id>', '<why>');
+    commit;
+    ```
+  - **Checks taken at the door:** record them on the sponsor's page. The date is required and can't be more than 3 days
+    ahead (#231); the form warns before the same check twice or an amount over the balance (#232).
 
 The load test that backs this (six iPads, the full gala, offline stretches): `prototype/scripts/load-checkin.mjs`.
 
