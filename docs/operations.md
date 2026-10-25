@@ -22,8 +22,11 @@ the app's emails and, as custom SMTP, the sign-in codes; AAFE's own function sec
 the stand-ins (`BACKEND.md`, Setup steps 2 and 3); `start-levels-2026.sql` instead of the demo data; the sponsor portal
 out from behind Access (the Access row below); and every key rotated (`keys-and-secrets.md`, "Before real data or
 handoff"). Then shut the prototype's open doors:
-- **End the email-domain sign-in** (Oct 21): `update staff_join_domains set until = now(); update staff_users set
-  access_until = now() where access_until is not null;` (`BACKEND.md`, "Sign-in by email domain").
+- **End the email-domain sign-in** (Oct 21). **First, keep AAFE's own staff:** everyone who joined through @aafe.org
+  has an end date, so the next line would lock them out on go-live day. Give each one who stays a row with no end
+  date, and check their role: `update staff_users set access_until = null where email = '<their email>';` (or add
+  them as in `BACKEND.md`, "Add a staff member"). Then: `update staff_join_domains set until = now(); update
+  staff_users set access_until = now() where access_until is not null;` (`BACKEND.md`, "Sign-in by email domain").
 - **Trim Cloudflare Access** to AAFE: take @pursuit.org and the team's personal addresses out of
   `prototype/.env.admin.local`, then `node prototype/scripts/cloudflare-access.mjs --apply`.
 - **End the team's, advisors' and reviewers' staff rows:** `update staff_users set access_until = now() where id in
@@ -175,6 +178,9 @@ realtime service that a local copy refuses. The backup files were deleted after 
     select staff_void_payment('<the payment id>', '<why>');
     commit;
     ```
+    The email must be a gala admin's row on the staff list; anyone else's answers `forbidden`. If the answer shows
+    `"in_salesforce": true`, the payment had already gone to Salesforce: remove it there too (the change log says so,
+    but in the SQL editor the answer is what you see).
   - **Checks taken at the door:** record them on the sponsor's page. The date is required and can't be more than 3 days
     ahead (#231); the form warns before the same check twice or an amount over the balance (#232).
 
