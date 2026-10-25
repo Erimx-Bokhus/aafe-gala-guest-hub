@@ -76,18 +76,30 @@ export function LanguageSelect<T extends string>({ value, onChange, options, lab
 
 // ---------- banners / pills ----------
 /**
+ * Which copy this build is (Oct 25): `VITE_APP_LINE=nightly` in the nightly folder's `.env.local` files; stable sets
+ * nothing, so AAFE and Demo Day see no label. It follows the database the build talks to, so it's right where the web
+ * address can't say: the iPad's Home Screen app and an upload's own link (e1277a50.aafe-gala-portal.pages.dev).
+ */
+const APP_LINE = (import.meta.env.VITE_APP_LINE ?? '').trim().toLowerCase()
+const LINE_NAME = APP_LINE ? APP_LINE[0].toUpperCase() + APP_LINE.slice(1) : ''
+const LINE_LABEL = APP_LINE && APP_LINE !== 'stable' ? `${LINE_NAME} · test copy` : ''
+
+/**
  * dataSwitch: the staff app and portal let you pick a demo data set; the iPad app has its own door list. Only in demo
  * mode: a build connected to Supabase reads whatever set the database holds, so the menu would change nothing and
  * send testers to links that set doesn't have (Oct 17, a Small-demo link "expired" on the hosted portal).
  */
 export function PrototypeBanner({ dataSwitch = false }: { dataSwitch?: boolean }) {
-  return <div role="note" className="proto-banner no-print px-4 py-1.5 text-center text-xs font-medium tracking-wide">
+  useEffect(() => { if (LINE_LABEL && !document.title.startsWith(`${LINE_NAME} · `)) document.title = `${LINE_NAME} · ${document.title}` }, [])
+  return <>{LINE_LABEL && <div className="no-print bg-amber-300 px-4 py-1.5 text-center text-sm font-bold text-amber-950" data-testid="app-line">
+      {LINE_LABEL}<span className="font-medium"> — not the copy AAFE sees</span></div>}
+    <div role="note" className="proto-banner no-print px-4 py-1.5 text-center text-xs font-medium tracking-wide">
     Capstone prototype — synthetic demonstration data only. Not a production AAFE system.
     {dataSwitch && !supabase && <label className="ml-2 inline-flex items-center gap-1">Demo data:
       <select value={demoSet()} onChange={(e) => chooseDemoSet(e.target.value as DemoSet)} className="rounded bg-transparent font-semibold underline decoration-dotted">
         {(Object.keys(DEMO_SET_LABEL) as DemoSet[]).map((k) => <option key={k} value={k}>{DEMO_SET_LABEL[k]}</option>)}
       </select></label>}
-  </div>
+  </div></>
 }
 const PILL: Record<string, string> = {
   green: 'bg-emerald-50 text-emerald-800 ring-emerald-200', amber: 'bg-amber-50 text-amber-800 ring-amber-200',

@@ -25,7 +25,7 @@ function setup() {
   const api = { live: false, assignSeat } as unknown as StaffApi
   render(<StaffCtx.Provider value={{ db, api, user: { id: 'st-admin', name: 'Test Admin', email: 'admin@aafe-demo.example.org', role: 'gala_admin' }, toast: () => {}, act: async () => true, demo: null }}><GuestList /></StaffCtx.Provider>)
   const picker = (g: typeof seated) => screen.getByLabelText(`Table for ${g.first_name} ${g.last_name}`) as HTMLSelectElement
-  return { seated, unseated, two, one, assignSeat, picker }
+  return { seated, unseated, two, one, assignSeat, picker, guests: db.guests.filter((g) => current.has(g.order_id)) }
 }
 
 describe('the guest list Table column', () => {
@@ -40,6 +40,18 @@ describe('the guest list Table column', () => {
     const full = [...picker(unseated).options].find((o) => o.value === one.id)!
     expect(full.disabled).toBe(true)
     expect(full.textContent).toContain('(full)')
+  })
+
+  it('counts one guest as "1 guest", not "1 guests" (Oct 23 click-through)', () => {
+    const { guests } = setup()
+    const name = (g: (typeof guests)[number]) => `${g.first_name} ${g.last_name}`.toLowerCase()
+    const one = guests.find((g) => guests.filter((h) => `${name(h)} ${h.organization}`.toLowerCase().includes(name(g))).length === 1)
+    if (!one) throw new Error('the demo data has no guest with a name of their own')
+    const search = screen.getByLabelText('Search guests')
+    fireEvent.change(search, { target: { value: name(one) } })
+    expect(screen.getByTestId('guest-count').textContent).toBe('1 guest')
+    fireEvent.change(search, { target: { value: '' } })
+    expect(screen.getByTestId('guest-count').textContent).toBe(`${guests.length} guests`)
   })
 
   it('"No table" clears the guest\'s table', () => {
