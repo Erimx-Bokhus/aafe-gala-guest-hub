@@ -86,15 +86,20 @@ reason.
    set to the org's My Domain URL. The tool gets a fresh token each run.
 3. **A field `AAFE_Gala_Id__c`** (Text, External ID, Unique) on Campaign, Account, Opportunity, `npe01__OppPayment__c`
    and Contact, so a second sync updates instead of duplicating. (NPSP objects; on Nonprofit Cloud the list changes.)
-4. **Campaign Member statuses** Registered, Attended and No Show on the gala's Campaign.
-5. **The gala's Campaign:** if Give Lively already made one, put the gala's id (for example `ev-2027`) in its
-   `AAFE_Gala_Id__c` once. The tool then always uses that Campaign, whatever its name. **Until the Oct 24 fix lands,
-   the sync also rewrites that Campaign's Name, Start Date, Type and Active**; don't do this step before then. With Give
-   Lively's campaign hierarchy on, it's the "Event - …" child Campaign.
+4. **Campaign Member statuses** Registered, Attended and No Show on the gala's Campaign. Since #250 the sync adds any
+   that are missing before it adds members, with the access in step 6. Without that access, add them by hand.
+5. **The gala's Campaign:** if Give Lively already made one, the sync finds it by the Give Lively page's name (the
+   "Event - …" child Campaign when Give Lively's campaign hierarchy is on), puts the gala's id (for example `ev-2027`)
+   in its `AAFE_Gala_Id__c` once and uses it from then on. Since #250 it never renames or changes a Campaign it found.
+   Put the id in by hand only when two Campaigns share the name: the sync then makes nothing and says so.
 6. **The sync user's access:** read and write on Contact, Account, Opportunity, `npe01__OppPayment__c`, Campaign and
    Campaign Member; field access to `AAFE_Gala_Id__c` on all five, NPSP's Home, Work and Alternate email fields and
    `npo02__NumberOfClosedOpps__c`; and the Marketing User setting if Campaigns need it. One hidden field makes a whole
-   lookup fail.
+   lookup fail. Two more since #250 (Cornell's review):
+   - **write access to `npe01__Do_Not_Automatically_Create_Payment__c`** on Opportunity. The sync sets it on every
+     Opportunity when it sends payments (the default). Without the access, Salesforce refuses every Opportunity, not
+     only the payments.
+   - **create on Campaign Member Status**, for step 4.
 7. **Rules that can refuse a record:** if Idlewild exempts Give Lively from duplicate and validation rules by Lead
    Source, the tool needs a Lead Source of its own (never "Give Lively") and the same exemption.
 
@@ -103,7 +108,7 @@ reason.
 | Decision | Setting | Default today |
 | --- | --- | --- |
 | **Which Salesforce product** AAFE's org is | **Answered Oct 21: NPSP**, with Give Lively's app connected | The code assumes NPSP, so it fits |
-| Does NPSP create payment records itself when a pledge is added? If yes, the tool shouldn't, or each check appears twice | Planned (Oct 24): the tool marks its Opportunities "don't create a payment automatically", so its own payments are the only ones. `SALESFORCE_SEND_PAYMENTS=false` also stops the double, but loses each payment's method, date and part payments | The tool sends payments, and doesn't set the flag yet |
+| Does NPSP create payment records itself when a pledge is added? If yes, the tool shouldn't, or each check appears twice | Since #250: the tool marks its Opportunities "don't create a payment automatically", so its own payments are the only ones. `SALESFORCE_SEND_PAYMENTS=false` also stops the double, but loses each payment's method, date and part payments | The tool sends payments and sets the flag on each Opportunity |
 | Which guests belong in Salesforce: every named guest, only those who came, or none (donors and sponsors only)? Guests' contact details are deleted from the tool 60 days after the gala, but stay in Salesforce. Decide before the first sync: switching from `all` to `attended` later doesn't remove the guests already sent | `SALESFORCE_SEND_GUESTS=all`, `attended` or `none` | Every named guest |
 | Should attendance (Attended, No Show) count in Salesforce? | Part of the above | Sent |
 | **Fair market value** on acknowledgments: a ticket or sponsorship over $75 needs it. Give Lively handles that online; the tool has no fair market value per level for checks, ACH and wires | None yet | Not tracked |
@@ -136,6 +141,10 @@ the Give Lively page's name), Accounts (found by exact name), Opportunities, `np
 (found on Email and NPSP's Home, Work and Alternate emails; made only when none match) and Campaign Members. It never
 sends a record type, a Lead Source, a primary contact or GAU allocations, and no duplicate-rule header.
 
+**Since this check:** the first four risks below are fixed (payments, the Campaign and member statuses in #250;
+refusals in #252), and Cornell's review of #250 added two permissions to setup step 6. The table shows the code as it
+was checked.
+
 | Risk | What the code does now | Real gap? | Fix | Size | Waits on Idlewild |
 | --- | --- | --- | --- | --- | --- |
 | Payments counted twice | Creates the Opportunity with no "don't create a payment" flag, then adds its own paid payment | Yes, if NPSP's automatic payments are on | Set `npe01__Do_Not_Automatically_Create_Payment__c` on the tool's Opportunities. Right either way, and keeps each payment's method and date (`SALESFORCE_SEND_PAYMENTS=false` would lose them) | Tiny | No |
@@ -147,11 +156,12 @@ sends a record type, a Lead Source, a primary contact or GAU allocations, and no
 | Duplicate and validation rules | No Lead Source, no header: every rule applies | Depends on Idlewild's rules | A Lead Source of the tool's own (never "Give Lively") for exemptions | Tiny | Yes |
 | Required fields, GAU allocations, primary contact | Not sent | Depends | Per Idlewild's answers | Depends | Yes |
 | Close Date | The order's created date, even when paid | Small: NPSP's gift-date reports use it | Last payment's date for paid sponsorships | Tiny | Confirm |
-| Sync user access | Any hidden field makes a whole lookup fail | Gap in the setup list | Setup steps 6 and 7 below | Tiny | Idlewild does it |
+| Sync user access | Any hidden field makes a whole lookup fail | Gap in the setup list | Setup steps 6 and 7 above | Tiny | Idlewild does it |
 
 **If NPSP isn't there, or fields are hidden:** the Campaign, Accounts and Opportunities still go through, but every
 Contact lookup and payment fails, so AAFE would get Opportunities with no payments and no guests. Without
-`AAFE_Gala_Id__c`, nothing is made. Today staff see only a count of records not sent.
+`AAFE_Gala_Id__c`, nothing is made. Since #252, staff see how many records weren't sent, Salesforce's reason and what
+to do, on the Integrations page.
 
 **Our tests can't catch these.** The stand-in Salesforce (`database/demo_salesforce.sql`) accepts any field or value.
 Only a sandbox run shows AAFE's picklists, record types, rules and NPSP's automation (setup step 1).
