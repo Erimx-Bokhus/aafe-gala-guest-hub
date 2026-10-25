@@ -28,7 +28,8 @@ function Badge({ g, sponsor, table, tpl, year }: { g: Guest; sponsor: string; ta
         {tpl.qr && g.qr_token && <QR value={g.qr_token} size={52} />}
       </div>
       <div className="border-t border-[#EBEBEB] px-4 py-1.5">
-        {tpl.tableSeat && <div className="text-sm font-bold">{table ? `Table ${table} · Seat ${g.seat_number}` : 'Table assignment pending'}</div>}
+        {/* A guest admitted without a table (most of them) gets no table line (Oct 25). */}
+        {tpl.tableSeat && table && <div className="text-sm font-bold">Table {table} · Seat {g.seat_number}</div>}
         {tpl.sponsor && <div className="truncate text-[0.6875rem] text-[#4D4C4C]">{hasSponsor(g.guest_type) ? `Sponsored by ${sponsor}` : GUEST_TYPE_LABEL[g.guest_type]}</div>}
       </div>
     </div>
