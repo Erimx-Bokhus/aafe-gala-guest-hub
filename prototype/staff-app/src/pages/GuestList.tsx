@@ -25,7 +25,9 @@ function Cell({ g, k, w }: { g: Guest; k: keyof Guest; w: string }) {
   if (prev !== g[k]) { setPrev(g[k]); setV(String(g[k] ?? '')) }
   return <input aria-label={`${k} for ${g.first_name} ${g.last_name}`} className={`${w} rounded border border-transparent bg-transparent px-1.5 py-1 text-sm text-navy-900 hover:border-navy-100 focus:border-brand-500 focus:bg-surface focus:outline-none`}
     value={v} onChange={(e) => setV(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-    onBlur={() => { if (v !== String(g[k] ?? '')) void act(api.updateGuest(g.id, { [k]: v || (k.endsWith('needs') ? null : '') })) }} />
+    // A refused save (a bad email, a blank name) puts the saved value back, so the cell never shows what wasn't saved
+    // (#242); the toast says why.
+    onBlur={() => { if (v !== String(g[k] ?? '')) void act(api.updateGuest(g.id, { [k]: v || (k.endsWith('needs') ? null : '') })).then((ok) => { if (!ok) setV(String(g[k] ?? '')) }) }} />
 }
 
 /** The guest's table, for the badge (decided Oct 17: replaces the seating chart). Picking a table takes its first open seat. */
