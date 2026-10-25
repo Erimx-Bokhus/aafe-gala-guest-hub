@@ -51,10 +51,16 @@ export function optionsFrom(get: (key: string) => string): PushOptions {
   return { payments: pay !== 'false', guests: guests === 'attended' || guests === 'none' ? guests : 'all' }
 }
 
+/** Salesforce's messages can quote the value it refused ("invalid email address: …"), and the sync log isn't
+ *  cleaned when contacts_delete removes emails 60 days after the gala, so no email is kept in it. The same pattern
+ *  contacts_delete scrubs with (backend.sql's email_re). Cornell's review of #252. */
+const EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g
+export const hideEmails = (s: string) => s.replace(EMAIL, '(email hidden)')
+
 /** Salesforce's own reason for refusing a call, from its answer's body: each errorCode and message (REST errors
- *  are a list of {errorCode, message}; sign-in errors one {error, error_description}). Never the request or the
- *  token; at most 300 characters, so a long answer can't flood the sync log. Not JSON (a proxy's error page): only
- *  the HTTP status. Before Oct 24 every refusal read "HTTP 400", so a setup problem looked like "try later". */
+ *  are a list of {errorCode, message}; sign-in errors one {error, error_description}). Never the request, the
+ *  token or an email; at most 300 characters, so a long answer can't flood the sync log. Not JSON (a proxy's error
+ *  page): only the HTTP status. Before Oct 24 every refusal read "HTTP 400", so a setup problem looked like "try later". */
 export function refusalText(status: number, body: string): string {
   let said = ''
   try {
@@ -64,7 +70,8 @@ export function refusalText(status: number, body: string): string {
       return [r.errorCode ?? r.error, r.message ?? r.error_description].filter((v) => typeof v === 'string' && v).join(': ')
     }).filter(Boolean).join('; ')
   } catch { /* not JSON: the status is all Salesforce said */ }
-  return `Salesforce refused (HTTP ${status})${said ? `: ${said}` : ''}`.slice(0, 300)
+  // Hidden before the cut, so an email straddling character 300 can't survive as a fragment the pattern misses.
+  return hideEmails(`Salesforce refused (HTTP ${status})${said ? `: ${said}` : ''}`).slice(0, 300)
 }
 
 /** Where to send and the token to send with. Null when Salesforce isn't connected. */
@@ -306,7 +313,9 @@ export async function pushAll(o: Outbox, ports: PushPorts, opts: PushOptions = D
   const contactOf = await pushContacts(guests, ports, results)
   // Campaign members carry their campaign's id, so there are none without a gala.
   if (o.campaign) await pushMembers(campaignId, guests, contactOf, ports, results)
-  return results
+  // Every reason Salesforce gave, whichever way it came (a refused call, a refused record, a failed lookup), goes to the
+  // sync log from here: no email in any of them (hideEmails).
+  return results.map((r) => (r.error ? { ...r, error: hideEmails(r.error) } : r))
 }
 
 /** What one push did, for the staff app's message. */

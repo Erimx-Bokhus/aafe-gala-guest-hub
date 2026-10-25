@@ -275,5 +275,24 @@ ok(/INVALID_FIELD: No such column 'npe01__HomeEmail__c'/.test(contactWhy) && log
   "an NPSP field the sync user can't see: the reason reaches each record, the sync log and the staff app's summary")
 ok(refusalText(400, standInBody) === `Salesforce refused (HTTP 400): MALFORMED_QUERY: ${malformed}`, "and the stand-in's HTTP errors read the same way")
 
+// ---- No email in the sync log (Cornell's review of #252): Salesforce quotes the value it refused, and contacts_delete
+// doesn't clean salesforce_sync 60 days after the gala.
+const quoted = (e: string) => `Email: invalid email address: ${e}`
+const lead = 'Salesforce refused (HTTP 400): X: ', cutAt = 300 - (gB.email.indexOf('@') + 4)   // the cut lands just past the @
+ok(refusalText(400, JSON.stringify([{ errorCode: 'INVALID_EMAIL_ADDRESS', message: quoted(gB.email) }])) === `Salesforce refused (HTTP 400): INVALID_EMAIL_ADDRESS: ${quoted('(email hidden)')}`
+  && !refusalText(400, JSON.stringify([{ errorCode: 'X', message: `${'y'.repeat(cutAt - lead.length - 1)} ${gB.email}` }])).includes('@'),
+  'a refused call names no email, not even one cut off at 300 characters')
+const fresh = 'refused.on.sync@guest.example.org'   // invented; new to the stand-in, so the push sends it
+await q(`update guests set email = $1 where id = $2`, [fresh, gB.id])
+const badEmail: PushPorts = { ...ports, upsert: (sobject, records) => (sobject === 'Contact'
+  ? Promise.resolve(records.map((r) => ({ success: false, errors: [{ statusCode: 'INVALID_EMAIL_ADDRESS', message: quoted(String(r.Email)) }] })))
+  : ports.upsert(sobject, records)) }
+const re = await pushAll(await outbox(), badEmail)
+await mark(re)
+const kept = (await q(`select count(*)::int n from salesforce_sync where error_message ~ '@'`))[0].n
+ok(re.find((x) => x.entity_id === gB.id && x.sf_object === 'Contact')?.error === `INVALID_EMAIL_ADDRESS: ${quoted('(email hidden)')}`
+  && re.every((x) => !x.error?.includes('@')) && kept === 0,
+  'a record refused for its email: the reason reaches the sync log, the email does not')
+
 console.log(`salesforce: ${count.pass} passed, ${count.fail} failed`)
 if (count.fail) process.exitCode = 1
