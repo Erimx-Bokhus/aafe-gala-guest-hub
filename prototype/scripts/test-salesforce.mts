@@ -3,7 +3,7 @@
 // (salesforce_mark_synced), all in PGlite. The stand-in starts with what Give Lively's own connector would have made,
 // so the push shows it adds nothing twice (Gate 1, box 5). Runs with npm run test:backend. Invented data only.
 import { readFileSync } from 'node:fs'
-import { BATCH, EXTERNAL_ID, LOOKUP, NO_EMAIL, optionsFrom, WAITS_FOR_ACCOUNT, pushAll, salesforceAccess, soqlText, summarize, toBatches, type Outbox, type PushPorts } from '../supabase/functions/_shared/salesforce.ts'
+import { BATCH, EXTERNAL_ID, LOOKUP, MEMBER_STATUSES, NO_AUTO_PAYMENT, NO_EMAIL, optionsFrom, refusalText, WAITS_FOR_ACCOUNT, pushAll, salesforceAccess, soqlText, summarize, toBatches, type Outbox, type PushPorts } from '../supabase/functions/_shared/salesforce.ts'
 import { parseSoql } from '../supabase/functions/salesforce-mock/soql.ts'
 import { isOwnStandIn, standInPorts, type Rpc } from '../supabase/functions/salesforce-mock/standin.ts'
 // @ts-expect-error plain JavaScript helper
@@ -77,6 +77,8 @@ ok(batches.map((b) => b.sobject).join() === 'Opportunity,npe01__OppPayment__c', 
 ok(batches.every((b) => b.records.every((r) => r.attributes.type === b.sobject && typeof r[EXTERNAL_ID] === 'string')), 'every record names its type and carries our id')
 const paid = o1.opportunities.find((x) => x.status === 'paid')
 ok(!paid || batches[0].records.find((r) => r[EXTERNAL_ID] === paid.id)?.StageName === 'Closed Won', 'a paid order is Closed Won')
+ok(batches[0].records.every((r) => r[NO_AUTO_PAYMENT] === true) && toBatches(o1, GL.campaign, new Map(), { payments: false, guests: 'all' })[0].records.every((r) => !(NO_AUTO_PAYMENT in r)),
+  "with our payments going, each Opportunity tells NPSP not to make its own; without them, NPSP's is left to make")
 
 // ---- Push to the stand-in org, then record what it said
 const svc = async (sql: string, params: unknown[]) => (await as('service_role', null, sql, params))[0].r
@@ -107,8 +109,9 @@ const withEmail = o1.contacts.filter((c) => c.email), noEmail = o1.contacts.filt
 ok(noEmail.length > 0, `the demo gala has guests with no email (${noEmail.length})`)
 ok(s1.failed === 0 && s1.skipped === noEmail.length && s1.sent === 1 + o1.accounts.length + o1.opportunities.length + o1.payments.length + 2 * withEmail.length,
   `everything lands, guests without an email skipped, counted once each (${s1.skipped}): ${JSON.stringify(s1.by_object)}`)
-ok([...new Set(steps)].join() === 'query Campaign,query Account,upsert Account,upsert Opportunity,upsert npe01__OppPayment__c,query Contact,upsert Contact,query CampaignMember,update CampaignMember,create CampaignMember',
-  'the gala first, then sponsors (looked up by name first), orders and payments, then guests (looked up before any is made) and their memberships')
+ok([...new Set(steps)].join() === 'query Campaign,update Campaign,query Account,upsert Account,upsert Opportunity,upsert npe01__OppPayment__c,query Contact,upsert Contact,'
+  + 'query CampaignMemberStatus,create CampaignMemberStatus,query CampaignMember,update CampaignMember,create CampaignMember',
+  "the gala first (Give Lively's, given our id), then sponsors (looked up by name first), orders and payments, then guests (looked up before any is made), the Campaign's member statuses and the memberships")
 const m1 = await mark(r1)
 ok(m1.synced + m1.failed === r1.length && m1.failed === 2 * s1.skipped, 'every answer is recorded, each skipped guest (as a Contact and a member) with the reason')
 const acct = (await q(`select salesforce_account_id from sponsors where id = $1`, [o1.accounts[0].id]))[0].salesforce_account_id
@@ -120,6 +123,12 @@ ok((await q(`select count(*)::int n from audit_log where action = 'salesforce.sy
 // ---- Nothing twice next to Give Lively's records
 const result = (id: string, sobject: string) => r1.find((x) => x.entity_id === id && x.sf_object === sobject)?.sf_id
 ok((await sf('Campaign')).length === 1 && result(o1.campaign?.id ?? '', 'Campaign') === GL.campaign, "the gala's Campaign is Give Lively's own: no second one")
+const glCampaign = (await sf('Campaign'))[0]
+ok(glCampaign.external_id === 'ev-2027' && glCampaign.fields.Name === PAGE && glCampaign.fields.Type === 'Event' && !('StartDate' in glCampaign.fields) && !('IsActive' in glCampaign.fields),
+  "Give Lively's Campaign gets our id, so the next sync finds it by id, and nothing else: its name stays Give Lively's (Oct 24)")
+const statuses = (await sf('CampaignMemberStatus')).filter((x) => x.fields.CampaignId === GL.campaign)
+ok(MEMBER_STATUSES.every((s) => statuses.some((x) => x.fields.Label === s)) && statuses.find((x) => x.fields.Label === 'Attended')?.fields.HasResponded === true
+  && new Set(statuses.map((x) => x.fields.SortOrder)).size === statuses.length, 'the Campaign gets Registered, Attended and No Show before its first member, each in its own place')
 ok((await sf('Opportunity')).every((x) => x.fields.CampaignId === GL.campaign) && (await sf('Opportunity')).length === o1.opportunities.length, "each order's Opportunity is in it")
 ok(result(gA.id, 'Contact') === GL.a, "a guest Give Lively knows is its Contact: the email matched whatever its case, the one with more gifts chosen")
 ok(result(gB.id, 'Contact') === GL.b, "an email in NPSP's Alternate Email field matches too")
@@ -154,13 +163,19 @@ ok((await q(`select count(*)::int n from salesforce_sync where entity = 'guest' 
 
 // ---- When it can't tell, it makes nothing
 await q(`insert into demo_salesforce_records (sf_id, sobject, fields) values ('701GLCAMPAIGN0002', 'Campaign', $1)`, [JSON.stringify({ Name: PAGE })])
-const r4 = await pushAll(await outbox(), ports)
+ok((await pushAll(await outbox(), ports)).find((x) => x.sf_object === 'Campaign')?.sf_id === GL.campaign && (await sf('Campaign')).length === 2,
+  'once the gala has its Campaign by id, a second one with the same name changes nothing')
+const AMB = 'Ambiguous Gala Example'
+for (const id of ['701AMBIGUOUS0001', '701AMBIGUOUS0002']) await q(`insert into demo_salesforce_records (sf_id, sobject, fields) values ($1, 'Campaign', $2)`, [id, JSON.stringify({ Name: AMB })])
+const amb = { id: 'ev-amb', name: 'Ambiguous Gala 2027', date: '2027-06-01', givelively_name: AMB }
+const r4 = await pushAll({ ...await outbox(), campaign: amb }, ports)
 const gala4 = r4.find((x) => x.sf_object === 'Campaign')
-ok(/2 Campaigns in Salesforce are named "AAFE's 53rd Annual Gala": put ev-2027 in the AAFE_Gala_Id__c field/.test(gala4?.error ?? '') && (await sf('Campaign')).length === 2,
-  'two Campaigns with the gala page\'s name: the gala fails with what to do, and no third is made')
+ok(/2 Campaigns in Salesforce are named "Ambiguous Gala Example": put ev-amb in the AAFE_Gala_Id__c field/.test(gala4?.error ?? '') && (await sf('Campaign')).length === 4,
+  'two Campaigns with the gala page\'s name and neither ours: the gala fails with what to do, and no third is made')
 ok(r4.filter((x) => x.sf_object === 'CampaignMember' && x.error !== NO_EMAIL).every((x) => /Campaign isn't in Salesforce yet/.test(x.error ?? '')), 'and its members wait for it')
-await q(`update demo_salesforce_records set fields = fields || jsonb_build_object($1::text, 'ev-2026') where sf_id = '701GLCAMPAIGN0002'`, [EXTERNAL_ID])
-ok((await pushAll(await outbox(), ports)).find((x) => x.sf_object === 'Campaign')?.sf_id === GL.campaign, "a same-named Campaign carrying another gala's id isn't this gala's")
+await q(`update demo_salesforce_records set fields = fields || jsonb_build_object($1::text, 'ev-2026'), external_id = 'ev-2026' where sf_id = '701AMBIGUOUS0002'`, [EXTERNAL_ID])
+ok((await pushAll({ campaign: amb, accounts: [], opportunities: [], payments: [], contacts: [] }, ports)).find((x) => x.sf_object === 'Campaign')?.sf_id === '701AMBIGUOUS0001',
+  "a same-named Campaign carrying another gala's id isn't this gala's")
 const contactsBefore = (await sf('Contact')).length
 const noLookup: PushPorts = { ...ports, query: (soql) => (parseSoql(soql).sobject === 'Contact' ? Promise.reject(new Error('HTTP 503')) : ports.query(soql)) }
 const r5 = await pushAll(await outbox(), noLookup)
@@ -188,13 +203,14 @@ let n = 0
 const many = [...Array.from({ length: 450 }, (_, i) => ({ id: `g-batch-${i}`, first: 'Test', last: `Guest ${i}`, email: `batch${i}@example.org`, status: 'Registered' })),
   ...Array.from({ length: 120 }, (_, i) => ({ id: `g-mail-${i}`, first: 'Test', last: `Mail ${i}`, email: `guest${i}@example.org`, status: 'Registered' }))]
 await pushAll({ ...o1, contacts: many }, {
-  query: async (soql) => { const p = parseSoql(soql); calls.push(`query ${p.sobject} ${p.conds.at(-1)?.values.length}`); return p.sobject === 'Campaign' ? [{ Id: GL.campaign, [EXTERNAL_ID]: null }] : [] },
+  query: async (soql) => { const p = parseSoql(soql); calls.push(`query ${p.sobject} ${p.conds.at(-1)?.values.length}`)
+    return p.sobject === 'Campaign' ? [{ Id: GL.campaign, [EXTERNAL_ID]: o1.campaign?.id }] : p.sobject === 'CampaignMemberStatus' ? MEMBER_STATUSES.map((Label) => ({ Label })) : [] },
   upsert: async (sobject, recs) => { calls.push(`upsert ${sobject} ${recs.length}`); return recs.map(() => ({ success: true, id: `x${n++}` })) },
   save: async (op, recs) => { calls.push(`${op} ${recs.length}`); return recs.map(() => ({ success: true, id: `m${n++}` })) },
 })
 const of = (prefix: string) => calls.filter((c) => c.startsWith(prefix)).map((c) => c.split(' ').at(-1)).join()
 ok(BATCH === 200 && of('upsert Contact') === '200,200,170' && of('create') === '200,200,170', '570 Contacts and their memberships go in three calls each')
-ok(LOOKUP === 50 && of('query Contact') === '50,50,50,50,50,50,50,50,50,50,50,20' && calls.filter((c) => c.startsWith('query CampaignMember')).length === 12, 'their emails are asked 50 at a time, and so are their memberships')
+ok(LOOKUP === 50 && of('query Contact') === '50,50,50,50,50,50,50,50,50,50,50,20' && calls.filter((c) => c.startsWith('query CampaignMember ')).length === 12, 'their emails are asked 50 at a time, and so are their memberships')
 
 // ---- A name or an email can't change a query
 const odd = `AAFE's "Gala" \\ x' OR Name != 'y\n`
@@ -251,9 +267,92 @@ ok(real?.token === 'fresh-token' && asked[0].url === 'https://aafe-demo.my.sales
 let refused = ''
 try { await salesforceAccess(env({ SALESFORCE_BASE_URL: 'https://x.my.salesforce.com', SALESFORCE_CLIENT_ID: 'a', SALESFORCE_CLIENT_SECRET: 'b' }), fakeFetch(400, { error: 'invalid_client' })) }
 catch (e) { refused = (e as Error).message }
-ok(/sign-in failed \(HTTP 400\)/.test(refused) && !/secret|\bb\b/.test(refused.replace("client id and secret", '')), "a refused sign-in says so, without the secret")
+ok(/sign-in failed \(HTTP 400\)/.test(refused) && /Salesforce said: invalid_client$/.test(refused) && !/secret|\bb\b/.test(refused.replace("client id and secret", '')),
+  "a refused sign-in says so, with Salesforce's own reason, without the secret")
 ok((await salesforceAccess(env({ SALESFORCE_BASE_URL: 'https://p.supabase.co/functions/v1/salesforce-mock', SALESFORCE_TOKEN: 'demo' }), fakeFetch(500, {})))?.token === 'demo'
   && (await salesforceAccess(env({ SALESFORCE_TOKEN: 'demo' }), fakeFetch(500, {}))) === null, "the demo's stand-in keeps its fixed token; no address means not connected")
+
+// ---- The review against Idlewild and NPSP (Oct 24): a found Campaign is never renamed, Give Lively's "Event - "
+// child is the event, NPSP makes no second payment, and the gala's Campaign gets our member statuses
+const none = { accounts: [], opportunities: [], payments: [], contacts: [] }
+const seedCampaign = async (id: string, fields: Record<string, unknown>) =>
+  q(`insert into demo_salesforce_records (sf_id, sobject, external_id, fields) values ($1, 'Campaign', $2, $3)`, [id, fields[EXTERNAL_ID] ?? null, JSON.stringify(fields)])
+await seedCampaign('701GLTAGGED00001', { Name: 'Page X Example', Type: 'Event', [EXTERNAL_ID]: 'ev-x' })   // setup step 5 done: our id put on Give Lively's
+const rx = await pushAll({ campaign: { id: 'ev-x', name: 'Gala X 2027', date: '2027-06-01', givelively_name: 'Page X Example' }, ...none }, ports)
+const tagged = (await q(`select fields from demo_salesforce_records where sf_id = '701GLTAGGED00001'`))[0].fields
+ok(rx[0].sf_id === '701GLTAGGED00001' && tagged.Name === 'Page X Example' && !('StartDate' in tagged) && !('IsActive' in tagged),
+  "a Campaign already carrying our id is used as it is: its name and dates are Give Lively's or AAFE's, never rewritten")
+await seedCampaign('701GLPARENT00001', { Name: 'Page Y Example' })
+await seedCampaign('701GLCHILD000001', { Name: 'Event - Page Y Example' })
+const ry = await pushAll({ campaign: { id: 'ev-y', name: 'Gala Y 2027', date: '2027-06-02', givelively_name: 'Page Y Example' }, ...none }, ports)
+const child = (await q(`select external_id, fields from demo_salesforce_records where sf_id = '701GLCHILD000001'`))[0]
+ok(ry[0].sf_id === '701GLCHILD000001' && child.external_id === 'ev-y' && child.fields.Name === 'Event - Page Y Example',
+  `with Give Lively's campaign hierarchy on, its "Event - " child is the gala's Campaign (the event), given our id and nothing else`)
+const newGuest = { id: 'g-new-camp', first: 'New', last: 'Campaign Guest', email: 'new.campaign.guest@example.org', status: 'Registered' }
+const rz = await pushAll({ campaign: { id: 'ev-z', name: 'Gala Z 2027', date: '2027-06-03', givelively_name: null }, ...none, contacts: [newGuest] }, ports)
+const zId = rz.find((x) => x.sf_object === 'Campaign')?.sf_id ?? ''
+const zStatuses = (await sf('CampaignMemberStatus')).filter((x) => x.fields.CampaignId === zId).sort((a, b) => a.fields.SortOrder - b.fields.SortOrder).map((x) => x.fields.Label)
+ok(zStatuses.join() === 'Sent,Responded,Registered,Attended,No Show' && !rz.some((x) => x.error),
+  "a Campaign the tool makes keeps Salesforce's own statuses and gets ours after them, and its member goes in")
+const refusedMember = await svc(`select demo_salesforce_save('create', $1::jsonb) r`, [JSON.stringify([{ attributes: { type: 'CampaignMember' }, CampaignId: zId, ContactId: GL.b, Status: 'Waitlisted' }])])
+ok(refusedMember[0].errors[0].statusCode === 'INVALID_OR_NULL_FOR_RESTRICTED_PICKLIST', "the stand-in refuses a member whose status its Campaign doesn't have, as Salesforce does")
+
+await q(`set demo_salesforce.npsp_auto_payments = 'on'`)   // the stand-in now makes NPSP's own payment for a new Opportunity
+const checks = [{ id: 'pay-npsp-1', order_id: 'ord-npsp', amount: 5000, date: '2027-02-01', method: 'check' }, { id: 'pay-npsp-2', order_id: 'ord-npsp', amount: 5000, date: '2027-03-01', method: 'check' }]
+await pushAll({ campaign: null, accounts: [{ id: 'sp-npsp', name: 'NPSP Payments Example' }], contacts: [],
+  opportunities: [{ id: 'ord-npsp', account_id: 'sp-npsp', name: 'NPSP pledge', amount: 10000, status: 'paid', close_date: '2027-01-15' }], payments: checks }, ports)
+const paymentsOn = async (order: string) => {
+  const sfId = (await q(`select sf_id from demo_salesforce_records where sobject = 'Opportunity' and external_id = $1`, [order]))[0]?.sf_id
+  return q(`select fields from demo_salesforce_records where sobject = 'npe01__OppPayment__c'
+    and (fields ->> 'npe01__Opportunity__c' = $1 or fields #>> '{npe01__Opportunity__r,AAFE_Gala_Id__c}' = $2)`, [sfId, order])
+}
+const npsp = await paymentsOn('ord-npsp')
+ok(npsp.length === 2 && npsp.reduce((s, x) => s + Number(x.fields.npe01__Payment_Amount__c), 0) === 10000,
+  'a $10,000 pledge paid by two $5,000 checks shows two payments, $10,000, not NPSP\'s own as well ($20,000)')
+await pushAll({ campaign: null, accounts: [{ id: 'sp-npsp', name: 'NPSP Payments Example' }], contacts: [], payments: [],
+  opportunities: [{ id: 'ord-npsp-off', account_id: 'sp-npsp', name: 'NPSP pledge, payments off', amount: 3000, status: 'pledged', close_date: '2027-01-16' }] }, ports, { payments: false, guests: 'all' })
+const off = await paymentsOn('ord-npsp-off')
+ok(off.length === 1 && Number(off[0].fields.npe01__Payment_Amount__c) === 3000 && off[0].fields.npe01__Paid__c === false,
+  "SALESFORCE_SEND_PAYMENTS=false: NPSP's own payment, unpaid for a pledge, is the only one (the stand-in makes it as NPSP does)")
+await q(`reset demo_salesforce.npsp_auto_payments`)
+
+// ---- Salesforce's own reason reaches staff, not "HTTP 400" (Oct 24, the review against Idlewild and NPSP)
+const noColumn = JSON.stringify([{ errorCode: 'INVALID_FIELD', message: "No such column 'npe01__HomeEmail__c' on entity 'Contact'." }])
+ok(refusalText(400, noColumn) === "Salesforce refused (HTTP 400): INVALID_FIELD: No such column 'npe01__HomeEmail__c' on entity 'Contact'.",
+  "a refused call keeps Salesforce's errorCode and message, as its REST API sends them")
+ok(refusalText(401, JSON.stringify({ error: 'invalid_grant', error_description: 'expired access/refresh token' })) === 'Salesforce refused (HTTP 401): invalid_grant: expired access/refresh token'
+  && refusalText(502, '<html>Bad gateway</html>') === 'Salesforce refused (HTTP 502)'
+  && refusalText(400, JSON.stringify([{ errorCode: 'X', message: 'y'.repeat(1000) }])).length === 300, 'a sign-in error reads the same way; a page that isn\'t JSON gives only the status; a long answer is cut to 300 characters')
+let malformed = ''
+try { parseSoql('SELECT Id FROM Contact') } catch (e) { malformed = (e as Error).message }
+const standInBody = JSON.stringify([{ errorCode: 'MALFORMED_QUERY', message: malformed }])   // what salesforce-mock answers over HTTP
+const hiddenField: PushPorts = { ...ports, query: (soql) => (parseSoql(soql).sobject === 'Contact' ? Promise.reject(new Error(refusalText(400, noColumn))) : ports.query(soql)) }
+const rh = await pushAll(await outbox(), hiddenField)
+const contactWhy = rh.find((x) => x.sf_object === 'Contact' && x.error !== NO_EMAIL)?.error ?? ''
+await mark(rh)
+const logged = (await q(`select error_message from salesforce_sync where entity = 'guest' and sf_object = 'Contact' and status = 'error' and error_message <> $1 limit 1`, [NO_EMAIL]))[0]?.error_message
+ok(/INVALID_FIELD: No such column 'npe01__HomeEmail__c'/.test(contactWhy) && logged === contactWhy && summarize(rh).first_error === contactWhy,
+  "an NPSP field the sync user can't see: the reason reaches each record, the sync log and the staff app's summary")
+ok(refusalText(400, standInBody) === `Salesforce refused (HTTP 400): MALFORMED_QUERY: ${malformed}`, "and the stand-in's HTTP errors read the same way")
+
+// ---- No email in the sync log (Cornell's review of #252): Salesforce quotes the value it refused, and contacts_delete
+// doesn't clean salesforce_sync 60 days after the gala.
+const quoted = (e: string) => `Email: invalid email address: ${e}`
+const lead = 'Salesforce refused (HTTP 400): X: ', cutAt = 300 - (gB.email.indexOf('@') + 4)   // the cut lands just past the @
+ok(refusalText(400, JSON.stringify([{ errorCode: 'INVALID_EMAIL_ADDRESS', message: quoted(gB.email) }])) === `Salesforce refused (HTTP 400): INVALID_EMAIL_ADDRESS: ${quoted('(email hidden)')}`
+  && !refusalText(400, JSON.stringify([{ errorCode: 'X', message: `${'y'.repeat(cutAt - lead.length - 1)} ${gB.email}` }])).includes('@'),
+  'a refused call names no email, not even one cut off at 300 characters')
+const fresh = 'refused.on.sync@guest.example.org'   // invented; new to the stand-in, so the push sends it
+await q(`update guests set email = $1 where id = $2`, [fresh, gB.id])
+const badEmail: PushPorts = { ...ports, upsert: (sobject, records) => (sobject === 'Contact'
+  ? Promise.resolve(records.map((r) => ({ success: false, errors: [{ statusCode: 'INVALID_EMAIL_ADDRESS', message: quoted(String(r.Email)) }] })))
+  : ports.upsert(sobject, records)) }
+const re = await pushAll(await outbox(), badEmail)
+await mark(re)
+const kept = (await q(`select count(*)::int n from salesforce_sync where error_message ~ '@'`))[0].n
+ok(re.find((x) => x.entity_id === gB.id && x.sf_object === 'Contact')?.error === `INVALID_EMAIL_ADDRESS: ${quoted('(email hidden)')}`
+  && re.every((x) => !x.error?.includes('@')) && kept === 0,
+  'a record refused for its email: the reason reaches the sync log, the email does not')
 
 console.log(`salesforce: ${count.pass} passed, ${count.fail} failed`)
 if (count.fail) process.exitCode = 1
