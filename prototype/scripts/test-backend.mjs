@@ -106,7 +106,12 @@ ok((await db.query(`select count(*)::int n from pg_proc where proname = 'write_a
 ok((await err('authenticated', RM, `select staff_set_seat_status($1,'badge_ready')`, [gid])) === "invalid_transition: this guest's status changed (now submitted); check the latest and try again",
   'cannot skip review, and the refusal says the status changed and what to do (Gate 3)')
 await as('authenticated', RM, `select staff_set_seat_status($1,'reviewed')`, [gid])
-ok((await err('authenticated', RM, `select staff_set_seat_status($1,'badge_ready')`, [gid]))?.includes('assign a table'), 'badge_ready needs seat')
+// An admitted guest with no table gets a badge too (Oct 25: it prints without a table line).
+const unseated = (await db.query(`select g.id from guests g join seats s on s.guest_id = g.id join orders o on o.id = g.order_id
+  where s.status = 'reviewed' and g.table_id is null and o.status <> 'cancelled' order by g.id limit 1`)).rows[0]?.id
+if (!unseated) throw new Error('the demo data has no reviewed guest without a table')
+ok((await err('authenticated', RM, `select staff_set_seat_status($1,'badge_ready')`, [unseated])) === null
+  && (await db.query(`select badge_status from guests where id = $1`, [unseated])).rows[0].badge_status === 'ready', 'badge_ready without a table')
 const taken = (await db.query(`select table_id, seat_number from guests where table_id is not null limit 1`)).rows[0]
 ok((await err('authenticated', RM, `select staff_assign_seat($1,$2,$3)`, [gid, taken.table_id, taken.seat_number])) === 'seat_taken', 'occupied seat rejected')
 const n = (await as('authenticated', RM, `select staff_seat_order_at_table($1,'tb-11') n`, [ord]))[0].n

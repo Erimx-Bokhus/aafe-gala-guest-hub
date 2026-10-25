@@ -45,7 +45,8 @@ describe('the iPad says what happened and what to do', () => {
     m.currentStaff.mockResolvedValue(KENJI)
     m.loadDoor.mockResolvedValue(null)   // no open gala: the list was cleared
     render(<App />)
-    expect(await screen.findByText('The guest list has been cleared from this iPad. If guests are still arriving, ask a gala admin to reopen the gala in the staff app, then tap Try again.')).toBeTruthy()
+    // No staff app screen reopens a gala (Gate 5 audit, Oct 24), so the message doesn't send anyone looking for one.
+    expect(await screen.findByText('The guest list has been cleared from this iPad. If guests are still arriving, ask a gala admin to reopen the gala, then tap Try again.')).toBeTruthy()
     fireEvent.click(screen.getByTestId('door-retry'))
     await waitFor(() => expect(m.loadDoor).toHaveBeenCalledTimes(2))
   })
