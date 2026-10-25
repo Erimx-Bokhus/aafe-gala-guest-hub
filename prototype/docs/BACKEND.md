@@ -221,7 +221,7 @@ In the demo it goes to `salesforce-mock`, a stand-in org that answers the calls 
 - Registered, Attended and No Show as member statuses on the gala's Campaign;
 - an External Client App (new connected apps are restricted since Spring '26) with the client credentials flow and a run-as user, for the client id and secret.
 
-Then `SALESFORCE_BASE_URL` is the org's instance URL. Run the first sync after Give Lively's first sale, so its Campaign already exists. Not matched yet: a sponsor organization AAFE already has as an Account (Give Lively makes none, so this isn't a duplicate of its records).
+Then `SALESFORCE_BASE_URL` is the org's instance URL. Run the first sync after Give Lively's first sale, so its Campaign already exists. A sponsor organization AAFE already has as an Account is matched by exact name (#213; two matches and nothing is made). Gaps found on Oct 24 against NPSP and Idlewild's setup (payments counted twice, Give Lively's Campaign renamed, member statuses, refusal reasons, record types): `docs/salesforce-setup.md`, "Checked against Idlewild and NPSP".
 
 ## Give Lively
 
