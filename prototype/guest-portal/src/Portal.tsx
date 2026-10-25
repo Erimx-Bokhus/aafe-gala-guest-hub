@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type MouseEvent } from 'react'
-import { Award, CheckCircle2, CircleDashed, Clock, Facebook, Instagram, Linkedin, Lock, Mail, MapPin, Pencil, Phone, Plus, Twitter, Youtube } from 'lucide-react'
+import { Award, CheckCircle2, CircleDashed, Facebook, Instagram, Linkedin, Lock, Mail, MapPin, Pencil, Phone, Plus, Twitter, Youtube } from 'lucide-react'
 import { Field, Modal, Toast, fmtDate, money } from '@shared/ui'
 import type { DB } from '@shared/types'
 import { displayName } from '@shared/data'
@@ -170,13 +170,12 @@ const SOCIAL = [
 function activityText(lang: Lang, a: PortalView['activity'][number]) {
   const t = DICT[lang]
   const m = a.summary.match(/^(.*?) (?:added to seat|updated \(seat|removed from seat) (\d+)/)
-  const name = m?.[1] ?? a.summary.replace(/ confirmed by AAFE\.?$/, '')
+  const name = m?.[1] ?? a.summary
   const seat = m?.[2] ?? ''
   switch (a.action) {
     case 'guest.submitted': return t.actAdded(name, seat)
     case 'guest.updated': return t.actUpdated(name, seat)
     case 'guest.removed': return t.actRemoved(name, seat)
-    case 'seat.reviewed': return t.actConfirmed(name)
     case 'payment.recorded': return t.actPayment(a.summary.replace(/^Payment received: /, '').replace(/\.$/, ''))
     case 'order.created': return t.actOrder
     case 'portal_link.sent': return t.actLink
@@ -230,6 +229,8 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
   const removingSeat = !closed && removing != null ? view.seats.find((s) => s.slot === removing) : undefined
   const openSeats = view.stats.total - view.stats.named
   const namesLeftMessage = namesLeftText(openSeats, t.namesLeft)
+  // Sponsors don't see review status (Oct 20 feedback); hide review events in the sponsor activity feed.
+  const sponsorActivity = view.activity.filter((a) => a.action !== 'seat.reviewed')
   const firstOpen = view.seats.find((s) => !s.guest)
   // Short place, like an invitation: the venue name (before any comma) and the city/state, no street or ZIP
   const venueName = view.event.venue.split(',')[0]!.trim()
@@ -307,7 +308,6 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
           <ul className="mt-4 grid gap-3 sm:grid-cols-2">
             {view.seats.map((s) => {
               const g = s.guest
-              const confirmed = s.status === 'reviewed' || s.status === 'badge_ready' || s.status === 'checked_in'
               // Screen readers hear which seat a button is for
               const guestName = g ? displayName(g) : ''
               const seatName = `${t.seat} ${s.slot}${g ? `, ${guestName}` : ''}`
@@ -325,12 +325,7 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
                             {g.accessibility_needs && g.accessibility_needs !== NONE && <span className="rounded bg-surface px-2 py-0.5 text-navy-700">{t.accessShort}: {g.accessibility_needs}</span>}
                           </div>
                         )}
-                        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
-                          {confirmed
-                            ? <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-800"><CheckCircle2 size={14} aria-hidden /> {t.confirmed}</span>
-                            : <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-800"><Clock size={14} aria-hidden /> {t.received}</span>}
-                          <span className="text-xs text-navy-600">{t.lastUpdated}: {fmtDate(g.updated_at, loc)}</span>
-                        </div>
+                        <div className="mt-2 text-xs text-navy-600">{t.lastUpdated}: {fmtDate(g.updated_at, loc)}</div>
                       </>
                     ) : (
                       <div className="mt-1 flex items-center gap-2 text-navy-600"><CircleDashed size={18} aria-hidden /> {t.open}</div>
@@ -406,10 +401,10 @@ export default function Portal({ db, update, token, lang }: { db: DB; update: (f
 
         {/* 5. Activity: collapsed by default, the event first and the time on the right */}
         <details className="card p-5" data-testid="activity-panel">
-          <summary className="type-h6 flex min-h-[44px] cursor-pointer items-center text-navy-900">{t.activityCount(view.activity.length)}</summary>
+          <summary className="type-h6 flex min-h-[44px] cursor-pointer items-center text-navy-900">{t.activityCount(sponsorActivity.length)}</summary>
           <p className="text-sm text-navy-500">{t.activityHelp}</p>
           <ol className="mt-3 max-h-80 divide-y divide-navy-100 overflow-y-auto" tabIndex={0} aria-label={t.activityTitle} data-testid="activity">
-            {view.activity.map((a, k) => (
+            {sponsorActivity.map((a, k) => (
               <li key={k} className="flex flex-col gap-0.5 py-2 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
                 <span className="text-navy-800">{activityText(lang, a)}</span>
                 <time className="shrink-0 whitespace-nowrap text-xs text-navy-500" dateTime={a.at}>{fmtDate(a.at, loc, true)}</time>
