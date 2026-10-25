@@ -8,7 +8,7 @@
 // connected app's SALESFORCE_CLIENT_ID and SALESFORCE_CLIENT_SECRET (a real org: a fresh token each run) or a fixed
 // SALESFORCE_TOKEN (the demo's stand-in only; a real token expires). Optional: SALESFORCE_SEND_PAYMENTS=false and
 // SALESFORCE_SEND_GUESTS=attended|none (optionsFrom). Not set: does nothing and says so. The demo never talks to a real org.
-import { EXTERNAL_ID, NOT_CONNECTED, optionsFrom, pushAll, salesforceAccess, summarize, type PushPorts, type SfAnswer, type SfRecord } from '../_shared/salesforce.ts'
+import { EXTERNAL_ID, NOT_CONNECTED, optionsFrom, pushAll, refusalText, salesforceAccess, summarize, type PushPorts, type SfAnswer, type SfRecord } from '../_shared/salesforce.ts'
 import { admin, caller, cors, env, json } from '../_shared/supabase.ts'
 import { isOwnStandIn, standInPorts } from '../salesforce-mock/standin.ts'
 
@@ -31,7 +31,8 @@ Deno.serve(async (req) => {
   // Salesforce's REST API: SOQL queries and sObject Collections calls. Never log the token.
   const call = async (path: string, init: RequestInit = {}) => {
     const res = await fetch(`${base}${path}`, { ...init, headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } })
-    if (!res.ok) throw new Error(`Salesforce returned HTTP ${res.status}`)
+    // Salesforce's own reason (a missing field, no access, a bad query) goes to each record and to staff (refusalText).
+    if (!res.ok) throw new Error(refusalText(res.status, await res.text()))
     return await res.json()
   }
   const send = (method: string, path: string, records: SfRecord[]) =>
