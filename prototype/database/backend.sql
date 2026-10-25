@@ -960,9 +960,8 @@ begin
   if not ((p_to = 'reviewed' and st.status = 'submitted') or (p_to = 'badge_ready' and st.status = 'reviewed')) then
     raise exception 'invalid_transition: this guest''s status changed (now %); check the latest and try again', replace(st.status, '_', ' ');
   end if;
-  if p_to = 'badge_ready' and (g.table_id is null or g.seat_number is null) then
-    raise exception 'invalid_transition: assign a table and seat first';
-  end if;
+  -- No table needed (Oct 25): most guests are admitted without one (208 of 553 had a table in 2026), and their badge
+  -- prints without a table line. Seating a guest later flags a printed badge for reprint (staff_assign_seat).
 
   update seats set status = p_to, updated_at = now() where id = st.id;
   if p_to = 'badge_ready' then
