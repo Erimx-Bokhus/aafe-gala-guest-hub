@@ -83,6 +83,10 @@ Badge status runs separately: `needs_review → ready → printed → reprint_ne
 
 ## 3. What the BACKEND needs (Cornell, Aisling)
 
+> **Historical (the plan of early October).** What was built differs in places: staff sign in with an emailed code, not
+> a password and MFA; relationship managers read the current gala only, and the change log is gala admins'; the
+> function names changed. The current reference is `docs/BACKEND.md`.
+
 Recommended stack: **Supabase**. It provides Postgres, Auth, Row-Level Security, Edge Functions, scheduled jobs (pg_cron) and Storage. Hosting is AAFE's decision after handoff, with whichever technical partner it chooses; this is only a build recommendation.
 
 | # | Piece | Details |
@@ -110,7 +114,7 @@ Both apps are built with Vite, React, TypeScript and Tailwind. They share code i
 | Real-time updates: subscribe to `guests`, `seats`, `payments` and `audit_log` changes | Staff dashboard and guest list |
 | Staff login → Supabase Auth | `staff-app/src/pages/Login.tsx` |
 | Set `VITE_GUEST_PORTAL_URL` so staff can copy or resend correct links | `staff-app` build env |
-| Have AAFE review the translations (English / 中文 / Español) | `guest-portal/src/i18n.ts` |
+| Have AAFE review the translations before turning them on (hidden for v1, #241; fix "No shellfish" in Chinese and Korean at the same time) | `guest-portal/src/i18n.ts`, `SHOW_LANGUAGES` in `guest-portal/src/App.tsx` |
 | Have AAFE approve the photos and get permission for the people shown | `shared/public/photos` |
 
 ---
