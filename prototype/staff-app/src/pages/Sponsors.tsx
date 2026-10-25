@@ -115,7 +115,7 @@ export function SponsorDetail({ id }: { id: string }) {
                         <td className="td"><SeatPill s={s.status} /></td>
                         <td className="td text-right">
                           {g && s.status === 'submitted' && <button className="btn-ghost btn-sm" onClick={() => void act(api.setSeatStatus(g.id, 'reviewed'), 'Marked reviewed — guest sees “Confirmed by AAFE”')}><Check size={14} /> Review</button>}
-                          {g && s.status === 'reviewed' && <button className="btn-ghost btn-sm" disabled={!g.table_id} title={g.table_id ? '' : 'Assign a table and seat first'} onClick={() => void act(api.setSeatStatus(g.id, 'badge_ready'), 'Badge ready')}>Badge ready</button>}
+                          {g && s.status === 'reviewed' && <button className="btn-ghost btn-sm" onClick={() => void act(api.setSeatStatus(g.id, 'badge_ready'), 'Badge ready')}>Badge ready</button>}
                         </td>
                       </tr>
                     )
