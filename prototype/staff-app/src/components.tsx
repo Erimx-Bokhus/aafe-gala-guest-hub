@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
-import { levelsOf, orderMoney, sponsorOf } from '@shared/data'
+import { levelsOf, methodLabel, orderMoney, sponsorOf } from '@shared/data'
 import { Field, Modal, Pill, fmtDate, money, type Tone } from '@shared/ui'
-import type { SeatStatus } from '@shared/types'
+import type { Payment, SeatStatus } from '@shared/types'
 import { useStaff } from './store'
 import { curOrders } from './pages/Dashboard'
 import { nyDate, paymentDateError } from './date'
@@ -90,6 +90,31 @@ export function RecordPaymentModal({ open, onClose, orderId }: { open: boolean; 
         <p className="rounded-md bg-cream-100 p-3 text-xs text-navy-600">No processor fee on offline payments. If this is the first payment and no portal link was sent, a guest-list email is drafted for staff approval. The payment is queued for Salesforce.</p>
         <div className="flex justify-end gap-2"><button type="button" className="btn-ghost" onClick={onClose}>Cancel</button><button className="btn-primary" disabled={!valid || saving} data-testid="save-payment">{saving ? 'Saving…' : warnings.length ? 'Record anyway' : 'Record payment'}</button></div>
       </form>
+    </Modal>
+  )
+}
+
+/** Void a check, ACH or wire entered by mistake (#223; AAFE's walk-through, item 15). Gala admins only; Give Lively
+ *  payments come from the import and are refunded there. The server keeps who, when and why in the change log and works
+ *  the order's status out again from what's left (staff_void_payment). Render with key={payment.id} so the reason resets. */
+export function VoidPaymentModal({ payment, onClose }: { payment: Payment | null; onClose: () => void }) {
+  const { db, api } = useStaff()
+  const { saving, save } = useSave()
+  const [why, setWhy] = useState('')
+  const o = payment && db.orders.find((x) => x.id === payment.order_id)
+  if (payment && !o) throw new Error(`Payment ${payment.id} has no order`)
+  const inSf = !!payment && db.salesforce_sync.some((s) => s.entity === 'payment' && s.entity_id === payment.id && s.sf_id)
+  return (
+    <Modal open={!!payment} onClose={onClose} title="Void this payment?">
+      {payment && o && (
+        <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); if (!why.trim()) return; void save(() => api.voidPayment(payment.id, why), 'Payment voided — order status updated').then((done) => { if (done) onClose() }) }}>
+          <p className="text-sm text-navy-800" data-testid="void-summary"><b>{money(payment.original_amount, !Number.isInteger(payment.original_amount))}</b> by {methodLabel(payment)}{payment.check_number ? ` #${payment.check_number}` : ''} from <b>{sponsorOf(db, o.sponsor_id).organization_name}</b>, {fmtDate(payment.received_at)}.</p>
+          <Field id="vr" label="Why" hint="For example: entered twice, wrong amount, or refunded."><input id="vr" className="input" value={why} onChange={(e) => setWhy(e.target.value)} autoFocus /></Field>
+          {inSf && <p role="status" className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">This payment was already sent to Salesforce: remove it there too.</p>}
+          <p className="rounded-md bg-cream-100 p-3 text-xs text-navy-600">The payment is removed and the order’s status is worked out again from what’s left. Who voided it, when and why stay in the change log. To correct an amount, void it, then record the payment again.</p>
+          <div className="flex justify-end gap-2"><button type="button" className="btn-ghost" onClick={onClose}>Cancel</button><button className="btn-primary" disabled={!why.trim() || saving} data-testid="confirm-void">{saving ? 'Voiding…' : 'Void payment'}</button></div>
+        </form>
+      )}
     </Modal>
   )
 }
