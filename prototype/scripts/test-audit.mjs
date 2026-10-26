@@ -52,6 +52,7 @@ const ACTIONS = [
   ['staff_set_prospect_stage', RM, `select staff_set_prospect_stage((select p.id from sponsor_prospects p join sponsors s on s.id = p.sponsor_id
      where s.organization_name = 'Audit Prospect Co'), 'reached_out')`, 'prospect.stage'],
   ['staff_set_sponsorship_goal', ADMIN, `select staff_set_sponsorship_goal(250000)`, 'gala.goal_set'],
+  ['staff_save_table', ADMIN, `select staff_save_table('tb-10', 'Peony', 12)`, 'table.updated'],
   ['staff_set_sponsor_arrivals', ADMIN, `select staff_set_sponsor_arrivals(true, 'Test approval')`, 'gala.sponsor_arrivals'],
   ['staff_update_gala_event', ADMIN, `select staff_update_gala_event('{"dress_code":"Black tie (audit test)"}')`, 'event.updated'],
   ['staff_set_material_status', RM, `select staff_set_material_status('ord-acme', 'logo', 'received')`, 'materials.updated'],

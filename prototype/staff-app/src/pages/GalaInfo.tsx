@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { CalendarPlus } from 'lucide-react'
 import { Field, Modal, Pill, fmtDate, money } from '@shared/ui'
-import type { GalaEvent, Seat } from '@shared/types'
+import type { EventTable, GalaEvent, Seat } from '@shared/types'
 import { PageHead } from '../App'
 import { useStaff } from '../store'
 import { canDo, type NewGala } from '../api'
@@ -40,6 +40,52 @@ function SponsorArrivals({ ev }: { ev: GalaEvent }) {
             <button className="btn-primary" data-testid="arrivals-on" disabled={!note.trim()} onClick={() => void act(api.setSponsorArrivals(true, note), 'Sponsors can now see which of their guests have arrived').then((ok) => { if (ok) setNote('') })}>Switch on</button>
           </div>
         )}
+    </section>
+  )
+}
+
+// Tables (AAFE's Oct 20 walk-through, items 12 and 24): each table's number, a name that prints on badges beside it, and
+// how many people it seats: 10 unless changed (AAFE's venue has 10- and 12-person tables; a smaller one is fine). The
+// guest list's Table picker and its "full" follow the size. Gala admins edit; staff_save_table checks the same rules.
+function TableRow({ t, at, canEdit }: { t: EventTable; at: number; canEdit: boolean }) {
+  const { api, act } = useStaff()
+  const [label, setLabel] = useState(t.label ?? '')
+  const [seats, setSeats] = useState(String(t.capacity))
+  const n = Number(seats)
+  const error = !Number.isInteger(n) || n < 1 || n > 30 ? 'Seats 1 to 30' : n < at ? `${at} seated now` : null
+  const changed = label.trim() !== (t.label ?? '') || n !== t.capacity
+  const save = () => void act(api.saveTable(t.id, label, n), `Table ${t.number} saved`)
+  return (
+    <tr>
+      <td className="td whitespace-nowrap font-semibold text-navy-900">Table {t.number}</td>
+      <td className="td"><input className="input py-1" aria-label={`Name of Table ${t.number}`} placeholder="No name" maxLength={40} value={label} disabled={!canEdit}
+        onChange={(e) => setLabel(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && changed && !error && save()} /></td>
+      <td className="td"><input className="input w-20 py-1 tabular-nums" aria-label={`Seats at Table ${t.number}`} inputMode="numeric" value={seats} disabled={!canEdit}
+        onChange={(e) => setSeats(e.target.value.replace(/[^0-9]/g, ''))} onKeyDown={(e) => e.key === 'Enter' && changed && !error && save()} />
+        {error && <div className="mt-1 text-xs text-rose-700">{error}</div>}</td>
+      <td className="td tabular-nums text-navy-600">{at}</td>
+      <td className="td">{canEdit && <button type="button" className="btn-ghost btn-sm" disabled={!changed || !!error} onClick={save}>Save</button>}</td>
+    </tr>
+  )
+}
+
+function Tables({ ev }: { ev: GalaEvent }) {
+  const { db, user } = useStaff()
+  const canEdit = canDo(user.role, 'saveTable')
+  const tables = db.event_tables.filter((t) => t.event_id === ev.id).sort((a, b) => a.number - b.number)
+  return (
+    <section className="card mt-6 p-5" data-testid="tables">
+      <h2 className="font-semibold text-navy-900">Tables</h2>
+      <p className="mt-1 text-sm text-navy-600">A table's name prints on badges with its number ("Table 2 · Harborline"). Seats sets how many people the guest list lets you put there.{canEdit ? '' : ' Only gala admins can change these.'}</p>
+      <div className="mt-3 overflow-x-auto">
+        <table className="w-full max-w-2xl">
+          <thead className="border-b border-navy-100"><tr><th className="th">Number</th><th className="th">Name on badges</th><th className="th">Seats</th><th className="th">Seated now</th><th className="th"><span className="sr-only">Save</span></th></tr></thead>
+          <tbody className="divide-y divide-navy-100">
+            {tables.map((t) => <TableRow key={`${t.id}:${t.label ?? ''}:${t.capacity}`} t={t} at={db.guests.filter((g) => g.table_id === t.id).length} canEdit={canEdit} />)}
+          </tbody>
+        </table>
+      </div>
+      {!tables.length && <p className="mt-3 text-sm text-navy-500">No tables for this gala yet.</p>}
     </section>
   )
 }
@@ -110,6 +156,7 @@ export default function GalaInfo() {
           </section>
         </div>
       </div>
+      <Tables ev={ev} />
     </div>
   )
 }

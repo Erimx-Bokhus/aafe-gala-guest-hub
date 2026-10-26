@@ -46,6 +46,32 @@ export function setSeatStatus(db: DB, actor: string, guestId: string, to: 'revie
     { actor_type: 'staff', actor, entity: 'seat', entity_id: seat.id, order_id: g.order_id, action: to === 'reviewed' ? 'seat.reviewed' : 'badge.ready', from_state: seat.status, to_state: to, guest_visible: to === 'reviewed', summary: to === 'reviewed' ? `${name(g)} confirmed by AAFE.` : `${name(g)} badge marked ready.` })
 }
 
+/** staff_save_table(): a table's name and how many it seats, by the server's rules (backend.sql). Seat numbers only count,
+ *  so a guest past a smaller size moves to an open number; renaming flags printed badges at the table for reprint. */
+export function saveTable(db: DB, user: StaffUser, id: string, label: string, capacity: number): DB {
+  const t = db.event_tables.find((x) => x.id === id)
+  if (!t) throw new Error('not_found: no such table')
+  const name = label.trim() || null
+  if (!Number.isInteger(capacity) || capacity < 1 || capacity > 30) throw new Error('invalid_input: a table seats 1 to 30 people')
+  if (name && name.length > 40) throw new Error('invalid_input: a table name is 40 characters at most')
+  const at = db.guests.filter((g) => g.table_id === id)
+  if (at.length > capacity) throw new Error(`invalid_input: ${at.length} people are at Table ${t.number} now; move some to another table before making it seat ${capacity}`)
+  if (t.label === name && t.capacity === capacity) return db
+  const taken = new Set(at.map((g) => g.seat_number).filter((n): n is number => n != null && n <= capacity))
+  const moved = new Map<string, number>()
+  for (const g of at.filter((x) => (x.seat_number ?? 0) > capacity).sort((a, b) => (a.seat_number ?? 0) - (b.seat_number ?? 0))) {
+    const n = Array.from({ length: capacity }, (_, i) => i + 1).find((k) => !taken.has(k))
+    if (n === undefined) throw new Error(`Table ${t.number} has no open seat number for ${g.id}, though it seats more than are at it`)
+    taken.add(n); moved.set(g.id, n)
+  }
+  const renamed = t.label !== name
+  const guests = db.guests.map((g) => (g.table_id !== id ? g : { ...g, seat_number: moved.get(g.id) ?? g.seat_number,
+    ...(renamed && g.badge_status === 'printed' ? { badge_status: 'reprint_needed' as const, updated_at: nowIso() } : {}) }))
+  return addAudit({ ...db, guests, event_tables: db.event_tables.map((x) => (x.id === id ? { ...x, label: name, capacity } : x)) },
+    { actor_type: 'staff', actor: user.name, entity: 'table', entity_id: id, order_id: null, action: 'table.updated', from_state: `${t.label ?? 'no name'} · ${t.capacity} seats`,
+      to_state: `${name ?? 'no name'} · ${capacity} seats`, guest_visible: false, summary: `Table ${t.number}: ${name ? `"${name}"` : 'no name'}, seats ${capacity}.` })
+}
+
 export function markPrinted(db: DB, actor: string, ids: string[]): DB {
   let d: DB = { ...db, guests: db.guests.map((g) => (ids.includes(g.id) ? { ...g, badge_status: 'printed' as const } : g)) }
   d = addAudit(d, { actor_type: 'staff', actor, entity: 'badge', entity_id: ids.join(','), order_id: null, action: 'badge.printed', from_state: null, to_state: 'printed', guest_visible: false, summary: `${ids.length} badge(s) marked printed.` })
