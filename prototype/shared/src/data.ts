@@ -3,7 +3,7 @@
 import small from './seed.json'
 import fullAsSent from './seed.full-as-sent.json'
 import fullFixed from './seed.full-fixed.json'
-import type { AuditEntry, DB, GuestType, PayMethod, Payment } from './types'
+import type { AuditEntry, DB, EventTable, GuestType, PayMethod, Payment } from './types'
 import { supabase } from './supabase'
 
 // The three labeled demo data sets (decisions Oct 7-8), one at a time. The same sets load into Supabase
@@ -62,6 +62,8 @@ export const GUEST_TYPE_LABEL: Record<GuestType, string> = {
 }
 /** Whether a guest came through a sponsor or ticket purchase (and so has a sponsor to show). */
 export const hasSponsor = (t: GuestType) => t === 'sponsor_guest' || t === 'ticket_holder'
+/** "Table 2 · Harborline", or "Table 2" for a table with no name: the badge, the printer file and the guest list's picker. */
+export const tableLabel = (t: Pick<EventTable, 'number' | 'label'>) => `Table ${t.number}${t.label ? ` · ${t.label}` : ''}`
 
 export const tierOf = (db: DB, id: string) => db.sponsorship_tiers.find((t) => t.id === id)!
 /** A gala's sponsorship levels, in order (one list per gala, decided Oct 14). Retired levels only when asked for. */

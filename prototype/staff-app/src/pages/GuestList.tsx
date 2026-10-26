@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Download, Search } from 'lucide-react'
-import { GUEST_TYPE_LABEL, sponsorOf } from '@shared/data'
+import { GUEST_TYPE_LABEL, sponsorOf, tableLabel } from '@shared/data'
 import { Pill, ago, downloadCsv } from '@shared/ui'
 import type { EventTable, Guest, GuestType, SeatStatus } from '@shared/types'
 import { PageHead } from '../App'
@@ -51,7 +51,7 @@ function TablePicker({ g, tables }: { g: Guest; tables: EventTable[] }) {
       <option value="">No table</option>
       {tables.map((t) => {
         const open = t.capacity - taken(t).size
-        return <option key={t.id} value={t.id} disabled={open < 1 && t.id !== g.table_id}>Table {t.number}{t.id === g.table_id ? '' : open < 1 ? ' (full)' : ` (${open} open)`}</option>
+        return <option key={t.id} value={t.id} disabled={open < 1 && t.id !== g.table_id}>{tableLabel(t)}{t.id === g.table_id ? '' : open < 1 ? ' (full)' : ` (${open} open)`}</option>
       })}
     </select>
   )

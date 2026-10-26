@@ -59,6 +59,7 @@ export interface StaffApi {
   recordPayment(orderId: string, p: PaymentInput): Promise<void>
   /** Undo a check, ACH or wire entered by mistake (#223). Gala admins only, with a reason. */
   voidPayment(paymentId: string, reason: string): Promise<void>
+  saveTable(tableId: string, label: string, capacity: number): Promise<void>
   addPledge(p: PledgeInput): Promise<void>
   addCompGuest(g: CompGuestInput): Promise<void>
   sendQrInvite(guestId: string): Promise<void>
@@ -132,7 +133,7 @@ export const ROLES: Record<Exclude<keyof StaffApi, 'live'>, Role[]> = {
   recordPayment: MANAGERS, voidPayment: ADMIN, addPledge: MANAGERS, addCompGuest: MANAGERS, sendQrInvite: MANAGERS, resendPortalLink: MANAGERS,
   approveEmail: MANAGERS, cancelEmail: MANAGERS, setMaterialStatus: MANAGERS,
   checkIn: ALL, checkInByCode: ALL, checkInException: ALL,
-  updateGalaEvent: ADMIN, history: MANAGERS,
+  updateGalaEvent: ADMIN, saveTable: ADMIN, history: MANAGERS,
   exportBadges: MANAGERS, exportCheckin: ALL, exportSalesforce: ADMIN, syncSalesforce: ADMIN,
   emailQueue: MANAGERS, queueReminders: MANAGERS, setSponsorArrivals: ADMIN,
   importGiveLively: ADMIN, pullGiveLively: ADMIN, setGalaPage: ADMIN, addGalaPage: ADMIN, removeGalaPage: ADMIN, setTierMapping: ADMIN, resolveImportReview: MANAGERS,
@@ -229,6 +230,7 @@ export function demoApi(user: StaffUser, update: (fn: (d: DB) => DB) => void, fu
     seatOrderAtTable: (o, t) => run('seatOrderAtTable', (d) => store.seatOrderAtTable(d, user.name, o, t)),
     recordPayment: (o, p) => run('recordPayment', (d) => store.recordOfflinePayment(d, user, o, p)),
     voidPayment: (id, why) => run('voidPayment', (d) => store.voidPayment(d, user, id, why)),
+    saveTable: (id, label, capacity) => run('saveTable', (d) => store.saveTable(d, user, id, label, capacity)),
     addPledge: (p) => run('addPledge', (d) => store.addPledge(d, user, p)),
     addCompGuest: (g) => run('addCompGuest', (d) => store.addCompGuest(d, user, g)),
     sendQrInvite: (id) => run('sendQrInvite', (d) => store.sendQrInvite(d, user, id)),
@@ -431,6 +433,7 @@ export function liveApi(client: SupabaseClient, reload: () => Promise<void>): St
     seatOrderAtTable: (o, t) => write('staff_seat_order_at_table', { p_order_id: o, p_table_id: t }),
     recordPayment: (o, p) => write('staff_record_payment', { p_order_id: o, p_method: p.method, p_amount: p.amount, p_received: p.received, p_check_number: p.check_number || null }),
     voidPayment: (id, why) => write('staff_void_payment', { p_payment_id: id, p_reason: why }),
+    saveTable: (id, label, capacity) => write('staff_save_table', { p_table_id: id, p_label: label, p_capacity: capacity }),
     addPledge: (p) => write('staff_add_pledge', { p_org: p.org, p_contact: p.contact, p_email: p.email, p_tier_id: p.tierId, p_source: p.source }),
     addCompGuest: (g) => write('staff_add_comp_guest', { p_guest: g }),
     sendQrInvite: (id) => write('staff_send_qr_invite', { p_guest_id: id }),

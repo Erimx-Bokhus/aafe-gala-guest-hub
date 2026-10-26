@@ -73,13 +73,14 @@ describe('who may export, and the change log', () => {
 })
 
 describe('the CSV files', () => {
-  it('keep the badge columns staff already use, and say what the badge says', () => {
+  it('say what the badge says: the table and its name, never a seat number (item 24)', () => {
     const csv = badgeCsv([
-      { display_name: 'Dr. Ana Ruiz', first_name: 'Ana', last_name: 'Ruiz', title: 'Director', organization: 'Example Co', table_number: 3, seat_number: 2, sponsor: 'Example Sponsor', guest_type: 'sponsor_guest', badge_status: 'ready' },
+      { display_name: 'Dr. Ana Ruiz', first_name: 'Ana', last_name: 'Ruiz', title: 'Director', organization: 'Example Co', table_number: 3, seat_number: 2, sponsor: 'Example Sponsor', guest_type: 'sponsor_guest', badge_status: 'ready', table_name: 'Peony' },
       { display_name: 'Bo Han', first_name: 'Bo', last_name: 'Han', title: null, organization: null, table_number: null, seat_number: null, sponsor: null, guest_type: 'comp_relationship', badge_status: 'ready' },
     ])
-    expect(csv[1]).toEqual(['Name on badge', 'First', 'Last', 'Title', 'Organization', 'Table', 'Seat', 'Affiliation'])
-    expect(csv[2]).toEqual(['Dr. Ana Ruiz', 'Ana', 'Ruiz', 'Director', 'Example Co', 3, 2, 'Example Sponsor'])   // the badge prints the name as written
+    expect(csv[1]).toEqual(['Name on badge', 'First', 'Last', 'Title', 'Organization', 'Table', 'Table name', 'Affiliation'])
+    expect(csv[2]).toEqual(['Dr. Ana Ruiz', 'Ana', 'Ruiz', 'Director', 'Example Co', 3, 'Peony', 'Example Sponsor'])   // the badge prints the name as written
+    expect(csv[3][6]).toBeNull()   // no table, no name
     expect(csv[3][7]).toBe('Guest of AAFE')
   })
 
