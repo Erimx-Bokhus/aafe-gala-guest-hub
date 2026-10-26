@@ -20,7 +20,7 @@ function setup(saved: boolean) {
   const api = { live: false, updateGuest } as unknown as StaffApi
   // act() answers false when the server refuses the save (it shows the reason as a toast).
   render(<StaffCtx.Provider value={{ db, api, user: { id: 'st-admin', name: 'Test Admin', email: 'admin@aafe-demo.example.org', role: 'gala_admin' }, toast: () => {}, act: async () => saved, demo: null }}><GuestList /></StaffCtx.Provider>)
-  const cell = screen.getByLabelText(`email for ${g.first_name} ${g.last_name}`) as HTMLInputElement
+  const cell = screen.getByLabelText(`email for ${g.first_name} ${g.last_name}`) as HTMLTextAreaElement
   return { g, updateGuest, cell }
 }
 

@@ -14,7 +14,7 @@ afterEach(cleanup)
 const ADMIN: StaffUser = { id: 'st-admin', name: 'Test Admin', email: 'admin@aafe-demo.example.org', role: 'gala_admin' }
 /** How many rows the grid shows, and the first row's editable cells (first name, last name, title, organization...). */
 const rowCount = () => screen.getByTestId('guest-grid').querySelectorAll('tbody tr').length
-const firstRow = () => [...(screen.getByTestId('guest-grid').querySelector('tbody tr')?.querySelectorAll('input') ?? [])].map((i) => i.value).join(' ')
+const firstRow = () => [...(screen.getByTestId('guest-grid').querySelector('tbody tr')?.querySelectorAll('textarea') ?? [])].map((i) => i.value).join(' ')
 
 async function setup() {
   let db: DB = loadDB()
