@@ -2337,10 +2337,10 @@ begin
   if nullif(p ->> 'id', '') is null then
     v_sp := nullif(p ->> 'sponsor_id', '');
     if v_sp is null then
-      v_org := btrim(coalesce(p ->> 'organization', ''));
-      if v_org = '' or btrim(coalesce(p ->> 'contact_name', '')) = '' then
-        raise exception 'invalid_input: organization and contact name are required';
-      end if;
+      if btrim(coalesce(p ->> 'contact_name', '')) = '' then raise exception 'invalid_input: a contact name is required'; end if;
+      -- An individual sponsor has no organization (AAFE's Oct 20 walk-through): their own name is the sponsor's name, the
+      -- way Give Lively's individual buyers are filed.
+      v_org := coalesce(nullif(btrim(coalesce(p ->> 'organization', '')), ''), btrim(p ->> 'contact_name'));
       select id into v_sp from sponsors where lower(btrim(organization_name)) = lower(v_org) limit 1;
       if v_sp is not null then   -- named as staff will find them in the list
         raise exception 'invalid_input: % is already a sponsor: choose them from the existing sponsors instead', (select organization_name from sponsors where id = v_sp);
