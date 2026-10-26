@@ -1,7 +1,7 @@
 // AAFE STAFF APP (the "client app": AAFE's gala team)
 // Reads everything the guest portal writes (same database), plus Give Lively + Salesforce data.
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { Activity, BadgeCheck, CalendarDays, ClipboardList, CreditCard, FileUp, Heart, LayoutDashboard, LogOut, Menu, Plug, ScanLine, Table2, TrendingUp, X, Layers, FileSpreadsheet } from 'lucide-react'
+import { Activity, BadgeCheck, CalendarDays, ClipboardList, CreditCard, FileUp, Heart, LayoutDashboard, LogOut, Menu, PanelLeftClose, PanelLeftOpen, Plug, ScanLine, Table2, TrendingUp, X, Layers, FileSpreadsheet } from 'lucide-react'
 import { loadDB } from '@shared/data'
 import { AafeLogo } from '@shared/Logo'
 import { DisplayControls, go, Link, PrototypeBanner, routeNow, Toast, useDisplayPrefs, useRoute } from '@shared/ui'
@@ -44,6 +44,8 @@ const NAV: { to: string; label: string; icon: typeof LayoutDashboard; roles: Rol
 ]
 const ROLE_LABEL: Record<Role, string> = { gala_admin: 'Gala admin', relationship_manager: 'Relationship manager', check_in_volunteer: 'Check-in volunteer' }
 const navFor = (role: Role) => NAV.filter((n) => n.roles.includes(role))
+/** "Janelle Teng" -> "JT", as the check-in app shows who is signed in. */
+const initials = (name: string) => name.split(/\s+/).filter(Boolean).map((w) => w[0]).slice(0, 2).join('').toUpperCase()
 /** The pages a role can open: one of its menu entries, or a page under one (a sponsor under Sponsors). */
 const canOpen = (role: Role, p: string) => navFor(role).some((n) => p === n.to || (n.to !== '/' && p.startsWith(n.to + '/')))
 
@@ -55,6 +57,9 @@ export default function App() {
   const [notice, setNotice] = useState('')
   const [msg, setMsg] = useState<string | null>(null)
   const [menu, setMenu] = useState(false)
+  // The menu narrowed to its icons (Aisling, Oct 20 walk-through, 15:51): the pages are wide tables, and the full menu took
+  // 240 px of them. Kept for this visit only, like the text size and theme (useDisplayPrefs).
+  const [narrow, setNarrow] = useState(false)
   const prefs = useDisplayPrefs()
   const [liveDb, setLiveDb] = useState<DB | null>(null)
   const [loadError, setLoadError] = useState('')
@@ -150,29 +155,38 @@ export default function App() {
   else if (p === '/activity') page = <AuditLog />
   else page = <Dashboard />
 
-  const Side = (
+  const leave = () => { void signOut(); setNotice(''); setUser(null); go('/') }
+  // Narrow: each page's icon, its name kept for screen readers and shown on hover; the AAFE mark; the person's initials.
+  const side = (narrow: boolean) => (
     <nav aria-label="Staff navigation" className="flex h-full flex-col bg-brand-500 text-white">
-      <div className="flex items-center gap-3 border-b border-brand-600 bg-white px-5 py-5 dark:bg-surface">
-        <AafeLogo size="sm" />
+      <div className={`flex items-center border-b border-brand-600 bg-white py-5 dark:bg-surface ${narrow ? 'justify-center px-2' : 'gap-3 px-5'}`}>
+        {narrow ? <img src="./brand/aafe-mark-orange.png" alt="Asian Americans for Equality (AAFE)" className="h-8 w-8" /> : <AafeLogo size="sm" />}
       </div>
-      <div className="px-5 pb-3 pt-5 text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-white">Gala operations</div>
-      <ul className="flex-1 space-y-0.5 overflow-y-auto px-3">
+      {!narrow && <div className="px-5 pb-3 pt-5 text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-white">Gala operations</div>}
+      <ul className={`flex-1 space-y-0.5 overflow-y-auto ${narrow ? 'px-2 pt-4' : 'px-3'}`}>
         {nav.map((n) => {
           const active = n.to === '/' ? p === '/' : p.startsWith(n.to)
           return (
             <li key={n.to}>
-              <Link to={n.to} aria-current={active ? 'page' : undefined} className={`flex items-center gap-3 rounded-full px-3 py-2 text-sm font-medium ${active ? 'bg-white text-brand-700 dark:!text-[#8A3118]' : 'text-white hover:bg-white/15'}`}>
-                <n.icon size={17} className={active ? 'text-brand-500' : 'text-white'} /> {n.label}
+              <Link to={n.to} aria-current={active ? 'page' : undefined} title={narrow ? n.label : undefined} className={`flex items-center rounded-full py-2 text-sm font-medium ${narrow ? 'justify-center' : 'gap-3 px-3'} ${active ? 'bg-white text-brand-700 dark:!text-[#8A3118]' : 'text-white hover:bg-white/15'}`}>
+                <n.icon size={narrow ? 19 : 17} aria-hidden className={active ? 'text-brand-500' : 'text-white'} /> <span className={narrow ? 'sr-only' : ''}>{n.label}</span>
               </Link>
             </li>
           )
         })}
       </ul>
-      <div className="border-t border-brand-600 p-4">
-        <div className="text-sm font-semibold text-white">{user.name}</div>
-        <div className="text-xs text-white">{ROLE_LABEL[user.role]}</div>
-        <button className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-white underline-offset-2 hover:underline" onClick={() => { void signOut(); setNotice(''); setUser(null); go('/') }}><LogOut size={14} /> Sign out</button>
-      </div>
+      {narrow ? (
+        <div className="flex flex-col items-center gap-2 border-t border-brand-600 px-2 py-4">
+          <span role="img" aria-label={`${user.name}, ${ROLE_LABEL[user.role]}`} title={`${user.name} · ${ROLE_LABEL[user.role]}`} className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-sm font-semibold text-brand-700" data-testid="menu-initials">{initials(user.name)}</span>
+          <button className="rounded-full p-2 text-white hover:bg-white/15" aria-label="Sign out" title="Sign out" onClick={leave}><LogOut size={16} /></button>
+        </div>
+      ) : (
+        <div className="border-t border-brand-600 p-4">
+          <div className="text-sm font-semibold text-white">{user.name}</div>
+          <div className="text-xs text-white">{ROLE_LABEL[user.role]}</div>
+          <button className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-white underline-offset-2 hover:underline" onClick={leave}><LogOut size={14} /> Sign out</button>
+        </div>
+      )}
     </nav>
   )
 
@@ -180,13 +194,15 @@ export default function App() {
     <StaffCtx.Provider value={{ db: viewDb, api, user, toast, act, demo: supabase ? null : update }}>
       <PrototypeBanner dataSwitch />
       <div className="flex min-h-[calc(100vh-28px)]">
-        <aside className="no-print sticky top-0 hidden h-[calc(100vh-28px)] w-60 shrink-0 lg:block">{Side}</aside>
+        <aside id="staff-menu" className={`no-print sticky top-0 hidden h-[calc(100vh-28px)] shrink-0 transition-[width] duration-200 lg:block ${narrow ? 'w-[72px]' : 'w-60'}`} data-testid="staff-menu">{side(narrow)}</aside>
         {/* The open menu covers the header, so it carries its own Close button (Oct 19 click-through). */}
-        {menu && <div className="no-print fixed inset-0 z-40 lg:hidden" onClick={() => setMenu(false)}><div className="relative h-full w-64" onClick={(e) => e.stopPropagation()}>{Side}<button className="icon-btn absolute right-3 top-4" aria-label="Close menu" onClick={() => setMenu(false)}><X size={18} /></button></div><div className="absolute inset-0 -z-10 bg-black/50" /></div>}
+        {menu && <div className="no-print fixed inset-0 z-40 lg:hidden" onClick={() => setMenu(false)}><div className="relative h-full w-64" onClick={(e) => e.stopPropagation()}>{side(false)}<button className="icon-btn absolute right-3 top-4" aria-label="Close menu" onClick={() => setMenu(false)}><X size={18} /></button></div><div className="absolute inset-0 -z-10 bg-black/50" /></div>}
         <div className="min-w-0 flex-1">
           <header className="no-print sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-navy-100 bg-surface/95 px-4 py-2.5 backdrop-blur sm:px-6">
             <div className="flex items-center gap-2">
               <button className="icon-btn lg:hidden" aria-label="Open menu" aria-expanded={menu} onClick={() => setMenu(true)}><Menu size={18} /></button>
+              <button className="icon-btn hidden lg:inline-flex" aria-label={narrow ? 'Show the full menu' : 'Narrow the menu to icons'} title={narrow ? 'Show the full menu' : 'Narrow the menu to icons'}
+                aria-controls="staff-menu" aria-expanded={!narrow} data-testid="menu-narrow" onClick={() => setNarrow((x) => !x)}>{narrow ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}</button>
               <div className="text-sm font-semibold text-navy-900">{viewDb.gala_events.find((e) => e.id === viewDb.meta.current_event_id)?.name}</div>
             </div>
             <DisplayControls prefs={prefs} />
