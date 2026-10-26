@@ -124,11 +124,15 @@ export function AddPledgeModal({ open, onClose }: { open: boolean; onClose: () =
   const { saving, save } = useSave()
   // This gala's levels only (one list per gala); each shows its amount and how many guests it includes.
   const levels = levelsOf(db).filter((t) => t.tier_category !== 'complimentary')
-  const [f, setF] = useState(() => ({ org: '', contact: '', email: '', tierId: levels.find((t) => t.tier_category === 'sponsorship')?.id ?? levels[0]?.id ?? '', source: 'check' as 'check' | 'ach_direct' | 'wire' }))
-  const ok = f.org.trim() && f.contact.trim() && /\S+@\S+\.\S+/.test(f.email) && f.tierId
+  const [f, setF] = useState(() => ({ org: '', contact: '', email: '', tierId: levels.find((t) => t.tier_category === 'sponsorship')?.id ?? levels[0]?.id ?? '', source: 'check' as 'check' | 'ach_direct' | 'wire', amount: '' }))
+  // Item 1 of AAFE's Oct 20 walk-through: blank means the level's price; type another for a donation or a different gift.
+  const level = levels.find((t) => t.id === f.tierId)
+  const amount = f.amount.trim() ? Number(f.amount) : null
+  const amountError = amount !== null && !(amount > 0 && amount <= 10_000_000) ? 'More than $0, at most $10,000,000' : undefined
+  const ok = f.org.trim() && f.contact.trim() && /\S+@\S+\.\S+/.test(f.email) && f.tierId && !amountError
   return (
     <Modal open={open} onClose={onClose} title="New pledge (check, ACH or wire)">
-      <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); if (!ok) return; void save(() => api.addPledge(f), 'Pledge recorded — guest-list email drafted for approval').then((done) => { if (done) { onClose(); setF({ ...f, org: '', contact: '', email: '' }) } }) }}>
+      <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); if (!ok) return; void save(() => api.addPledge({ ...f, amount }), 'Pledge recorded — guest-list email drafted for approval').then((done) => { if (done) { onClose(); setF({ ...f, org: '', contact: '', email: '', amount: '' }) } }) }}>
         <Field id="po" label="Organization or donor name"><input id="po" className="input" value={f.org} onChange={(e) => setF({ ...f, org: e.target.value })} /></Field>
         <div className="grid gap-3 sm:grid-cols-2">
           <Field id="pc" label="Primary contact"><input id="pc" className="input" value={f.contact} onChange={(e) => setF({ ...f, contact: e.target.value })} /></Field>
@@ -138,6 +142,9 @@ export function AddPledgeModal({ open, onClose }: { open: boolean; onClose: () =
           <Field id="pt" label="Package"><select id="pt" className="input" value={f.tierId} onChange={(e) => setF({ ...f, tierId: e.target.value })}>{levels.map((t) => <option key={t.id} value={t.id}>{t.name} — {money(t.contribution_amount)} · {t.included_seat_count} {t.included_seat_count === 1 ? 'guest' : 'guests'}</option>)}</select></Field>
           <Field id="ps" label="Will pay by"><select id="ps" className="input" value={f.source} onChange={(e) => setF({ ...f, source: e.target.value as 'check' })}><option value="check">Check</option><option value="ach_direct">ACH to AAFE bank</option><option value="wire">Wire</option></select></Field>
         </div>
+        <Field id="pa" label="Amount" hint={`Leave blank for the level's ${level ? money(level.contribution_amount) : 'price'}; type another for a donation or a different gift.`} error={amountError}>
+          <input id="pa" className="input" inputMode="decimal" placeholder={level ? String(level.contribution_amount) : ''} value={f.amount} onChange={(e) => setF({ ...f, amount: e.target.value.replace(/[^0-9.]/g, '') })} />
+        </Field>
         <p className="rounded-md bg-cream-100 p-3 text-xs text-navy-600">Give Lively purchases arrive automatically — use this only for donors paying outside Give Lively. Seats are created from the package and a guest-list email is drafted for staff approval.</p>
         <div className="flex justify-end gap-2"><button type="button" className="btn-ghost" onClick={onClose}>Cancel</button><button className="btn-primary" disabled={!ok || saving} data-testid="save-pledge">{saving ? 'Saving…' : 'Record pledge & email link'}</button></div>
       </form>

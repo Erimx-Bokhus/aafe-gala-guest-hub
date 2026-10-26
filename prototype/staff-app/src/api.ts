@@ -17,7 +17,8 @@ import { demoBadgeRows, demoCheckinRows, demoSalesforceRows, type BadgeRow, type
 
 export type OfflineMethod = Extract<PayMethod, 'check' | 'ach_direct' | 'wire'>
 export interface PaymentInput { method: OfflineMethod; amount: number; received: string; check_number?: string }
-export interface PledgeInput { org: string; contact: string; email: string; tierId: string; source: OfflineMethod }
+/** amount: null or left out = the level's price (staff_add_pledge). */
+export interface PledgeInput { org: string; contact: string; email: string; tierId: string; source: OfflineMethod; amount?: number | null }
 export interface CompGuestInput { first_name: string; last_name: string; title: string; organization: string; email: string; relationship_note: string }
 export interface ExceptionInput { name: string; orderId: string | null; type: string; note: string }
 export interface NewGala { year: number; name: string; event_date: string; doors_time: string; program_time: string; venue_name: string; venue_address: string; dress_code: string; guest_list_deadline: string; program_ad_deadline: string; copy_levels_from: string | null }
@@ -434,7 +435,7 @@ export function liveApi(client: SupabaseClient, reload: () => Promise<void>): St
     recordPayment: (o, p) => write('staff_record_payment', { p_order_id: o, p_method: p.method, p_amount: p.amount, p_received: p.received, p_check_number: p.check_number || null }),
     voidPayment: (id, why) => write('staff_void_payment', { p_payment_id: id, p_reason: why }),
     saveTable: (id, label, capacity) => write('staff_save_table', { p_table_id: id, p_label: label, p_capacity: capacity }),
-    addPledge: (p) => write('staff_add_pledge', { p_org: p.org, p_contact: p.contact, p_email: p.email, p_tier_id: p.tierId, p_source: p.source }),
+    addPledge: (p) => write('staff_add_pledge', { p_org: p.org, p_contact: p.contact, p_email: p.email, p_tier_id: p.tierId, p_source: p.source, p_amount: p.amount ?? null }),
     addCompGuest: (g) => write('staff_add_comp_guest', { p_guest: g }),
     sendQrInvite: (id) => write('staff_send_qr_invite', { p_guest_id: id }),
     resendPortalLink: (o) => write('staff_resend_portal_link', { p_order_id: o }),

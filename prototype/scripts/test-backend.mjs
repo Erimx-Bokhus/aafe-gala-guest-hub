@@ -505,6 +505,29 @@ ok((await db.query(`select count(*)::int n from audit_log where entity = 'table'
 await as('authenticated', ADMIN, `select staff_save_table($1, '', 12)`, [busy.id])
 ok((await db.query(`select label, capacity from event_tables where id = $1`, [busy.id])).rows[0].label === null, 'a blank name clears it')
 
+// ---- New pledge's amount (AAFE's Oct 20 walk-through, item 1): left out, the level's price; typed by staff, kept for a
+// donation or a different gift, and logged. Stable and nightly had a 5-argument version: backend.sql must replace it,
+// not add a second one, or every call without an amount would be refused as ambiguous.
+const goldPrice = Number((await db.query(`select contribution_amount from sponsorship_tiers where id = 'gold'`)).rows[0].contribution_amount)
+const amountOf = async (id) => Number((await db.query(`select commitment_amount from orders where id = $1`, [id])).rows[0].commitment_amount)
+const atLevel = (await as('authenticated', RM, `select staff_add_pledge('Level Price Co', 'Ana Ruiz', 'ana@level.example.org', 'gold', 'check') id`))[0].id
+ok(await amountOf(atLevel) === goldPrice, "a pledge without an amount takes the level's price")
+const gift = (await as('authenticated', RM, `select staff_add_pledge('Gift Example Fund', 'Bo Han', 'bo@gift.example.org', 'gold', 'wire', 2000.004) id`))[0].id
+ok(await amountOf(gift) === 2000, 'an amount typed by staff is kept, to the cent')
+ok((await db.query(`select summary from audit_log where entity_id = $1 and action = 'order.created'`, [gift])).rows[0].summary.endsWith(', $2,000.00.'),
+  "the change log names the amount when it isn't the level's")
+ok((await err('authenticated', RM, `select staff_add_pledge('Zero Example Co', 'Cy Lo', 'cy@zero.example.org', 'gold', 'check', 0)`))?.startsWith('invalid_input'), 'an amount of $0 is refused')
+ok((await err('authenticated', RM, `select staff_add_pledge('Huge Example Co', 'Di Wu', 'di@huge.example.org', 'gold', 'check', 10000000.01)`))?.startsWith('invalid_input'),
+  'an amount over $10,000,000 is refused')
+await db.exec(`create function private.staff_add_pledge(p_org text, p_contact text, p_email text, p_tier_id text, p_source text) returns text language sql as $$ select 'old' $$;
+  create function public.staff_add_pledge(p_org text, p_contact text, p_email text, p_tier_id text, p_source text) returns text language sql as $$ select 'old wrapper' $$`)
+await db.exec(readFileSync(D + 'backend.sql', 'utf8'))
+const versions = (await db.query(`select n.nspname s, count(*)::int c from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+  where p.proname = 'staff_add_pledge' group by 1 order by 1`)).rows.map((r) => `${r.s}:${r.c}`).join(' ')
+ok(versions === 'private:1 public:1', `backend.sql replaces the 5-argument version: one of each left (${versions})`)
+const fiveArgs = (await as('authenticated', RM, `select staff_add_pledge('Five Args Example Co', 'Eli Ng', 'eli@five.example.org', 'gold', 'check') id`))[0].id
+ok(fiveArgs?.startsWith('ord') && await amountOf(fiveArgs) === goldPrice, 'a call without an amount still works after the upgrade')
+
 console.log(`${pass} passed, ${fail} failed`)
 
 if (fail) process.exitCode = 1

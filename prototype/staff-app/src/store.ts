@@ -199,13 +199,16 @@ function createSeats(db: DB, orderId: string, n: number): DB {
 }
 
 /** Staff enters a pledge that will be paid by check/ACH/wire (not through Give Lively). The link email is drafted for staff approval. */
-export function addPledge(db: DB, user: StaffUser, p: { org: string; contact: string; email: string; tierId: string; source: 'check' | 'ach_direct' | 'wire' }): DB {
+/** staff_add_pledge(): the amount is the level's unless one is given, by the server's rules (backend.sql). */
+export function addPledge(db: DB, user: StaffUser, p: { org: string; contact: string; email: string; tierId: string; source: 'check' | 'ach_direct' | 'wire'; amount?: number | null }): DB {
+  if (p.amount != null && !(p.amount > 0 && p.amount <= 10_000_000)) throw new Error('invalid_input: the amount must be more than $0 and at most $10,000,000')
   const sp = { id: uid('sp'), organization_name: p.org, primary_contact_name: p.contact, primary_contact_email: p.email, phone: '', relationship_owner_id: user.id, salesforce_account_id: null, created_at: nowIso() }
   const tier = tierOf(db, p.tierId)
-  const o = { id: uid('ord'), event_id: db.meta.current_event_id, sponsor_id: sp.id, tier_id: tier.id, source: p.source, commitment_amount: tier.contribution_amount, status: 'pledged' as const, portal_token: tier.included_seat_count ? secureToken() : null, portal_token_expires_at: null, portal_link_sent_at: null, guest_list_deadline: db.gala_events.find((e) => e.id === db.meta.current_event_id)!.guest_list_deadline, logo_status: tier.required_materials.includes('logo') ? 'pending' as const : 'not_required' as const, program_ad_status: tier.required_materials.some((m) => m.includes('ad')) ? 'pending' as const : 'not_required' as const, givelively_order_ref: null, salesforce_opportunity_id: null, internal_notes: '', created_at: nowIso(), updated_at: nowIso() }
+  const amount = Math.round((p.amount ?? tier.contribution_amount) * 100) / 100
+  const o = { id: uid('ord'), event_id: db.meta.current_event_id, sponsor_id: sp.id, tier_id: tier.id, source: p.source, commitment_amount: amount, status: 'pledged' as const, portal_token: tier.included_seat_count ? secureToken() : null, portal_token_expires_at: null, portal_link_sent_at: null, guest_list_deadline: db.gala_events.find((e) => e.id === db.meta.current_event_id)!.guest_list_deadline, logo_status: tier.required_materials.includes('logo') ? 'pending' as const : 'not_required' as const, program_ad_status: tier.required_materials.some((m) => m.includes('ad')) ? 'pending' as const : 'not_required' as const, givelively_order_ref: null, salesforce_opportunity_id: null, internal_notes: '', created_at: nowIso(), updated_at: nowIso() }
   let d: DB = { ...db, sponsors: [...db.sponsors, sp], orders: [...db.orders, o] }
   d = createSeats(d, o.id, tier.included_seat_count)
-  d = addAudit(d, { actor_type: 'staff', actor: user.name, entity: 'order', entity_id: o.id, order_id: o.id, action: 'order.created', from_state: null, to_state: 'pledged', guest_visible: true, summary: `${tier.name} recorded for ${p.org} (${p.source}).` })
+  d = addAudit(d, { actor_type: 'staff', actor: user.name, entity: 'order', entity_id: o.id, order_id: o.id, action: 'order.created', from_state: null, to_state: 'pledged', guest_visible: true, summary: `${tier.name} recorded for ${p.org} (${p.source})${amount !== tier.contribution_amount ? `, ${moneyFmt(amount)}` : ''}.` })
   if (o.portal_token) d = sendEmail(d, 'portal_link', p.email, p.contact, o.id, null, 'pledge_recorded')
   return d
 }

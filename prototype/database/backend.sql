@@ -1163,13 +1163,22 @@ begin
 end $$;
 
 -- addPledge: sponsor will pay by check / direct ACH / wire. Link is emailed right away.
-create or replace function staff_add_pledge(p_org text, p_contact text, p_email text, p_tier_id text, p_source text)
+-- The amount is the level's unless staff type another (AAFE's Oct 20 walk-through, item 1): a donation, or a donor who
+-- gives more or less than the level's price. One order still holds one level; several items in one order is D1, after v1.
+-- The amount came in on Oct 26: drop the 5-argument version (the public wrapper and the private function) first, or a
+-- 5-argument call would match both versions and be refused as ambiguous.
+drop function if exists public.staff_add_pledge(text, text, text, text, text);
+drop function if exists private.staff_add_pledge(text, text, text, text, text);
+create or replace function staff_add_pledge(p_org text, p_contact text, p_email text, p_tier_id text, p_source text, p_amount numeric default null)
 returns text language plpgsql security definer set search_path = public as $$
 declare
   me staff_users := require_staff(array['gala_admin','relationship_manager']);
-  t sponsorship_tiers; e gala_events; v_sp text := new_id('sp'); v_order text := new_id('ord');
+  t sponsorship_tiers; e gala_events; v_sp text := new_id('sp'); v_order text := new_id('ord'); v_amount numeric;
 begin
   if p_source not in ('check','ach_direct','wire') then raise exception 'invalid_input: source must be check, ach_direct or wire'; end if;
+  if p_amount is not null and (p_amount <= 0 or p_amount > 10000000) then
+    raise exception 'invalid_input: the amount must be more than $0 and at most $10,000,000';
+  end if;
   if coalesce(trim(p_org), '') = '' or coalesce(trim(p_contact), '') = '' or coalesce(trim(p_email), '') = '' then
     raise exception 'invalid_input: organization, contact and email are required';
   end if;
@@ -1177,17 +1186,19 @@ begin
   select * into t from sponsorship_tiers where id = p_tier_id and event_id = current_event_id() and not retired;
   select * into e from gala_events where id = current_event_id();
   if t.id is null or e.id is null then raise exception 'not_found: no such level on this gala'; end if;
+  v_amount := round(coalesce(p_amount, t.contribution_amount), 2);
 
   insert into sponsors (id, organization_name, primary_contact_name, primary_contact_email, phone, relationship_owner_id)
   values (v_sp, trim(p_org), trim(p_contact), trim(p_email), '', me.id);
   insert into orders (id, event_id, sponsor_id, tier_id, source, commitment_amount, status, guest_list_deadline,
                       logo_status, program_ad_status, internal_notes)
-  values (v_order, e.id, v_sp, t.id, p_source, t.contribution_amount, 'pledged', e.guest_list_deadline,
+  values (v_order, e.id, v_sp, t.id, p_source, v_amount, 'pledged', e.guest_list_deadline,
           case when 'logo' = any (t.required_materials) then 'pending' else 'not_required' end,
           case when exists (select 1 from unnest(t.required_materials) m where m like '%ad') then 'pending' else 'not_required' end, '');
   perform create_seats(v_order, t.included_seat_count);
   perform write_audit('staff', me.name, 'order', v_order, v_order, 'order.created', null, 'pledged', true,
-    format('%s recorded for %s (%s).', t.name, trim(p_org), p_source));
+    format('%s recorded for %s (%s)%s.', t.name, trim(p_org), p_source,
+           case when v_amount <> t.contribution_amount then ', ' || money_fmt(v_amount) else '' end));
   if t.included_seat_count > 0 then
     perform enqueue_email('portal_link', trim(p_email), trim(p_contact), v_order, null, 'pledge_recorded');
   end if;
@@ -3308,7 +3319,7 @@ grant execute on function portal_get_view(text), portal_save_guest(text, int, js
 grant execute on function
   staff_me(), staff_current_event(), staff_update_guest(text, jsonb), staff_set_seat_status(text, text), staff_mark_printed(text[]),
   staff_assign_seat(text, text, int), staff_seat_order_at_table(text, text), staff_save_table(text, text, int),
-  staff_record_payment(text, text, numeric, date, text), staff_void_payment(text, text), staff_add_pledge(text, text, text, text, text),
+  staff_record_payment(text, text, numeric, date, text), staff_void_payment(text, text), staff_add_pledge(text, text, text, text, text, numeric),
   staff_add_comp_guest(jsonb), staff_send_qr_invite(text), staff_resend_portal_link(text), staff_approve_email(text), staff_cancel_email(text),
   checkin_list(), staff_check_in(text, text), staff_check_in_qr(text), staff_check_in_exception(text, text, text, text),
   staff_checkin_snapshot(), staff_sync_check_ins(jsonb), staff_undo_check_in(text),
