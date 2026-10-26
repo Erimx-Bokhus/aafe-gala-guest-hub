@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Camera, CheckCircle2, Download, QrCode, Search, UserPlus } from 'lucide-react'
-import { GUEST_TYPE_LABEL, hasSponsor, sponsorOf } from '@shared/data'
+import { GUEST_TYPE_LABEL, hasSponsor, sponsorOf, tableLabel } from '@shared/data'
 import { unknownCodeMessage } from '@shared/offlineCheckin'
 import { Field, Modal, downloadCsv, fmtDate } from '@shared/ui'
 import { useStaff } from '../store'
@@ -80,7 +80,7 @@ export default function CheckIn() {
         </div>
       </div>
 
-      {lastG && <div role="status" className="mb-4 flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800"><CheckCircle2 size={22} /><div><div className="font-semibold">{lastG.first_name} {lastG.last_name} — welcome</div><div className="text-sm">{lastG.table_id ? `Table ${db.event_tables.find((t) => t.id === lastG.table_id)!.number}, seat ${lastG.seat_number}` : 'See the host stand for seating'}</div></div></div>}
+      {lastG && <div role="status" className="mb-4 flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800"><CheckCircle2 size={22} /><div><div className="font-semibold">{lastG.first_name} {lastG.last_name} — welcome</div><div className="text-sm">{lastG.table_id ? tableLabel(db.event_tables.find((t) => t.id === lastG.table_id)!) : 'See the host stand for seating'}</div></div></div>}
 
       <div className="relative"><Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-navy-300" />
         <input className="input h-14 pl-12 text-lg" placeholder="Guest name, organization or sponsor" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search guests" data-testid="checkin-search" /></div>
@@ -104,7 +104,7 @@ export default function CheckIn() {
               <div>
                 <div className="text-xl font-semibold text-navy-900">{g.first_name} {g.last_name}</div>
                 <div className="text-sm text-navy-600">{g.title} · {g.organization}</div>
-                <div className="mt-1 text-sm text-navy-500">{hasSponsor(g.guest_type) ? `Sponsor: ${sp(g.order_id)}` : GUEST_TYPE_LABEL[g.guest_type]} · <strong className="text-navy-800">{t ? `Table ${t.number}, seat ${g.seat_number}` : 'Table pending'}</strong></div>
+                <div className="mt-1 text-sm text-navy-500">{hasSponsor(g.guest_type) ? `Sponsor: ${sp(g.order_id)}` : GUEST_TYPE_LABEL[g.guest_type]} · <strong className="text-navy-800">{t ? tableLabel(t) : 'Table pending'}</strong></div>
               </div>
               {done ? <span className="inline-flex items-center gap-2 rounded-lg bg-emerald-50 px-4 py-3 font-semibold text-emerald-800"><CheckCircle2 size={18} /> Checked in</span>
                 : <button className="btn-primary h-14 px-8 text-base" onClick={() => arrive(g.id, 'search')} data-testid={`arrive-${g.id}`}>Mark arrived</button>}
