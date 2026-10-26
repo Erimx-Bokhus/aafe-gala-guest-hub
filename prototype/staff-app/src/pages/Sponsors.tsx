@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { ArrowDown, ArrowLeft, ArrowUp, Check, Copy, History, Mail, Plus, Search } from 'lucide-react'
-import { methodLabel, orderMoney, seatStats, sponsorOf, staffName, tierOf } from '@shared/data'
+import { methodLabel, orderMoney, seatStats, sponsorOf, staffName, tableLabel, tierOf } from '@shared/data'
 import { Link, Modal, Pill, fmtDate, money } from '@shared/ui'
 import type { AuditEntry, Material } from '@shared/types'
 import { PageHead } from '../App'
@@ -137,7 +137,7 @@ export function SponsorDetail({ id }: { id: string }) {
           <section className="card overflow-x-auto">
             <div className="border-b border-navy-100 px-4 py-3"><h2 className="font-semibold text-navy-900">Seats ({st.named}/{st.total} named · {st.needsReview} to review)</h2></div>
             {seats.length ? (
-              <table className="w-full min-w-[640px]"><thead className="bg-cream-100"><tr><th className="th">#</th><th className="th">Guest</th><th className="th">Table / seat</th><th className="th">Dietary · access</th><th className="th">Status</th><th className="th"></th></tr></thead>
+              <table className="w-full min-w-[640px]"><thead className="bg-cream-100"><tr><th className="th">#</th><th className="th">Guest</th><th className="th">Table</th><th className="th">Dietary · access</th><th className="th">Status</th><th className="th"></th></tr></thead>
                 <tbody className="divide-y divide-navy-100">
                   {seats.map((s) => {
                     const g = db.guests.find((x) => x.id === s.guest_id)
@@ -146,7 +146,7 @@ export function SponsorDetail({ id }: { id: string }) {
                       <tr key={s.id}>
                         <td className="td tabular-nums text-navy-500">{s.slot_number}</td>
                         <td className="td">{g ? <><div className="font-semibold text-navy-900">{g.first_name} {g.last_name}</div><div className="text-xs text-navy-500">{g.title} · {g.organization}</div></> : <span className="text-navy-500">—</span>}</td>
-                        <td className="td tabular-nums">{t ? `T${t.number} · S${g!.seat_number}` : g ? <span className="text-amber-700">Unseated</span> : ''}</td>
+                        <td className="td tabular-nums">{t ? tableLabel(t) : g ? <span className="text-navy-500">No table</span> : ''}</td>
                         <td className="td text-xs">{[g?.dietary_needs, g?.accessibility_needs].filter(Boolean).join(' · ')}</td>
                         <td className="td"><SeatPill s={s.status} /></td>
                         <td className="td text-right">
