@@ -51,6 +51,9 @@ describe('the demo pipeline matches the database', () => {
     const newOrg = { organization: 'Lotus Street Bakery', contact_name: 'Rina Cho', contact_email: 'rina@lotus-sample.example.org', sector: 'small_business', ask_amount: 5000, notes: 'Met at the spring fair.' }
     const sNew = await sql('select staff_save_prospect($1) r', [JSON.stringify(newOrg)])
     const dNew = await api.saveProspect({ ...newOrg, sector: 'small_business' })
+    // An individual sponsor (item 6): no organization; the contact's name becomes the sponsor's name on both sides.
+    const person = { contact_name: 'Dana Example Individual', ask_amount: 1500 }
+    await sql('select staff_save_prospect($1) r', [JSON.stringify({ ...person, sector: 'individual' })]); await api.saveProspect({ ...person, sector: 'individual' })
     const sBuyer = await sql('select staff_save_prospect($1) r', [JSON.stringify({ sponsor_id: buyer.id, ask_tier_id: tier.id, ask_amount: tier.contribution_amount, follow_up_owner_id: 'st-priya' })])
     const dBuyer = await api.saveProspect({ sponsor_id: buyer.id, ask_tier_id: tier.id, ask_amount: tier.contribution_amount, follow_up_owner_id: 'st-priya' })
     for (const stage of ['reached_out', 'in_conversation']) { await sql('select staff_set_prospect_stage($1, $2) r', [sNew, stage]); await api.setProspectStage(dNew, stage as 'reached_out') }

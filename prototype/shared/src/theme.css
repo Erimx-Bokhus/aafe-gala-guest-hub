@@ -84,6 +84,11 @@
   .th { @apply px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-navy-600 whitespace-nowrap; }
   .td { @apply px-3 py-2.5 text-sm text-navy-800 align-top; }
   .icon-btn { @apply inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 border-navy-500 bg-surface text-navy-700 hover:bg-navy-50 disabled:opacity-40; }
+  /* A text cell that wraps and grows with its text (guest list, Oct 20 walk-through): a hidden copy of the text, set in
+     data-value, sizes the grid cell the textarea shares, so nothing measures heights in script. */
+  .grow-wrap { @apply grid; grid-template-columns: minmax(0, 1fr); }
+  .grow-wrap::after { content: attr(data-value) ' '; grid-area: 1 / 1 / 2 / 2; @apply invisible whitespace-pre-wrap break-words border border-transparent px-1.5 py-1 text-sm; }
+  .grow-wrap > textarea { grid-area: 1 / 1 / 2 / 2; @apply w-full resize-none overflow-hidden; }
 }
 @media print {
   .no-print { display: none !important; }

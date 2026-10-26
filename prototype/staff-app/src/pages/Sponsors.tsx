@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ArrowLeft, Check, Copy, History, Mail, Plus, Search } from 'lucide-react'
+import { ArrowDown, ArrowLeft, ArrowUp, Check, Copy, History, Mail, Plus, Search } from 'lucide-react'
 import { methodLabel, orderMoney, seatStats, sponsorOf, staffName, tierOf } from '@shared/data'
 import { Link, Modal, Pill, fmtDate, money } from '@shared/ui'
 import type { AuditEntry, Material } from '@shared/types'
@@ -12,31 +12,67 @@ import { curOrders } from './Dashboard'
 const SRC: Record<string, string> = { givelively: 'Give Lively', check: 'Check', ach_direct: 'ACH (direct)', wire: 'Wire', comp: 'Complimentary', staff_entry: 'Staff entry' }
 const STATUS_TONE = { paid: 'green', partially_paid: 'amber', pledged: 'amber', comp: 'blue', invoice_sent: 'gray', cancelled: 'gray' } as const
 
+// Filter and sort (AAFE's Oct 20 walk-through, item 2): by package to see all the Silvers, by owner to see one person's
+// sponsors, by status to see who has paid and who has only pledged. Any heading but Source and Seats sorts the list.
+type SortKey = 'sponsor' | 'package' | 'commitment' | 'received' | 'status' | 'owner'
+
 export default function Sponsors() {
   const { db } = useStaff()
   const [q, setQ] = useState('')
+  const [pkg, setPkg] = useState(''), [owner, setOwner] = useState(''), [status, setStatus] = useState('')
+  const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: 'commitment', dir: -1 })
   const [add, setAdd] = useState(false)
-  const rows = curOrders(db).filter((o) => sponsorOf(db, o.sponsor_id).organization_name.toLowerCase().includes(q.toLowerCase())).sort((a, b) => b.commitment_amount - a.commitment_amount)
+  const all = curOrders(db).map((o) => {
+    const sp = sponsorOf(db, o.sponsor_id), tier = tierOf(db, o.tier_id)
+    return { o, name: sp.organization_name, tier, paid: orderMoney(db, o.id).paid, ownerId: sp.relationship_owner_id, owner: staffName(db, sp.relationship_owner_id) }
+  })
+  const sortVal = (r: (typeof all)[number]): string | number =>
+    ({ sponsor: r.name, package: r.tier.name, commitment: r.o.commitment_amount, received: r.paid, status: r.o.status, owner: r.owner })[sort.key]
+  const rows = all
+    .filter((r) => r.name.toLowerCase().includes(q.toLowerCase()) && (!pkg || r.o.tier_id === pkg) && (!owner || r.ownerId === owner) && (!status || r.o.status === status))
+    .sort((a, b) => { const x = sortVal(a), y = sortVal(b); return sort.dir * (typeof x === 'number' && typeof y === 'number' ? x - y : String(x).localeCompare(String(y))) })
+  const uniq = <T,>(list: [string, T][]) => [...new Map(list)]
+  const levels = uniq(all.map((r) => [r.o.tier_id, r.tier] as [string, typeof r.tier])).sort((a, b) => b[1].contribution_amount - a[1].contribution_amount || a[1].name.localeCompare(b[1].name))
+  const owners = uniq(all.map((r) => [r.ownerId, r.owner] as [string, string])).sort((a, b) => a[1].localeCompare(b[1]))
+  const statuses = uniq(all.map((r) => [r.o.status, r.o.status.replace('_', ' ')] as [string, string]))
+  const filtered = !!(q || pkg || owner || status)
+  // A plain function, not a component: a component made inside the page is a new type on every render, so React would
+  // remount the heading's button and keyboard focus would be lost after sorting.
+  const th = (k: SortKey, label: string, right = false) => (
+    <th className={`th ${right ? 'text-right' : ''}`} aria-sort={sort.key === k ? (sort.dir === 1 ? 'ascending' : 'descending') : 'none'}>
+      <button type="button" className="inline-flex items-center gap-1 uppercase hover:text-brand-600" data-testid={`sort-${k}`}
+        onClick={() => setSort((s) => ({ key: k, dir: s.key === k ? (s.dir === 1 ? -1 : 1) : k === 'commitment' || k === 'received' ? -1 : 1 }))}>
+        {label}{sort.key === k && (sort.dir === 1 ? <ArrowUp size={12} aria-hidden /> : <ArrowDown size={12} aria-hidden />)}
+      </button>
+    </th>
+  )
   return (
     <div>
       <PageHead title="Sponsors & orders" sub="Every commitment for this gala — Give Lively purchases arrive automatically; checks, ACH and wires are entered by staff." actions={<button className="btn-primary" onClick={() => setAdd(true)}><Plus size={16} /> New pledge</button>} />
-      <div className="relative mb-4 max-w-sm"><Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-navy-300" /><input className="input pl-9" placeholder="Search sponsors" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search sponsors" /></div>
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <div className="relative w-full max-w-xs"><Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-navy-300" /><input className="input pl-9" placeholder="Search sponsors" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search sponsors" /></div>
+        <select className="input w-auto max-w-56" value={pkg} onChange={(e) => setPkg(e.target.value)} aria-label="Package"><option value="">All packages</option>{levels.map(([id, t]) => <option key={id} value={id}>{t.name}</option>)}</select>
+        <select className="input w-auto" value={owner} onChange={(e) => setOwner(e.target.value)} aria-label="Owner"><option value="">All owners</option>{owners.map(([id, n]) => <option key={id} value={id}>{n}</option>)}</select>
+        <select className="input w-auto" value={status} onChange={(e) => setStatus(e.target.value)} aria-label="Status"><option value="">All statuses</option>{statuses.map(([s, l]) => <option key={s} value={s}>{l}</option>)}</select>
+        <span className="text-sm text-navy-500" data-testid="sponsor-count">{filtered ? `${rows.length} of ${all.length}` : `${all.length}`} order{all.length === 1 ? '' : 's'}</span>
+        {filtered && <button type="button" className="btn-ghost btn-sm" onClick={() => { setQ(''); setPkg(''); setOwner(''); setStatus('') }}>Clear filters</button>}
+      </div>
       <div className="card overflow-x-auto">
         <table className="w-full min-w-[860px]">
-          <thead className="border-b border-navy-100 bg-cream-100"><tr><th className="th">Sponsor</th><th className="th">Package</th><th className="th">Source</th><th className="th text-right">Commitment</th><th className="th text-right">Received</th><th className="th">Status</th><th className="th">Seats named</th><th className="th">Owner</th></tr></thead>
+          <thead className="border-b border-navy-100 bg-cream-100"><tr>{th('sponsor', 'Sponsor')}{th('package', 'Package')}<th className="th">Source</th>{th('commitment', 'Commitment', true)}{th('received', 'Received', true)}{th('status', 'Status')}<th className="th">Seats named</th>{th('owner', 'Owner')}</tr></thead>
           <tbody className="divide-y divide-navy-100">
-            {rows.map((o) => {
-              const m = orderMoney(db, o.id), st = seatStats(db, o.id)
+            {rows.map(({ o, name, tier, paid, owner: ownerName }) => {
+              const st = seatStats(db, o.id)
               return (
                 <tr key={o.id} className="hover:bg-navy-50">
-                  <td className="td"><Link to={`/sponsors/${o.id}`} className="font-semibold text-navy-900 hover:text-brand-600">{sponsorOf(db, o.sponsor_id).organization_name}</Link></td>
-                  <td className="td text-navy-600">{tierOf(db, o.tier_id).name}</td>
+                  <td className="td"><Link to={`/sponsors/${o.id}`} className="font-semibold text-navy-900 hover:text-brand-600">{name}</Link></td>
+                  <td className="td text-navy-600">{tier.name}</td>
                   <td className="td">{SRC[o.source]}</td>
                   <td className="td text-right tabular-nums">{money(o.commitment_amount)}</td>
-                  <td className="td text-right tabular-nums">{money(m.paid, m.paid % 1 !== 0)}</td>
+                  <td className="td text-right tabular-nums">{money(paid, paid % 1 !== 0)}</td>
                   <td className="td"><Pill tone={STATUS_TONE[o.status]}>{o.status.replace('_', ' ')}</Pill></td>
                   <td className="td tabular-nums">{st.total ? `${st.named} / ${st.total}` : '—'}</td>
-                  <td className="td text-navy-600">{staffName(db, sponsorOf(db, o.sponsor_id).relationship_owner_id)}</td>
+                  <td className="td text-navy-600">{ownerName}</td>
                 </tr>
               )
             })}

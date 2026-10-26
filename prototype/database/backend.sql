@@ -1030,6 +1030,41 @@ begin
   return v_n;
 end $$;
 
+-- saveTable: a table's name and how many people it seats (AAFE's Oct 20 walk-through, items 12 and 24; gala admins).
+-- A table seats 10 unless changed; AAFE's venue has 10- and 12-person tables, and a smaller one is fine. A table can't be
+-- made smaller than the guests already at it. Seat numbers only count who is at a table (badges don't print them), so a
+-- guest past a smaller size moves to an open number below it. A table's name prints on badges: printed ones at a renamed
+-- table are flagged for reprint.
+create or replace function staff_save_table(p_table_id text, p_label text, p_capacity int) returns void
+language plpgsql security definer set search_path = public as $$
+declare
+  me staff_users := require_staff(array['gala_admin']);
+  t event_tables; v_label text := nullif(btrim(coalesce(p_label, '')), ''); v_at int; g record; v_free int;
+begin
+  if p_capacity is null or p_capacity < 1 or p_capacity > 30 then raise exception 'invalid_input: a table seats 1 to 30 people'; end if;
+  if length(v_label) > 40 then raise exception 'invalid_input: a table name is 40 characters at most'; end if;
+  select * into t from event_tables where id = p_table_id for update;
+  if t.id is null then raise exception 'not_found: no such table'; end if;
+  select count(*) into v_at from guests where table_id = t.id;
+  if v_at > p_capacity then
+    raise exception 'invalid_input: % people are at Table % now; move some to another table before making it seat %', v_at, t.number, p_capacity;
+  end if;
+  if t.label is not distinct from v_label and t.capacity = p_capacity then return; end if;
+
+  for g in select id from guests where table_id = t.id and seat_number > p_capacity order by seat_number loop
+    select n into v_free from generate_series(1, p_capacity) n
+     where not exists (select 1 from guests where table_id = t.id and seat_number = n) order by n limit 1;
+    update guests set seat_number = v_free where id = g.id;
+  end loop;
+  update event_tables set label = v_label, capacity = p_capacity where id = t.id;
+  if t.label is distinct from v_label then
+    update guests set badge_status = 'reprint_needed', updated_at = now() where table_id = t.id and badge_status = 'printed';
+  end if;
+  perform write_audit('staff', me.name, 'table', t.id, null, 'table.updated',
+    format('%s · %s seats', coalesce(t.label, 'no name'), t.capacity), format('%s · %s seats', coalesce(v_label, 'no name'), p_capacity), false,
+    format('Table %s: %s, seats %s.', t.number, coalesce('"' || v_label || '"', 'no name'), p_capacity));
+end $$;
+
 -- recordOfflinePayment: check, or ACH/wire straight to AAFE's bank. No processor fee.
 create or replace function staff_record_payment(p_order_id text, p_method text, p_amount numeric, p_received date, p_check_number text default null)
 returns text language plpgsql security definer set search_path = public as $$
@@ -2337,10 +2372,10 @@ begin
   if nullif(p ->> 'id', '') is null then
     v_sp := nullif(p ->> 'sponsor_id', '');
     if v_sp is null then
-      v_org := btrim(coalesce(p ->> 'organization', ''));
-      if v_org = '' or btrim(coalesce(p ->> 'contact_name', '')) = '' then
-        raise exception 'invalid_input: organization and contact name are required';
-      end if;
+      if btrim(coalesce(p ->> 'contact_name', '')) = '' then raise exception 'invalid_input: a contact name is required'; end if;
+      -- An individual sponsor has no organization (AAFE's Oct 20 walk-through): their own name is the sponsor's name, the
+      -- way Give Lively's individual buyers are filed.
+      v_org := coalesce(nullif(btrim(coalesce(p ->> 'organization', '')), ''), btrim(p ->> 'contact_name'));
       select id into v_sp from sponsors where lower(btrim(organization_name)) = lower(v_org) limit 1;
       if v_sp is not null then   -- named as staff will find them in the list
         raise exception 'invalid_input: % is already a sponsor: choose them from the existing sponsors instead', (select organization_name from sponsors where id = v_sp);
@@ -3241,7 +3276,7 @@ begin
               'hash_token','new_id','new_qr_token','qr_expiry','current_event_id','current_staff','staff_role','require_staff',
               'write_audit','audit_changes','enqueue_email','create_seats','money_fmt','portal_order','portal_get_view','portal_save_guest',
               'portal_release_seat','staff_me','staff_current_event','staff_update_guest','staff_set_seat_status','staff_mark_printed',
-              'staff_assign_seat','staff_seat_order_at_table','staff_record_payment','staff_void_payment','staff_add_pledge','staff_add_comp_guest',
+              'staff_assign_seat','staff_seat_order_at_table','staff_save_table','staff_record_payment','staff_void_payment','staff_add_pledge','staff_add_comp_guest',
               'staff_send_qr_invite','staff_resend_portal_link','staff_approve_email','staff_cancel_email','checkin_list','staff_check_in','staff_check_in_qr',
               'staff_check_in_exception','gl_import','staff_import_givelively','email_mark_sent','email_mark_failed','email_claim',
               'purchase_key','payment_method_of','payment_method_detail','name_key','has_need','add_import_review','import_fill_guests','staff_set_tier_mapping','staff_set_gala_page','sync_gala_pages','staff_add_gala_page','staff_remove_gala_page',
@@ -3272,7 +3307,7 @@ grant execute on function portal_get_view(text), portal_save_guest(text, int, js
 -- Staff App
 grant execute on function
   staff_me(), staff_current_event(), staff_update_guest(text, jsonb), staff_set_seat_status(text, text), staff_mark_printed(text[]),
-  staff_assign_seat(text, text, int), staff_seat_order_at_table(text, text),
+  staff_assign_seat(text, text, int), staff_seat_order_at_table(text, text), staff_save_table(text, text, int),
   staff_record_payment(text, text, numeric, date, text), staff_void_payment(text, text), staff_add_pledge(text, text, text, text, text),
   staff_add_comp_guest(jsonb), staff_send_qr_invite(text), staff_resend_portal_link(text), staff_approve_email(text), staff_cancel_email(text),
   checkin_list(), staff_check_in(text, text), staff_check_in_qr(text), staff_check_in_exception(text, text, text, text),

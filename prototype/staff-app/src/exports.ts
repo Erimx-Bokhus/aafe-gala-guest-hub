@@ -12,6 +12,8 @@ export interface BadgeRow {
   display_name: string
   first_name: string; last_name: string; title: string | null; organization: string | null
   table_number: number | null; seat_number: number | null; sponsor: string | null; guest_type: GuestType; badge_status: string
+  /** The table's name, added by the Badges page from the tables it has loaded. */
+  table_name?: string | null
 }
 export interface CheckinRow {
   last_name: string; first_name: string | null; display_name: string; organization: string | null; sponsor: string; table_number: number | null
@@ -95,8 +97,9 @@ export function demoSalesforceRows(db: DB): SalesforceRow[] {
 // ---- CSV layout (same columns as the downloads before the server exports, so nothing changes for staff) ----
 
 /** The badge printer's file. Affiliation is what the badge's bottom line says. */
-export const badgeCsv = (rows: BadgeRow[], synthetic = true) => [...(synthetic ? [NOTICE] : []), ['Name on badge', 'First', 'Last', 'Title', 'Organization', 'Table', 'Seat', 'Affiliation'],
-  ...rows.map((r) => [r.display_name, r.first_name, r.last_name, r.title, r.organization, r.table_number, r.seat_number, r.sponsor ?? GUEST_TYPE_LABEL[r.guest_type]])]
+// The badge prints the table, never a seat number (AAFE's Oct 20 walk-through, item 24), so the printer file matches it.
+export const badgeCsv = (rows: BadgeRow[], synthetic = true) => [...(synthetic ? [NOTICE] : []), ['Name on badge', 'First', 'Last', 'Title', 'Organization', 'Table', 'Table name', 'Affiliation'],
+  ...rows.map((r) => [r.display_name, r.first_name, r.last_name, r.title, r.organization, r.table_number, r.table_name ?? null, r.sponsor ?? GUEST_TYPE_LABEL[r.guest_type]])]
 
 export const checkinCsv = (rows: CheckinRow[], synthetic = true) => [...(synthetic ? [NOTICE] : []), ['Last', 'First', 'Name', 'Organization', 'Sponsor', 'Table', 'Seat', 'Guest type', 'Access needs', 'Arrived'],
   ...rows.map((r) => [r.last_name, r.first_name, r.display_name, r.organization, r.sponsor, r.table_number, r.seat_number,

@@ -46,6 +46,32 @@ export function setSeatStatus(db: DB, actor: string, guestId: string, to: 'revie
     { actor_type: 'staff', actor, entity: 'seat', entity_id: seat.id, order_id: g.order_id, action: to === 'reviewed' ? 'seat.reviewed' : 'badge.ready', from_state: seat.status, to_state: to, guest_visible: to === 'reviewed', summary: to === 'reviewed' ? `${name(g)} confirmed by AAFE.` : `${name(g)} badge marked ready.` })
 }
 
+/** staff_save_table(): a table's name and how many it seats, by the server's rules (backend.sql). Seat numbers only count,
+ *  so a guest past a smaller size moves to an open number; renaming flags printed badges at the table for reprint. */
+export function saveTable(db: DB, user: StaffUser, id: string, label: string, capacity: number): DB {
+  const t = db.event_tables.find((x) => x.id === id)
+  if (!t) throw new Error('not_found: no such table')
+  const name = label.trim() || null
+  if (!Number.isInteger(capacity) || capacity < 1 || capacity > 30) throw new Error('invalid_input: a table seats 1 to 30 people')
+  if (name && name.length > 40) throw new Error('invalid_input: a table name is 40 characters at most')
+  const at = db.guests.filter((g) => g.table_id === id)
+  if (at.length > capacity) throw new Error(`invalid_input: ${at.length} people are at Table ${t.number} now; move some to another table before making it seat ${capacity}`)
+  if (t.label === name && t.capacity === capacity) return db
+  const taken = new Set(at.map((g) => g.seat_number).filter((n): n is number => n != null && n <= capacity))
+  const moved = new Map<string, number>()
+  for (const g of at.filter((x) => (x.seat_number ?? 0) > capacity).sort((a, b) => (a.seat_number ?? 0) - (b.seat_number ?? 0))) {
+    const n = Array.from({ length: capacity }, (_, i) => i + 1).find((k) => !taken.has(k))
+    if (n === undefined) throw new Error(`Table ${t.number} has no open seat number for ${g.id}, though it seats more than are at it`)
+    taken.add(n); moved.set(g.id, n)
+  }
+  const renamed = t.label !== name
+  const guests = db.guests.map((g) => (g.table_id !== id ? g : { ...g, seat_number: moved.get(g.id) ?? g.seat_number,
+    ...(renamed && g.badge_status === 'printed' ? { badge_status: 'reprint_needed' as const, updated_at: nowIso() } : {}) }))
+  return addAudit({ ...db, guests, event_tables: db.event_tables.map((x) => (x.id === id ? { ...x, label: name, capacity } : x)) },
+    { actor_type: 'staff', actor: user.name, entity: 'table', entity_id: id, order_id: null, action: 'table.updated', from_state: `${t.label ?? 'no name'} · ${t.capacity} seats`,
+      to_state: `${name ?? 'no name'} · ${capacity} seats`, guest_visible: false, summary: `Table ${t.number}: ${name ? `"${name}"` : 'no name'}, seats ${capacity}.` })
+}
+
 export function markPrinted(db: DB, actor: string, ids: string[]): DB {
   let d: DB = { ...db, guests: db.guests.map((g) => (ids.includes(g.id) ? { ...g, badge_status: 'printed' as const } : g)) }
   d = addAudit(d, { actor_type: 'staff', actor, entity: 'badge', entity_id: ids.join(','), order_id: null, action: 'badge.printed', from_state: null, to_state: 'printed', guest_visible: false, summary: `${ids.length} badge(s) marked printed.` })
@@ -531,6 +557,9 @@ export function syncPipeline(db: DB): DB {
 }
 
 /** staff_save_prospect()'s checks, on the synced demo data: the reason it refuses, or null. */
+/** A new prospect's sponsor name: the organization, or for an individual sponsor their own name (staff_save_prospect). */
+const prospectOrg = (p: ProspectInput) => (p.organization ?? '').trim() || (p.contact_name ?? '').trim()
+
 export function prospectError(db: DB, p: ProspectInput): string | null {
   const ev = db.meta.current_event_id
   if (p.sector && !SECTORS.includes(p.sector)) return 'invalid_input: sector must be board, community, corporate, foundation, individual or small_business'
@@ -541,8 +570,8 @@ export function prospectError(db: DB, p: ProspectInput): string | null {
   let me: Prospect | undefined
   if (!p.id) {
     if (!p.sponsor_id) {
-      const org = (p.organization ?? '').trim()
-      if (!org || !(p.contact_name ?? '').trim()) return 'invalid_input: organization and contact name are required'
+      if (!(p.contact_name ?? '').trim()) return 'invalid_input: a contact name is required'
+      const org = prospectOrg(p)
       const sp = db.sponsors.find((s) => s.organization_name.trim().toLowerCase() === org.toLowerCase())
       if (sp) return `invalid_input: ${sp.organization_name} is already a sponsor: choose them from the existing sponsors instead`
     } else {
@@ -567,7 +596,7 @@ export function saveProspect(db: DB, user: StaffUser, p: ProspectInput, ids: { p
     let spId = p.sponsor_id
     if (!spId) {
       spId = ids.sponsor
-      d = { ...d, sponsors: [...d.sponsors, { id: spId, organization_name: p.organization!.trim(), primary_contact_name: p.contact_name!.trim(), primary_contact_email: (p.contact_email ?? '').trim(),
+      d = { ...d, sponsors: [...d.sponsors, { id: spId, organization_name: prospectOrg(p), primary_contact_name: p.contact_name!.trim(), primary_contact_email: (p.contact_email ?? '').trim(),
         phone: '', relationship_owner_id: user.id, salesforce_account_id: null, created_at: now }] }
     }
     id = ids.prospect

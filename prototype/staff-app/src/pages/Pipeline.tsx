@@ -14,6 +14,9 @@ const TONE: Record<PipelineStage, 'gray' | 'blue' | 'amber' | 'green' | 'red'> =
   not_started: 'gray', reached_out: 'blue', in_conversation: 'amber', closed_won: 'green', payment_received: 'green', lost: 'red',
 }
 const sectorLabel = (s: Sector | null) => (s ? s.charAt(0).toUpperCase() + s.slice(1).replace('_', ' ') : '—')
+// What a prospect can be asked for (AAFE's Oct 20 walk-through, item 5): sponsorships, and the ads and tickets sold on
+// top of them. Complimentary levels aren't asked for. Donations come with the add-ons design.
+const PACKAGE_KINDS = [['sponsorship', 'Sponsorships'], ['advertising_only', 'Ads'], ['ticket', 'Tickets']] as const
 
 export default function Pipeline() {
   const { db, api, act } = useStaff()
@@ -36,7 +39,7 @@ export default function Pipeline() {
 
   return (
     <div>
-      <PageHead title="Sponsor pipeline" sub="Every sponsor ask for this gala, by stage. A pledge moves a sponsor to closed won and a payment to payment received by themselves; staff move the early stages."
+      <PageHead title="Sponsor pipeline" sub="Every sponsor ask for this gala, by stage. Staff move the early stages. Closed won doesn't create the pledge: record it with New pledge on Sponsors & orders, and this card moves to closed won by itself; recording a payment moves it to payment received."
         actions={<button className="btn-primary" data-testid="pipeline-add" onClick={() => setEditing('new')}><Plus className="h-4 w-4" aria-hidden /> Add prospect</button>} />
 
       <section className="card p-5" data-testid="pipeline-summary">
@@ -156,7 +159,8 @@ function ProspectForm({ editing, board, onClose }: { editing: PipelineProspect |
   const inPipeline = new Set(board.prospects.map((p) => p.sponsor_id))
   const sponsors = db.sponsors.filter((s) => !inPipeline.has(s.id)).sort((a, b) => a.organization_name.localeCompare(b.organization_name))
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF({ ...f, [k]: e.target.value })
-  const ready = !isNew || f.sponsor_id || (f.organization.trim() && f.contact_name.trim())
+  // An individual sponsor has no organization (item 6): the contact's name is enough, and becomes the sponsor's name.
+  const ready = !isNew || f.sponsor_id || f.contact_name.trim()
   const save = () => {
     const fields = { sector: (f.sector || null) as Sector | null, ask_amount: parseAmount(f.ask), ask_tier_id: f.ask_tier_id || null, follow_up_owner_id: f.follow_up_owner_id || null, notes: f.notes }
     const p: ProspectInput = old ? { id: old.id, ...fields }
@@ -176,7 +180,7 @@ function ProspectForm({ editing, board, onClose }: { editing: PipelineProspect |
             </Field>
             {!f.sponsor_id && (
               <div className="grid gap-3 sm:grid-cols-2">
-                <Field id="pf-org" label="Organization"><input id="pf-org" className="input" value={f.organization} onChange={set('organization')} /></Field>
+                <Field id="pf-org" label="Organization (optional)" hint="Leave empty for an individual: their name is used"><input id="pf-org" className="input" value={f.organization} onChange={set('organization')} /></Field>
                 <Field id="pf-contact" label="Contact name"><input id="pf-contact" className="input" value={f.contact_name} onChange={set('contact_name')} /></Field>
                 <div className="sm:col-span-2"><Field id="pf-email" label="Contact email (optional)"><input id="pf-email" type="email" className="input" value={f.contact_email} onChange={set('contact_email')} /></Field></div>
               </div>
@@ -186,7 +190,10 @@ function ProspectForm({ editing, board, onClose }: { editing: PipelineProspect |
         <div className="grid gap-3 sm:grid-cols-2">
           <Field id="pf-sector" label="Sector"><select id="pf-sector" className="input" value={f.sector} onChange={set('sector')}><option value="">—</option>{SECTORS.map((s) => <option key={s} value={s}>{sectorLabel(s)}</option>)}</select></Field>
           <Field id="pf-ask" label="Ask ($)"><input id="pf-ask" className="input" inputMode="numeric" value={f.ask} onChange={(e) => setF({ ...f, ask: e.target.value.replace(/[^0-9.]/g, '') })} /></Field>
-          <Field id="pf-tier" label="Package asked for"><select id="pf-tier" className="input" value={f.ask_tier_id} onChange={set('ask_tier_id')}><option value="">—</option>{levelsOf(db).filter((x) => x.tier_category === 'sponsorship').map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</select></Field>
+          <Field id="pf-tier" label="Package asked for"><select id="pf-tier" className="input" value={f.ask_tier_id} onChange={set('ask_tier_id')}><option value="">—</option>{PACKAGE_KINDS.map(([kind, label]) => {
+            const ls = levelsOf(db).filter((x) => x.tier_category === kind)
+            return ls.length ? <optgroup key={kind} label={label}>{ls.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</optgroup> : null
+          })}</select></Field>
           <Field id="pf-fu" label="Follow-up (AAFE)"><select id="pf-fu" className="input" value={f.follow_up_owner_id} onChange={set('follow_up_owner_id')}><option value="">—</option>{db.staff_users.filter((u) => u.role !== 'check_in_volunteer').map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</select></Field>
         </div>
         <Field id="pf-notes" label="Notes (staff only)"><textarea id="pf-notes" className="input" rows={2} value={f.notes} onChange={set('notes')} /></Field>

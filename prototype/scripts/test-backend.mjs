@@ -480,6 +480,31 @@ const free = (await as('anon', null, `select portal_get_view('ac-6w9k3p5d') v`))
 ok(free && await err('anon', null, `select portal_save_guest('ac-6w9k3p5d', $1, $2)`, [free.slot, { first_name: 'Pat', last_name: 'Example', email: 'nope' }]) === NOT_EMAIL('nope'),
   'the portal\'s save checks the email too, not only its form')
 
+// ---- Tables: name and size (AAFE's Oct 20 walk-through, items 12 and 24). Gala admins set them; a table can't shrink below
+// the guests at it, a guest past a smaller size moves to an open seat number, and renaming flags printed badges for reprint.
+const busy = (await db.query(`select table_id id, count(*)::int n from guests where table_id is not null group by 1 order by 2 desc, 1 limit 1`)).rows[0]
+const atTable = async () => (await db.query(`select id, seat_number s, badge_status b from guests where table_id = $1 order by seat_number`, [busy.id])).rows
+const [far, printed] = await atTable()
+await db.query(`update guests set seat_number = (select max(n) from generate_series(1, 10) n where not exists (select 1 from guests where table_id = $1 and seat_number = n)) where id = $2`, [busy.id, far.id])
+await db.query(`update guests set badge_status = 'printed' where id = $1`, [printed.id])
+ok(await err('authenticated', RM, `select staff_save_table($1, 'Peony', 10)`, [busy.id]) === 'forbidden', 'only gala admins set up tables')
+ok((await err('authenticated', ADMIN, `select staff_save_table($1, null, 0)`, [busy.id]))?.startsWith('invalid_input'), 'a table seats at least one')
+ok((await err('authenticated', ADMIN, `select staff_save_table($1, null, 31)`, [busy.id]))?.startsWith('invalid_input'), 'a table seats 30 at most')
+ok((await err('authenticated', ADMIN, `select staff_save_table($1, null, $2)`, [busy.id, busy.n - 1]))?.includes(`${busy.n} people are at Table`),
+  "a table can't be made smaller than the guests at it, and the refusal says how many are there")
+await as('authenticated', ADMIN, `select staff_save_table($1, '  Peony  ', $2)`, [busy.id, busy.n])
+const after = await atTable()
+ok(after.every((g) => g.s >= 1 && g.s <= busy.n) && new Set(after.map((g) => g.s)).size === busy.n,
+  `a guest past the smaller size moved to an open seat number: ${after.map((g) => g.s).join(',')}`)
+const tb = (await db.query(`select label, capacity from event_tables where id = $1`, [busy.id])).rows[0]
+ok(tb.label === 'Peony' && tb.capacity === busy.n, 'the name is trimmed and the size saved')
+ok(after.find((g) => g.id === printed.id).b === 'reprint_needed', "renaming a table flags its printed badges for reprint")
+const tableLogged = (await db.query(`select count(*)::int n from audit_log where entity = 'table' and entity_id = $1`, [busy.id])).rows[0].n
+await as('authenticated', ADMIN, `select staff_save_table($1, 'Peony', $2)`, [busy.id, busy.n])
+ok((await db.query(`select count(*)::int n from audit_log where entity = 'table' and entity_id = $1`, [busy.id])).rows[0].n === tableLogged, 'saving with no change logs nothing')
+await as('authenticated', ADMIN, `select staff_save_table($1, '', 12)`, [busy.id])
+ok((await db.query(`select label, capacity from event_tables where id = $1`, [busy.id])).rows[0].label === null, 'a blank name clears it')
+
 console.log(`${pass} passed, ${fail} failed`)
 
 if (fail) process.exitCode = 1
