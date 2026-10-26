@@ -36,7 +36,9 @@ export default function Sponsors() {
   const owners = uniq(all.map((r) => [r.ownerId, r.owner] as [string, string])).sort((a, b) => a[1].localeCompare(b[1]))
   const statuses = uniq(all.map((r) => [r.o.status, r.o.status.replace('_', ' ')] as [string, string]))
   const filtered = !!(q || pkg || owner || status)
-  const Th = ({ k, label, right }: { k: SortKey; label: string; right?: boolean }) => (
+  // A plain function, not a component: a component made inside the page is a new type on every render, so React would
+  // remount the heading's button and keyboard focus would be lost after sorting.
+  const th = (k: SortKey, label: string, right = false) => (
     <th className={`th ${right ? 'text-right' : ''}`} aria-sort={sort.key === k ? (sort.dir === 1 ? 'ascending' : 'descending') : 'none'}>
       <button type="button" className="inline-flex items-center gap-1 uppercase hover:text-brand-600" data-testid={`sort-${k}`}
         onClick={() => setSort((s) => ({ key: k, dir: s.key === k ? (s.dir === 1 ? -1 : 1) : k === 'commitment' || k === 'received' ? -1 : 1 }))}>
@@ -57,7 +59,7 @@ export default function Sponsors() {
       </div>
       <div className="card overflow-x-auto">
         <table className="w-full min-w-[860px]">
-          <thead className="border-b border-navy-100 bg-cream-100"><tr><Th k="sponsor" label="Sponsor" /><Th k="package" label="Package" /><th className="th">Source</th><Th k="commitment" label="Commitment" right /><Th k="received" label="Received" right /><Th k="status" label="Status" /><th className="th">Seats named</th><Th k="owner" label="Owner" /></tr></thead>
+          <thead className="border-b border-navy-100 bg-cream-100"><tr>{th('sponsor', 'Sponsor')}{th('package', 'Package')}<th className="th">Source</th>{th('commitment', 'Commitment', true)}{th('received', 'Received', true)}{th('status', 'Status')}<th className="th">Seats named</th>{th('owner', 'Owner')}</tr></thead>
           <tbody className="divide-y divide-navy-100">
             {rows.map(({ o, name, tier, paid, owner: ownerName }) => {
               const st = seatStats(db, o.id)

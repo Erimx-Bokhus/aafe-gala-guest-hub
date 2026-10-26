@@ -46,10 +46,13 @@ describe('Sponsors & orders list', () => {
     expect(names()).toContain(sponsorOf(db, orders[0].sponsor_id).organization_name)
   })
 
-  it('sorts by commitment, largest first, and a heading click sorts A to Z, then Z to A', () => {
+  it('sorts by commitment, largest first, and a heading click sorts A to Z, then Z to A, keeping keyboard focus', () => {
     const { names } = setup()
     expect(screen.getByTestId('sort-commitment').closest('th')!.getAttribute('aria-sort')).toBe('descending')
-    fireEvent.click(screen.getByTestId('sort-sponsor'))
+    const sortSponsor = screen.getByTestId('sort-sponsor')
+    sortSponsor.focus()
+    fireEvent.click(sortSponsor)
+    expect(document.activeElement).toBe(sortSponsor)   // the same button, not a remounted one
     const az = names()
     expect(az).toEqual([...az].sort((a, b) => a!.localeCompare(b!)))
     expect(screen.getByTestId('sort-sponsor').closest('th')!.getAttribute('aria-sort')).toBe('ascending')
