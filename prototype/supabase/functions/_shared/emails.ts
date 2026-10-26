@@ -14,7 +14,8 @@ export interface Rendered { subject: string; html: string }
 
 const GALA = 'the AAFE Gala'
 
-/** Sponsor's first email: their private link to add guest names. */
+/** Sponsor's first email: their private link to add guest names. The link works until the day after the deadline and a
+ *  reminder replaces it, so it never promises "at any time" (D6), nor a language menu the portal hides for v1 (#241). */
 export function portalLinkEmail(d: { toName: string; tierName: string | null; event: EventInfo | null; deadline: string | null; link: string }): Rendered {
   const ev = d.event
   return {
@@ -22,8 +23,7 @@ export function portalLinkEmail(d: { toName: string; tierName: string | null; ev
     html: layout(`<p>Dear ${esc(d.toName)},</p>
         <p>Thank you for your ${esc(d.tierName ?? 'support')} for ${esc(ev?.name ?? GALA)}. Please tell us who will be sitting at your seats${d.deadline ? ` by <strong>${longDay(d.deadline)}</strong>` : ''}.</p>
         ${button(d.link, 'Add or update guest names')}
-        <p>You can return to this link at any time to make changes. It is private to your organization, so please don't forward it outside your team.</p>
-        <p style="color:#555">English · 中文 · 한국어 · Español — choose your language on the page.</p>
+        <p>You can come back to this link to add or change names${d.deadline ? ` until ${longDay(d.deadline)}` : ''}. If we send you a reminder, use the link in that email: it replaces this one. The link is private to your organization, so please don't forward it outside your team.</p>
         <p>${esc(when(ev))}<br>${esc(ev?.venue_name ?? '')}</p>`),
   }
 }

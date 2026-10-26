@@ -121,6 +121,11 @@ ok(r3.html.includes('October 2'), '10:30 PM in New York is still October 2')
 
 const r4 = portalLinkEmail({ toName: 'Pat', tierName: 'Gold Sponsor', event, deadline: '2027-04-23', link })
 ok(r4.subject === 'Add your guests for AAFE Gala 2027' && r4.html.includes('by <strong>April 23</strong>') && r4.html.includes(link), 'guest-list link email unchanged')
+// Oct 20 walk-through (D6): a reminder replaces the link and the link ends after the deadline, so the first email
+// doesn't promise "at any time"; and it names no language menu, which the portal hides for v1 (#241).
+ok(!r4.html.includes('at any time') && r4.html.includes('until April 23') && r4.html.includes('it replaces this one') && !r4.html.includes('choose your language'),
+  'the first email says how long the link works, that a reminder replaces it, and offers no hidden language menu')
+ok(!portalLinkEmail({ toName: 'Pat', tierName: null, event, deadline: null, link }).html.includes('until'), 'with no deadline set, it names no date')
 const r5 = qrInvitationEmail({ firstName: 'Rep', event, code: 'AAFE-0123456789ABCDEF0123456789ABCDEF' })
 ok(r5.html.includes('AAFE-0123456789ABCDEF0123456789ABCDEF') && r5.html.includes('Thursday, May 13, 2027, doors 6:00 PM'), 'QR invitation shows the code and the date')
 ok(money(1234.5) === '$1,234.50' && longDay('2027-04-23') === 'April 23', 'money and date formats')
