@@ -65,6 +65,9 @@ export default function Pipeline() {
             <span className="text-xs font-semibold uppercase tracking-wide text-navy-500">{s.label}</span>
             <span className="mt-1 block text-xl font-semibold tabular-nums text-navy-900">{s.count}</span>
             <span className="block text-xs tabular-nums text-navy-500">{s.committed ? `${money(s.committed)} committed` : `${money(s.ask)} asked`} · {Math.round(s.probability * 100)}% likely</span>
+            {/* AAFE's Oct 20 walk-through, 9:35: "Payment received" counts a sponsor after any payment, so its committed total
+                sat beside a smaller Received total above with nothing to say why. The card now shows what came in. */}
+            {s.received > 0 && <span className="block text-xs tabular-nums text-navy-500" data-testid={`stage-received-${s.stage}`}>{money(s.received)} received</span>}
           </button>
         ))}
       </section>

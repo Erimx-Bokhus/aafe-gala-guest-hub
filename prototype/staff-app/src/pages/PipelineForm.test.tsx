@@ -4,6 +4,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { loadDB } from '@shared/data'
+import { money } from '@shared/ui'
 import type { DB, StaffUser } from '@shared/types'
 import { demoApi } from '../api'
 import { StaffCtx } from '../store'
@@ -19,6 +20,18 @@ async function openForm() {
   fireEvent.click(await screen.findByTestId('pipeline-add'))
   return within(screen.getByTestId('prospect-form'))
 }
+
+describe('the stage cards', () => {
+  it('"Payment received" says how much came in, beside its committed total (Oct 20 walk-through, 9:35)', async () => {
+    let db: DB = loadDB()
+    const api = { ...demoApi(MEI, (fn) => { db = fn(db) }, () => db), live: false }
+    const paid = (await api.pipeline()).stages.find((s) => s.stage === 'payment_received')
+    if (!paid || !(paid.received > 0)) throw new Error('the demo data needs money received in Payment received')
+    render(<StaffCtx.Provider value={{ db, api, user: MEI, toast: () => {}, act: async (p) => { await p; return true }, demo: null }}><Pipeline /></StaffCtx.Provider>)
+    expect((await screen.findByTestId('stage-received-payment_received')).textContent).toBe(`${money(paid.received)} received`)
+    expect(screen.queryByTestId('stage-received-not_started')).toBeNull()   // nothing in, no line
+  })
+})
 
 describe('adding a prospect', () => {
   it("needs a contact name, not an organization", async () => {
