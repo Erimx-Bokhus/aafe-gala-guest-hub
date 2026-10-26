@@ -200,6 +200,41 @@ def build(name):
                 o['givelively_order_ref'] = p['givelively_transaction_id']
         payments.append(p)
 
+    # ---- past galas (AAFE's Oct 20 walk-through, 9:35): the Small set's 12 past orders alone left 150 of this gala's sponsors
+    # blank under "Last two galas" and made past galas look tiny beside this one. Most returning sponsors now gave in 2026 and
+    # some in 2025, at the same level or one below (the levels those galas had), paid in full before the gala.
+    PAST = {'ev-2026': ('26', 0.65, {'platinum': ['platinum-2026', 'gold-2026'], 'gold': ['gold-2026', 'silver-2026'], 'silver': ['silver-2026', 'champion-2026'],
+                                      'bronze': ['silver-2026', 'champion-2026'], 'champion': ['champion-2026', 'friend-2026'],
+                                      'friend': ['friend-2026', 'supporter-2026'], 'supporter': ['supporter-2026', 'friend-2026']}),
+            'ev-2025': ('25', 0.45, {'platinum': ['gold-2025'], 'gold': ['gold-2025', 'bronze-2025'], 'silver': ['bronze-2025'], 'bronze': ['bronze-2025', 'friend-2025'],
+                                      'champion': ['friend-2025'], 'friend': ['friend-2025'], 'supporter': ['friend-2025']})}
+    had = {(o['sponsor_id'], o['event_id']) for o in history}
+    for o in sorted(orders.values(), key=lambda x: x['id']):
+        if o['tier_id'] not in PAST['ev-2026'][2] or o['sponsor_id'].startswith('sp-aafe'):
+            continue
+        h_rng = random.Random(f"aafe-full-history-{o['sponsor_id']}")
+        for ev, (yy, share, levels) in PAST.items():
+            if (o['sponsor_id'], ev) in had or h_rng.random() >= share:
+                continue
+            had.add((o['sponsor_id'], ev))
+            tier = tiers[h_rng.choice(levels[o['tier_id']])]
+            hid = f"ord-{yy}-{o['id'][4:]}"
+            created = f"20{yy}-{2 + h_rng.randrange(3):02d}-{1 + h_rng.randrange(28):02d}T15:00:00Z"
+            source = h_rng.choice(['check', 'check', 'ach_direct', 'wire', 'givelively'])
+            sf_id = f"006DEMO{yy[-1]}-{o['id'][4:].upper()}"
+            mats = tier['required_materials']
+            past = dict(id=hid, event_id=ev, sponsor_id=o['sponsor_id'], tier_id=tier['id'], source=source, commitment_amount=tier['contribution_amount'], status='paid',
+                        portal_token=None, portal_token_expires_at=None, portal_link_sent_at=None, guest_list_deadline=None,
+                        logo_status='approved' if 'logo' in mats else 'not_required', program_ad_status='approved' if any('ad' in m for m in mats) else 'not_required',
+                        givelively_order_ref=None, salesforce_opportunity_id=sf_id, internal_notes='Historical (synthetic).', created_at=created, updated_at=created)
+            method = h_rng.choice(['card', 'givelively_ach']) if source == 'givelively' else source
+            pay = payment(h_rng, f'pay-{hid}', hid, method, tier['contribution_amount'], created, recorded_by='givelively_sync' if source == 'givelively' else 'st-mei',
+                          check_no=str(3000 + h_rng.randrange(900)) if method == 'check' else None, sf=sf_id)
+            if source == 'givelively':
+                past['givelively_order_ref'] = pay['givelively_transaction_id']
+            history.append(past)
+            payments.append(pay)
+
     # ---- tables: the door list's 21
     tables = []
     for n in range(1, 22):
