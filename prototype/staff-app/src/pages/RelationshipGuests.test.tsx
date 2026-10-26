@@ -21,6 +21,18 @@ function mount(prep: (db: DB) => DB = (d) => d) {
   return box
 }
 
+describe('a relationship guest card', () => {
+  it('shows the table, never a seat number (Oct 20 walk-through, 36:39)', () => {
+    const box = mount()
+    const seated = box.db.guests.find((g) => g.guest_type === 'comp_relationship' && g.table_id)
+    if (!seated) throw new Error('the demo data needs a seated relationship guest')
+    const table = box.db.event_tables.find((x) => x.id === seated.table_id)!
+    const card = screen.getByText(`${seated.first_name} ${seated.last_name}`).closest('.card')!
+    expect(card.textContent).toContain(`Table ${table.number}`)
+    expect(card.textContent).not.toMatch(/seat \d/i)
+  })
+})
+
 describe('adding a relationship guest (D4)', () => {
   it('needs only a name; a typed email must still look like one', () => {
     mount()
