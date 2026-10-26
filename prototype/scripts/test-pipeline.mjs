@@ -60,6 +60,10 @@ ok((await saveErr({ sponsor_id: lanternSponsor }))?.includes('already in this ga
 ok((await saveErr({ organization: 'Bad Sector Co', contact_name: 'X', sector: 'aliens' }))?.startsWith('invalid_input'), 'sector must be one of AAFE\'s six')
 ok((await saveErr({ organization: 'Negative Co', contact_name: 'X', ask_amount: -5 }))?.startsWith('invalid_input'), 'the ask cannot be negative')
 ok((await saveErr({ organization: 'No Contact Co' }))?.startsWith('invalid_input'), 'a new organization needs a contact')
+// An individual sponsor (AAFE's Oct 20 walk-through, item 6): no organization; the contact's name is the sponsor's name.
+const solo = await prospect(await save({ contact_name: 'Sam Example Individual', sector: 'individual', ask_amount: 2500 }))
+ok((await q(`select organization_name from sponsors where id = $1`, [solo.sponsor_id]))[0]?.organization_name === 'Sam Example Individual',
+  "an individual sponsor needs no organization: their own name is the sponsor's name")
 ok((await err('authenticated', VOL.email, `select staff_save_prospect('{"organization":"V","contact_name":"V"}')`)) === 'forbidden', 'volunteers cannot add prospects')
 
 await save({ id: pr, ask_amount: 30000, notes: 'Met at the spring breakfast' })

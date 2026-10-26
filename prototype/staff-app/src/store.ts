@@ -531,6 +531,9 @@ export function syncPipeline(db: DB): DB {
 }
 
 /** staff_save_prospect()'s checks, on the synced demo data: the reason it refuses, or null. */
+/** A new prospect's sponsor name: the organization, or for an individual sponsor their own name (staff_save_prospect). */
+const prospectOrg = (p: ProspectInput) => (p.organization ?? '').trim() || (p.contact_name ?? '').trim()
+
 export function prospectError(db: DB, p: ProspectInput): string | null {
   const ev = db.meta.current_event_id
   if (p.sector && !SECTORS.includes(p.sector)) return 'invalid_input: sector must be board, community, corporate, foundation, individual or small_business'
@@ -541,8 +544,8 @@ export function prospectError(db: DB, p: ProspectInput): string | null {
   let me: Prospect | undefined
   if (!p.id) {
     if (!p.sponsor_id) {
-      const org = (p.organization ?? '').trim()
-      if (!org || !(p.contact_name ?? '').trim()) return 'invalid_input: organization and contact name are required'
+      if (!(p.contact_name ?? '').trim()) return 'invalid_input: a contact name is required'
+      const org = prospectOrg(p)
       const sp = db.sponsors.find((s) => s.organization_name.trim().toLowerCase() === org.toLowerCase())
       if (sp) return `invalid_input: ${sp.organization_name} is already a sponsor: choose them from the existing sponsors instead`
     } else {
@@ -567,7 +570,7 @@ export function saveProspect(db: DB, user: StaffUser, p: ProspectInput, ids: { p
     let spId = p.sponsor_id
     if (!spId) {
       spId = ids.sponsor
-      d = { ...d, sponsors: [...d.sponsors, { id: spId, organization_name: p.organization!.trim(), primary_contact_name: p.contact_name!.trim(), primary_contact_email: (p.contact_email ?? '').trim(),
+      d = { ...d, sponsors: [...d.sponsors, { id: spId, organization_name: prospectOrg(p), primary_contact_name: p.contact_name!.trim(), primary_contact_email: (p.contact_email ?? '').trim(),
         phone: '', relationship_owner_id: user.id, salesforce_account_id: null, created_at: now }] }
     }
     id = ids.prospect
