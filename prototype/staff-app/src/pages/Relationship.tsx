@@ -49,7 +49,8 @@ export default function Relationship() {
               <div className="min-w-0 flex-1">
                 <div className="font-semibold text-navy-900">{g.first_name} {g.last_name}</div>
                 <div className="truncate text-sm text-navy-600">{g.title} · {g.organization}</div>
-                <div className="mt-1 text-xs text-navy-500">{g.relationship_note} · {t ? `Table ${t.number}, seat ${g.seat_number}` : 'Not seated'}</div>
+                {/* The table, never a seat number: AAFE doesn't seat guests at numbered places (Oct 20 walk-through, 36:39). */}
+                <div className="mt-1 text-xs text-navy-500">{g.relationship_note} · {t ? `Table ${t.number}` : 'No table'}</div>
                 {g.qr_token && <div className="mt-1 font-sans tabular-nums text-xs text-navy-500">{g.qr_token}</div>}
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   {em ? <Pill tone={em.status === 'queued' ? 'amber' : 'green'}>{em.status === 'queued' ? 'Invitation queued' : `Sent ${em.sent_at ? fmtDate(em.sent_at) : ''}`}</Pill> : <Pill tone="amber">Not sent</Pill>}

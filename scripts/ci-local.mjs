@@ -12,7 +12,8 @@
 //                                              push it and mark it for GitHub's fast lane (use it instead of git push)
 //
 // Needs Node 22+ and Python. Docker (for the secret scan) and Deno (for the server-function check) are optional:
-// a check whose tool is missing is skipped with a note, not failed.
+// a check whose tool is missing is skipped with a note, not failed. In a git worktree the secret scan mounts the
+// repository that holds the commits, and a scan that read none fails (scripts/secret-scan.mjs).
 //
 // The fast lane: when a full run (all seven checks, no --quick) passes on a commit with nothing left uncommitted, it
 // marks that commit "local-ci" on GitHub (with the GitHub CLI you're signed in with). GitHub's two long checks,
@@ -27,6 +28,7 @@ import { spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { existsSync, readdirSync, readFileSync, writeFileSync, chmodSync } from 'node:fs'
 import { join } from 'node:path'
+import { scanProblem, scanTarget } from './secret-scan.mjs'
 
 const root = spawnSync('git', ['rev-parse', '--show-toplevel'], { encoding: 'utf8' }).stdout.trim()
 const proto = join(root, 'prototype')
@@ -63,10 +65,24 @@ const checks = {
   'real-data': () => sh('node scripts/check-no-real-data.mjs') && sh('node scripts/test-check-no-real-data.mjs'),
 
   // .github/workflows/gitleaks.yml: your commits not yet on main (merge commits included), or everything with --full-scan.
+  // In a git worktree it mounts the repository that holds the commits, and a run that read nothing fails (secret-scan.mjs).
   secrets: () => {
+    if (!sh('node scripts/test-secret-scan.mjs')) return false
     if (!has('docker info')) return [SKIP, 'Docker is not running; start Docker Desktop to scan for secrets']
-    const range = flag('--full-scan') ? '' : ` --log-opts="-m --first-parent origin/main..HEAD"`
-    return sh(`docker run --rm -v "${root}:/repo" ghcr.io/gitleaks/gitleaks:v8.30.1 git /repo --redact --no-banner${range}`)
+    const rev = (...a) => quiet(`git rev-parse --verify --quiet ${a.join(' ')}`).stdout.trim()
+    const full = flag('--full-scan'), head = rev('HEAD'), base = full ? null : rev('origin/main')
+    if (!full && !base) { console.log('\norigin/main is missing here: run git fetch origin, then try again.'); return false }
+    const t = scanTarget({ toplevel: root, gitDir: quiet('git rev-parse --path-format=absolute --git-dir').stdout.trim(),
+      commonDir: quiet('git rev-parse --path-format=absolute --git-common-dir').stdout.trim(), head, base })
+    if (t.worktree) console.log(`\nA git worktree: scanning its commits from the repository that holds them, ${t.repo}.`)
+    const cmd = `docker run --rm -v "${t.repo}:/repo" ghcr.io/gitleaks/gitleaks:v8.30.1 git /repo --redact --no-banner${t.logOpts ? ` --log-opts="${t.logOpts}"` : ''}`
+    console.log(`\n$ ${cmd}`)
+    const r = spawnSync(cmd, { cwd: root, shell: true, encoding: 'utf8' })
+    process.stdout.write(r.stdout ?? ''); process.stderr.write(r.stderr ?? '')
+    const expected = Number(quiet(`git rev-list --count ${full ? head : `--first-parent ${base}..${head}`}`).stdout.trim())
+    const problem = scanProblem(`${r.stdout}${r.stderr}`, expected)
+    if (problem) console.log(`\nThe secret scan can't be trusted: ${problem}. It fails rather than pass on a scan that read nothing.`)
+    return !problem && r.status === 0
   },
 
   'import-engine': () => {
