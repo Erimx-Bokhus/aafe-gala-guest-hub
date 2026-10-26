@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // Demo mode (no Supabase): the pages run their actions through StaffApi with the same role rules as the server (issue #9).
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { loadDB } from '@shared/data'
 
 async function renderDemo() {
@@ -37,6 +37,24 @@ describe('staff app (demo mode)', () => {
     window.location.hash = '#/checkinx'
     expect(await screen.findByTestId('export-checkin')).toBeTruthy()
     expect(screen.queryByText('Gala dashboard')).toBeNull()
+  })
+
+  it('narrows the menu to its icons and back, keeping each page\'s name for screen readers (Oct 20 walk-through, 15:51)', async () => {
+    await renderDemo()
+    fireEvent.click(await screen.findByTestId('login-gala_admin'))
+    const toggle = await screen.findByTestId('menu-narrow'), menu = screen.getByTestId('staff-menu')
+    expect(toggle.getAttribute('aria-expanded')).toBe('true')
+    fireEvent.click(toggle)
+    expect(menu.className).toContain('w-[72px]')
+    expect(toggle.getAttribute('aria-expanded')).toBe('false')
+    const link = within(menu).getByRole('link', { name: 'Guest list' })
+    expect(link.getAttribute('title')).toBe('Guest list')
+    expect(link.querySelector('span')?.className).toBe('sr-only')
+    expect(within(menu).getByTestId('menu-initials').textContent).toMatch(/^[A-Z]{2}$/)
+    expect(within(menu).getByRole('button', { name: 'Sign out' })).toBeTruthy()
+    fireEvent.click(toggle)
+    expect(menu.className).toContain('w-60')
+    expect(within(menu).getByRole('link', { name: 'Guest list' }).querySelector('span')?.className).toBe('')
   })
 
   it('a gala admin saves the gala information', async () => {
