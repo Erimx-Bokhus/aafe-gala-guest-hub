@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Download, Search } from 'lucide-react'
 import { GUEST_TYPE_LABEL, sponsorOf } from '@shared/data'
 import { Pill, ago, downloadCsv } from '@shared/ui'
-import type { EventTable, Guest, GuestType } from '@shared/types'
+import type { EventTable, Guest, GuestType, SeatStatus } from '@shared/types'
 import { PageHead } from '../App'
 import { canDo } from '../api'
 import { SeatPill } from '../components'
@@ -16,7 +16,10 @@ const EDITABLE: { k: keyof Guest; label: string; w: string }[] = [
   { k: 'organization', label: 'Organization', w: 'w-52' }, { k: 'email', label: 'Email', w: 'w-56' },
   { k: 'dietary_needs', label: 'Dietary', w: 'w-32' }, { k: 'accessibility_needs', label: 'Accessibility', w: 'w-36' },
 ]
-const BADGE_TONE = { needs_review: 'amber', ready: 'green', printed: 'gray', reprint_needed: 'red' } as const
+// One badge column (AAFE's Oct 20 walk-through, item 13): the badge's own status lives here, and "Badge ready" left the
+// Status column, which now says only whether the name was reviewed or the guest checked in.
+const BADGE_PILL = { needs_review: ['amber', 'Needs review'], ready: ['green', 'Ready'], printed: ['gray', 'Printed'], reprint_needed: ['red', 'Reprint needed'] } as const
+const nameStatus = (s: SeatStatus): SeatStatus => (s === 'badge_ready' ? 'reviewed' : s)
 
 function Cell({ g, k, w }: { g: Guest; k: keyof Guest; w: string }) {
   const { api, act } = useStaff()
@@ -67,7 +70,7 @@ export default function GuestList() {
   const rows = useMemo(() => db.guests.filter((g) => orderIds.has(g.order_id)).map((g) => {
     const o = db.orders.find((x) => x.id === g.order_id)!
     return { g, o, sponsor: sponsorOf(db, o.sponsor_id).organization_name, seat: db.seats.find((s) => s.guest_id === g.id)!, table: db.event_tables.find((t) => t.id === g.table_id) }
-  }).filter((r) => (status === 'all' || r.seat.status === status) && (type === 'all' || r.g.guest_type === type)
+  }).filter((r) => (status === 'all' || nameStatus(r.seat.status) === status) && (type === 'all' || r.g.guest_type === type)
       && `${r.g.first_name} ${r.g.last_name} ${r.g.organization} ${r.sponsor}`.toLowerCase().includes(q.toLowerCase()))
     .sort((a, b) => (order === 'newest' ? b.g.created_at.localeCompare(a.g.created_at) : 0) || a.sponsor.localeCompare(b.sponsor) || a.seat.slot_number - b.seat.slot_number), [db, q, status, type, order]) // eslint-disable-line
 
@@ -83,7 +86,7 @@ export default function GuestList() {
       <div className="mb-4 flex flex-wrap gap-2">
         <div className="relative w-full max-w-xs"><Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-navy-300" /><input className="input pl-9" placeholder="Search guests or sponsors" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search guests" /></div>
         <select className="input w-48" value={status} onChange={(e) => setStatus(e.target.value)} aria-label="Filter by status">
-          <option value="all">All statuses</option><option value="submitted">Needs review</option><option value="reviewed">Reviewed</option><option value="badge_ready">Badge ready</option><option value="checked_in">Checked in</option>
+          <option value="all">All statuses</option><option value="submitted">Needs review</option><option value="reviewed">Reviewed</option><option value="checked_in">Checked in</option>
         </select>
         <select className="input w-56" value={type} onChange={(e) => setType(e.target.value as GuestType | 'all')} aria-label="Filter by guest type">
           <option value="all">All guest types</option>
@@ -107,8 +110,8 @@ export default function GuestList() {
                 <td className="sticky left-0 border-b border-navy-100 bg-surface px-3 py-1.5 text-sm"><div className="w-44 truncate font-medium text-navy-800" title={sponsor}>{sponsor}</div>{g.guest_type === 'comp_relationship' && <Pill tone="brand">Comp</Pill>}</td>
                 {EDITABLE.map((c) => <td key={c.k} className="border-b border-navy-100 px-1 py-1"><Cell g={g} k={c.k} w={c.w} /></td>)}
                 <td className="border-b border-navy-100 px-1 py-1"><TablePicker g={g} tables={tables} /></td>
-                <td className="border-b border-navy-100 px-3"><SeatPill s={seat.status} /></td>
-                <td className="border-b border-navy-100 px-3"><Pill tone={BADGE_TONE[g.badge_status]}>{g.badge_status.replace('_', ' ')}</Pill></td>
+                <td className="border-b border-navy-100 px-3"><SeatPill s={nameStatus(seat.status)} /></td>
+                <td className="border-b border-navy-100 px-3"><Pill tone={BADGE_PILL[g.badge_status][0]}>{BADGE_PILL[g.badge_status][1]}</Pill></td>
                 <td className="whitespace-nowrap border-b border-navy-100 px-3 text-xs text-navy-500">{g.last_updated_by === 'guest_portal' ? 'Guest portal' : 'Staff'} · {ago(g.updated_at)}</td>
                 <td className="border-b border-navy-100 px-3">{seat.status === 'submitted' && <button className="btn-ghost btn-sm" onClick={() => void act(api.setSeatStatus(g.id, 'reviewed'), 'Reviewed')}>Review</button>}</td>
               </tr>
