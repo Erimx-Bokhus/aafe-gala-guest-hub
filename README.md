@@ -2,7 +2,7 @@
 
 Companion tool for Asian Americans for Equality's annual gala: one complete, editable guest list built on top of Give Lively, with sponsor self-service guest names, staff-approved follow-ups, badge exports, and gala-night check-in.
 
-Status: discovery complete (Oct 1, 2026); prototype concept shared (Oct 2); stack decision pending. Prototype with invented data only. See `CLAUDE.md` and `docs/`.
+Status: built on invented data only. Stack decided Oct 5 (React and TypeScript on Supabase); release candidate `v1.0.0-rc.2` tagged Oct 26; code freeze Oct 29; Stable V1 and AAFE's review Oct 30; Demo Day and handoff Nov 10. See `CLAUDE.md` and `docs/`.
 
 Starting with Claude Code: open this repo and paste the prompt in `KICKOFF_PROMPT.md`.
 

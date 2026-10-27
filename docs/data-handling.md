@@ -1,7 +1,7 @@
 # Guest data and AI handling (draft for AAFE)
 
-Shared version for AAFE: https://claude.ai/code/artifact/1d0571f4-d854-4e4a-90df-b60a62de28ce (the Oct 1 draft, being
-brought up to date from this file, Oct 24). **This file is the current version**, kept next to the code so the code can
+Shared version for AAFE: https://claude.ai/code/artifact/1d0571f4-d854-4e4a-90df-b60a62de28ce (the Oct 1 draft,
+rewritten from this file on Oct 26). **This file is the current version**, kept next to the code so the code can
 be checked against it.
 
 ## Commitments
