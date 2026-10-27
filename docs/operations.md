@@ -134,8 +134,12 @@ realtime service that a local copy refuses. The backup files were deleted after 
   - **Door accounts:** each volunteer has their own `check_in_volunteer` row and a confirmed sign-in (`BACKEND.md`,
     "Add a staff member"). Don't rely on the email-domain sign-in for doors: it makes relationship managers, who see
     guests' emails and food and access answers, and it ends on its date.
-  - **Badges:** Badges → the badge file for the printer (or Print sheet), print, then **Mark printed**. Leave
-    sponsor-facing arrivals off (Gala information) unless AAFE's privacy review approved them.
+  - **Tables:** a gala admin names each table and sets how many it seats on Gala information → Tables (10 unless
+    changed); the name prints on the badge beside the number ("Table 2 · Harborline"). Renaming a table after its
+    badges are printed flags them for reprint.
+  - **Badges:** Badges → **Needs review** → **Mark ready** for the names that are checked, then the badge file for the
+    printer (or Print sheet), print, then **Mark printed**. Leave sponsor-facing arrivals off (Gala information) unless
+    AAFE's privacy review approved them.
 - **The day before and that morning:** test a sign-in code again; don't change the Gmail account's password. Check the
   schedules ran recently: `select jobname, status, end_time from cron.job_run_details order by end_time desc limit 10;`.
   Check the email queue (Integrations & email) holds no failed or forgotten drafts. Write down who to call when

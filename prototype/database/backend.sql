@@ -947,7 +947,7 @@ begin
     audit_changes(to_jsonb(g), to_jsonb(n), v_changed));
 end $$;
 
--- setSeatStatus: submitted -> reviewed, reviewed -> badge_ready (needs table + seat)
+-- setSeatStatus: submitted -> reviewed, reviewed -> badge_ready (no table needed since Oct 25, below)
 create or replace function staff_set_seat_status(p_guest_id text, p_to text) returns void
 language plpgsql security definer set search_path = public as $$
 declare me staff_users := require_staff(array['gala_admin','relationship_manager']); st seats; g guests;
