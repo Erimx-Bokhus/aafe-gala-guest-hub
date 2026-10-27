@@ -52,11 +52,12 @@ Natalie built clickable concepts of the sponsor portal and staff app (shared in 
 | Aisling Leiva-Davila | nessaisling-lab / aislingld-pursuit | Backend | Backend, GitHub and integrations, repo admin |
 | Cornell Robertson | CodeToTheCore | Backend | Backend |
 
-Work is split into two areas (Oct 5, `docs/decisions.md`). Frontend: staff app, sponsor portal, check-in, branding. Backend: Supabase backend, Give Lively import, sign-in and roles, secure links, exports, emails. Who is building each part (Oct 7): backend by Aisling (Supabase backend, import, secure links, exports, emails, offline check-in, pipeline) and Cornell (staff sign-in); frontend by Natalie (sponsor portal, staff app, iPad check-in app, PRDs) and Antonin (portal ideas, Korean).
+Work is split into two areas (Oct 5, `docs/decisions.md`). Frontend: staff app, sponsor portal, check-in, branding. Backend: Supabase backend, Give Lively import, sign-in and roles, secure links, exports, emails. Who is building each part (Oct 7): backend by Aisling (Supabase backend, import, secure links, exports, emails, offline check-in, pipeline) and Cornell (staff sign-in); frontend by Natalie (sponsor portal, staff app, iPad check-in app, PRDs) and Antonin (portal ideas, Korean). Since Oct 17, Antonin works on the sponsor portal and the staff app is Natalie's (`docs/decisions.md`).
 
 ## Key dates
 - Oct 3–5: stack decided, areas assigned
-- Oct 15: first prototype review with AAFE
-- Oct 30: full path working end to end; AAFE feedback
+- Oct 19: first prototype review with AAFE, a hands-on walkthrough (moved back from Oct 15); AAFE's walk-through feedback came Oct 20
+- Oct 29: code freeze
+- Oct 30: full path working end to end; AAFE's review of Stable V1 (`docs/RELEASING.md`)
 - Nov 10: Demo Day; code and docs handed to AAFE
 - Target event: AAFE's 2027 gala

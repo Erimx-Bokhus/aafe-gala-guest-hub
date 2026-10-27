@@ -27,20 +27,20 @@ Until the final PRDs (Natalie's and Pursuit's) arrive, this file plus the hub's 
 ## Should have
 - **QR-code e-tickets** emailed per guest; scan to check in on an iPad. [call: Sarah]
 - **Blank sponsor name tags** for unnamed seats. [call]
-- **Multilingual sponsor form** (English, Chinese, Korean, Spanish; all four in the portal since PR #51, Oct 7; AAFE reviews the translations). [Natalie scope]
+- **Multilingual sponsor form** (English, Chinese, Korean, Spanish; all four built in the portal since PR #51, Oct 7. English only for v1, decided Oct 24, PR #241: the other three stay hidden until a native speaker on AAFE's staff reviews them). [Natalie scope]
 - **Relationship guests** (comps for officials, board, partners) with personal QR invites. [prototype]
 - **Branding** matching aafe.org. [call]
 
 ## Later / out of scope
 - Automatic seating (anything that places guests without staff). [call]
 - Automatic emails. Every send is staff-approved, as Sarah asked on the call; this changes only if Sarah asks. [call]
-- Automatic Give Lively sync (donation JSON feed / live attendee CSV) — stretch goal.
-- A live connection to a real Salesforce org (the demo's push is simulated).
+- ~~Automatic Give Lively sync (donation JSON feed / live attendee CSV) — stretch goal.~~ Built: the sync reads Give Lively every 15 minutes on both projects since Oct 18 (`prototype/database/cron.sql`, PR #209), and Pull now runs it at once.
+- A live connection to AAFE's real Salesforce during the capstone. The sync is written for AAFE's NPSP (in scope since Oct 19, PRs #210, #245, #250, #252), but the demo sends to a stand-in org; the first real sync waits for Idlewild Partners' answers, in a sandbox (`docs/salesforce-setup.md`).
 - Payments, checkout, Stripe, auctions, donor CRM.
 
 ## Required inputs before build
 
-The full list, with what each unlocks, is on the hub's Discovery page ("Required inputs before build"): an AAFE approval contact, 2027 tiers and seat counts, comp categories, spreadsheet column headers, Give Lively exports (Line Items and attendee reports), badge and check-in templates, deadlines, Give Lively screen recordings, sponsor email threads, and AAFE’s brand kit.
+The full list, with what each unlocks, is on the hub's Discovery page ("Inputs from AAFE"): an AAFE approval contact, 2027 tiers and seat counts, comp categories, spreadsheet column headers, Give Lively exports (Line Items and attendee reports), badge and check-in templates, deadlines, Give Lively screen recordings, sponsor email threads, and AAFE’s brand kit.
 
 ## Open questions for AAFE
 - ~~**Seats per tier.**~~ Answered Oct 5 by AAFE's 2026 sponsorship flyer (`docs/decisions.md`). Only Champion and above guarantee a seat; Friend and Supporter tickets admit guests without a guaranteed table.
