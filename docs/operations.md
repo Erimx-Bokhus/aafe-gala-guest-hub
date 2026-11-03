@@ -1,13 +1,13 @@
 # Running the tool: free-plan limits, backups, gala night
 
-The prototype runs on free plans: Supabase (two projects, stable and nightly, in one free organization), Cloudflare
+The prototype runs on free plans: Supabase (one project, stable, in a free organization), Cloudflare
 Pages and Access, a team Gmail account that sends the sign-in codes, and Resend, which sends the app's emails. This page lists what could stop it, how to
 prevent each thing and how to recover, how to take and restore a backup, and a checklist for gala night. Gate 3 of
 v1.0 (#149); limits read from the providers' pages on Oct 17, 2026 (sources at the end).
 
 ## Before going live: what still points at the team
 
-- **Emails go to the team.** Since Oct 18 stable and nightly send approved emails through Resend, from a team member's
+- **Emails go to the team.** Since Oct 18 stable sends approved emails through Resend, from a team member's
   account with no verified domain, so every email is redirected to that team member's inbox. Sign-in codes are separate:
   Supabase sends them through the Gmail account.
 - **The schedules run** (`prototype/database/cron.sql`, on both projects, set up with `prototype/scripts/setup-cron.mjs`):
@@ -39,13 +39,13 @@ handoff"). Then shut the prototype's open doors:
 | --- | --- | --- | --- | --- |
 | **The project pauses** | A free project with little database activity for 7 days is paused; the owner gets an email about a week before. A paused project can be restored for up to a year ([1], [2]) | Over a quiet stretch (Thanksgiving, after the Nov 10 handoff) everything stops: the apps, the poll, the emails. Before the 2027 gala it will have paused unless someone kept it awake | Someone reads the project owner's inbox. Use the apps weekly. Check the project is running a week before every review, Demo Day and the gala | Supabase dashboard → the project → **Resume project**; data and settings come back. How long it takes isn't published: resume early |
 | **No backups** | The free plan has no daily backups and no point-in-time restore ([1], [3]) | A wrong SQL statement, a wrong `db:load` or a deleted project can't be undone. Gala-night check-ins live only in the database and on the iPads | Our own backup (below), weekly and before every event | Restore from that backup (below), or Pro ($25 a month) for 7 daily backups |
-| **Two free projects** | Two active free projects across the organization's owners and admins; paused ones don't count ([4]) | Stable and nightly use both slots, so a new project (for a restore, or AAFE's) can't be made | Keep the owner and admin roles to who needs them | Pause nightly to free a slot |
+| **Two free projects** | Two active free projects across the organization's owners and admins; paused ones don't count ([4]) | Stable uses one slot, leaving one for a restore or a second project | Keep the owner and admin roles to who needs them | Pause or delete a project that isn't needed |
 | **5 GB of data a month** | Shared by the whole organization. Over it: a notice, a grace period, then restrictions; after one grace period the next overage gets none ([1], [4], [5]) | Measured on the 553-guest gala: the **staff app** loads everything once, 1.1 MB (99 KB compressed), then every 10 s fetches only what changed since (`staff_sync`, Oct 17): about 0.6 KB when nothing did, about 1.4 KB per check-in, and everything again every 4 hours. One tab on gala night: **under 1 MB an hour** (it was 128 MB reloading everything every 30 s). The **iPad** and a check-in volunteer in the staff app keep the door list the same way since Oct 17 (`door_sync`): the whole list (281 KB, 27 KB compressed) at the start and every 4 hours, and in between only what changed, every 15 s on the iPad (about 0.4 KB when nothing did, so about 0.1 MB an hour plus the check-ins). Before, each iPad fetched the whole list once a minute, 16 MB an hour. In the gala-night load test, two door lists kept this way took 681 KB over 129 syncs, instead of 38,955 KB. Whether Supabase counts compressed bytes isn't published | Check the Usage page weekly and before events | Wait for the next billing month, or Pro (250 GB) |
 | **500 MB database** | Read-only above it ([6]) | Small today. The schedules add about 1,540 rows a day to `cron.job_run_details`, which pg_cron never cleans on its own ([7]) | `cron.sql` now deletes run history older than a week | Delete old rows and vacuum; [6] explains how to leave read-only mode |
 | **Sign-in codes through Gmail** | More than 500 emails a day blocks sending for up to a day ([8]); the app password stops working when the Google password changes ([9]) | Volume is fine. A password change silently stops every sign-in code | Don't change that Google password near an event; test a sign-in code the day before and the morning of | Make a new app password and put it in Supabase → Authentication → Emails → SMTP |
-| **Resend's free plan** | 100 emails a day, 3,000 a month; `resend.dev` only sends to your own address ([10], [11]) | Today (stable and nightly) only the app's emails go through it, all to the account owner. On AAFE's project the sign-in codes would too, so codes, guest-list links, reminders and QR invitations share 100 a day: QR e-tickets for 550 guests take six days | Verify AAFE's domain; Resend Pro ($20 a month) for the gala months, or spread the sends over days | Wait for the next day (midnight UTC: 8 p.m. New York, 7 p.m. from Nov 1) or upgrade |
+| **Resend's free plan** | 100 emails a day, 3,000 a month; `resend.dev` only sends to your own address ([10], [11]) | Today (stable) only the app's emails go through it, all to the account owner. On AAFE's project the sign-in codes would too, so codes, guest-list links, reminders and QR invitations share 100 a day: QR e-tickets for 550 guests take six days | Verify AAFE's domain; Resend Pro ($20 a month) for the gala months, or spread the sends over days | Wait for the next day (midnight UTC: 8 p.m. New York, 7 p.m. from Nov 1) or upgrade |
 | **Cloudflare Access: 50 people** | A person takes a seat at their first sign-in and keeps it until removed; when 50 are taken, new people are refused. A code expires in 10 minutes ([12], [13], [14]) | The team, AAFE's reviewers, Pursuit's advisors and the volunteers share 50 seats. Since Oct 19 anyone at @aafe.org or @pursuit.org can sign in, and each one who does takes a seat. **The sponsor portal is behind Access too** (`prototype/scripts/cloudflare-access.mjs`), fine for the prototype, but for AAFE's real gala every sponsor would need a seat | Remove people who no longer need access. For the real gala, take the portal out from behind Access: its private link is the sponsor's credential | Zero Trust → Users → remove; the person asks for a new code |
-| **Other Supabase quotas** | 500,000 Edge Function calls and 50,000 monthly sign-ins a month; logs kept one day ([1], [15]) | The email sender (every minute) and the Give Lively poll (every 15) use about 92,000 calls a month across both projects; the daily jobs run in the database and call nothing | Look into a gala-night problem that same night: the logs are gone the next day. The change log (`audit_log`) keeps our own history; gala admins read it (Activity log) | — |
+| **Other Supabase quotas** | 500,000 Edge Function calls and 50,000 monthly sign-ins a month; logs kept one day ([1], [15]) | The email sender (every minute) and the Give Lively poll (every 15) use about 46,000 calls a month on stable; the daily jobs run in the database and call nothing | Look into a gala-night problem that same night: the logs are gone the next day. The change log (`audit_log`) keeps our own history; gala admins read it (Activity log) | — |
 
 Cloudflare Pages is no risk: 500 builds a month, 20,000 files of up to 25 MB, unlimited requests ([16]); our builds
 are 21 files, the largest 3.2 MB.
@@ -82,8 +82,8 @@ missing from them loses access. After applying, it checks that all three address
 ## Backups
 
 The CLI takes a backup through your Supabase login: **no database password is needed** (it makes a temporary login
-role). It needs Docker running. In `prototype/` of the folder linked to the project (stable or nightly: `BACKEND.md`,
-"One working folder per project"), check the target with `cat supabase/.temp/project-ref`, then:
+role). It needs Docker running. In `prototype/` of the folder linked to stable (`BACKEND.md`, "Stable: the project, apps and
+settings"), check the target with `cat supabase/.temp/project-ref`, then:
 
 ```bash
 B="$HOME/aafe-backups/$(date +%F)-stable"; mkdir -p "$B"
@@ -129,8 +129,7 @@ realtime service that a local copy refuses. The backup files were deleted after 
   the day of: on Resend's free plan about 100 go out a day (the Resend row above).
   - **The release, then a freeze:** `npx wrangler@4 pages deployment list --project-name aafe-gala-checkin` (and
     `aafe-gala-staff`, `aafe-gala-portal`) shows the release tag's commit on `main` for each app, and `backend.sql` was
-    run from the same commit. After that, no `db:backend` and no uploads until after the gala. Doors use the plain
-    addresses, never `nightly.`.
+    run from the same commit. After that, no `db:backend` and no uploads until after the gala.
   - **Door accounts:** each volunteer has their own `check_in_volunteer` row and a confirmed sign-in (`BACKEND.md`,
     "Add a staff member"). Don't rely on the email-domain sign-in for doors: it makes relationship managers, who see
     guests' emails and food and access answers, and it ends on its date.
