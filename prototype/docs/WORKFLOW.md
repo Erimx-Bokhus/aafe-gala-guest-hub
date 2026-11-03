@@ -1,13 +1,14 @@
-# AAFE Gala Apps — How the Two Apps Work Together
+# AAFE Gala Apps — How the Apps Work Together
 
-Capstone prototype by ERIMX BOKHUS (Pursuit AI Builder Fellowship). **All data is synthetic.** The sponsorship tiers and seat counts come from AAFE's public 2025 sponsorship flyer. AAFE must confirm the packages for future years.
+Capstone prototype by ERIMX BOKHUS (Pursuit AI Builder Fellowship). **All data is synthetic.** For 2027, the sponsorship levels and seats per level follow AAFE's 2026 flyer until AAFE says otherwise (decided Oct 5), and gala admins set each gala's levels in the staff app (decided Oct 14).
 
-There are **two apps** and **one database**:
+There are **three apps** and **one database**:
 
 | App | Who uses it | How they get in | What it does |
 |---|---|---|---|
 | **Guest Portal** (`guest-portal/`) | Sponsors and ticket buyers | A private link in an email sent after they pay or pledge | Add or update attendee names, titles, organizations, dietary and accessibility needs. See amount paid, payment dates, balance and a timestamped activity history. **Payment details are never shown.** |
-| **Staff App** (`staff-app/`), the "client app" | AAFE gala team, relationship managers, check-in volunteers | Staff login with roles | Dashboard, gala information, sponsors and orders, spreadsheet-style guest list, **payments and Give Lively fees per ticket with totals**, seating chart (table and seat), relationship guests with QR codes, badge template and print sheet, iPad check-in, Give Lively and Salesforce integrations, email log, audit log |
+| **Staff App** (`staff-app/`), the "client app" | AAFE gala team, relationship managers, check-in volunteers | Staff login with roles | Dashboard, gala information, sponsors and orders, spreadsheet-style guest list, **payments and Give Lively fees per ticket with totals**, a table for each guest (no seating chart, decided Oct 17), relationship guests with QR codes, badge template and print sheet, a check-in view, Give Lively and Salesforce integrations, email log, audit log |
+| **iPad Check-in** (`checkin-app/`) | Volunteers and staff at the door | Staff sign-in; the check-in volunteer role sees check-in only | The A–Z door list, QR scan with the iPad camera, approved exceptions and undo. Installs on the iPad as an app and works without Wi-Fi |
 
 ```
               ┌────────────────┐        ┌──────────────────────────┐
@@ -19,13 +20,14 @@ There are **two apps** and **one database**:
                                                 │          │
                                    token RPC    │          │  authenticated (role-based)
                                     ┌───────────┴──┐   ┌───┴────────────┐
-                                    │ Guest Portal │   │   Staff App    │
-                                    └──────────────┘   └────────────────┘
+                                    │ Guest Portal │   │ Staff App,     │
+                                    └──────────────┘   │ iPad Check-in  │
+                                                       └────────────────┘
 ```
 
-The two apps never talk to each other directly. Both read and write the **same database**. When a guest saves a name in the portal, it shows up immediately in the staff app's guest list, dashboard feed and badge queue. When staff confirm a name, seat a guest, or record a payment, the guest sees it in the portal.
+The apps never talk to each other directly. All three read and write the **same database**. When a guest saves a name in the portal, it shows up in the staff app's guest list, dashboard feed and badge queue. When staff confirm a name, seat a guest, or record a payment, the guest sees it in the portal. Check-ins at the door show up in the staff app.
 
-> In this prototype each app holds its own in-memory copy of `shared/src/seed.json`, so a change in one does not appear in the other. Live sync begins when the backend team connects both apps to Supabase. The functions to swap are listed under "Front-end needs" below.
+> With Supabase keys in their builds, all three apps run live on the same database (`docs/BACKEND.md`). Without keys, as in the double-click `OPEN-*.html` files, each app runs on its own built-in copy of the demo data, so a change in one doesn't appear in the others.
 
 ---
 
@@ -104,7 +106,11 @@ Recommended stack: **Supabase**. It provides Postgres, Auth, Row-Level Security,
 
 ## 4. What the FRONT END needs (Natalie, Antonin)
 
-Both apps are built with Vite, React, TypeScript and Tailwind. They share code in `shared/src` (types, theme, UI, the A−/A+ text size and light/dark controls) and the photos in `shared/public`.
+> **Historical (the plan of early October).** Since then the apps were connected to Supabase: they run live when
+> their build has the keys (`docs/BACKEND.md`). The staff app and the iPad pick up changes by asking the server for
+> what changed, not by subscription. Still open: the translations review (last row but one).
+
+All three apps are built with Vite, React, TypeScript and Tailwind. They share code in `shared/src` (types, theme, UI, the A−/A+ text size and light/dark controls) and the photos in `shared/public`.
 
 | Task | Where |
 |---|---|
@@ -115,7 +121,7 @@ Both apps are built with Vite, React, TypeScript and Tailwind. They share code i
 | Staff login → Supabase Auth | `staff-app/src/pages/Login.tsx` |
 | Set `VITE_GUEST_PORTAL_URL` so staff can copy or resend correct links | `staff-app` build env |
 | Have AAFE review the translations before turning them on (hidden for v1, #241; fix "No shellfish" in Chinese and Korean at the same time) | `guest-portal/src/i18n.ts`, `SHOW_LANGUAGES` in `guest-portal/src/App.tsx` |
-| Have AAFE approve the photos and get permission for the people shown | `shared/public/photos` |
+| ~~Have AAFE approve the photos~~ Decided Oct 13 (hard rule 8): AAFE's logo and event photos may appear in everything we build; never a photo where a real attendee's name badge is readable | `shared/public/photos` |
 
 ---
 
@@ -140,9 +146,9 @@ Both apps are built with Vite, React, TypeScript and Tailwind. They share code i
 ## 6. Open questions for AAFE (AAFE's project contact, AAFE's gala lead)
 
 1. Which Give Lively campaign or event page will sell gala tickets in 2027, and who can create the Zapier API key?
-2. Does AAFE already have Salesforce/NPSP? Is Give Lively's integration turned on?
+2. Does AAFE already have Salesforce/NPSP? Is Give Lively's integration turned on? **Answered Oct 21:** NPSP, fully integrated with Give Lively, built by Idlewild Partners (`docs/decisions.md`).
 3. Who records checks and direct ACH today, and from what document (deposit slip, bank statement)?
-4. Final 2027 sponsorship packages, seat counts and benefits.
+4. Final 2027 sponsorship packages, seat counts and benefits. **Partly answered Oct 5:** 2027 seats follow AAFE's 2026 flyer until AAFE says otherwise.
 5. Badge printer and badge size (the template assumes a 4×3 in. badge).
 6. Venue floor plan: number of tables and seats per table (the prototype uses 11 tables of 10).
-7. How long guest data should be kept after the gala.
+7. How long guest data should be kept after the gala. **Built Oct 18 as the proposed default:** guests' contact details are deleted 60 days after the gala, and food and access answers after the gala, keeping only totals (`docs/data-handling.md`).

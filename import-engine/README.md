@@ -37,11 +37,14 @@ tier mappings, sponsors, this gala's guests, earlier purchases) and returns the 
 needs stored rows: dedupe on `payments.purchase_key`, skip unchanged rows, pre-fill guests only into orders
 nobody has named, `guest_text_changed`, refunds, the review queue (`import_review`), tier mappings
 (`tier_mappings`), and one run record per upload (`import_runs`). One upload is one transaction.
+`staff_import_givelively` saves the rows through `gl_import()`, the database function from Natalie Walker's
+Oct 3 backend that every import goes through (`docs/import-matching-spec.md`, section 0).
 
-The staff app's upload screen is the remaining piece (frontend pair): read the file, call
-`prepareUpload` with a snapshot of the tables, show the report and any `GalaPageNotSetError` or unknown
-tiers, then call `staff_import_givelively` with `toGlImport`'s result. The database tests in
-`prototype/scripts/test-backend.mjs` run that whole path on a sample CSV.
+The staff app's **Give Lively import** page (`prototype/staff-app/src/pages/Import.tsx`, PR #104, Oct 10)
+runs this path: it reads the file, calls `prepareUpload` with a snapshot of the tables (`src/importer.ts`),
+shows the report and any `GalaPageNotSetError` or unknown tiers, then calls `staff_import_givelively` with
+`toGlImport`'s result. The database tests in `prototype/scripts/test-backend.mjs` run the same path on a
+sample CSV.
 
 ## A full-size test gala
 
