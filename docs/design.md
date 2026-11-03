@@ -133,7 +133,7 @@ Load Poppins 400, 600 and 700 from Google Fonts. Fallback: `system-ui, sans-seri
 | Small labels (for example "SEAT 1") | 14px, uppercase | Semibold 600 | same |
 | Form inputs | **16px minimum** (prevents iPhone zoom) | Regular 400 | same |
 
-**Where this scale applies (decided Oct 10, 2026):** the **guest portal** will follow it (not yet applied in the code; a separate change). The **staff app** and **iPad check-in app** keep their current, denser sizes, because they show long lists and tables at a desk or the door. Check-in names stay at 20px or larger, readable at arm's length.
+**Where this scale applies (decided Oct 10, 2026):** the **guest portal** follows it (applied in `guest-portal/src/typography.css`, by Antonin). The **staff app** and **iPad check-in app** keep their current, denser sizes, because they show long lists and tables at a desk or the door. Check-in names stay at 20px or larger, readable at arm's length.
 
 ~~Old scale (v1.0): page title 30px, section heading 20px, body 16px, tables 14px, labels 12px.~~ Replaced by the scale above for the portal.
 

@@ -8,8 +8,8 @@ guests in on gala night.
 Team ERIMX BOKHUS built it in Pursuit's AI Native program as a working prototype on invented data. The code and
 documents go to AAFE at Demo Day, November 10, 2026, for AAFE and any technical partner to take forward.
 
-**Status:** invented data only. Release candidate `v1.0.0-rc.2` tagged Oct 26; code freeze Oct 29; AAFE's review
-of Stable V1 Oct 30; Demo Day and handoff Nov 10.
+**Status:** invented data only. Release candidate `v1.0.0-rc.2` tagged Oct 26 (`v1.0.0` isn't tagged yet); code
+freeze Oct 29; Demo Day and handoff Nov 10.
 
 ## The three apps
 

@@ -9,7 +9,10 @@ Where it differs from later discovery or decisions, `docs/discovery-2026-10-01.m
 | Give Lively forms are embedded on aafe.org (`how-give-lively-works-natalie.txt`) | Registration is **not** embedded; aafe.org/gala links out to Give Lively | Discovery, Oct 1 |
 | Option B: an AAFE-branded Stripe checkout collecting names at purchase ("we have built both") | Out of scope: no payment processing (hard rule 2) | Decisions, Sep 30 and Oct 1 |
 | Drag-and-drop seating chart in the staff app | Later phase; staff-assigned table number on the badge is enough | Decisions, Oct 1 |
-| Example: $50,000 sponsorship with 12 seats | Seat counts per tier are pending with AAFE | Decisions (pending) |
 | "November 9 presentation" (`source-of-truth-v3-natalie.md`) | Nov 9 is the team's last work day; Demo Day and handoff are Nov 10 | Decisions, Oct 3 |
+
+No longer a difference: the research's example of a $50,000 sponsorship with twelve seats
+(`how-give-lively-works-natalie.txt`) matches the 2027 seats the team adopted from AAFE's 2026 flyer (Platinum
+$50,000 = 12; decisions, Oct 5).
 
 Natalie's prototypes and seed data (Oct 2) are reviewed in `prototype-review-2026-10-03.md`.
