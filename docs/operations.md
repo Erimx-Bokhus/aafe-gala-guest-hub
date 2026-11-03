@@ -170,16 +170,10 @@ realtime service that a local copy refuses. The backup files were deleted after 
   cleared): `update gala_events set status = 'live' where id = '<the gala id>';`. These two SQL edits write no line in
   the change log.
   - **A payment entered by mistake** (a check, ACH or wire; Give Lively payments are refunded in Give Lively): a gala
-    admin voids it in the SQL editor until the staff app has a Void button (#223):
-    ```sql
-    begin;
-    select set_config('request.jwt.claims', '{"email": "<your staff email>"}', true);
-    select staff_void_payment('<the payment id>', '<why>');
-    commit;
-    ```
-    The email must be a gala admin's row on the staff list; anyone else's answers `forbidden`. If the answer shows
-    `"in_salesforce": true`, the payment had already gone to Salesforce: remove it there too (the change log says so,
-    but in the SQL editor the answer is what you see).
+    admin opens **Payments & fees**, clicks **Void** on its row, types why, and confirms (#223, #264). Other roles
+    don't see the button. The change log keeps who, when and why, and the order's status is worked out again from
+    what's left. If the dialog says the payment was already sent to Salesforce, remove it there too. A wrong amount
+    or date is fixed the same way: void it, then record it again on the sponsor's page.
   - **Checks taken at the door:** record them on the sponsor's page. The date is required and can't be more than 3 days
     ahead (#231); the form warns before the same check twice or an amount over the balance (#232).
 

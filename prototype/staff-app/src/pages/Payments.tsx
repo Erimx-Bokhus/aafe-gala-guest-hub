@@ -1,19 +1,27 @@
 import { useState } from 'react'
-import { Download, Plus } from 'lucide-react'
+import { ArrowDown, ArrowUp, Download, Plus, Search } from 'lucide-react'
 import { METHOD_LABEL, methodLabel, netToAafe, sponsorOf, tierOf } from '@shared/data'
 import { Pill, downloadCsv, fmtDate, money } from '@shared/ui'
-import type { PayMethod } from '@shared/types'
+import type { PayMethod, Payment } from '@shared/types'
 import { Kpi, PageHead } from '../App'
-import { RecordPaymentModal } from '../components'
+import { canDo } from '../api'
+import { RecordPaymentModal, VoidPaymentModal } from '../components'
 import { useStaff } from '../store'
 import { nyDate } from '../date'
 import { NOTICE, csvName, isDemo } from '../exports'
 
+// Search and sort (AAFE's Oct 20 walk-through, item 14): find a payment by sponsor, check number or reference, and sort
+// by date, sponsor, method or amount. The cards, totals and export stay for the whole gala year.
+type SortKey = 'date' | 'sponsor' | 'method' | 'original' | 'gross' | 'net'
+
 // Per-ticket fee ledger. Columns mirror Give Lively's "Line Items (All)" report.
 export default function Payments() {
-  const { db } = useStaff()
+  const { db, user } = useStaff()
   const [year, setYear] = useState(db.meta.current_event_id)
   const [rec, setRec] = useState(false)
+  const [q, setQ] = useState('')
+  const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: 'date', dir: -1 })
+  const [voiding, setVoiding] = useState<Payment | null>(null)
   const ids = new Set(db.orders.filter((o) => o.event_id === year).map((o) => o.id))
   const pays = db.payments.filter((p) => ids.has(p.order_id)).sort((a, b) => b.received_at.localeCompare(a.received_at))
   // A fee AAFE's ticket export didn't carry is unknown (null), not $0 (Gate 1): totals count the known fees and say how many aren't.
@@ -31,6 +39,28 @@ export default function Payments() {
     ['TOTAL', '', '', '', '', '', sum('original_amount'), sum('covered_fee_amount'), sum('gross_amount'), sum('transaction_fee_amount'), net, beforeFees && `Net ${beforeFees}`],
   ])
   const c = (n: number) => money(n, true)
+  const sponsorName = (p: Payment) => {
+    const o = db.orders.find((x) => x.id === p.order_id)
+    if (!o) throw new Error(`Payment ${p.id} has no order`)
+    return sponsorOf(db, o.sponsor_id).organization_name
+  }
+  // A net that isn't known yet compares as NaN, which the sort reads as a tie, so the date decides.
+  const sortVal = (p: Payment): string | number =>
+    ({ date: p.received_at, sponsor: sponsorName(p), method: methodLabel(p), original: p.original_amount, gross: p.gross_amount, net: p.net_amount ?? NaN })[sort.key]
+  const needle = q.trim().toLowerCase()
+  const rows = pays.filter((p) => !needle || [sponsorName(p), methodLabel(p), p.check_number, p.givelively_transaction_id].some((v) => v?.toLowerCase().includes(needle)))
+    .sort((a, b) => { const x = sortVal(a), y = sortVal(b); return (sort.dir * (typeof x === 'number' && typeof y === 'number' ? x - y : String(x).localeCompare(String(y)))) || b.received_at.localeCompare(a.received_at) })
+  const mayVoid = canDo(user.role, 'voidPayment')
+  // A plain function, not a component: a component made inside the page is a new type on every render, so React would
+  // remount the heading's button and keyboard focus would be lost after sorting.
+  const th = (k: SortKey, label: string, right = false) => (
+    <th className={`th ${right ? 'text-right' : ''}`} aria-sort={sort.key === k ? (sort.dir === 1 ? 'ascending' : 'descending') : 'none'}>
+      <button type="button" className="inline-flex items-center gap-1 uppercase hover:text-brand-600" data-testid={`sort-${k}`}
+        onClick={() => setSort((s) => ({ key: k, dir: s.key === k ? (s.dir === 1 ? -1 : 1) : k === 'sponsor' || k === 'method' ? 1 : -1 }))}>
+        {label}{sort.key === k && (sort.dir === 1 ? <ArrowUp size={12} aria-hidden /> : <ArrowDown size={12} aria-hidden />)}
+      </button>
+    </th>
+  )
   return (
     <div>
       <PageHead title="Payments & fees" sub="What Give Lively’s payment processor took from each ticket and sponsorship, totaled. Give Lively charges no platform fee — fees are Stripe’s card/ACH processing."
@@ -45,11 +75,16 @@ export default function Payments() {
         <Kpi label="Net to AAFE" value={c(net)} sub={beforeFees || undefined} />
       </div>
       <div className="mt-6 grid gap-6 2xl:grid-cols-[1fr_320px]">
+        <div className="min-w-0">
+        <div className="mb-3 flex flex-wrap items-center gap-3">
+          <div className="relative w-full max-w-sm"><Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-navy-300" /><input className="input pl-9" placeholder="Sponsor, check number or reference" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search payments" /></div>
+          <span className="text-sm text-navy-500" data-testid="payment-count">{needle ? `${rows.length} of ${pays.length} payments · totals are for all ${pays.length}` : `${pays.length} payment${pays.length === 1 ? '' : 's'}`}</span>
+        </div>
         <div className="card overflow-x-auto">
           <table className="w-full min-w-[1000px]" data-testid="fee-ledger">
-            <thead className="border-b border-navy-100 bg-cream-100"><tr><th className="th">Date</th><th className="th">Sponsor / ticket</th><th className="th">Method</th><th className="th">Reference</th><th className="th text-right">Original</th><th className="th text-right">Donor-covered</th><th className="th text-right">Gross</th><th className="th text-right">Give Lively fee</th><th className="th text-right">Net</th><th className="th">Recon.</th></tr></thead>
+            <thead className="border-b border-navy-100 bg-cream-100"><tr>{th('date', 'Date')}{th('sponsor', 'Sponsor / ticket')}{th('method', 'Method')}<th className="th">Reference</th>{th('original', 'Original', true)}<th className="th text-right">Donor-covered</th>{th('gross', 'Gross', true)}<th className="th text-right">Give Lively fee</th>{th('net', 'Net', true)}<th className="th">Recon.</th>{mayVoid && <th className="th sticky right-0 bg-cream-100"><span className="sr-only">Void</span></th>}</tr></thead>
             <tbody className="divide-y divide-navy-100">
-              {pays.map((p) => {
+              {rows.map((p) => {
                 const o = db.orders.find((x) => x.id === p.order_id)!
                 return (
                   <tr key={p.id}>
@@ -63,12 +98,16 @@ export default function Payments() {
                     <td className="td text-right font-semibold tabular-nums text-brand-600">{p.transaction_fee_amount == null ? <span className="font-normal text-navy-500" title="AAFE's ticket export has no fee column; the Give Lively sync fills it in">Not in file</span> : c(p.transaction_fee_amount)}</td>
                     <td className="td text-right font-semibold tabular-nums">{p.net_amount == null ? <span className="font-normal text-navy-500">—</span> : c(p.net_amount)}</td>
                     <td className="td"><Pill tone={p.reconciliation_status === 'matched' ? 'green' : p.reconciliation_status === 'needs_review' ? 'red' : 'amber'}>{p.reconciliation_status.replace('_', ' ')}</Pill></td>
+                    {/* Item 15: staff-entered payments only; Give Lively payments are refunded in Give Lively. Pinned to the right
+                        edge, since the ledger is wider than a laptop screen and scrolls sideways. */}
+                    {mayVoid && <td className="td sticky right-0 bg-surface">{p.processor === 'none' && <button type="button" className="btn-ghost btn-sm" onClick={() => setVoiding(p)} aria-label={`Void ${c(p.original_amount)} from ${sponsorOf(db, o.sponsor_id).organization_name}`}>Void</button>}</td>}
                   </tr>
                 )
               })}
             </tbody>
-            <tfoot className="border-t-2 border-navy-100 bg-cream-100 font-semibold"><tr><td className="td" colSpan={4}>Totals</td><td className="td text-right tabular-nums">{c(sum('original_amount'))}</td><td className="td text-right tabular-nums">{c(sum('covered_fee_amount'))}</td><td className="td text-right tabular-nums">{c(sum('gross_amount'))}</td><td className="td text-right tabular-nums text-brand-600" data-testid="fee-total">{c(sum('transaction_fee_amount'))}</td><td className="td text-right tabular-nums" data-testid="net-total">{c(net)}{beforeFees && <div className="text-xs font-normal text-navy-500">{beforeFees}</div>}</td><td /></tr></tfoot>
+            <tfoot className="border-t-2 border-navy-100 bg-cream-100 font-semibold"><tr><td className="td" colSpan={4}>Totals</td><td className="td text-right tabular-nums">{c(sum('original_amount'))}</td><td className="td text-right tabular-nums">{c(sum('covered_fee_amount'))}</td><td className="td text-right tabular-nums">{c(sum('gross_amount'))}</td><td className="td text-right tabular-nums text-brand-600" data-testid="fee-total">{c(sum('transaction_fee_amount'))}</td><td className="td text-right tabular-nums" data-testid="net-total">{c(net)}{beforeFees && <div className="text-xs font-normal text-navy-500">{beforeFees}</div>}</td><td />{mayVoid && <td className="sticky right-0 bg-cream-100" />}</tr></tfoot>
           </table>
+        </div>
         </div>
         <aside className="space-y-4">
           <section className="card p-4">
@@ -82,6 +121,7 @@ export default function Payments() {
         </aside>
       </div>
       <RecordPaymentModal open={rec} onClose={() => setRec(false)} />
+      <VoidPaymentModal key={voiding?.id ?? ''} payment={voiding} onClose={() => setVoiding(null)} />
     </div>
   )
 }
