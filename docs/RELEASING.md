@@ -4,24 +4,24 @@ How the gala tool is versioned, what has to be true before a tag, and how fixes 
 v1.0.0. The rules were decided by Aisling with Natalie on Oct 14, 2026, after Pursuit's review of the build, and kept
 until now on Aisling's own project hub; this file is where they live for the handoff.
 
-## Two lines
+## Stable
 
-| | Stable | Nightly |
-| --- | --- | --- |
-| What it takes | Fixes and gate work only | New features, and anything that didn't make the cut |
-| Branch | `main` until v1.0.0, then `release/v1` | `nightly` until v1.0.0, then `main` |
-| Supabase project | `aafe-gala-guest-list` (`abmlzjwnwpkypubpzcsn`) | `aafe-gala-nightly` (`tykckkoxuudvwdosturh`) |
-| Apps | `aafe-gala-staff`, `-checkin`, `-portal` `.pages.dev`, uploaded with `--branch main` | the same with `nightly.` in front, `--branch nightly` |
-| Who sees it | AAFE, Demo Day, anyone we show | The team and testers |
+The version AAFE sees and Demo Day runs:
 
-The rule for any change: it goes to stable only if it fixes a bug or closes a gate; everything else goes to nightly.
-Until v1.0.0, every fix merged into `main` is also merged into `nightly` with a "Nightly: … (#n)" pull request from
-`main` (`prototype/docs/BACKEND.md`, "Stable and nightly"), so nightly never brings a fixed bug back.
+| | Stable |
+| --- | --- |
+| What it takes | Fixes and gate work only (code freeze from Oct 29) |
+| Branch | `main` until v1.0.0, then `release/v1` |
+| Supabase project | `aafe-gala-guest-list` (`abmlzjwnwpkypubpzcsn`) |
+| Apps | `aafe-gala-staff`, `-checkin`, `-portal` `.pages.dev`, uploaded with `--branch main` |
+| Who sees it | AAFE, Demo Day, anyone we show |
+
+The rule for any change: it goes to `main` only if it fixes a bug or closes a gate.
 
 ## Version numbers
 
 - `v1.0.0-rc.1`, `rc.2`, …: release candidates, tagged on `main` as the gates pass. `v1.0.0-rc.1` was tagged on Oct 23
-  (`f88db6c`, after Gate 4's two clean click-throughs).
+  (`f88db6c`, after Gate 4's two clean click-throughs), and `v1.0.0-rc.2` on Oct 26 (`318870b`).
 - `v1.0.0`: Stable V1, tagged with a GitHub release and its notes.
 - `v1.0.1`, …: fixes to Stable V1, on `release/v1`.
 
@@ -87,5 +87,5 @@ Tagged when all of these are true:
    (still uploading with `--branch main`: another branch name makes a preview, not the live app), then tag `v1.0.1` with
    the same checks as above.
 4. **Merge each fix forward:** a pull request from `release/v1` into `main`, so the next version has it.
-5. **Nightly moves to `main`:** from v1.0.0 on, new work merges into `main` and the nightly apps are built from it; the
-   `nightly` branch is retired.
+5. **New work goes to `main`:** from v1.0.0 on, new features merge into `main`, and fixes for Stable V1 into
+   `release/v1` (step 3).
