@@ -67,7 +67,7 @@ The full text is in [`CLAUDE.md`](CLAUDE.md), "Hard rules." In short:
 | --- | --- |
 | Run the apps on your own computer | [`prototype/README.md`](prototype/README.md) (Node 22.18 or newer) |
 | Set up a Supabase project, its functions and its secrets | [`prototype/docs/BACKEND.md`](prototype/docs/BACKEND.md) |
-| Understand stable and nightly, and how releases work | [`docs/RELEASING.md`](docs/RELEASING.md) |
+| Understand stable, the version AAFE sees, and how releases work | [`docs/RELEASING.md`](docs/RELEASING.md) |
 | Know the free-plan limits, take backups, run gala night, go live | [`docs/operations.md`](docs/operations.md) |
 | Find every key, where it lives and how to replace it | [`docs/keys-and-secrets.md`](docs/keys-and-secrets.md) |
 
