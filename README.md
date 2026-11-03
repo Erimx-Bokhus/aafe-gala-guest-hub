@@ -111,9 +111,8 @@ Oct 5 ([decision log](docs/decisions.md)).
 [ERIMX BOKHUS on Trello](https://trello.com/b/g9ycbWCv/erimx-bokhus). It was in use by Sep 28, 2026, before the
 project hub. It's private: ask Natalie to be added.
 
-**Project hub:** Aisling's own tracker, in a separate repo,
-[AAFE Gala Guest Project Hub](https://github.com/Erimx-Bokhus/aafe-gala-guest-project-hub). Nobody else needs to
-clone it.
+**Project hub:** Aisling's own tracker, kept outside this repo since Oct 11, 2026. It's no longer in the Erimx-Bokhus
+organization; nobody else needs it.
 
 ## License
 
