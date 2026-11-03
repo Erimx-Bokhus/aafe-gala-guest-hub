@@ -10,7 +10,7 @@ Her spreadsheet says the same data lives in `database/seed.sql` and `shared/src/
 | --- | --- | --- |
 | `gala_events` | 4 | 2024–2026 (closed) and the 2027 demo gala with deadlines |
 | `staff_users` | 5 | Admin, three relationship managers, one check-in volunteer |
-| `sponsorship_tiers` | 12 | From AAFE's public 2025 flyer, incl. ad-only and comp tiers; seat counts pending AAFE |
+| `sponsorship_tiers` | 12 | From AAFE's public 2025 flyer, incl. ad-only and comp tiers; 2027 seats now follow AAFE's 2026 flyer (decisions, Oct 5) |
 | `sponsors` | 15 | Companies, foundations, and individual ticket buyers |
 | `orders` | 27 | 15 for 2027 (Give Lively, check, ACH, wire, comp, ad-only), plus history |
 | `payments` | 24 | Incl. a partial payment (installments) and a check needing review |
@@ -34,5 +34,7 @@ This is the base demo state, not the import tests. `docs/seed-data-requirements.
 - **`orders.portal_token`**: short and stored in plain text, and one is a readable slug (`acme-community-partners`). Generate random 128-bit tokens and store only their hashes (rule 6).
 - **`guests.qr_token`**: sequential (`AAFE27-REL-1037`, `-1074`, …). Generate random tokens, hashed (rule 6).
 - **`email_log`**: portal links marked as sent automatically after a purchase or payment. Load them as staff-approved sends; new ones start as drafts (rule 4).
+
+Done since: the **Full fixed** demo set (decisions, Oct 7) has random link and QR codes and an approval on every email.
 
 Fee columns in `payments` (covered fee, processor fee, net) are kept but not used in the MVP: fee analytics is a later phase.
