@@ -179,7 +179,7 @@ Stable sends through Aisling's Resend account, and with no verified domain Resen
 
 ## Demo with a stand-in Salesforce (all synthetic)
 
-Give Lively's own Salesforce connector already sends its online purchases to AAFE's Salesforce (NPSP): the buyer as a Contact (matched by email), an Opportunity, and the event's Campaign (named after the Give Lively page) with the buyer as a member. It never sends guests or Accounts ([its documented sync logic](https://www.givelively.org/resources/see-our-salesforce-integration-logic-and-fields)). `salesforce-push` sends what Give Lively doesn't know, for the current gala (`salesforce_outbox()` in `backend.sql`, mapped by `_shared/salesforce.ts`):
+Give Lively's own Salesforce connector already sends its online purchases to AAFE's Salesforce (NPSP today; Idlewild is moving it to its Nonprofit Accelerator, so the fields below are mapped to it first: `docs/salesforce-setup.md`): the buyer as a Contact (matched by email), an Opportunity, and the event's Campaign (named after the Give Lively page) with the buyer as a member. It never sends guests or Accounts ([its documented sync logic](https://www.givelively.org/resources/see-our-salesforce-integration-logic-and-fields)). `salesforce-push` sends what Give Lively doesn't know, for the current gala (`salesforce_outbox()` in `backend.sql`, mapped by `_shared/salesforce.ts`):
 
 | Here | Salesforce |
 | --- | --- |
