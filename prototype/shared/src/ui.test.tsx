@@ -26,27 +26,3 @@ describe('the demo data menu', () => {
     expect(screen.getByRole('note').textContent).toContain('synthetic demonstration data only')
   })
 })
-
-// Which copy this is (Oct 25): Cornell couldn't tell he was on nightly, and the iPad's Home Screen app has no address bar.
-describe('the nightly label', () => {
-  async function line(value: string | null) {
-    vi.resetModules()
-    if (value !== null) vi.stubEnv('VITE_APP_LINE', value)
-    document.title = 'AAFE Gala — Staff Operations'
-    const { PrototypeBanner } = await import('./ui')
-    render(<PrototypeBanner />)
-  }
-  it('shows "Nightly · test copy" on every screen and in the tab title', async () => {
-    await line('nightly')
-    expect(screen.getByTestId('app-line').textContent).toBe('Nightly · test copy — not the copy AAFE sees')
-    expect(document.title).toBe('Nightly · AAFE Gala — Staff Operations')
-  })
-  it('shows nothing on stable, or when the setting is left out', async () => {
-    for (const value of ['stable', null]) {
-      await line(value)
-      expect(screen.queryByTestId('app-line')).toBeNull()
-      expect(document.title).toBe('AAFE Gala — Staff Operations')
-      cleanup(); vi.unstubAllEnvs()
-    }
-  })
-})

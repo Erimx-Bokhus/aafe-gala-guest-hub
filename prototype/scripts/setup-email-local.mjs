@@ -1,6 +1,6 @@
 // npm run email:local -- <your Resend sign-in email> [--replace]
-// Your own email settings for testing send-emails on your laptop, with your own free Resend account, so stable and
-// nightly keep theirs. First sign in once:  npx resend-cli@2.26.0 login
+// Your own email settings for testing send-emails on your laptop, with your own free Resend account, so the hosted
+// project keeps its own. First sign in once:  npx resend-cli@2.26.0 login
 // It makes a sending-only key on your account, writes it with the other settings to supabase/functions/.env (git
 // ignores it; the key is never printed), and sends one test email to you. --replace swaps an earlier key for a new
 // one and deletes the old one. Without a verified domain Resend delivers only to its account owner, so every email is
