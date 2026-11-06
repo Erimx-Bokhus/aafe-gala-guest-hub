@@ -12,7 +12,7 @@ a staff app reload lost the page (#207). All three were fixed and passed on Oct 
 ## Safe by design
 
 - **Local only.** Every request to a hosted Supabase project (`*.supabase.co`) is blocked and reported, so a run can
-  never touch stable or nightly. The reset script stops unless the local API answers at `127.0.0.1:54321`.
+  never touch the hosted project. The reset script stops unless the local API answers at `127.0.0.1:54321`.
 - **Invented data only.** The full-fixed set is the demo's own (`database/seed.full-fixed.sql`); loading it refuses to
   clear a gala that isn't marked synthetic. Sign-ins are the five invented staff (`@aafe-demo.example.org`), and their
   codes arrive in the local mail catcher, never a real inbox.

@@ -1,6 +1,6 @@
 # Security review (Gate 2, v1.0 Stable)
 
-October 15, 2026. GitHub issue #148. Reviewed against `main` at 627fcbd, the stable and nightly Supabase projects, and
+October 15, 2026. GitHub issue #148. Reviewed against `main` at 627fcbd, the stable Supabase project (and the nightly test copy's, which ended Oct 28), and
 the built apps. Each box of the gate, what was checked, what it found, and the test or fix that proves it. Fixes are in
 the pull request that adds this file.
 
@@ -82,8 +82,7 @@ Stable's settings, read from the Supabase dashboard on Oct 16:
 | Time between emails to one person | 60 seconds | Yes: a second "send me a code" waits a minute |
 | Code expiry | 3600 seconds (an hour), 6 digits | Yes |
 
-Nightly's sign-in emails were set up on Oct 21 to match stable: the same Gmail sender with its own app password, the
-same templates and rate limits. Since Oct 21 both projects have sign-ups on, for sign-in by email domain
+Since Oct 21 sign-ups are on, for sign-in by email domain
 (`BACKEND.md`, Setup step 2): Supabase's Before User Created hook (`hook_staff_signup`) makes a new login only for an
 email on the staff list or at a domain in `staff_join_domains`, so nobody else can have sign-in emails sent, and a
 joined row stops working at its date.
@@ -104,7 +103,7 @@ load `@supabase/supabase-js` from npm through Deno, outside `npm audit`.
 
 ## 5. Supabase security advisors
 
-The same three notices on stable and nightly:
+Three notices on stable:
 
 | Notice | Why it stays |
 | --- | --- |

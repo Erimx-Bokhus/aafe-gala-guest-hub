@@ -45,7 +45,7 @@ jobs:
           # The base branch as it is now (a re-run reuses the original event, whose base may be out of date).
           BASE_SHA=$(gh api "repos/$REPO/branches/$BASE_REF" --jq .commit.sha || echo unknown)
           # Files the base changed since this commit's last common commit with it. None means the merged code is this
-          # commit's code, even when the base has merge commits of its own (nightly's "Merge pull request ... from main").
+          # commit's code, even when the base has merge commits of its own ("Merge pull request ... from main").
           base_files=$(gh api "repos/$REPO/compare/$HEAD_SHA...$BASE_SHA" --jq '.files | length' || echo unknown)
           marked() { gh api "repos/$REPO/commits/$1/status" --jq '[.statuses[] | select(.context == "local-ci" and .state == "success")] | length' || echo 0; }
           # ci-local.mjs --push marks the commit right after pushing it; give the mark a few seconds to arrive (free:
@@ -57,7 +57,7 @@ jobs:
             [ "$passed" -gt 0 ] 2>/dev/null && break
           done
           # A merge commit whose files are exactly one parent's: main's "Merge pull request" commit of a branch that
-          # already included main. The branch's mark covers it (a Nightly PR's head is such a commit).
+          # already included main. The branch's mark covers it.
           if ! [ "$passed" -gt 0 ] 2>/dev/null; then
             tree=$(gh api "repos/$REPO/git/commits/$HEAD_SHA" --jq .tree.sha || echo none)
             for p in $(gh api "repos/$REPO/git/commits/$HEAD_SHA" --jq '.parents[].sha' || true); do

@@ -3,13 +3,10 @@
 // The Supabase URL and the anon / publishable key are public by design (access rules protect the data);
 // the service_role / secret key bypasses every access rule and must stay in Supabase's Edge Function
 // secrets. This stops the build if a VITE_* variable holds one. See docs/keys-and-secrets.md.
-// It also stops a build whose "Nightly · test copy" label doesn't match its Supabase project (Cornell's #256 review).
 import type { Plugin } from 'vite'
 
 const SECRET_NAME = /SERVICE_ROLE|SECRET|PRIVATE|PASSWORD/i
 const BROWSER_SAFE_ROLES = new Set(['anon', 'authenticated'])
-// The nightly project's ref (prototype/docs/BACKEND.md). Project refs are public: every build carries its URL.
-const NIGHTLY_REF = 'tykckkoxuudvwdosturh'
 
 /** The JWT payload's `role`, or null when the value isn't a decodable JWT. */
 function jwtRole(value: string): string | null {
@@ -38,17 +35,7 @@ export function browserEnvProblems(env: Record<string, string | undefined>): str
   return problems
 }
 
-/** Why the nightly label doesn't match the Supabase project, or null when it does. Forgetting the label made
- *  nightly look like stable; setting it on any other build would tell AAFE their copy is a test copy. */
-export function appLineProblem(env: Record<string, string | undefined>): string | null {
-  const onNightly = (env.VITE_SUPABASE_URL ?? '').includes(`${NIGHTLY_REF}.supabase.co`)
-  const labelled = (env.VITE_APP_LINE ?? '').trim().toLowerCase() === 'nightly'
-  if (onNightly && !labelled) return 'VITE_SUPABASE_URL is the nightly project but VITE_APP_LINE=nightly is missing, so nightly would look like stable'
-  if (labelled && !onNightly) return 'VITE_APP_LINE=nightly but VITE_SUPABASE_URL is not the nightly project, so this copy would wrongly say "Nightly · test copy"'
-  return null
-}
-
-/** Vite plugin: fails the build (and the dev server) when browserEnvProblems or appLineProblem finds anything. */
+/** Vite plugin: fails the build (and the dev server) when browserEnvProblems finds anything. */
 export function browserEnvGuard(): Plugin {
   return {
     name: 'aafe-browser-env-guard',
@@ -59,8 +46,6 @@ export function browserEnvGuard(): Plugin {
         throw new Error(`Refusing to build: a secret would be shipped to the browser.\n- ${problems.join('\n- ')}\n` +
           'Remove it from the .env.local file. Secret keys belong in Supabase Edge Function secrets (docs/keys-and-secrets.md).')
       }
-      const line = appLineProblem(env)
-      if (line) throw new Error(`Refusing to build: ${line}.\nFix the .env.local file (both projects are listed in prototype/docs/BACKEND.md).`)
     },
   }
 }
