@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { appLineProblem, browserEnvGuard, browserEnvProblems } from './envGuard'
+import { browserEnvGuard, browserEnvProblems } from './envGuard'
 
 // Fake keys are built at run time so no key-shaped string is committed (the secret scan would flag it).
 const b64 = (o: object) => Buffer.from(JSON.stringify(o)).toString('base64url')
@@ -52,26 +52,5 @@ describe('browserEnvGuard plugin', () => {
 
   it('stops the build with instructions when a secret would ship', () => {
     expect(run({ VITE_SUPABASE_ANON_KEY: fakeJwt('service_role') })).toThrow(/Refusing to build[\s\S]*keys-and-secrets/)
-  })
-})
-
-// Oct 25, Cornell's #256 review: forgetting VITE_APP_LINE=nightly made nightly silently look like stable again.
-describe('the nightly label check', () => {
-  const nightly = 'https://tykckkoxuudvwdosturh.supabase.co', stable = 'https://abmlzjwnwpkypubpzcsn.supabase.co'
-  const run = (env: Record<string, string>) => () =>
-    (browserEnvGuard().configResolved as (c: { env: Record<string, string> }) => void)({ env })
-
-  it('lets nightly with its label, and stable and demo builds without one, through', () => {
-    expect(appLineProblem({ VITE_SUPABASE_URL: nightly, VITE_APP_LINE: 'Nightly ' })).toBeNull()
-    expect(appLineProblem({ VITE_SUPABASE_URL: stable })).toBeNull()
-    expect(appLineProblem({})).toBeNull()
-  })
-
-  it('stops a nightly build that forgot its label', () => {
-    expect(run({ VITE_SUPABASE_URL: nightly })).toThrow(/Refusing to build: VITE_SUPABASE_URL is the nightly project/)
-  })
-
-  it('stops any other build that would wrongly say nightly', () => {
-    for (const url of [stable, '']) expect(run({ VITE_SUPABASE_URL: url, VITE_APP_LINE: 'nightly' })).toThrow(/not the nightly project/)
   })
 })

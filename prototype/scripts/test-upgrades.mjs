@@ -1,7 +1,7 @@
 // Database upgrades recorded in schema_upgrades (backend.sql, section 1; Gate 1 box 7): a one-time change to data
 // already in a database runs once, is recorded, and is never decided by "does this column exist yet". Covers a fresh
-// database, one from before Oct 14 that still needs the steps, one that ran them before the table existed (stable and
-// nightly), a reload of demo data, and a new step. Runs with npm run test:backend. Invented data only.
+// database, one from before Oct 14 that still needs the steps, one that ran them before the table existed (the hosted
+// project), a reload of demo data, and a new step. Runs with npm run test:backend. Invented data only.
 import { PGlite } from '@electric-sql/pglite'
 import { readFileSync } from 'node:fs'
 import { counter, D, openTestDb, SUPABASE_STAND_INS } from './test-db.mjs'
@@ -24,7 +24,7 @@ const before = await tiers(db)
 await db.exec(backend)
 ok(JSON.stringify(await steps(db)) === JSON.stringify(fresh) && await tiers(db) === before, 'running backend.sql again records and changes nothing')
 
-// ---- Stable and nightly: they ran these steps before the table existed. Meeting it records them; nothing changes.
+// ---- The hosted project: it ran these steps before the table existed. Meeting it records them; nothing changes.
 await db.exec(`drop table schema_upgrades; drop function upgrade_step(text, text)`)
 await db.exec(backend)
 const met = await steps(db)
