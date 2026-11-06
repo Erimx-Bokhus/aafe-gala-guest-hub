@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-// Editing a guest in the list (#242, Cornell's nightly test, Oct 24): a save the server refuses (a bad email, a blank
+// Editing a guest in the list (#242, Cornell's test, Oct 24): a save the server refuses (a bad email, a blank
 // name) puts the saved value back in the cell, so it never looks saved when it isn't; an accepted edit stays.
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
