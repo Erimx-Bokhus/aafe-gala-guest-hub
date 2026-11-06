@@ -107,7 +107,7 @@ AAFE Gala Guest List: How Give Lively Works and What We're Building
 
 
   The five gaps in the intake form
-  Every constraint Janelle lists is about guests, not about money moving.
+  Every constraint the project contact lists is about guests, not about money moving.
 
    1. Guest names per package. Sponsorship levels and ticket packages come with
       different numbers of guests, so collecting names needs conditional questions that

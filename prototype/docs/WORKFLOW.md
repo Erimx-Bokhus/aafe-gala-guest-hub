@@ -130,7 +130,7 @@ All three apps are built with Vite, React, TypeScript and Tailwind. They share c
 **Yes. Sign up for a free Developer Edition for the team now. AAFE uses its own org for production.**
 
 1. **Team (now, free):** Create a Salesforce Developer Edition org at [developer.salesforce.com/free-trials](https://developer.salesforce.com/free-trials) and install the **Nonprofit Success Pack (NPSP)**. Build and test the sync against it using only synthetic data.
-2. **AAFE (production):** Through the Power of Us program, eligible nonprofits get **10 donated Salesforce licenses** ([Salesforce Help: Power of Us](https://help.salesforce.com/s/articleView?id=000366523&type=2&language=en_US)). That is 10, not 6. AAFE may already have Salesforce, so ask Janelle or Sarah first.
+2. **AAFE (production):** Through the Power of Us program, eligible nonprofits get **10 donated Salesforce licenses** ([Salesforce Help: Power of Us](https://help.salesforce.com/s/articleView?id=000366523&type=2&language=en_US)). That is 10, not 6. AAFE may already have Salesforce, so ask AAFE's project contact or gala lead first.
 3. **Give Lively's free Salesforce integration** is built for NPSP and syncs hourly. Give Lively recommends testing in a sandbox first ([Give Lively: Salesforce integration](https://www.givelively.org/resources/integrate-our-platform-with-salesforce); [AppExchange listing](https://appexchange.salesforce.com/appxListingDetail?listingId=a0N3A00000FABSeUAP)). If AAFE turns it on, Give Lively donations reach Salesforce on their own. **Our sync then only adds what Give Lively doesn't know:** checks, direct ACH, comps, seats, table assignments and attendance. Use Give Lively's transaction ID to avoid duplicates.
 
 | This app | Salesforce (NPSP) |
@@ -143,7 +143,7 @@ All three apps are built with Vite, React, TypeScript and Tailwind. They share c
 
 ---
 
-## 6. Open questions for AAFE (Janelle Teng, Sarah Pritchard)
+## 6. Open questions for AAFE (its project contact and gala lead)
 
 1. Which Give Lively campaign or event page will sell gala tickets in 2027, and who can create the Zapier API key?
 2. Does AAFE already have Salesforce/NPSP? Is Give Lively's integration turned on? **Answered Oct 21:** NPSP, fully integrated with Give Lively, built by Idlewild Partners (`docs/decisions.md`).

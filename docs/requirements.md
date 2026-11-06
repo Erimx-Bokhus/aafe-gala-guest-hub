@@ -25,7 +25,7 @@ Until the final PRDs (Natalie's and Pursuit's) arrive, this file plus the hub's 
 - **Activity log:** gala admins see the whole change log; relationship managers see what sponsors changed in their portal and what Give Lively recorded; each sponsor sees their own seats' activity in the portal (decided Oct 22). [prototype]
 
 ## Should have
-- **QR-code e-tickets** emailed per guest; scan to check in on an iPad. [call: Sarah]
+- **QR-code e-tickets** emailed per guest; scan to check in on an iPad. [call: the gala lead]
 - **Blank sponsor name tags** for unnamed seats. [call]
 - **Multilingual sponsor form** (English, Chinese, Korean, Spanish; all four built in the portal since PR #51, Oct 7. English only for v1, decided Oct 24, PR #241: the other three stay hidden until a native speaker on AAFE's staff reviews them). [Natalie scope]
 - **Relationship guests** (comps for officials, board, partners) with personal QR invites. [prototype]
@@ -33,7 +33,7 @@ Until the final PRDs (Natalie's and Pursuit's) arrive, this file plus the hub's 
 
 ## Later / out of scope
 - Automatic seating (anything that places guests without staff). [call]
-- Automatic emails. Every send is staff-approved, as Sarah asked on the call; this changes only if Sarah asks. [call]
+- Automatic emails. Every send is staff-approved, as the gala lead asked on the call; this changes only if the gala lead asks. [call]
 - ~~Automatic Give Lively sync (donation JSON feed / live attendee CSV) — stretch goal.~~ Built: the sync reads Give Lively every 15 minutes on both projects since Oct 18 (`prototype/database/cron.sql`, PR #209), and Pull now runs it at once.
 - A live connection to AAFE's real Salesforce during the capstone. The sync is written for AAFE's NPSP (in scope since Oct 19, PRs #210, #245, #250, #252), but the demo sends to a stand-in org; the first real sync waits for Idlewild Partners' answers, in a sandbox (`docs/salesforce-setup.md`).
 - Payments, checkout, Stripe, auctions, donor CRM.

@@ -1,12 +1,12 @@
 # Discovery call findings — October 1, 2026
 
-Attendees: Janelle Teng, Sarah Pritchard (AAFE); Natalie Walker, Aisling Leiva-Davila, Antonin Lesov,
+Attendees: AAFE's project contact and gala lead; Natalie Walker, Aisling Leiva-Davila, Antonin Lesov,
 Cornell Robertson (team); Avni Nahar (Pursuit). The full transcript is kept out of the repo (it is the client's own words); ask the team for access.
-Sarah ran the guest list for the 2026 gala (Janelle was on leave).
+The gala lead ran the guest list for the 2026 gala (the project contact was on leave).
 
 ## Top priority
-- **Sponsorship guest names.** Janelle: "a way to layer on top of GiveLively to collect that information in a more seamless way." Individual tickets are "much more manageable."
-- **Sponsors edit their own guests.** Sarah: guests and sponsors should "go back and update if needed."
+- **Sponsorship guest names.** The project contact: "a way to layer on top of GiveLively to collect that information in a more seamless way." Individual tickets are "much more manageable."
+- **Sponsors edit their own guests.** The gala lead: guests and sponsors should "go back and update if needed."
 - **"The marriage of different sources"** with every record linked back to its source.
 
 ## How it works today
@@ -23,7 +23,7 @@ Sarah ran the guest list for the 2026 gala (Janelle was on leave).
 - Check-in uses a printed spreadsheet; the line is slow. They want check-in on an iPad and a record of who actually attended.
 - Sponsor guests never named get pre-printed blank name tags with the company name.
 - Walk-ins and exceptions happen; a check-in lead makes calls; they plan to put relationship managers at the table.
-- Sarah liked **emailed QR-code tickets** scanned at the door, and **comp digital tickets relationship managers can send themselves**.
+- The gala lead liked **emailed QR-code tickets** scanned at the door, and **comp digital tickets relationship managers can send themselves**.
 
 ## Other requirements
 - Seating: lower priority. Staff assign seats (some funders must not sit together). Most useful: table number printed on the badge.
@@ -35,7 +35,7 @@ Sarah ran the guest list for the 2026 gala (Janelle was on leave).
 - Tech capacity "pretty low"; cannot maintain anything very custom.
 - Website run by a third-party developer (named "Graybox" on the call) that hosts on its own server. Research (corrected Oct 7): the partner is most likely GreyBox Creative, a New York branding and web agency whose portfolio includes AAFE's rebrand and trilingual website (not graybox.co). Who hosts aafe.org and manages its domain and DNS is unconfirmed; an earlier note that it runs on an OVH server was a guess and has been removed. Confirm who manages it.
 - AAFE uses Google Workspace / Google Drive.
-- Janelle is finalizing an AI acceptable-use policy (no PII into AI tools) and wants to be kept in the loop on data decisions.
+- The project contact is finalizing an AI acceptable-use policy (no PII into AI tools) and wants to be kept in the loop on data decisions.
 
 ## Promised by AAFE (~1 week)
 Comp categories and amounts; spreadsheet column headers; badge/export/check-in templates; sample Give Lively exports; deadlines; screen recordings of their Give Lively front and back end; redacted sample email threads.
@@ -43,4 +43,4 @@ Comp categories and amounts; spreadsheet column headers; badge/export/check-in t
 ## Team follow-ups
 - Natalie: same-day recap to AAFE (correct: tool never touches payment data or Stripe).
 - Hosting options 1–3 with costs and requirements (suggested by Avni).
-- Data and AI handling note for Janelle (drafted).
+- Data and AI handling note for the project contact (drafted).

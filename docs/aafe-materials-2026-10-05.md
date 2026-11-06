@@ -1,6 +1,6 @@
 # AAFE materials received Oct 5, 2026
 
-Janelle sent the guest-list notes, the 2026 sponsorship flyer, a Give Lively ticket export, and a redacted sponsor email thread. **The files themselves stay out of the repo** (they contain real people's names and emails; hard rule 1). This page records only their structure and the facts the build needs.
+The project contact sent the guest-list notes, the 2026 sponsorship flyer, a Give Lively ticket export, and a redacted sponsor email thread. **The files themselves stay out of the repo** (they contain real people's names and emails; hard rule 1). This page records only their structure and the facts the build needs.
 
 ## 2026 guest list, by category
 

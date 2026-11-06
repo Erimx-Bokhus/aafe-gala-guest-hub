@@ -3,7 +3,7 @@
 Written by Natalie Walker, product lead (Oct 20, 2026; updated Oct 21 with AAFE's answer), from her review of #190 and the fixes in #213.
 
 For the technical meeting with **Idlewild Partners**, the firm building and configuring AAFE's Salesforce (requested by
-Sarah Pritchard at the Oct 19 midpoint check-in). It lists what the gala tool can send to Salesforce, what Idlewild
+AAFE's gala lead at the Oct 19 midpoint check-in). It lists what the gala tool can send to Salesforce, what Idlewild
 would set up, and the decisions that are AAFE's and Idlewild's to make. Code: `prototype/supabase/functions/_shared/salesforce.ts`; technical detail:
 `prototype/docs/BACKEND.md` ("Demo with a stand-in Salesforce"). Research behind the open questions: Aisling's notes on
 #213 and her flow chart (https://claude.ai/artifact/78x5YhYbs9C1ToWwC9yxWq).
@@ -37,7 +37,7 @@ options is in her notes on #213.
 ## Next: Idlewild is moving AAFE to its Nonprofit Accelerator (Nov 2)
 
 On the Nov 2, 2026 call with AAFE and Idlewild, asked whether AAFE is "staying on NPSP or moving on to your
-accelerator", Katie Healy (Idlewild) answered: "Moving on to the accelerator, so it's built on just standard sales
+accelerator", Idlewild's consultant answered: "Moving on to the accelerator, so it's built on just standard sales
 cloud." So NPSP is where AAFE's org started (Oct 21, above), and **Idlewild's Nonprofit Accelerator is where it is
 going**. As Idlewild described it on the call:
 - its own Payments object: an Opportunity gets a Payment automatically unless a "don't create payments" box is ticked,
@@ -46,7 +46,7 @@ going**. As Idlewild described it on the call:
   "Special Events" record type;
 - everything for a gala goes in that year's Campaign.
 
-The same day, AAFE (Sarah Pritchard) chose to bring the gala's data in as a CSV import for now, not a direct sync.
+The same day, AAFE (its gala lead) chose to bring the gala's data in as a CSV import for now, not a direct sync.
 
 What this means for the tool:
 - **The sync and the CSV files use NPSP's field names** (`npe01__…` and NPSP's email fields). The Accelerator is
