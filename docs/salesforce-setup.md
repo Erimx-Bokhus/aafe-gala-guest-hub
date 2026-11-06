@@ -31,8 +31,32 @@ What that means for the gala tool:
   (https://claude.ai/artifact/7PuS3YtyCyQtD5kfWLGEsS), which guests belong in Salesforce, and the setup list below.
 - **Greybox Creative** is AAFE's website and branding agency (`docs/design.md`), not part of the Salesforce work.
 
-The other options (Nonprofit Cloud, which Give Lively's app doesn't support, and plain Sales and Service Cloud) no
-longer apply to AAFE. Aisling's research on them is in her notes on #213.
+Salesforce's Nonprofit Cloud, which Give Lively's app doesn't support, doesn't apply to AAFE. Aisling's research on the
+options is in her notes on #213.
+
+## Next: Idlewild is moving AAFE to its Nonprofit Accelerator (Nov 2)
+
+On the Nov 2, 2026 call with AAFE and Idlewild, asked whether AAFE is "staying on NPSP or moving on to your
+accelerator", Katie Healy (Idlewild) answered: "Moving on to the accelerator, so it's built on just standard sales
+cloud." So NPSP is where AAFE's org started (Oct 21, above), and **Idlewild's Nonprofit Accelerator is where it is
+going**. As Idlewild described it on the call:
+- its own Payments object: an Opportunity gets a Payment automatically unless a "don't create payments" box is ticked,
+  and marking the Opportunity paid marks the Payment paid;
+- Accounts are "Standard" (organizations) or Household; Contacts have no record types; Opportunities likely use a
+  "Special Events" record type;
+- everything for a gala goes in that year's Campaign.
+
+The same day, AAFE (Sarah Pritchard) chose to bring the gala's data in as a CSV import for now, not a direct sync.
+
+What this means for the tool:
+- **The sync and the CSV files use NPSP's field names** (`npe01__…` and NPSP's email fields). The Accelerator is
+  unmanaged, so its fields carry no package prefix. Before going live on it, map each column to the Accelerator's field
+  from Idlewild's data diagram (ERD).
+- **Give Lively keeps working.** Its Salesforce app runs with or without NPSP (its sync logic checks whether NPSP is
+  installed), and Idlewild has shown the Accelerator running with Give Lively. Only Nonprofit Cloud is unsupported.
+- **To confirm with Idlewild:** whether NPSP is live in AAFE's org today and when the move happens (the same org or a
+  new one); the API names of the Payments object and its fields; the record-type names; which import tool staff will
+  use; and the ERD.
 
 ## Two ways to get the gala's data into Salesforce
 
@@ -134,7 +158,8 @@ of support after go-live ([who we are](https://www.idlewildinc.com/who-we-are),
 [what we do](https://www.idlewildinc.com/what-we-do)). They also sell their own **Nonprofit Accelerator**, built on
 plain Sales Cloud, and offer to move NPSP orgs onto it
 ([Nonprofit Accelerator](https://www.idlewildinc.com/nonprofit-accelerator)). The sync depends on NPSP's managed
-packages (`npe01`, `npo02`), so which one AAFE ends up on decides whether it works.
+packages (`npe01`, `npo02`); Idlewild is moving AAFE onto the Accelerator, so its fields are mapped first ("Next:
+Idlewild is moving AAFE to its Nonprofit Accelerator", above).
 
 **What the sync writes today** (`prototype/supabase/functions/_shared/salesforce.ts`): a Campaign (found by our id or
 the Give Lively page's name), Accounts (found by exact name), Opportunities, `npe01__OppPayment__c` payments, Contacts
