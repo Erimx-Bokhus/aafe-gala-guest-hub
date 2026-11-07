@@ -37,7 +37,7 @@ options is in her notes on #213.
 ## Next: Idlewild is moving AAFE to its Nonprofit Accelerator (Nov 2)
 
 On the Nov 2, 2026 call with AAFE and Idlewild, asked whether AAFE is "staying on NPSP or moving on to your
-accelerator", Idlewild's consultant (Idlewild) answered: "Moving on to the accelerator, so it's built on just standard sales
+accelerator", Idlewild's consultant answered: "Moving on to the accelerator, so it's built on just standard sales
 cloud." So NPSP is where AAFE's org started (Oct 21, above), and **Idlewild's Nonprofit Accelerator is where it is
 going**. As Idlewild described it on the call:
 - its own Payments object: an Opportunity gets a Payment automatically unless a "don't create payments" box is ticked,

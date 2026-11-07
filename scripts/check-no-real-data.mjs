@@ -105,6 +105,15 @@ const hasHead = spawnSync('git', ['rev-parse', '--verify', '-q', 'HEAD'], { cwd:
 const committed = hasHead ? readCommitted() : new Map()
 const problems = [...committed].flatMap(([file, buf]) => check(file, buf))
 
+// On Nov 6, 2026 the history was rewritten to take client staff names out of the docs. A copy cloned before then still
+// holds the old commits, and this one (the old version of the first rewritten commit) is in every one of them, never in
+// the new history, so a branch built on an old copy fails here instead of bringing the names back. (GitHub's check
+// needs the full history to see it: fetch-depth 0 in .github/workflows/real-data.yml.)
+const OLD_HISTORY = '000cd57c8518eb1e29a5b8e1f4b24cfdec8d4aa0'
+if (hasHead && spawnSync('git', ['merge-base', '--is-ancestor', OLD_HISTORY, 'HEAD'], { cwd: root }).status === 0) {
+  problems.push("this commit is built on the repository's history from before Nov 6, 2026, which was rewritten to remove client names. Clone the repository again and redo the change there; don't merge an old copy")
+}
+
 // Files on disk that differ from the commit (edited, added, or rebuilt locally): warnings, since GitHub doesn't see
 // them until they're committed. Only what the commit doesn't already have is listed; line numbers may differ.
 const withoutLine = (p) => p.replace(/:\d+: /, ': ')
