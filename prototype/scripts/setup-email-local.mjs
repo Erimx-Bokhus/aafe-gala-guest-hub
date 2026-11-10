@@ -63,6 +63,7 @@ writeFileSync(FILE, [
   `EMAIL_REDIRECT_TO=${email}`,
   'GUEST_PORTAL_URL=http://localhost:5173/',
   `CRON_SECRET=${randomBytes(24).toString('hex')}`,
+  `LINK_TOKEN_SECRET=${randomBytes(32).toString('hex')}`,
   '',
 ].join('\n'))
 console.log(`2/3 Settings written to ${FILE}.`)
