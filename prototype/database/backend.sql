@@ -96,6 +96,12 @@ alter table email_log add column if not exists approved_at timestamptz;   -- nul
 alter table email_log add column if not exists created_at  timestamptz not null default now();
 alter table email_log add column if not exists claimed_at  timestamptz;   -- set while one send-emails run is sending it (email_claim)
 alter table email_log add column if not exists payment_id  text references payments(id);  -- payment_receipt: which payment
+-- The send attempt's exact request to Resend, saved just before it goes out (email_save_snapshot), so a retry of that
+-- attempt resends it unchanged instead of rebuilding it from data that may have changed (Gaelen Hallenbeck's review,
+-- Nov 10). Its link token, QR code and QR image are placeholders, never the values (hard rule 6). Cleared once the
+-- email is sent or the attempt fails. To remove: drop both columns and email_save_snapshot.
+alter table email_log add column if not exists send_snapshot         text;
+alter table email_log add column if not exists send_snapshot_attempt int;
 alter table email_log drop constraint if exists email_log_status_check;
 alter table email_log add constraint email_log_status_check check (status in ('queued','sent','opened','bounced','cancelled'));
 
@@ -2064,7 +2070,8 @@ create or replace function email_mark_sent(p_email_id text, p_token_hash text de
 language plpgsql security definer set search_path = public as $$
 declare m email_log; v_deadline date;
 begin
-  update email_log set status = 'sent', sent_at = now(), attempts = attempts + 1, last_error = null, claimed_at = null
+  update email_log set status = 'sent', sent_at = now(), attempts = attempts + 1, last_error = null, claimed_at = null,
+         send_snapshot = null, send_snapshot_attempt = null
    where id = p_email_id and status = 'queued' and approved_at is not null returning * into m;
   if m.id is null then return; end if;
   -- A reminder carries a fresh link too, so the newest email always has the one that works.
@@ -2144,10 +2151,26 @@ begin
 end $$;
 
 -- After 5 failed attempts the email stays 'queued' but the worker stops retrying.
+-- The failed attempt's saved request goes with it: the next attempt gets a new link and is built fresh.
 create or replace function email_mark_failed(p_email_id text, p_error text) returns void
 language sql security definer set search_path = public as $$
-  update email_log set attempts = attempts + 1, last_error = left(p_error, 1000), claimed_at = null where id = p_email_id
+  update email_log set attempts = attempts + 1, last_error = left(p_error, 1000), claimed_at = null,
+         send_snapshot = null, send_snapshot_attempt = null
+   where id = p_email_id
 $$;
+
+-- Saves a send attempt's request (send_snapshot) just before send-emails sends it, once per attempt: a retry of the
+-- same attempt finds it and resends it unchanged. False when the email can't be sent as this attempt any more
+-- (cancelled, sent, or its attempt moved on), or this attempt's request is already saved; the worker then sends nothing.
+create or replace function email_save_snapshot(p_email_id text, p_attempt int, p_snapshot text) returns boolean
+language plpgsql security definer set search_path = public as $$
+begin
+  if p_snapshot is null or p_snapshot = '' then raise exception 'email_save_snapshot: no request to save'; end if;
+  update email_log set send_snapshot = p_snapshot, send_snapshot_attempt = p_attempt
+   where id = p_email_id and status = 'queued' and approved_at is not null and attempts = p_attempt
+     and send_snapshot_attempt is distinct from p_attempt;
+  return found;
+end $$;
 
 -- The send-emails worker claims its batch before sending anything. The every-minute schedule and a
 -- staff member's "send now" can overlap; without a claim both runs would send the same email, and
@@ -3186,7 +3209,8 @@ begin
       'guests', (select coalesce(jsonb_agg(to_jsonb(r) - 'sync_txid'), '[]') from guests r where v_full or r.sync_txid >= p_cursor),
       'seats', (select coalesce(jsonb_agg(to_jsonb(r) - 'sync_txid'), '[]') from seats r where v_full or r.sync_txid >= p_cursor),
       'check_ins', (select coalesce(jsonb_agg(to_jsonb(r) - 'sync_txid'), '[]') from check_ins r where v_full or r.sync_txid >= p_cursor),
-      'email_log', (select coalesce(jsonb_agg(to_jsonb(r) - 'sync_txid'), '[]') from email_log r where v_full or r.sync_txid >= p_cursor),
+      -- send_snapshot is the email worker's, not the app's: it stays on the server.
+      'email_log', (select coalesce(jsonb_agg(to_jsonb(r) - 'sync_txid' - 'send_snapshot' - 'send_snapshot_attempt'), '[]') from email_log r where v_full or r.sync_txid >= p_cursor),
       'salesforce_sync', (select coalesce(jsonb_agg(to_jsonb(r) - 'sync_txid'), '[]') from salesforce_sync r where v_full or r.sync_txid >= p_cursor),
       'import_runs', (select coalesce(jsonb_agg(to_jsonb(r) - 'sync_txid'), '[]') from import_runs r where v_full or r.sync_txid >= p_cursor),
       'import_review', (select coalesce(jsonb_agg(to_jsonb(r) - 'sync_txid'), '[]') from import_review r where v_full or r.sync_txid >= p_cursor),
@@ -3243,7 +3267,7 @@ begin
               'portal_release_seat','staff_me','staff_current_event','staff_update_guest','staff_set_seat_status','staff_mark_printed',
               'staff_assign_seat','staff_seat_order_at_table','staff_record_payment','staff_void_payment','staff_add_pledge','staff_add_comp_guest',
               'staff_send_qr_invite','staff_resend_portal_link','staff_approve_email','staff_cancel_email','checkin_list','staff_check_in','staff_check_in_qr',
-              'staff_check_in_exception','gl_import','staff_import_givelively','email_mark_sent','email_mark_failed','email_claim',
+              'staff_check_in_exception','gl_import','staff_import_givelively','email_mark_sent','email_mark_failed','email_claim','email_save_snapshot',
               'purchase_key','payment_method_of','payment_method_detail','name_key','has_need','add_import_review','import_fill_guests','staff_set_tier_mapping','staff_set_gala_page','sync_gala_pages','staff_add_gala_page','staff_remove_gala_page',
               'staff_resolve_import_review','seats_void_qr','guests_void_qr','gala_events_no_mixing','require_gala_order',
               'staff_export_badges','staff_export_checkin','staff_export_salesforce',
@@ -3297,7 +3321,8 @@ do $$ begin
 end $$;
 
 -- Edge functions (service role)
-grant execute on function gl_import(jsonb, text, text), email_mark_sent(text, text), email_mark_failed(text, text), email_claim(int), hash_token(text),
+grant execute on function gl_import(jsonb, text, text), email_mark_sent(text, text), email_mark_failed(text, text), email_claim(int),
+  email_save_snapshot(text, int, text), hash_token(text),
   salesforce_outbox(), salesforce_mark_synced(jsonb, text), sync_gala_pages(), sync_prune()
   to service_role;
 

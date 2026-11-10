@@ -5,8 +5,11 @@
 //
 // Portal links and QR e-tickets: each send attempt of a portal_link, guest_list_reminder or
 // qr_invitation email gets its own token (_shared/linkToken.ts). Only its SHA-256 hash is stored
-// (email_mark_sent), so earlier links for that order, or codes for that seat, stop working. A retry of
-// the same attempt rebuilds the same token, so the email it resends is identical (see below).
+// (email_mark_sent), so earlier links for that order, or codes for that seat, stop working.
+//
+// Retries: each attempt's request is saved before it goes out, with its link or QR code taken out
+// (_shared/emailSnapshot.ts, email_save_snapshot). A retry of the same attempt resends that request
+// unchanged, so Resend recognizes it (see below).
 //
 // Secrets: RESEND_API_KEY, EMAIL_FROM (e.g. "AAFE Gala <gala@aafe.org>", domain verified in Resend),
 //          GUEST_PORTAL_URL (e.g. https://gala.aafe.org/), LINK_TOKEN_SECRET (32+ random characters,
@@ -14,6 +17,7 @@
 // Demo: EMAIL_REDIRECT_TO=<team inbox> sends every email there instead of the (fake) recipient.
 import QRCode from 'npm:qrcode@1.5.4'
 import { deadlinePassed, guestListReminderEmail, paymentReceiptEmail, portalLinkEmail, qrInvitationEmail, type EventInfo } from '../_shared/emails.ts'
+import { freezeRequest, LINK_TOKEN, QR_CODE, QR_IMAGE, thawRequest, type Secret } from '../_shared/emailSnapshot.ts'
 import { linkSecretProblem, portalLinkToken, qrTicketCode } from '../_shared/linkToken.ts'
 import { retry } from '../_shared/retry.ts'
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2'
@@ -22,10 +26,11 @@ import { admin, caller, cors, env, json } from '../_shared/supabase.ts'
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
   if (!(await caller(req, ['gala_admin', 'relationship_manager']))) return json({ error: 'forbidden' }, 403)
-  const apiKey = env('RESEND_API_KEY'), from = env('EMAIL_FROM'), portalUrl = env('GUEST_PORTAL_URL'), redirect = env('EMAIL_REDIRECT_TO')
-  const links: LinkSettings = { portalUrl, secret: env('LINK_TOKEN_SECRET') }
+  const apiKey = env('RESEND_API_KEY'), redirect = env('EMAIL_REDIRECT_TO')
+  const links: LinkSettings = { portalUrl: env('GUEST_PORTAL_URL'), secret: env('LINK_TOKEN_SECRET') }
+  const mail: MailSettings = { from: env('EMAIL_FROM'), redirect }
   // Without a key nothing is sent and nothing changes; emails wait in the queue.
-  const missing = notConfigured(apiKey, from, links)
+  const missing = notConfigured(apiKey, mail.from, links)
   if (missing) return json({ sent: 0, message: `Email not configured (${missing}). Emails stay queued.` })
 
   const db = admin()
@@ -39,16 +44,18 @@ Deno.serve(async (req) => {
   for (const m of queue) {
     let delivered = false
     try {
-      const { subject, html, attachments, tokenHash } = await build(db, m, links)
+      const secrets = await attemptSecrets(m, links)
+      const body = await requestBody(db, m, links, mail, secrets)
       const res = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json', 'Idempotency-Key': `${m.id}-${m.attempts}` },
-        body: JSON.stringify({ from, to: [redirect || m.to_email], subject: redirect ? `[demo → ${m.to_email}] ${subject}` : subject, html, attachments }),
+        body,
       })
       if (!res.ok) throw new Error(`Resend HTTP ${res.status}: ${(await res.text()).slice(0, 300)}`)
       // The email is out. Saving that must not count as a failed send: a retry would send a second email with a
       // new link, and the link in the first one would stop working (Oct 12 audit). Try the save a few times.
       delivered = true
+      const tokenHash = secrets.token ? await sha256(secrets.token) : null
       await retry(async () => {
         const { error: e2 } = await db.rpc('email_mark_sent', { p_email_id: m.id, p_token_hash: tokenHash })
         if (e2) throw new Error(e2.message)
@@ -56,9 +63,10 @@ Deno.serve(async (req) => {
       sent++
     } catch (e) {
       // A save that still fails leaves the email claimed, using no attempt. After 10 minutes the next run claims it
-      // again and rebuilds the identical email: same attempt, so the same link (_shared/linkToken.ts) under the same
-      // Idempotency-Key. Resend answers with the first send instead of sending a second email, and the save then
-      // makes the link the sponsor already has work (Gaelen Hallenbeck's review, Nov 9).
+      // again and resends this attempt's saved request: the same link (_shared/linkToken.ts) in the same email under
+      // the same Idempotency-Key, even if the gala or the order changed since. Resend answers with the first send
+      // instead of sending a second email, and the save then makes the link the sponsor already has work
+      // (Gaelen Hallenbeck's review, Nov 9 and 10).
       if (delivered) { unsaved++; continue }
       failed++
       await db.rpc('email_mark_failed', { p_email_id: m.id, p_error: e instanceof Error ? e.message : String(e) })
@@ -71,16 +79,57 @@ Deno.serve(async (req) => {
 interface EmailRow {
   id: string; template: string; to_email: string; to_name: string | null
   order_id: string | null; payment_id: string | null; guest_id: string | null; attempts: number
+  send_snapshot: string | null; send_snapshot_attempt: number | null
 }
-interface Built { subject: string; html: string; attachments: { filename: string; content: string }[] | undefined; tokenHash: string | null }
+interface Built { subject: string; html: string; attachments: { filename: string; content: string }[] | undefined }
 /** Where sponsor links point, and the secret their tokens are derived from (_shared/linkToken.ts). */
 interface LinkSettings { portalUrl: string; secret: string }
+/** Who emails come from, and the demo inbox that receives them all instead (empty when off). */
+interface MailSettings { from: string; redirect: string }
+/** What this attempt's email carries that is never stored: its link token or QR code, and the QR image. */
+interface AttemptSecrets { token: string | null; qrImage: string | null }
 
 /** What's missing before emails can go out, or null when everything is set. */
 function notConfigured(apiKey: string, from: string, links: LinkSettings): string | null {
   if (!apiKey || !from || !links.portalUrl) return 'RESEND_API_KEY, EMAIL_FROM, GUEST_PORTAL_URL'
   return linkSecretProblem(links.secret)
 }
+
+/** This attempt's link token, or its QR code and image. The same attempt of the same email always gets the same ones. */
+async function attemptSecrets(m: EmailRow, links: LinkSettings): Promise<AttemptSecrets> {
+  if (m.template === 'portal_link' || m.template === 'guest_list_reminder') {
+    return { token: await portalLinkToken(links.secret, m.id, m.attempts), qrImage: null }
+  }
+  if (m.template === 'qr_invitation') {
+    const code = await qrTicketCode(links.secret, m.id, m.attempts)
+    const png: Uint8Array = await QRCode.toBuffer(code, { width: 360, margin: 2 })
+    return { token: code, qrImage: b64(png) }
+  }
+  return { token: null, qrImage: null }
+}
+
+/** The placeholders that stand in for this attempt's secrets in the saved request (_shared/emailSnapshot.ts). */
+function placeholders(m: EmailRow, s: AttemptSecrets): Secret[] {
+  if (m.template === 'qr_invitation' && s.token && s.qrImage) return [{ placeholder: QR_IMAGE, value: s.qrImage }, { placeholder: QR_CODE, value: s.token }]
+  if (s.token) return [{ placeholder: LINK_TOKEN, value: s.token }]
+  return []
+}
+
+/** This attempt's request to Resend: the one saved before its first send, unchanged, or built now and saved before it goes out. */
+async function requestBody(db: SupabaseClient, m: EmailRow, links: LinkSettings, mail: MailSettings, s: AttemptSecrets): Promise<string> {
+  if (m.send_snapshot !== null && m.send_snapshot_attempt === m.attempts) {
+    refuseExpiredLink(m, await orderContext(db, m))
+    return thawRequest(m.send_snapshot, placeholders(m, s))
+  }
+  const { subject, html, attachments } = await build(db, m, links, s)
+  const body = JSON.stringify({ from: mail.from, to: [mail.redirect || m.to_email], subject: mail.redirect ? `[demo → ${m.to_email}] ${subject}` : subject, html, attachments })
+  // Saved before it goes out: a retry must find it even if this run stops right after Resend accepts it.
+  const { data: saved, error } = await db.rpc('email_save_snapshot', { p_email_id: m.id, p_attempt: m.attempts, p_snapshot: freezeRequest(body, placeholders(m, s)) })
+  if (error) throw new Error(`Could not save the email before sending it: ${error.message}`)
+  if (saved !== true) throw new Error('The email changed before it could be sent (cancelled, sent or retried elsewhere)')
+  return body
+}
+
 type OrderContext = Awaited<ReturnType<typeof orderContext>>
 /** The order row orderContext reads: an order has one level and one gala, so both come back as objects. */
 interface OrderForEmail {
@@ -89,18 +138,22 @@ interface OrderForEmail {
   gala_events: (EventInfo & { guest_list_deadline: string | null }) | null
 }
 
-// Gathers what each template needs; the wording lives in _shared/emails.ts.
-async function build(db: SupabaseClient, m: EmailRow, links: LinkSettings): Promise<Built> {
-  const ctx = await orderContext(db, m)
-  // staff_approve_email refuses these too; this catches a deadline that passed after the draft was approved.
+/** staff_approve_email refuses these too; this catches a deadline that passed after the draft was approved. */
+function refuseExpiredLink(m: EmailRow, ctx: OrderContext) {
   if ((m.template === 'portal_link' || m.template === 'guest_list_reminder') && deadlinePassed(ctx.deadline)) {
     throw new Error(`The guest-list deadline (${ctx.deadline}) has passed, so the link would arrive expired. Extend this order's deadline, then send the link again.`)
   }
+}
+
+// Gathers what each template needs; the wording lives in _shared/emails.ts.
+async function build(db: SupabaseClient, m: EmailRow, links: LinkSettings, s: AttemptSecrets): Promise<Built> {
+  const ctx = await orderContext(db, m)
+  refuseExpiredLink(m, ctx)
   switch (m.template) {
-    case 'portal_link': return await portalLink(m, ctx, links)
-    case 'guest_list_reminder': return await reminder(db, m, ctx, links)
+    case 'portal_link': return portalLink(ctx, linkTo(links, s))
+    case 'guest_list_reminder': return await reminder(db, m, ctx, linkTo(links, s))
     case 'payment_receipt': return await receipt(db, m, ctx)
-    case 'qr_invitation': return await qrInvitation(db, m, ctx, links.secret)
+    case 'qr_invitation': return await qrInvitation(db, m, ctx, s)
     default: throw new Error(`No template for "${m.template}" yet`)
   }
 }
@@ -115,26 +168,24 @@ async function orderContext(db: SupabaseClient, m: EmailRow) {
 }
 
 /** This attempt's private link: the token goes in the email, only its hash is stored. */
-async function newLink(m: EmailRow, links: LinkSettings) {
-  const token = await portalLinkToken(links.secret, m.id, m.attempts)
-  return { token, link: `${links.portalUrl.replace(/#.*$/, '')}#/s/${token}` }
+function linkTo(links: LinkSettings, s: AttemptSecrets): string {
+  if (!s.token) throw new Error('A guest-list email needs its link token')
+  return `${links.portalUrl.replace(/#.*$/, '')}#/s/${s.token}`
 }
 
-async function portalLink(m: EmailRow, ctx: OrderContext, links: LinkSettings): Promise<Built> {
-  const { token, link } = await newLink(m, links)
-  return { ...portalLinkEmail({ toName: ctx.toName, tierName: ctx.o?.sponsorship_tiers?.name ?? null, event: ctx.event, deadline: ctx.deadline, link }), tokenHash: await sha256(token), attachments: undefined }
+function portalLink(ctx: OrderContext, link: string): Built {
+  return { ...portalLinkEmail({ toName: ctx.toName, tierName: ctx.o?.sponsorship_tiers?.name ?? null, event: ctx.event, deadline: ctx.deadline, link }), attachments: undefined }
 }
 
-async function reminder(db: SupabaseClient, m: EmailRow, ctx: OrderContext, links: LinkSettings): Promise<Built> {
+async function reminder(db: SupabaseClient, m: EmailRow, ctx: OrderContext, link: string): Promise<Built> {
   const { data: seats } = await db.from('seats').select('status').eq('order_id', m.order_id).neq('status', 'cancelled')
   const all: { status: string }[] = seats ?? []
   const unnamed = all.filter((x) => x.status === 'unnamed').length
   // Everyone named since the draft was approved: nothing to remind about, so don't send it.
   if (unnamed === 0) throw new Error('No unnamed seats left; discard this reminder')
-  const { token, link } = await newLink(m, links)
   return {
     ...guestListReminderEmail({ toName: ctx.toName, tierName: ctx.o?.sponsorship_tiers?.name ?? null, event: ctx.event, deadline: ctx.deadline, link, unnamed, total: all.length }),
-    tokenHash: await sha256(token), attachments: undefined,
+    attachments: undefined,
   }
 }
 
@@ -148,20 +199,19 @@ async function receipt(db: SupabaseClient, m: EmailRow, ctx: OrderContext): Prom
   return {
     ...paymentReceiptEmail({ toName: ctx.toName, event: ctx.event, amount: Number(p.gross_amount), method: p.method, receivedAt: p.received_at, checkNumber: p.check_number,
       commitment: Number(ctx.o?.commitment_amount ?? 0), paidToDate }),
-    tokenHash: null, attachments: undefined,
+    attachments: undefined,
   }
 }
 
-async function qrInvitation(db: SupabaseClient, m: EmailRow, ctx: OrderContext, secret: string): Promise<Built> {
+async function qrInvitation(db: SupabaseClient, m: EmailRow, ctx: OrderContext, s: AttemptSecrets): Promise<Built> {
   // This attempt's code for the guest's seat, never stored: only its hash is saved (email_mark_sent),
-  // so earlier codes for that seat stop working. A retry of the same attempt rebuilds the same code.
+  // so earlier codes for that seat stop working.
   const { data: g } = await db.from('guests').select('first_name').eq('id', m.guest_id).single()
   if (!g) throw new Error('Guest not found')
-  const code = await qrTicketCode(secret, m.id, m.attempts)
-  const png: Uint8Array = await QRCode.toBuffer(code, { width: 360, margin: 2 })
+  if (!s.token || !s.qrImage) throw new Error('A QR invitation needs its code and image')
   return {
-    ...qrInvitationEmail({ firstName: g.first_name, event: ctx.event, code }),
-    tokenHash: await sha256(code), attachments: [{ filename: 'aafe-gala-entry-qr.png', content: b64(png) }],
+    ...qrInvitationEmail({ firstName: g.first_name, event: ctx.event, code: s.token }),
+    attachments: [{ filename: 'aafe-gala-entry-qr.png', content: s.qrImage }],
   }
 }
 

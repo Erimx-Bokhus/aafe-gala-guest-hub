@@ -1,8 +1,11 @@
-// Sponsor links and QR e-ticket codes, one per send attempt (supabase/functions/_shared/linkToken.ts), and the retry
-// Gaelen Hallenbeck found (Nov 9): Resend accepted an email, saving its link failed, and the retry 10 minutes later
-// sent a new link under the same Idempotency-Key, which Resend refuses (409). The sponsor kept a link that never
-// worked. Runs with npm run test:backend.
+// Sponsor links and QR e-ticket codes, one per send attempt (supabase/functions/_shared/linkToken.ts), and the retries
+// Gaelen Hallenbeck found: Resend accepted an email, saving its link failed, and the retry 10 minutes later sent a
+// different request under the same Idempotency-Key, which Resend refuses (409). Nov 9: a new link; Nov 10: the same
+// link in an email rebuilt after the gala was renamed. The sponsor kept a link that never worked. Each attempt's
+// request is now saved without its secrets and resent unchanged (_shared/emailSnapshot.ts; the database side is in
+// scripts/test-emails.mjs). Runs with npm run test:backend.
 import { createHash } from 'node:crypto'
+import { freezeRequest, LINK_TOKEN, QR_CODE, QR_IMAGE, thawRequest } from '../supabase/functions/_shared/emailSnapshot.ts'
 import { linkSecretProblem, MIN_SECRET_LENGTH, portalLinkToken, qrTicketCode } from '../supabase/functions/_shared/linkToken.ts'
 // @ts-expect-error plain JavaScript helper
 import { counter } from './test-db.mjs'
@@ -72,6 +75,58 @@ const after = await journey(() => portalLinkToken(SECRET, 'em_42', 0))
 ok(after.first === 200 && after.retry === 200, `after: Resend accepts the retry as the same email ${JSON.stringify(after)}`)
 ok(after.emails === 1, 'the sponsor gets one email, not two')
 ok(after.firstLinkWorks, 'and the link in it works once the save goes through')
+
+// ---- Gaelen's second case (Nov 10): the same journey, but staff rename the gala before the retry. Rebuilt, the retry
+// carries the same link in a different email, and Resend refuses it too. send-emails now saves each attempt's request
+// before sending it (email_save_snapshot: once per attempt, cleared when the email is sent or the attempt fails) and
+// resends that on a retry of the same attempt. Everything below follows those rules.
+const linkIn = (body: string) => /#\/s\/([A-Za-z0-9_-]+)/.exec(body)?.[1] ?? ''
+async function renamedJourney(resendSaved: boolean) {
+  const resend = fakeResend(), m = { id: 'em_43', attempts: 0 }, stored: string[] = []
+  let title = 'AAFE Gala 2027', saved: string | null = null, snapshot: { attempt: number; body: string } | null = null
+  const run = async (saveWorks: boolean) => {
+    const token = await portalLinkToken(SECRET, m.id, m.attempts), secrets = [{ placeholder: LINK_TOKEN, value: token }]
+    let body: string
+    if (resendSaved && snapshot?.attempt === m.attempts) body = thawRequest(snapshot.body, secrets)
+    else {
+      body = JSON.stringify({ subject: `Add your guests for ${title}`, html: `<a href="https://portal.example.org/#/s/${token}">Name your guests</a>` })
+      if (resendSaved) { snapshot = { attempt: m.attempts, body: freezeRequest(body, secrets) }; stored.push(snapshot.body) }
+    }
+    const status = resend.send(`${m.id}-${m.attempts}`, body)
+    if (status !== 200) { m.attempts++; snapshot = null; return status }  // email_mark_failed
+    if (saveWorks) { saved = hash(token); snapshot = null }                // email_mark_sent
+    return status
+  }
+  const first = await run(false)                                        // delivered, but the save fails
+  title = 'AAFE 53rd Annual Gala'                                      // staff rename the gala
+  const retry = await run(true)                                        // 10 minutes later
+  return { first, retry, emails: resend.inbox.length, firstLinkWorks: saved === hash(linkIn(resend.inbox[0])), stored }
+}
+const rebuilt = await renamedJourney(false)
+ok(rebuilt.retry === 409 && !rebuilt.firstLinkWorks, `before (the email rebuilt on the retry): the renamed gala makes it a different email, Resend refuses it, and the sponsor's link never works ${JSON.stringify({ ...rebuilt, stored: undefined })}`)
+const resent = await renamedJourney(true)
+ok(resent.first === 200 && resent.retry === 200 && resent.emails === 1, 'after: the retry resends the saved request, Resend recognizes it, and the sponsor gets one email')
+ok(resent.firstLinkWorks, 'and the link in it works once the save goes through')
+const t43 = await portalLinkToken(SECRET, 'em_43', 0)
+ok(resent.stored.length === 1 && !resent.stored[0].includes(t43) && resent.stored[0].includes(LINK_TOKEN),
+  'what the database keeps has a placeholder where the link was, never the link (hard rule 6)')
+
+// The QR invitation: its code is in the email and in the attached image; neither is kept.
+const qr = await qrTicketCode(SECRET, 'em_44', 0), image = Buffer.from(`png bytes that encode ${qr}`).toString('base64')
+const qrSecrets = [{ placeholder: QR_IMAGE, value: image }, { placeholder: QR_CODE, value: qr }]
+const qrBody = JSON.stringify({ subject: 'Your entry pass', html: `<p>${qr}</p>`, attachments: [{ filename: 'aafe-gala-entry-qr.png', content: image }] })
+const qrFrozen = freezeRequest(qrBody, qrSecrets)
+ok(!qrFrozen.includes(qr) && !qrFrozen.includes(image) && qrFrozen.includes(QR_CODE) && qrFrozen.includes(QR_IMAGE), 'a saved QR invitation keeps neither the code nor the image')
+ok(thawRequest(qrFrozen, qrSecrets) === qrBody, 'and a retry puts both back: the identical request')
+
+// Refusals: never store a secret, never send a half-filled email.
+const throws = (f: () => unknown) => { try { f(); return false } catch (e) { return e instanceof Error } }
+ok(throws(() => freezeRequest('{"html":"no link here"}', [{ placeholder: LINK_TOKEN, value: t43 }])), 'an email without its link is not saved')
+ok(throws(() => freezeRequest(`{"html":"${t43} {{aafe:link_token}}"}`, [{ placeholder: LINK_TOKEN, value: t43 }])),
+  'an email that already contains placeholder text (a name typed as one, say) is not saved: putting the link back would go wrong')
+ok(throws(() => thawRequest('{"html":"no placeholder"}', [{ placeholder: LINK_TOKEN, value: t43 }])), 'a saved request without the placeholder is not sent')
+ok(throws(() => thawRequest(qrFrozen, [{ placeholder: QR_CODE, value: qr }])), 'nor one with a placeholder this attempt cannot fill')
+ok(throws(() => thawRequest(qrFrozen, [{ placeholder: QR_IMAGE, value: '' }, { placeholder: QR_CODE, value: qr }])), 'nor one filled with nothing')
 
 console.log(`link tokens: ${count.pass} passed, ${count.fail} failed`)
 if (count.fail) process.exitCode = 1

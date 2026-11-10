@@ -101,6 +101,36 @@ await db.exec(`update email_log set claimed_at = null where status = 'queued'`)
 ok((await claim(1)).length === 1, 'a run claims no more than its batch size')
 await db.exec(`update email_log set claimed_at = null where status = 'queued'`)
 
+// ---- Saved requests (email_save_snapshot): a retry of the same attempt resends the identical email, even if the gala
+// was renamed in between (Gaelen Hallenbeck's review, Nov 10). The worker side: scripts/test-link-token.mts.
+const save = async (id, attempt, body) => (await as('service_role', null, `select email_save_snapshot($1, $2, $3) ok`, [id, attempt, body]))[0].ok
+const row = async (id) => (await q(`select attempts, status, send_snapshot, send_snapshot_attempt from email_log where id = $1`, [id]))[0]
+const [snap] = await claim(1)
+const att = (await row(snap)).attempts
+const FROZEN = '{"subject":"Add your guests for AAFE Gala 2027","html":"#/s/{{aafe:link_token}}"}'
+ok(/permission denied/.test(await err('authenticated', ADMIN, `select email_save_snapshot('x', 0, 'y')`) ?? ''), 'only the email worker can save a request, not signed-in staff')
+ok(await save(snap, att, FROZEN) === true, "the worker saves an attempt's request before sending it")
+ok(await save(snap, att, '{"subject":"Add your guests for AAFE 53rd Annual Gala"}') === false && (await row(snap)).send_snapshot === FROZEN,
+  'once per attempt: a later save for the same attempt is refused, so a retry keeps the request that went out')
+await db.exec(`update email_log set claimed_at = now() - interval '11 minutes' where id = '${snap}'`)
+const retried = (await as('service_role', null, `select id, send_snapshot, send_snapshot_attempt from email_claim(1000)`)).find((r) => r.id === snap)
+ok(retried?.send_snapshot === FROZEN && retried.send_snapshot_attempt === att, 'the retry claims the email with its saved request')
+ok(await save(snap, att + 1, 'x') === false, 'a request for an attempt the email is not on is refused')
+ok(await save(unapproved[0], 0, 'x') === false, 'a draft waiting for approval cannot have a request saved')
+ok(/no request/.test(await err('service_role', null, `select email_save_snapshot($1, $2, '')`, [snap, att + 1]) ?? ''), 'an empty request is refused')
+const synced = (await as('authenticated', ADMIN, `select staff_sync(null, null) s`))[0].s.rows.email_log
+ok(synced.some((r) => r.id === snap) && synced.every((r) => !('send_snapshot' in r) && !('send_snapshot_attempt' in r)),
+  "the staff app's copy of the emails never includes a saved request")
+await as('service_role', null, `select email_mark_failed($1, 'Resend HTTP 500')`, [snap])
+const afterFail = await row(snap)
+ok(afterFail.attempts === att + 1 && afterFail.send_snapshot === null && afterFail.send_snapshot_attempt === null,
+  "a failed attempt drops its saved request: the next attempt is built fresh, with a new link")
+ok(await save(snap, att + 1, FROZEN) === true, 'and the next attempt saves its own')
+await as('service_role', null, `select email_mark_sent($1)`, [snap])
+const afterSent = await row(snap)
+ok(afterSent.status === 'sent' && afterSent.send_snapshot === null && afterSent.send_snapshot_attempt === null, 'once the email is sent, its saved request is cleared')
+await db.exec(`update email_log set claimed_at = null where status = 'queued'`)
+
 // ---- Wording (supabase/functions/_shared/emails.ts)
 const event = { name: 'AAFE Gala 2027', event_date: '2027-05-13', doors_time: '6:00 PM', venue_name: 'Harbor Hall', venue_address: '1 Pier Rd' }
 const link = 'https://gala.example.org/#/s/abc_DEF-123'
