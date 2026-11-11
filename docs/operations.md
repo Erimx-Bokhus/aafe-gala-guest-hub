@@ -94,9 +94,9 @@ grep -c '^COPY' "$B/data.sql"     # one per table with rows; check public.check_
 ```
 
 - **What's in it:** our tables and functions (`schema.sql`); every row, including the sign-in accounts
-  (`auth.users`) (`data.sql`). The CLI doesn't leave the schedules (`cron`) out of `data.sql`, but a practice restore
-  on Nov 10 found none came back, so don't count on them. Not included: Vault secrets (the CLI leaves the `vault`
-  schema out), function secrets, Auth settings.
+  (`auth.users`) (`data.sql`). Not included: the schedules, the Vault secrets they call with, function secrets and Auth
+  settings. A backup of stable on Nov 11, 2026 had 57 tables of data (`auth`, `public`, `storage`) and nothing from
+  `cron` or `vault`, although the CLI's source doesn't exclude `cron`.
 - **Where it goes:** outside the repo, in a private folder (the team's or AAFE's drive). It holds the sign-in emails
   of the team and reviewers. Delete old copies under the data-handling retention promise.
 - **When:** weekly; before each AAFE review, Demo Day and the Nov 10 handoff; on gala day before doors open and after
@@ -114,12 +114,11 @@ psql --single-transaction --variable ON_ERROR_STOP=1 --file schema.sql \
 
 Then, for a hosted project: the function secrets and deploys and the Auth settings (`BACKEND.md`, Setup steps 2 and 3),
 and **right after them**, every time, `node scripts/setup-cron.mjs <PROJECT-REF>`. A restore brings back none of the
-Vault secrets the schedules call with, and maybe none of the five schedules either; the script creates both, and
-replaces any schedule that did come back instead of adding a copy. Until it runs, nothing works on a schedule: no
-approved email goes out and Give Lively isn't polled. To see what came back, run `select jobname from cron.job;` right
-after the restore. (Nov 11, 2026: this used to say the schedules always come back. The CLI's data backup doesn't
-exclude the `cron` schema (CLI 2.121.0's source), but a practice restore on Nov 10 found no schedules, so it's
-unconfirmed.) Then the new address and key in the
+five schedules and none of the Vault secrets they call with; the script creates both (and replaces, rather than copies,
+any schedule a project already has). Until it runs, nothing works on a schedule: no approved email goes out and Give
+Lively isn't polled. Check with `select jobname from cron.job;` after the script. (Nov 11, 2026: this used to say the
+schedules come back with the restore. A real backup of stable that day contained none, and a practice restore on
+Nov 10 found none.) Then the new address and key in the
 apps' `.env.local` files before building and uploading them again (`BACKEND.md`, "Upload the apps").
 
 **Drill, Oct 17:** stable was backed up with the commands above (no password) and restored into a local Supabase
