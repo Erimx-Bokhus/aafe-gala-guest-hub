@@ -9,7 +9,8 @@
 //
 // Retries: each attempt's request is saved before it goes out, with its link or QR code taken out
 // (_shared/emailSnapshot.ts, email_save_snapshot). A retry of the same attempt resends that request
-// unchanged, so Resend recognizes it (see below).
+// unchanged, so Resend recognizes it (see below). It's kept in a table staff can't read and deleted
+// as soon as the attempt is over: sent, failed, cancelled, or its address changed or deleted.
 //
 // Secrets: RESEND_API_KEY, EMAIL_FROM (e.g. "AAFE Gala <gala@aafe.org>", domain verified in Resend),
 //          GUEST_PORTAL_URL (e.g. https://gala.aafe.org/), LINK_TOKEN_SECRET (32+ random characters,
@@ -39,6 +40,8 @@ Deno.serve(async (req) => {
   const { data: claimed, error } = await db.rpc('email_claim', { p_limit: 25 })
   if (error) return json({ error: 'db_error', message: error.message }, 500)
   const queue = ((claimed ?? []) as EmailRow[]).sort((a, b) => a.id.localeCompare(b.id))   // email_claim's rows
+  const snapshotError = await attachSnapshots(db, queue)
+  if (snapshotError) return json({ error: 'db_error', message: snapshotError }, 500)
 
   let sent = 0, failed = 0, unsaved = 0
   for (const m of queue) {
@@ -75,11 +78,28 @@ Deno.serve(async (req) => {
   return json({ sent, failed, unsaved })
 })
 
-/** A claimed email (email_claim in backend.sql). */
+/** A claimed email (email_claim in backend.sql), with its saved request when it has one (email_snapshots). */
 interface EmailRow {
   id: string; template: string; to_email: string; to_name: string | null
   order_id: string | null; payment_id: string | null; guest_id: string | null; attempts: number
   send_snapshot: string | null; send_snapshot_attempt: number | null
+}
+/** A row from email_snapshots: the request saved for one attempt of a claimed email. */
+interface SavedRequest { email_id: string; attempt: number; snapshot: string }
+
+/** Puts each claimed email's saved request on it, if an earlier run already sent this attempt. They're kept apart from
+ *  email_log, which staff can read, and only this worker reads them (email_snapshots in backend.sql). The error, or null. */
+async function attachSnapshots(db: SupabaseClient, queue: EmailRow[]): Promise<string | null> {
+  if (!queue.length) return null
+  const { data, error } = await db.rpc('email_snapshots', { p_ids: queue.map((m) => m.id) })
+  if (error) return error.message
+  const byId = new Map(((data ?? []) as SavedRequest[]).map((s) => [s.email_id, s]))
+  for (const m of queue) {
+    const s = byId.get(m.id)
+    m.send_snapshot = s?.snapshot ?? null
+    m.send_snapshot_attempt = s?.attempt ?? null
+  }
+  return null
 }
 interface Built { subject: string; html: string; attachments: { filename: string; content: string }[] | undefined }
 /** Where sponsor links point, and the secret their tokens are derived from (_shared/linkToken.ts). */

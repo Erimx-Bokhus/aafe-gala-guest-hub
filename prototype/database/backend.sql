@@ -98,10 +98,22 @@ alter table email_log add column if not exists claimed_at  timestamptz;   -- set
 alter table email_log add column if not exists payment_id  text references payments(id);  -- payment_receipt: which payment
 -- The send attempt's exact request to Resend, saved just before it goes out (email_save_snapshot), so a retry of that
 -- attempt resends it unchanged instead of rebuilding it from data that may have changed (Gaelen Hallenbeck's review,
--- Nov 10). Its link token, QR code and QR image are placeholders, never the values (hard rule 6). Cleared once the
--- email is sent or the attempt fails. To remove: drop both columns and email_save_snapshot.
-alter table email_log add column if not exists send_snapshot         text;
-alter table email_log add column if not exists send_snapshot_attempt int;
+-- Nov 10). Its link token, QR code and QR image are placeholders, never the values (hard rule 6), but it does hold the
+-- recipient's address and name. So it lives in its own table, not on email_log, which staff read: no policy and no
+-- grant lets a signed-in user or the public key read it; only the send-emails worker does, through email_snapshots
+-- (GreyBox's second review, Nov 10). It goes as soon as the attempt is over: the trigger email_log_drop_snapshot (below)
+-- deletes it when the email is sent, cancelled or unapproved, the attempt fails, or its address changes or is deleted
+-- (contacts_delete). To remove: drop the table, the trigger, email_save_snapshot and email_snapshots.
+-- The first version kept it in two email_log columns, which staff could read: dropped from any database that has them.
+alter table email_log drop column if exists send_snapshot, drop column if exists send_snapshot_attempt;
+create table if not exists email_send_snapshots (
+  email_id text primary key references email_log(id) on delete cascade,
+  attempt  int  not null,
+  snapshot text not null,
+  saved_at timestamptz not null default now()
+);
+alter table email_send_snapshots enable row level security;   -- no policies: no API role reads it
+revoke all on email_send_snapshots from public, anon, authenticated;
 alter table email_log drop constraint if exists email_log_status_check;
 alter table email_log add constraint email_log_status_check check (status in ('queued','sent','opened','bounced','cancelled'));
 
@@ -2070,8 +2082,7 @@ create or replace function email_mark_sent(p_email_id text, p_token_hash text de
 language plpgsql security definer set search_path = public as $$
 declare m email_log; v_deadline date;
 begin
-  update email_log set status = 'sent', sent_at = now(), attempts = attempts + 1, last_error = null, claimed_at = null,
-         send_snapshot = null, send_snapshot_attempt = null
+  update email_log set status = 'sent', sent_at = now(), attempts = attempts + 1, last_error = null, claimed_at = null
    where id = p_email_id and status = 'queued' and approved_at is not null returning * into m;
   if m.id is null then return; end if;
   -- A reminder carries a fresh link too, so the newest email always has the one that works.
@@ -2154,23 +2165,47 @@ end $$;
 -- The failed attempt's saved request goes with it: the next attempt gets a new link and is built fresh.
 create or replace function email_mark_failed(p_email_id text, p_error text) returns void
 language sql security definer set search_path = public as $$
-  update email_log set attempts = attempts + 1, last_error = left(p_error, 1000), claimed_at = null,
-         send_snapshot = null, send_snapshot_attempt = null
+  update email_log set attempts = attempts + 1, last_error = left(p_error, 1000), claimed_at = null
    where id = p_email_id
 $$;
 
--- Saves a send attempt's request (send_snapshot) just before send-emails sends it, once per attempt: a retry of the
--- same attempt finds it and resends it unchanged. False when the email can't be sent as this attempt any more
--- (cancelled, sent, or its attempt moved on), or this attempt's request is already saved; the worker then sends nothing.
+-- Saves a send attempt's request (email_send_snapshots) just before send-emails sends it, once per attempt: a retry of
+-- the same attempt finds it and resends it unchanged. False when the email can't be sent as this attempt any more
+-- (cancelled, sent, unapproved, or its attempt moved on), or this attempt's request is already saved; the worker then
+-- sends nothing. The email's row stays locked until the save commits, so a cancellation at the same moment waits and
+-- its trigger then deletes what was saved, or goes first and the save finds the email cancelled.
 create or replace function email_save_snapshot(p_email_id text, p_attempt int, p_snapshot text) returns boolean
 language plpgsql security definer set search_path = public as $$
 begin
   if p_snapshot is null or p_snapshot = '' then raise exception 'email_save_snapshot: no request to save'; end if;
-  update email_log set send_snapshot = p_snapshot, send_snapshot_attempt = p_attempt
-   where id = p_email_id and status = 'queued' and approved_at is not null and attempts = p_attempt
-     and send_snapshot_attempt is distinct from p_attempt;
+  perform 1 from email_log
+   where id = p_email_id and status = 'queued' and approved_at is not null and attempts = p_attempt for update;
+  if not found then return false; end if;
+  insert into email_send_snapshots (email_id, attempt, snapshot) values (p_email_id, p_attempt, p_snapshot)
+  on conflict (email_id) do update set attempt = excluded.attempt, snapshot = excluded.snapshot, saved_at = now()
+   where email_send_snapshots.attempt is distinct from excluded.attempt;
   return found;
 end $$;
+
+-- The saved requests of the emails a send-emails run just claimed (email_claim): the worker's only way to read them.
+create or replace function email_snapshots(p_ids text[]) returns table (email_id text, attempt int, snapshot text)
+language sql stable security definer set search_path = public as $$
+  select s.email_id, s.attempt, s.snapshot from email_send_snapshots s where s.email_id = any(p_ids)
+$$;
+
+-- A saved request lasts only while its attempt can still go out. Sent, cancelled (staff, a voided QR code, a cancelled
+-- order or payment), back to a draft, a failed attempt, or a new or deleted address (contacts_delete): it's deleted.
+create or replace function email_log_drop_snapshot() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  delete from email_send_snapshots where email_id = new.id;
+  return null;
+end $$;
+drop trigger if exists email_log_drop_snapshot on email_log;
+create trigger email_log_drop_snapshot after update of status, attempts, approved_at, to_email on email_log for each row
+  when (new.status <> 'queued' or new.attempts is distinct from old.attempts or new.approved_at is null
+        or new.to_email is distinct from old.to_email)
+  execute function email_log_drop_snapshot();
 
 -- The send-emails worker claims its batch before sending anything. The every-minute schedule and a
 -- staff member's "send now" can overlap; without a claim both runs would send the same email, and
@@ -3209,8 +3244,7 @@ begin
       'guests', (select coalesce(jsonb_agg(to_jsonb(r) - 'sync_txid'), '[]') from guests r where v_full or r.sync_txid >= p_cursor),
       'seats', (select coalesce(jsonb_agg(to_jsonb(r) - 'sync_txid'), '[]') from seats r where v_full or r.sync_txid >= p_cursor),
       'check_ins', (select coalesce(jsonb_agg(to_jsonb(r) - 'sync_txid'), '[]') from check_ins r where v_full or r.sync_txid >= p_cursor),
-      -- send_snapshot is the email worker's, not the app's: it stays on the server.
-      'email_log', (select coalesce(jsonb_agg(to_jsonb(r) - 'sync_txid' - 'send_snapshot' - 'send_snapshot_attempt'), '[]') from email_log r where v_full or r.sync_txid >= p_cursor),
+      'email_log', (select coalesce(jsonb_agg(to_jsonb(r) - 'sync_txid'), '[]') from email_log r where v_full or r.sync_txid >= p_cursor),
       'salesforce_sync', (select coalesce(jsonb_agg(to_jsonb(r) - 'sync_txid'), '[]') from salesforce_sync r where v_full or r.sync_txid >= p_cursor),
       'import_runs', (select coalesce(jsonb_agg(to_jsonb(r) - 'sync_txid'), '[]') from import_runs r where v_full or r.sync_txid >= p_cursor),
       'import_review', (select coalesce(jsonb_agg(to_jsonb(r) - 'sync_txid'), '[]') from import_review r where v_full or r.sync_txid >= p_cursor),
@@ -3267,7 +3301,7 @@ begin
               'portal_release_seat','staff_me','staff_current_event','staff_update_guest','staff_set_seat_status','staff_mark_printed',
               'staff_assign_seat','staff_seat_order_at_table','staff_record_payment','staff_void_payment','staff_add_pledge','staff_add_comp_guest',
               'staff_send_qr_invite','staff_resend_portal_link','staff_approve_email','staff_cancel_email','checkin_list','staff_check_in','staff_check_in_qr',
-              'staff_check_in_exception','gl_import','staff_import_givelively','email_mark_sent','email_mark_failed','email_claim','email_save_snapshot',
+              'staff_check_in_exception','gl_import','staff_import_givelively','email_mark_sent','email_mark_failed','email_claim','email_save_snapshot','email_snapshots','email_log_drop_snapshot',
               'purchase_key','payment_method_of','payment_method_detail','name_key','has_need','add_import_review','import_fill_guests','staff_set_tier_mapping','staff_set_gala_page','sync_gala_pages','staff_add_gala_page','staff_remove_gala_page',
               'staff_resolve_import_review','seats_void_qr','guests_void_qr','gala_events_no_mixing','require_gala_order',
               'staff_export_badges','staff_export_checkin','staff_export_salesforce',
@@ -3322,7 +3356,7 @@ end $$;
 
 -- Edge functions (service role)
 grant execute on function gl_import(jsonb, text, text), email_mark_sent(text, text), email_mark_failed(text, text), email_claim(int),
-  email_save_snapshot(text, int, text), hash_token(text),
+  email_save_snapshot(text, int, text), email_snapshots(text[]), hash_token(text),
   salesforce_outbox(), salesforce_mark_synced(jsonb, text), sync_gala_pages(), sync_prune()
   to service_role;
 

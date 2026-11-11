@@ -37,7 +37,8 @@ const READERS = ['relationship_manager', 'gala_admin']
 const ADMIN_ONLY = ['givelively_raw']
 // Read whole by gala admins, in part by relationship managers (the change log: Oct 22, tested below).
 const MANAGERS_PART = ['audit_log']
-const NO_READERS = ['staff_join_domains']
+// email_send_snapshots: a send attempt's saved request, the email worker's alone (GreyBox's second review, Nov 10).
+const NO_READERS = ['staff_join_domains', 'email_send_snapshots']
 
 // One invented row in each table that starts empty, so every table is really probed.
 await db.exec(`
@@ -45,6 +46,7 @@ insert into givelively_raw (transaction_id, payload, import_status) values ('gl-
 insert into sync_deleted (table_name, row_id) values ('guests', 'g-test-deleted');
 insert into gala_need_totals (event_id, kind, choice, guests) values ('ev-2026', 'dietary', 'Vegan', 3);
 insert into staff_join_domains (domain, role, until) values ('join-test.example', 'check_in_volunteer', now() + interval '1 day');
+insert into email_send_snapshots (email_id, attempt, snapshot) values ((select id from email_log order by id limit 1), 0, '{"note": "synthetic"}');
 insert into import_runs (id, event_id, source, started_by) values ('run-test-1', current_event_id(), 'csv', 'test');
 insert into import_review (id, run_id, event_id, reason) values ('rev-test-1', 'run-test-1', current_event_id(), 'refund');
 insert into tier_mappings (id, event_id, givelively_name, name_key, tier_id, created_by)

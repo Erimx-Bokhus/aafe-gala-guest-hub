@@ -78,7 +78,8 @@ ok(after.firstLinkWorks, 'and the link in it works once the save goes through')
 
 // ---- Gaelen's second case (Nov 10): the same journey, but staff rename the gala before the retry. Rebuilt, the retry
 // carries the same link in a different email, and Resend refuses it too. send-emails now saves each attempt's request
-// before sending it (email_save_snapshot: once per attempt, cleared when the email is sent or the attempt fails) and
+// before sending it (email_save_snapshot: once per attempt, in a table only the worker reads, deleted when the email is sent, cancelled
+// or readdressed, or the attempt fails) and
 // resends that on a retry of the same attempt. Everything below follows those rules.
 const linkIn = (body: string) => /#\/s\/([A-Za-z0-9_-]+)/.exec(body)?.[1] ?? ''
 async function renamedJourney(resendSaved: boolean) {
