@@ -93,8 +93,9 @@ npx supabase db dump --linked --data-only --use-copy -x storage.buckets_vectors 
 grep -c '^COPY' "$B/data.sql"     # one per table with rows; check public.check_ins is there
 ```
 
-- **What's in it:** our tables and functions (`schema.sql`); every row, including the sign-in accounts
-  (`auth.users`) and any schedules (`data.sql`). Not included: Vault secrets, function secrets, Auth settings.
+- **What's in it:** our tables and functions (`schema.sql`); every row of them, including the sign-in accounts
+  (`auth.users`) (`data.sql`). Not included: the schedules and the Vault secrets they call with (the CLI leaves
+  Supabase's own `cron` and `vault` schemas out of a backup), function secrets, Auth settings.
 - **Where it goes:** outside the repo, in a private folder (the team's or AAFE's drive). It holds the sign-in emails
   of the team and reviewers. Delete old copies under the data-handling retention promise.
 - **When:** weekly; before each AAFE review, Demo Day and the Nov 10 handoff; on gala day before doors open and after
@@ -111,8 +112,10 @@ psql --single-transaction --variable ON_ERROR_STOP=1 --file schema.sql \
 ```
 
 Then, for a hosted project: the function secrets and deploys and the Auth settings (`BACKEND.md`, Setup steps 2 and 3),
-and **right after them** `node scripts/setup-cron.mjs <PROJECT-REF>`: the restored data brings the schedules back but
-not the Vault secrets they call with, so until it runs every scheduled call fails. Then the new address and key in the
+and **right after them** `node scripts/setup-cron.mjs <PROJECT-REF>`: a restore brings back none of the five schedules
+and none of the Vault secrets they call with, and the script creates both. Until it runs, nothing happens on a schedule:
+no approved email goes out and Give Lively isn't polled. (Corrected Nov 11, 2026: this said the schedules came back.
+They don't: the Supabase CLI's backup leaves out the `cron` schema, checked in CLI 2.121.0.) Then the new address and key in the
 apps' `.env.local` files before building and uploading them again (`BACKEND.md`, "Upload the apps").
 
 **Drill, Oct 17:** stable was backed up with the commands above (no password) and restored into a local Supabase
