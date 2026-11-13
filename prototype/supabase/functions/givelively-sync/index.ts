@@ -5,7 +5,7 @@
 // Secrets: GIVELIVELY_ORG_ID, GIVELIVELY_API_KEY (Nonprofit Admin Portal -> Zapier API key), CRON_SECRET.
 // Which donations are gala sales: the current gala's Give Lively pages (gala_events.givelively_page_name, e.g.
 // "AAFE's 52nd Annual Gala", and givelively_other_pages, e.g. its Community Tickets page), set by staff in the staff app. Not set -> the sync does nothing and says so. Demo: GIVELIVELY_BASE_URL points at the givelively-mock function instead of Give Lively.
-import { NOT_CONNECTED, pollFailure, pollStart, syncDonations, withoutKey } from '../_shared/givelively-sync.ts'
+import { canAdvance, NOT_CONNECTED, pollFailure, pollStart, SAVE_FAILURE, syncDonations, withoutKey } from '../_shared/givelively-sync.ts'
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2'
 import { admin, caller, cors, env, json } from '../_shared/supabase.ts'
 
@@ -27,7 +27,10 @@ Deno.serve(async (req) => {
   return await runSync(db, { org, key, campaigns, actor: who === 'schedule' ? 'Give Lively sync' : `Give Lively sync (${who})` })
 })
 
-/** One poll: the donations Give Lively changed since the last one, imported one by one, and the cursor moved on. */
+/**
+ * One poll: the donations Give Lively changed since the last one, imported one by one, and the cursor moved on, unless
+ * a donation could be neither imported nor recorded: then the cursor stays and the next poll reads it again.
+ */
 async function runSync(db: SupabaseClient, o: { org: string; key: string; campaigns: string[]; actor: string }): Promise<Response> {
   const { org, key, campaigns, actor } = o
   const startedAt = Date.now()
@@ -61,9 +64,18 @@ async function runSync(db: SupabaseClient, o: { org: string; key: string; campai
       const { data, error } = await db.rpc('gl_import', { p_rows: [row], p_actor: actor })
       return { data, error: error?.message ?? null }
     },
-    saveRaw: async (rec) => { await db.from('givelively_raw').upsert(rec) },
+    saveRaw: async (rec) => {
+      const { error } = await db.from('givelively_raw').upsert(rec)
+      return { error: error?.message ?? null }
+    },
   })
 
+  if (!canAdvance(counts)) {
+    // No cursor_ms in this update: the cursor stays where it was, so the next poll reads these donations again.
+    const detail = `${counts.lost} donation(s) could be neither imported nor recorded in givelively_raw; the cursor was not moved.`
+    const { error } = await db.from('givelively_sync_state').update({ last_run_at: new Date().toISOString(), last_status: 'error', last_error: detail, last_counts: counts }).eq('id', 1)
+    return json({ error: 'givelively_not_saved', message: SAVE_FAILURE, counts, status_saved: !error }, 500)
+  }
   await db.from('givelively_sync_state').update({ cursor_ms: startedAt, last_run_at: new Date().toISOString(), last_status: 'ok', last_error: null, last_counts: counts }).eq('id', 1)
   return json(counts)
 }
