@@ -94,7 +94,9 @@ grep -c '^COPY' "$B/data.sql"     # one per table with rows; check public.check_
 ```
 
 - **What's in it:** our tables and functions (`schema.sql`); every row, including the sign-in accounts
-  (`auth.users`) and any schedules (`data.sql`). Not included: Vault secrets, function secrets, Auth settings.
+  (`auth.users`) (`data.sql`). Not included: the schedules, the Vault secrets they call with, function secrets and Auth
+  settings. A backup of stable on Nov 11, 2026 had 57 tables of data (`auth`, `public`, `storage`) and nothing from
+  `cron` or `vault`, although the CLI's source doesn't exclude `cron`.
 - **Where it goes:** outside the repo, in a private folder (the team's or AAFE's drive). It holds the sign-in emails
   of the team and reviewers. Delete old copies under the data-handling retention promise.
 - **When:** weekly; before each AAFE review, Demo Day and the Nov 10 handoff; on gala day before doors open and after
@@ -111,8 +113,12 @@ psql --single-transaction --variable ON_ERROR_STOP=1 --file schema.sql \
 ```
 
 Then, for a hosted project: the function secrets and deploys and the Auth settings (`BACKEND.md`, Setup steps 2 and 3),
-and **right after them** `node scripts/setup-cron.mjs <PROJECT-REF>`: the restored data brings the schedules back but
-not the Vault secrets they call with, so until it runs every scheduled call fails. Then the new address and key in the
+and **right after them**, every time, `node scripts/setup-cron.mjs <PROJECT-REF>`. A restore brings back none of the
+five schedules and none of the Vault secrets they call with; the script creates both (and replaces, rather than copies,
+any schedule a project already has). Until it runs, nothing works on a schedule: no approved email goes out and Give
+Lively isn't polled. Check with `select jobname from cron.job;` after the script. (Nov 11, 2026: this used to say the
+schedules come back with the restore. A real backup of stable that day contained none, and a practice restore on
+Nov 10 found none.) Then the new address and key in the
 apps' `.env.local` files before building and uploading them again (`BACKEND.md`, "Upload the apps").
 
 **Drill, Oct 17:** stable was backed up with the commands above (no password) and restored into a local Supabase
