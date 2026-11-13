@@ -1,6 +1,6 @@
 // Give Lively sync: what happens to each donation a poll returns (supabase/functions/_shared/givelively-sync.ts),
 // run against the real gl_import() in PGlite. Runs with npm run test:backend.
-import { pollStart, OVERLAP_MS, syncDonations, withoutKey, type SyncPorts } from '../supabase/functions/_shared/givelively-sync.ts'
+import { canAdvance, pollStart, OVERLAP_MS, syncDonations, withoutKey, type SyncPorts } from '../supabase/functions/_shared/givelively-sync.ts'
 import { normalize } from '../supabase/functions/_shared/givelively.ts'
 // @ts-expect-error plain JavaScript helper
 import { counter, openTestDb } from './test-db.mjs'
@@ -21,7 +21,7 @@ const donation = (txn: string, over: Record<string, unknown> = {}) => ({
 // no phone number or postal address (the feed's other fields stay, so staff can see what Give Lively sends).
 {
   const kept = new Map<string, any>()
-  const keep: SyncPorts = { importRow: async () => ({ data: null, error: null }), saveRaw: async (r) => { kept.set(r.transaction_id, r) } }
+  const keep: SyncPorts = { importRow: async () => ({ data: null, error: null }), saveRaw: async (r) => { kept.set(r.transaction_id, r); return { error: null } } }
   await syncDonations([
     { campaign_name: 'Year-End Appeal', email: 'appeal@example.org', phone: '(212) 555-0199', street_address: '1 Example St' },
     { campaign_name: '', first_name: 'Unreadable', donor_email_address: 'unreadable@example.org', phone_number: '(212) 555-0198',
@@ -53,6 +53,7 @@ const ports: SyncPorts = {
       on conflict (transaction_id) do update set payload = excluded.payload, last_seen_at = excluded.last_seen_at,
       import_status = excluded.import_status, import_note = excluded.import_note`,
       [rec.transaction_id, JSON.stringify(rec.payload), rec.last_seen_at, rec.import_status, rec.import_note])
+    return { error: null }
   },
 }
 const totals = async () => (await q(`select (select count(*) from payments)::int pay, (select count(*) from orders)::int ord,
@@ -115,6 +116,28 @@ const failing: SyncPorts = { ...ports, importRow: async (row) => row.txn === 'GL
 const c6 = await syncDonations([donation('GL-S5'), donation('GL-S6')], [PAGE], failing)
 ok(c6.unmapped === 1 && c6.created === 1, `a refused row doesn't stop the rest: ${JSON.stringify(c6)}`)
 ok(saved.get('GL-S5')?.import_status === 'unmapped' && saved.get('GL-S5').import_note === 'boom', 'the refused row is stored with the error for staff')
+ok(c6.lost === 0 && canAdvance(c6), 'a refused row that was stored for staff lets the cursor move on')
+
+// ---- Both the import and the stored copy fail (Gaelen Hallenbeck's review, Nov 9): the donation must not be skipped.
+// Before this fix the poll reported success and moved its cursor past the donation, so no later poll read it again.
+{
+  const down = 'database unavailable'
+  const outage: SyncPorts = { importRow: async () => ({ data: null, error: down }), saveRaw: async () => ({ error: down }) }
+  const c = await syncDonations([donation('GL-L1'), donation('GL-L2', { campaign_name: 'Spring Appeal' })], [PAGE], outage)
+  ok(c.lost === 1 && c.unmapped === 1 && c.not_gala === 1, `the gala purchase neither imported nor stored is counted as lost: ${JSON.stringify(c)}`)
+  ok(!canAdvance(c), 'and the cursor stays where it was')
+  const noTrace = await syncDonations([{ note: 'no id, no email, no amount' }], [PAGE], { ...ports, saveRaw: async () => ({ error: down }) })
+  ok(noTrace.lost === 1 && !canAdvance(noTrace), 'an unreadable donation that could not be stored is lost too: staff would never see it')
+  const imported = await syncDonations([donation('GL-L3')], [PAGE], { ...ports, saveRaw: async () => ({ error: down }) })
+  ok(imported.created === 1 && imported.lost === 0 && canAdvance(imported), 'a purchase that imported is safe even if its stored copy failed')
+  const pending = await syncDonations([donation('GL-L4', { donation_status: 'pending' })], [PAGE], { ...ports, saveRaw: async () => ({ error: down }) })
+  ok(pending.lost === 0 && canAdvance(pending), 'a pending payment comes back when it settles, so it does not hold the cursor')
+  // The database is back: the next poll reads GL-L1 again and imports it, once.
+  const retry = await syncDonations([donation('GL-L1')], [PAGE], ports)
+  ok(retry.created === 1 && retry.lost === 0 && canAdvance(retry), `the next poll imports the held purchase: ${JSON.stringify(retry)}`)
+  const again = await syncDonations([donation('GL-L1')], [PAGE], ports)
+  ok(again.created === 0 && (await q(`select count(*)::int n from payments where givelively_transaction_id = 'GL-L1'`))[0].n === 1, 'and only once')
+}
 
 // ---- No page name set: nothing counts as a gala sale
 const c7 = await syncDonations([donation('GL-S7')], [], ports)

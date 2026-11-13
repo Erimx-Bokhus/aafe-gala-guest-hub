@@ -16,6 +16,19 @@ export const pollFailure = (status: number | null) => (status === 404
   ? "Give Lively didn't accept AAFE's org ID or API key. Ask your technical partner to check them."
   : "Couldn't reach Give Lively. Try again in a few minutes; the 15-minute schedule keeps trying.")
 
+/**
+ * What staff see when a poll reached Give Lively but some donations could be neither imported nor recorded (the
+ * database was unavailable, say). The cursor stays where it was, so nothing is skipped: the next poll reads them again.
+ */
+export const SAVE_FAILURE = "Some Give Lively purchases couldn't be saved. Nothing is skipped: the next check, within 15 minutes, reads them again. If this keeps happening, ask your technical partner."
+
+/**
+ * Whether the cursor may move on after a poll: only when every donation was imported or recorded in givelively_raw.
+ * One that was neither (Gaelen Hallenbeck's review, Nov 9) would otherwise fall behind the cursor and never be read
+ * again. Holding the cursor is safe because gl_import is idempotent: the next poll's re-read creates nothing twice.
+ */
+export const canAdvance = (counts: SyncCounts) => counts.lost === 0
+
 /** An error message with the API key taken out: a network error can quote the request URL, which contains the key. */
 export const withoutKey = (message: string, key: string) =>
   key ? message.replaceAll(encodeURIComponent(key), '***').replaceAll(key, '***') : message
@@ -27,9 +40,11 @@ export interface RawRecord {
 export interface SyncPorts {
   /** cancel_only: a failed donation; gl_import may cancel a purchase it imported earlier, never create one. */
   importRow(row: GLRow & { cancel_only?: boolean }): Promise<{ data: ImportResult | null; error: string | null }>
-  saveRaw(rec: RawRecord): Promise<void>
+  /** Records the raw donation; error says why it couldn't (the database's message), null when it was stored. */
+  saveRaw(rec: RawRecord): Promise<{ error: string | null }>
 }
-export type SyncCounts = Record<'seen' | 'created' | 'updated' | 'skipped' | 'needs_review' | 'failed' | 'not_gala' | 'not_settled' | 'unmapped', number>
+/** lost: donations neither imported nor recorded; any at all keeps the cursor where it was (canAdvance). */
+export type SyncCounts = Record<'seen' | 'created' | 'updated' | 'skipped' | 'needs_review' | 'failed' | 'not_gala' | 'not_settled' | 'unmapped' | 'lost', number>
 
 /**
  * Classifies each donation against this gala's page name and imports the gala purchases.
@@ -40,6 +55,8 @@ export type SyncCounts = Record<'seen' | 'created' | 'updated' | 'skipped' | 'ne
  *   creates nothing.
  * - unmapped (no transaction ID or date): stored, keyed by its content, so staff can see it once.
  * - A row the database refuses is stored as unmapped with the error, and the rest carry on.
+ * - lost: a donation that wasn't imported (unmapped) and couldn't be stored either. Staff would have no trace of it,
+ *   so the poll reports an error and the cursor stays put (canAdvance); the next poll reads it again.
  */
 // Field names that hold a phone number or a postal address (never an email field such as "email_address").
 const CONTACT_FIELD = /phone|mobile|street|city|zip|postal|country|address/i
@@ -57,7 +74,7 @@ export function withoutContactDetails(raw: unknown): unknown {
 }
 
 export async function syncDonations(donations: unknown[], campaigns: string[], ports: SyncPorts, now = () => new Date()): Promise<SyncCounts> {
-  const counts: SyncCounts = { seen: donations.length, created: 0, updated: 0, skipped: 0, needs_review: 0, failed: 0, not_gala: 0, not_settled: 0, unmapped: 0 }
+  const counts: SyncCounts = { seen: donations.length, created: 0, updated: 0, skipped: 0, needs_review: 0, failed: 0, not_gala: 0, not_settled: 0, unmapped: 0, lost: 0 }
   for (const raw of donations) {
     const row = normalize(raw)
     const verdict = classify(row, campaigns)
@@ -66,12 +83,15 @@ export async function syncDonations(donations: unknown[], campaigns: string[], p
     else counts[verdict]++
     if (status === 'not_gala') continue
     // Unmapped rows have no reliable ID; key them by content so they are still recorded once.
-    await ports.saveRaw({
+    const { error } = await ports.saveRaw({
       transaction_id: row.txn || `unmapped-${await sha256(JSON.stringify(raw))}`,
       payload: withoutContactDetails(raw), last_seen_at: now().toISOString(),
       import_status: status === 'not_settled' ? 'skipped' : status,
       import_note: note ?? (status === 'not_settled' ? `Status "${row.status}"; will import once settled.` : null),
     })
+    // An imported purchase is safe in the guest list, and a pending one comes back when it settles; an unmapped one
+    // exists only in this record, so without it the donation is gone.
+    if (error && status === 'unmapped') counts.lost++
   }
   return counts
 }
