@@ -101,6 +101,66 @@ await db.exec(`update email_log set claimed_at = null where status = 'queued'`)
 ok((await claim(1)).length === 1, 'a run claims no more than its batch size')
 await db.exec(`update email_log set claimed_at = null where status = 'queued'`)
 
+// ---- Saved requests (email_save_snapshot): a retry of the same attempt resends the identical email, even if the gala
+// was renamed in between (Gaelen Hallenbeck's review, Nov 10). The worker side: scripts/test-link-token.mts.
+const save = async (id, attempt, body) => (await as('service_role', null, `select email_save_snapshot($1, $2, $3) ok`, [id, attempt, body]))[0].ok
+const saved = async (id) => (await q(`select attempt, snapshot from email_send_snapshots where email_id = $1`, [id]))[0] ?? null
+const row = async (id) => (await q(`select attempts, status from email_log where id = $1`, [id]))[0]
+const [snap] = await claim(1)
+const att = (await row(snap)).attempts
+const FROZEN = '{"to":["sponsor.contact@example.org"],"subject":"Add your guests for AAFE Gala 2027","html":"#/s/{{aafe:link_token}}"}'
+ok(/permission denied/.test(await err('authenticated', ADMIN, `select email_save_snapshot('x', 0, 'y')`) ?? ''), 'only the email worker can save a request, not signed-in staff')
+ok(await save(snap, att, FROZEN) === true, "the worker saves an attempt's request before sending it")
+ok(await save(snap, att, '{"subject":"Add your guests for AAFE 53rd Annual Gala"}') === false && (await saved(snap))?.snapshot === FROZEN,
+  'once per attempt: a later save for the same attempt is refused, so a retry keeps the request that went out')
+await db.exec(`update email_log set claimed_at = now() - interval '11 minutes' where id = '${snap}'`)
+ok((await claim(1000)).includes(snap), 'the retry claims the email again')
+const retried = (await as('service_role', null, `select email_id, attempt, snapshot from email_snapshots(array[$1]::text[])`, [snap]))[0]
+ok(retried?.snapshot === FROZEN && retried.attempt === att, 'and the worker reads back its saved request (email_snapshots)')
+ok(await save(snap, att + 1, 'x') === false, 'a request for an attempt the email is not on is refused')
+ok(await save(unapproved[0], 0, 'x') === false, 'a draft waiting for approval cannot have a request saved')
+ok(/no request/.test(await err('service_role', null, `select email_save_snapshot($1, $2, '')`, [snap, att + 1]) ?? ''), 'an empty request is refused')
+
+// Only the worker reads a saved request: it holds the recipient's address and the email's wording. Before, it sat on
+// email_log, where a gala admin could read it straight from the table (GreyBox's second review, Nov 10).
+for (const [role, who, label] of [['authenticated', ADMIN, 'a gala admin'], ['authenticated', RM, 'a relationship manager'], ['anon', null, 'the public key']]) {
+  ok(/permission denied/.test(await err(role, who, `select * from email_send_snapshots`) ?? ''), `${label} cannot read saved requests from their table`)
+}
+ok(/permission denied/.test(await err('authenticated', ADMIN, `select * from email_snapshots(array[$1]::text[])`, [snap]) ?? ''),
+  "nor through the worker's own function")
+const direct = await as('authenticated', ADMIN, `select * from email_log where id = $1`, [snap])
+ok(direct.length === 1 && !JSON.stringify(direct).includes('{{aafe:') && !Object.keys(direct[0]).some((k) => k.includes('snapshot')),
+  'a gala admin reading email_log directly sees the email, not its saved request')
+const synced = (await as('authenticated', ADMIN, `select staff_sync(null, null) s`))[0].s.rows.email_log
+ok(synced.some((r) => r.id === snap) && !JSON.stringify(synced).includes('{{aafe:'), "the staff app's copy of the emails never includes a saved request")
+
+await as('service_role', null, `select email_mark_failed($1, 'Resend HTTP 500')`, [snap])
+ok((await row(snap)).attempts === att + 1 && await saved(snap) === null,
+  "a failed attempt drops its saved request: the next attempt is built fresh, with a new link")
+ok(await save(snap, att + 1, FROZEN) === true, 'and the next attempt saves its own')
+await as('service_role', null, `select email_mark_sent($1)`, [snap])
+ok((await row(snap)).status === 'sent' && await saved(snap) === null, 'once the email is sent, its saved request is deleted')
+
+// A saved request lasts only while its attempt can still go out (GreyBox's second review, Nov 10).
+const spare = (await q(`select enqueue_email('portal_link', 'spare.contact@example.org', 'Spare Contact', 'ord-acme', null, 'test', 'test') id`))[0].id
+const armed = async () => save(spare, (await row(spare)).attempts, FROZEN)
+ok(await armed() === true, 'an approved email with a saved request')
+await db.exec(`update email_log set to_email = 'corrected.contact@example.org' where id = '${spare}'`)
+ok(await saved(spare) === null, 'a new address deletes it: the retry is rebuilt for the new address, never sent to the old one')
+ok(await armed() === true, 'saved again')
+await db.exec(`update email_log set to_email = '' where id = '${spare}'`)
+ok(await saved(spare) === null, "a deleted address (contacts_delete) deletes it: the address doesn't survive in the saved copy")
+await db.exec(`update email_log set to_email = 'spare.contact@example.org' where id = '${spare}'`)
+ok(await armed() === true, 'saved again')
+await db.exec(`update email_log set approved_at = null where id = '${spare}'`)
+ok(await saved(spare) === null, 'back to a draft deletes it')
+await db.exec(`update email_log set approved_at = now() where id = '${spare}'`)
+ok(await armed() === true, 'saved again')
+await as('authenticated', RM, `select staff_cancel_email($1)`, [spare])
+ok((await row(spare)).status === 'cancelled' && await saved(spare) === null, 'staff cancelling the email deletes it')
+ok(await armed() === false, 'and a cancelled email cannot have one saved')
+await db.exec(`update email_log set claimed_at = null where status = 'queued'`)
+
 // ---- Wording (supabase/functions/_shared/emails.ts)
 const event = { name: 'AAFE Gala 2027', event_date: '2027-05-13', doors_time: '6:00 PM', venue_name: 'Harbor Hall', venue_address: '1 Pier Rd' }
 const link = 'https://gala.example.org/#/s/abc_DEF-123'

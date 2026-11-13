@@ -32,6 +32,12 @@ const otherOrder = (await one(`select id from orders where event_id = $1 order b
 await q(`insert into guests (id, order_id, first_name, last_name, display_name, guest_type, last_updated_by, email) values ('g-other-gala', $1, 'Other', 'Gala', 'Other Gala', 'sponsor_guest', 'staff', 'other.gala@example.org')`, [otherOrder])
 // An email to a guest still waiting for approval: it can't go once the address is gone.
 await q(`select enqueue_email('qr_invitation', 'waiting.guest@example.org', 'Waiting Guest', $1, $2, 'test')`, [order, g1])
+// GreyBox's second review (Nov 10): that invitation approved, and a send attempt that saved its request but hasn't
+// finished. The saved request holds the address too, so it has to go with the rest.
+const waiting = await one(`select id, attempts from email_log where guest_id = $1 and template = 'qr_invitation' and status = 'queued' order by created_at desc limit 1`, [g1])
+await q(`update email_log set approved_at = now(), approved_by = 'test' where id = $1`, [waiting.id])
+ok((await as('service_role', null, `select email_save_snapshot($1, $2, $3) ok`,
+  [waiting.id, waiting.attempts, '{"to":["waiting.guest@example.org"],"html":"{{aafe:qr_code}}"}']))[0].ok === true, 'before: an invitation part-way through sending, its request saved')
 const sponsorsBefore = JSON.stringify(await q(`select id, primary_contact_email, phone from sponsors order by id`))
 const sponsorMailBefore = (await one(`select count(*)::int n from email_log where guest_id is null and to_email <> '' and order_id in (select id from orders where event_id = $1)`, [ev])).n
 const guestMail = (await one(`select count(*)::int n, count(*) filter (where status = 'queued')::int queued from email_log where guest_id in ${ofGala(ev)} and to_email <> ''`)).n
@@ -57,6 +63,9 @@ ok((await one(`select count(*)::int n from audit_log where entity = 'guest' and 
   "no guest's address is left in the gala's change log")
 const mail = await one(`select count(*) filter (where to_email <> '')::int left_, count(*) filter (where status = 'queued')::int queued from email_log where guest_id in ${ofGala(ev)}`)
 ok(mail.left_ === 0 && mail.queued === 0, "emails to the gala's guests keep no address, and one still waiting is cancelled")
+ok((await one(`select count(*)::int n from email_send_snapshots where email_id = $1`, [waiting.id])).n === 0
+  && (await one(`select count(*)::int n from email_send_snapshots where snapshot ~ '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+[.][A-Za-z]{2,}'`)).n === 0,
+  "the waiting invitation's saved request is deleted too: no address is left in a saved request")
 ok((await one(`select count(*)::int n from email_log where guest_id is null and to_email <> '' and order_id in (select id from orders where event_id = $1)`, [ev])).n === sponsorMailBefore,
   "emails to sponsors keep theirs: sponsors' contact details are AAFE's relationship records")
 const review = (await one(`select details from import_review where id = 'rev-contact-1'`)).details
